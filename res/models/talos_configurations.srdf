@@ -1,0 +1,36 @@
+<?xml version="1.0" ?>
+<robot name="talos">
+    <group_state name="pal_start" group="all">
+        <joint name="reference" value="0. 0. 1.05 0. 0. 0.707 0.707" />
+        <joint name="arm_left_1_joint" value="0.4" />
+        <joint name="arm_left_2_joint" value="0.24" />
+        <joint name="arm_left_3_joint" value="-0.6" />
+        <joint name="arm_left_4_joint" value="-1.45" />
+        <joint name="arm_left_5_joint" value="0" />
+        <joint name="arm_left_6_joint" value="0" />
+        <joint name="arm_left_7_joint" value="0" />
+        <joint name="arm_right_1_joint" value="-0.4" />
+        <joint name="arm_right_2_joint" value="-0.24" />
+        <joint name="arm_right_3_joint" value="0.6" />
+        <joint name="arm_right_4_joint" value="-1.45" />
+        <joint name="arm_right_5_joint" value="0" />
+        <joint name="arm_right_6_joint" value="0" />
+        <joint name="arm_right_7_joint" value="0" />
+        <joint name="head_1_joint" value="0" />
+        <joint name="head_2_joint" value="0" />
+        <joint name="leg_left_1_joint" value="0.0" />
+        <joint name="leg_left_2_joint" value="0.0" />
+        <joint name="leg_left_3_joint" value="-0.26" />
+        <joint name="leg_left_4_joint" value="0.59" />
+        <joint name="leg_left_5_joint" value="-0.33" />
+        <joint name="leg_left_6_joint" value="-0.0" />
+        <joint name="leg_right_1_joint" value="0.0" />
+        <joint name="leg_right_2_joint" value="0.0" />
+        <joint name="leg_right_3_joint" value="-0.26" />
+        <joint name="leg_right_4_joint" value="0.59" />
+        <joint name="leg_right_5_joint" value="-0.33" />
+        <joint name="leg_right_6_joint" value="-0.0" />
+        <joint name="torso_1_joint" value="0" />
+        <joint name="torso_2_joint" value="0.05" />
+    </group_state>
+</robot>
