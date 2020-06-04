@@ -1,0 +1,19 @@
+SOT:
+  w_com_: 1.0
+  w_posture_: 0.75
+  w_forceRef_feet_: 1e-3
+  w_forceRef_hands_: 1e-3
+  w_floatingb_: 20.0
+  w_velocity_ : 1.0
+  w_rh_: 10.0
+  w_lh_: 10.0
+  w_rf_: 1.0
+  w_lf_: 1.0
+  kp_contact_: 30.0
+  kp_com_: 3000.0
+  kp_posture_: 30.0
+  kp_floatingb_: 3000.0
+  kp_rh_: 300.0
+  kp_lh_: 300.0
+  kp_rf_: 30.0
+  kp_lf_: 30.0

@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128")
 
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
+find_package(yaml-cpp REQUIRED)
 # we ask for Magnum because we want to build the graphics
 
 if(BUILD_GRAPHICS)
@@ -19,6 +20,7 @@ list(APPEND DEPENDENCIES_LIBS
                     pinocchio::pinocchio
                     tsid::tsid
                     RobotDART::Simu
+                    ${YAML_CPP_LIBRARIES}
 )
 
 list(APPEND DEPENDENCIES_INCS

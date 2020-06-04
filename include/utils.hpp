@@ -3,12 +3,13 @@
 
 /*!
  * \file utils.hpp
- * \brief quaternion utils
+ * \brief quaternion + parsing utils
  * \author Eloïse Dalin
  * \version 0.1
  */
 
 #include <cstdlib>
+#include <yaml-cpp/yaml.h>
 
 // To convert quaternions to euler angles
 // source https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
@@ -44,6 +45,22 @@ EulerAngles to_euler(Quaternion q)
   angles.yaw = std::atan2(siny_cosp, cosy_cosp);
 
   return angles;
+}
+
+template <typename type>
+void parse(type &parameter, std::string parameterName, YAML::Node &config, bool verbose = true, std::string prevName = "SOT")
+{
+  if (!config[prevName][parameterName])
+  {
+    if (verbose)
+      std::cout << "No parameter " << parameterName << " found taking the default one : " << parameter << std::endl;
+  }
+  else
+  {
+    parameter = config[prevName][parameterName].as<type>();
+    if (verbose)
+      std::cout << "Parameter " << parameterName << " found : " << parameter << std::endl;
+  }
 }
 
 #endif

@@ -22,7 +22,7 @@
 #include "map"
 #include "string"
 #include "vector"
-#include "math-utils.hpp"
+#include "utils.hpp"
 
 #include <tsid/contacts/contact-6d.hpp>
 #include <tsid/contacts/contact-point.hpp>
@@ -66,18 +66,20 @@ namespace tsid_sot
       float dt;
     };
 
-    talos_sot(const Params &params)
+    talos_sot(const Params &params, const std::string &sot_config_path = "", bool verbose = true)
     {
       dt_ = params.dt;
+      verbose_ = verbose;
       t_ = 0.0;
-      std::vector<std::string> p = {"/home/user/konstan/res/model"};
 
-      //if your urdf doesn't have a floating base link use this :
-      //robot_ = std::make_shared<RobotWrapper>(params.urdf_path, p, pinocchio::JointModelFreeFlyer(),true);
       pinocchio::Model robot_model;
       pinocchio::urdf::buildModel(params.urdf_path, robot_model, false); //allows to parse the floating base joint which is in the urdf
       robot_ = std::make_shared<RobotWrapper>(robot_model, false);
       pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, false); //the srdf contains initial joint positions
+
+      //if your urdf doesn't have a floating base link use this :
+      // std::vector<std::string> p = {""};
+      //robot_ = std::make_shared<RobotWrapper>(params.urdf_path, p, pinocchio::JointModelFreeFlyer(),true);
 
       uint nactuated = robot_->na();
       uint ndofs = robot_->nv(); // na + 6 (floating base)
@@ -100,11 +102,54 @@ namespace tsid_sot
       ddq_.setZero(ddq_.size());
       tau_.setZero(tau_.size());
 
+      if (!sot_config_path.empty())
+      {
+        parse_configuration_yaml(sot_config_path);
+      }
+
       set_stack_configuration();
       init_references();
     }
 
     ~talos_sot(){};
+
+    void parse_configuration_yaml(const std::string &sot_config_path)
+    {
+      std::ifstream yamlConfigFile(sot_config_path);
+      if (!yamlConfigFile.good())
+      {
+        if (verbose_)
+        {
+          std::cout << sot_config_path << " not found" << std::endl;
+          std::cout << "Taking default stack of tasks weights" << std::endl;
+        }
+      }
+      else
+      {
+        if (verbose_)
+          std::cout << "Taking the stack of tasks parameters in " << sot_config_path << std::endl;
+
+        YAML::Node config = YAML::LoadFile(sot_config_path);
+        parse(w_com_, "w_com_", config, verbose_);
+        parse(w_posture_, "w_posture_", config, verbose_);
+        parse(w_forceRef_feet_, "w_forceRef_feet_", config, verbose_);
+        parse(w_forceRef_hands_, "w_forceRef_hands_", config, verbose_);
+        parse(w_floatingb_, "w_floatingb_", config, verbose_);
+        parse(w_velocity_, "w_velocity_", config, verbose_);
+        parse(w_rh_, "w_rh_", config, verbose_);
+        parse(w_lh_, "w_lh_", config, verbose_);
+        parse(w_rf_, "w_rf_", config, verbose_);
+        parse(w_lf_, "w_lf_", config, verbose_);
+        parse(kp_contact_, "kp_contact_", config, verbose_);
+        parse(kp_com_, "kp_com_", config, verbose_);
+        parse(kp_posture_, "kp_posture_", config, verbose_);
+        parse(kp_floatingb_, "kp_floatingb_", config, verbose_);
+        parse(kp_rh_, "kp_rh_", config, verbose_);
+        parse(kp_lh_, "kp_lh_", config, verbose_);
+        parse(kp_rf_, "kp_rf_", config, verbose_);
+        parse(kp_lf_, "kp_lf_", config, verbose_);
+      }
+    }
 
     void set_stack_configuration()
     {
@@ -168,17 +213,17 @@ namespace tsid_sot
       posture_task_->setMask(mask_post);
       tsid_->addMotionTask(*posture_task_, w_posture_, 1);
 
-      ////////// Add the flaotingb task
-      flaotingb_task_ = std::make_shared<TaskSE3Equality>("task-flaotingb", *robot_, "reference");
-      flaotingb_task_->Kp(kp_flaotingb_ * Vector::Ones(6));
-      flaotingb_task_->Kd(2.0 * flaotingb_task_->Kp().cwiseSqrt());
-      Vector mask_flaotingb = Vector::Ones(6);
+      ////////// Add the floatingb task
+      floatingb_task_ = std::make_shared<TaskSE3Equality>("task-floatingb", *robot_, "reference");
+      floatingb_task_->Kp(kp_floatingb_ * Vector::Ones(6));
+      floatingb_task_->Kd(2.0 * floatingb_task_->Kp().cwiseSqrt());
+      Vector mask_floatingb = Vector::Ones(6);
       for (int i = 0; i < 3; i++)
       {
-        mask_flaotingb[i] = 0; // DO NOT CONSTRAIN flaotingb POSITION IN SOT
+        mask_floatingb[i] = 0; // DO NOT CONSTRAIN floatingb POSITION IN SOT
       }
-      flaotingb_task_->setMask(mask_flaotingb);
-      tsid_->addMotionTask(*flaotingb_task_, w_flaotingb_, 1);
+      floatingb_task_->setMask(mask_floatingb);
+      tsid_->addMotionTask(*floatingb_task_, w_floatingb_, 1);
 
       ////////// Add the left hand  task
       lh_task_ = std::make_shared<TaskSE3Equality>("task-lh", *robot_, "arm_left_6_joint");
@@ -236,7 +281,7 @@ namespace tsid_sot
     {
       sample_com_.resize(3);
       sample_posture_.resize(robot_->na());
-      sample_flaotingb_.resize(3);
+      sample_floatingb_.resize(3);
       sample_lf_.resize(6);
       sample_rf_.resize(6);
       sample_lh_.resize(3);
@@ -244,7 +289,7 @@ namespace tsid_sot
 
       com_init_ = robot_->com(tsid_->data());
       posture_init_ = q_tsid_.tail(robot_->na());
-      flaotingb_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("reference"));
+      floatingb_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("reference"));
       lf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_left_6_joint"));
       rf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
       lh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("arm_left_6_joint"));
@@ -252,7 +297,7 @@ namespace tsid_sot
 
       com_ref_ = com_init_;
       posture_ref_ = posture_init_;
-      flaotingb_ref_ = flaotingb_init_;
+      floatingb_ref_ = floatingb_init_;
       lf_ref_ = lf_init_;
       rf_ref_ = rf_init_;
       lh_ref_ = lh_init_;
@@ -260,7 +305,7 @@ namespace tsid_sot
 
       traj_com_ = std::make_shared<TrajectoryEuclidianConstant>("traj_com", com_ref_);
       traj_posture_ = std::make_shared<TrajectoryEuclidianConstant>("traj_posture", posture_ref_);
-      traj_flaotingb_ = std::make_shared<TrajectorySE3Constant>("traj_flaotingb", flaotingb_ref_);
+      traj_floatingb_ = std::make_shared<TrajectorySE3Constant>("traj_floatingb", floatingb_ref_);
       traj_lf_ = std::make_shared<TrajectorySE3Constant>("traj_lf", lf_ref_);
       traj_rf_ = std::make_shared<TrajectorySE3Constant>("traj_rf", rf_ref_);
       traj_lh_ = std::make_shared<TrajectorySE3Constant>("traj_lh", lh_ref_);
@@ -268,7 +313,7 @@ namespace tsid_sot
 
       sample_com_ = traj_com_->computeNext();
       sample_posture_ = traj_posture_->computeNext();
-      sample_flaotingb_ = traj_flaotingb_->computeNext();
+      sample_floatingb_ = traj_floatingb_->computeNext();
       sample_lf_ = traj_lf_->computeNext();
       sample_rf_ = traj_rf_->computeNext();
       sample_lh_ = traj_lh_->computeNext();
@@ -276,7 +321,7 @@ namespace tsid_sot
 
       com_task_->setReference(sample_com_);
       posture_task_->setReference(sample_posture_);
-      flaotingb_task_->setReference(sample_flaotingb_);
+      floatingb_task_->setReference(sample_floatingb_);
       lf_task_->setReference(sample_lf_);
       rf_task_->setReference(sample_rf_);
       lh_task_->setReference(sample_lh_);
@@ -309,8 +354,11 @@ namespace tsid_sot
       }
       else
       {
-        std::cout << "Controller failed, can't solve problem " << std::endl;
-        std::cout << "Status " + toString(sol.status) << std::endl;
+        if (verbose_)
+        {
+          std::cout << "Controller failed, can't solve problem " << std::endl;
+          std::cout << "Status " + toString(sol.status) << std::endl;
+        }
         return false;
       }
     }
@@ -385,22 +433,22 @@ namespace tsid_sot
     double w_posture_ = 0.75;                         //  weight of joint posture task
     double w_forceRef_feet_ = 1e-3;                   //# weight of force regularization task
     double w_forceRef_hands_ = 1e-3;                  //# weight of force regularization task
-    double w_flaotingb_ = 20.0;                       //# weight of flaotingb task
+    double w_floatingb_ = 20.0;                       //# weight of floatingb task
     double w_velocity_ = 1.0;                         //# weight of velocity bounds
-    double w_torque_ = 1.0;                           //# weight of velocity bounds
-    double w_rh_ = 10.0;                              //# weight of flaotingb task
-    double w_lh_ = 10.0;                              //# weight of flaotingb task
-    double w_rf_ = 1.0;                               //# weight of flaotingb task
-    double w_lf_ = 1.0;                               //# weight of flaotingb task
+    double w_rh_ = 10.0;                              //# weight of right hand  task
+    double w_lh_ = 10.0;                              //# weight of left hand  task
+    double w_rf_ = 1.0;                               //# weight of right foot  task
+    double w_lf_ = 1.0;                               //# weight of left foot  task
     double kp_contact_ = 30.0;                        //# proportional gain of contact constraint
     double kp_com_ = 3000.0;                          //# proportional gain of center of mass task
     double kp_posture_ = 30.0;                        //# proportional gain of joint posture task
-    double kp_flaotingb_ = 3000.0;                    //# proportional gain of flaotingb task
+    double kp_floatingb_ = 3000.0;                    //# proportional gain of floatingb task
     double kp_rh_ = 300.0;                            //# proportional gain of right hand task
     double kp_lh_ = 300.0;                            //# proportional gain of left hand task
     double kp_rf_ = 30.0;                             //# proportional gain of right foot task
     double kp_lf_ = 30.0;                             //# proportional gain of left foot task
-    double dt_ = 0.001;
+    double dt_;
+    bool verbose_;
 
     double t_;
 
@@ -427,7 +475,7 @@ namespace tsid_sot
     //tasks
     std::shared_ptr<TaskComEquality> com_task_;
     std::shared_ptr<TaskJointPosture> posture_task_;
-    std::shared_ptr<TaskSE3Equality> flaotingb_task_;
+    std::shared_ptr<TaskSE3Equality> floatingb_task_;
     std::shared_ptr<TaskSE3Equality> lf_task_;
     std::shared_ptr<TaskSE3Equality> rf_task_;
     std::shared_ptr<TaskSE3Equality> lh_task_;
@@ -450,10 +498,10 @@ namespace tsid_sot
     std::shared_ptr<TrajectoryBase> traj_posture_;
     TrajectorySample sample_posture_;
 
-    //flaotingb ref
-    pinocchio::SE3 flaotingb_init_, flaotingb_ref_;
-    std::shared_ptr<TrajectorySE3Constant> traj_flaotingb_;
-    TrajectorySample sample_flaotingb_;
+    //floatingb ref
+    pinocchio::SE3 floatingb_init_, floatingb_ref_;
+    std::shared_ptr<TrajectorySE3Constant> traj_floatingb_;
+    TrajectorySample sample_floatingb_;
 
     // Left Foot ref
     pinocchio::SE3 lf_init_, lf_ref_;
