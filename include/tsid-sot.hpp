@@ -103,9 +103,7 @@ namespace tsid_sot
       tau_.setZero(tau_.size());
 
       if (!sot_config_path.empty())
-      {
         parse_configuration_yaml(sot_config_path);
-      }
 
       set_stack_configuration();
       init_references();
@@ -401,20 +399,11 @@ namespace tsid_sot
       lh_task_->setReference(sample_lh_);
     }
 
-    pinocchio::SE3 lh_init()
-    {
-      return lh_init_;
-    }
+    pinocchio::SE3 lh_init() { return lh_init_; }
 
-    Eigen::VectorXd dq()
-    {
-      return dq_;
-    }
+    Eigen::VectorXd dq() { return dq_; }
 
-    Eigen::VectorXd q0()
-    {
-      return q0_;
-    }
+    Eigen::VectorXd q0() { return q0_; }
 
   private:
     // TALOS CONFIG
