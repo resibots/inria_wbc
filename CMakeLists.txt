@@ -7,8 +7,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128")
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
-# we ask for Magnum because we want to build the graphics
+find_package(trajectory_utils REQUIRED)
 
+# we ask for Magnum because we want to build the graphics
 if(BUILD_GRAPHICS)
     find_package(RobotDART REQUIRED OPTIONAL_COMPONENTS Magnum)
 else()
@@ -21,6 +22,7 @@ list(APPEND DEPENDENCIES_LIBS
                     tsid::tsid
                     RobotDART::Simu
                     ${YAML_CPP_LIBRARIES}
+                    ${trajectory_utils_LIBRARIES}
 )
 
 list(APPEND DEPENDENCIES_INCS
@@ -36,4 +38,16 @@ if(RobotDART_Magnum_FOUND)
     add_executable(talos_graphics src/talos.cpp)
     target_link_libraries(talos_graphics PUBLIC ${DEPENDENCIES_LIBS})
     target_include_directories(talos_graphics  PUBLIC ${DEPENDENCIES_INCS})
+endif()
+
+
+add_executable(talos_squat src/talos-squat.cpp)
+target_link_libraries(talos_squat PUBLIC ${DEPENDENCIES_LIBS})
+target_include_directories(talos_squat  PUBLIC ${DEPENDENCIES_INCS})
+
+if(RobotDART_Magnum_FOUND)
+    list(APPEND DEPENDENCIES_LIBS RobotDART::Magnum)
+    add_executable(talos_squat_graphics src/talos-squat.cpp)
+    target_link_libraries(talos_squat_graphics PUBLIC ${DEPENDENCIES_LIBS})
+    target_include_directories(talos_squat_graphics  PUBLIC ${DEPENDENCIES_INCS})
 endif()

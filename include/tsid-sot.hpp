@@ -79,7 +79,7 @@ namespace tsid_sot
 
       //if your urdf doesn't have a floating base link use this :
       // std::vector<std::string> p = {""};
-      //robot_ = std::make_shared<RobotWrapper>(params.urdf_path, p, pinocchio::JointModelFreeFlyer(),true);
+      // robot_ = std::make_shared<RobotWrapper>(params.urdf_path, p, pinocchio::JointModelFreeFlyer(), true);
 
       uint nactuated = robot_->na();
       uint ndofs = robot_->nv(); // na + 6 (floating base)
@@ -404,6 +404,27 @@ namespace tsid_sot
     Eigen::VectorXd dq() { return dq_; }
 
     Eigen::VectorXd q0() { return q0_; }
+
+    Eigen::VectorXd q() { return q_; }
+
+
+    //COM trajectory control    
+    Vector3 com_init()
+    {
+      return com_init_;
+    }
+
+    std::shared_ptr<TaskComEquality> com_task()
+    {
+      return com_task_;
+    }
+
+    void set_com_ref(Vector3 ref)
+    {
+      traj_com_->setReference(ref);
+      sample_com_ = traj_com_->computeNext();
+      com_task_->setReference(sample_com_);
+    }
 
   private:
     // TALOS CONFIG
