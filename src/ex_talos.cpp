@@ -1,4 +1,3 @@
-#include "tsid-sot.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -11,6 +10,9 @@
 #include <dart/collision/fcl/FCLCollisionDetector.hpp>
 #include <dart/constraint/ConstraintSolver.hpp>
 
+#include "tsid_sot_talos.hpp"
+
+
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
@@ -22,10 +24,10 @@ int main()
     float dt = 0.001;
     int duration = 20 / dt;
     float arm_speed = 0.05;
-    tsid_sot::talos_sot::Params params = {"../res/models/talos.urdf",
+    tsid_sot::Talos::Params params = {"../res/models/talos.urdf",
                                           "../res/models/talos_configurations.srdf",
                                           dt};
-    auto talos_sot = tsid_sot::talos_sot(params, "../res/yaml/sot.yaml", true);
+    auto talos_sot = tsid_sot::Talos(params, "../res/yaml/sot.yaml", true);
     auto all_dofs = talos_sot.all_dofs();
     auto controllable_dofs = talos_sot.controllable_dofs();
     uint ncontrollable = controllable_dofs.size();

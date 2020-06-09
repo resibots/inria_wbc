@@ -27,25 +27,25 @@ list(APPEND DEPENDENCIES_INCS
                     ${CMAKE_SOURCE_DIR}/include
 )
 
-add_executable(talos src/talos.cpp)
+add_executable(talos src/ex_talos.cpp src/tsid_sot_talos.cpp)
 target_link_libraries(talos PUBLIC ${DEPENDENCIES_LIBS})
 target_include_directories(talos  PUBLIC ${DEPENDENCIES_INCS})
 
 if(RobotDART_Magnum_FOUND)
     list(APPEND DEPENDENCIES_LIBS RobotDART::Magnum)
-    add_executable(talos_graphics src/talos.cpp)
+    add_executable(talos_graphics src/ex_talos.cpp src/tsid_sot_talos.cpp)
     target_link_libraries(talos_graphics PUBLIC ${DEPENDENCIES_LIBS})
     target_include_directories(talos_graphics  PUBLIC ${DEPENDENCIES_INCS})
 endif()
 
 
-add_executable(talos_squat src/talos-squat.cpp)
+add_executable(talos_squat src/ex_talos_squat.cpp src/tsid_sot_talos.cpp)
 target_link_libraries(talos_squat PUBLIC ${DEPENDENCIES_LIBS})
 target_include_directories(talos_squat  PUBLIC ${DEPENDENCIES_INCS})
 
 if(RobotDART_Magnum_FOUND)
     list(APPEND DEPENDENCIES_LIBS RobotDART::Magnum)
-    add_executable(talos_squat_graphics src/talos-squat.cpp)
+    add_executable(talos_squat_graphics src/ex_talos_squat.cpp src/tsid_sot_talos.cpp)
     target_link_libraries(talos_squat_graphics PUBLIC ${DEPENDENCIES_LIBS})
     target_include_directories(talos_squat_graphics  PUBLIC ${DEPENDENCIES_INCS})
 endif()

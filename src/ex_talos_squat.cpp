@@ -1,6 +1,3 @@
-#include "tsid-sot.hpp"
-#include "trajectory-handler.hpp"
-
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
@@ -14,6 +11,10 @@
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
+
+#include "tsid_sot_talos.hpp"
+#include "trajectory-handler.hpp"
+
 
 Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, Eigen::VectorXd targetpos)
 {
@@ -51,10 +52,10 @@ int main()
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
     float dt = 0.001;
     int duration = 20 / dt;
-    tsid_sot::talos_sot::Params params = {"../res/models/talos.urdf",
+    tsid_sot::Talos::Params params = {"../res/models/talos.urdf",
                                           "../res/models/talos_configurations.srdf",
                                           dt};
-    auto talos_sot = tsid_sot::talos_sot(params, "../res/yaml/sot-squat.yaml", true);
+    auto talos_sot = tsid_sot::Talos(params, "../res/yaml/sot-squat.yaml", true);
     auto all_dofs = talos_sot.all_dofs();
     auto controllable_dofs = talos_sot.controllable_dofs();
     uint ncontrollable = controllable_dofs.size();
@@ -92,7 +93,7 @@ int main()
     auto trajectory1 = trajectory_handler::compute_traj(com_init, com_final, dt, trajectory_duration);
     auto trajectory2 = trajectory_handler::compute_traj(com_final, com_init, dt, trajectory_duration);
 
-    Vector3 ref;
+    tsid::math::Vector3 ref;
     //////////////////// PLAY SIMULATION //////////////////////////////////////
     int k = 0;
     while (true) {

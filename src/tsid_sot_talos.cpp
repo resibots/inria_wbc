@@ -1,13 +1,3 @@
-#ifndef TSID_SOT_HPP
-#define TSID_SOT_HPP
-
-/*!
- * \file tsid-sot.hpp
- * \brief C++ Interface for a controller object of type TSID
- * \author Eloïse Dalin
- * \version 0.1
- */
-
 /* Pinocchio !!!! NEED TO BE INCLUDED BEFORE BOOST*/
 #include <pinocchio/algorithm/joint-configuration.hpp> // integrate
 #include <pinocchio/parsers/srdf.hpp>
@@ -45,6 +35,9 @@
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
 
+
+#include "tsid_sot_talos.hpp"
+
 using namespace tsid;
 using namespace tsid::trajectories;
 using namespace tsid::math;
@@ -56,17 +49,7 @@ using namespace std;
 
 namespace tsid_sot
 {
-  class talos_sot
-  {
-  public:
-    struct Params
-    {
-      std::string urdf_path;
-      std::string srdf_path;
-      float dt;
-    };
-
-    talos_sot(const Params &params, const std::string &sot_config_path = "", bool verbose = true)
+    Talos::Talos(const Params &params, const std::string &sot_config_path, bool verbose)
     {
       dt_ = params.dt;
       verbose_ = verbose;
@@ -109,9 +92,8 @@ namespace tsid_sot
       init_references();
     }
 
-    ~talos_sot(){};
 
-    void parse_configuration_yaml(const std::string &sot_config_path)
+    void Talos::parse_configuration_yaml(const std::string &sot_config_path)
     {
       std::ifstream yamlConfigFile(sot_config_path);
       if (!yamlConfigFile.good())
@@ -149,7 +131,7 @@ namespace tsid_sot
       }
     }
 
-    void set_stack_configuration()
+    void Talos::set_stack_configuration()
     {
       ////////////////////Gather Initial Pose //////////////////////////////////////
       q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
@@ -275,16 +257,8 @@ namespace tsid_sot
       tsid_->addMotionTask(*bounds_task_, w_velocity_, 0); //add pos vel acc bounds
     }
 
-    void init_references()
+    void Talos::init_references()
     {
-      sample_com_.resize(3);
-      sample_posture_.resize(robot_->na());
-      sample_floatingb_.resize(3);
-      sample_lf_.resize(6);
-      sample_rf_.resize(6);
-      sample_lh_.resize(3);
-      sample_rh_.resize(3);
-
       com_init_ = robot_->com(tsid_->data());
       posture_init_ = q_tsid_.tail(robot_->na());
       floatingb_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("reference"));
@@ -309,13 +283,13 @@ namespace tsid_sot
       traj_lh_ = std::make_shared<TrajectorySE3Constant>("traj_lh", lh_ref_);
       traj_rh_ = std::make_shared<TrajectorySE3Constant>("traj_rh", rh_ref_);
 
-      sample_com_ = traj_com_->computeNext();
-      sample_posture_ = traj_posture_->computeNext();
-      sample_floatingb_ = traj_floatingb_->computeNext();
-      sample_lf_ = traj_lf_->computeNext();
-      sample_rf_ = traj_rf_->computeNext();
-      sample_lh_ = traj_lh_->computeNext();
-      sample_rh_ = traj_rh_->computeNext();
+      TrajectorySample sample_com_ = traj_com_->computeNext();
+      TrajectorySample sample_posture_ = traj_posture_->computeNext();
+      TrajectorySample sample_floatingb_ = traj_floatingb_->computeNext();
+      TrajectorySample sample_lf_ = traj_lf_->computeNext();
+      TrajectorySample sample_rf_ = traj_rf_->computeNext();
+      TrajectorySample sample_lh_ = traj_lh_->computeNext();
+      TrajectorySample sample_rh_ = traj_rh_->computeNext();
 
       com_task_->setReference(sample_com_);
       posture_task_->setReference(sample_posture_);
@@ -326,7 +300,7 @@ namespace tsid_sot
       rh_task_->setReference(sample_rh_);
     }
 
-    bool solve()
+    bool Talos::solve()
     {
       //Compute the current data from the current position and solve to find next position
       const HQPData &HQPData = tsid_->computeProblemData(t_, q_tsid_, v_tsid_);
@@ -362,14 +336,14 @@ namespace tsid_sot
     }
 
     // Removes the universe and root (floating base) joint names
-    std::vector<std::string> controllable_dofs()
+    std::vector<std::string> Talos::controllable_dofs()
     {
       auto na = robot_->model().names;
       return std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
     }
 
     // Order of the floating base in q_ according to dart naming convention
-    std::vector<std::string> floating_base_dofs()
+    std::vector<std::string> Talos::floating_base_dofs()
     {
       std::vector<std::string> floating_base_dofs = {"reference_pos_x",
                                                      "reference_pos_y",
@@ -380,7 +354,7 @@ namespace tsid_sot
       return floating_base_dofs;
     }
 
-    std::vector<std::string> all_dofs()
+    std::vector<std::string> Talos::all_dofs()
     {
       std::vector<std::string> all_dofs = floating_base_dofs();
       std::vector<std::string> control_dofs = controllable_dofs();
@@ -389,149 +363,22 @@ namespace tsid_sot
     }
 
     //Left hand trajectory control
-    void add_to_lh_ref(float delta_x, float delta_y, float delta_z)
+    void Talos::add_to_lh_ref(float delta_x, float delta_y, float delta_z)
     {
       lh_ref_.translation()(0) += delta_x;
       lh_ref_.translation()(1) += delta_y;
       lh_ref_.translation()(2) += delta_z;
       traj_lh_->setReference(lh_ref_);
-      sample_lh_ = traj_lh_->computeNext();
+      TrajectorySample sample_lh_ = traj_lh_->computeNext();
       lh_task_->setReference(sample_lh_);
     }
 
-    pinocchio::SE3 lh_init() { return lh_init_; }
 
-    Eigen::VectorXd dq() { return dq_; }
-
-    Eigen::VectorXd q0() { return q0_; }
-
-    Eigen::VectorXd q() { return q_; }
-
-    //COM trajectory control
-    Vector3 com_init()
-    {
-      return com_init_;
-    }
-
-    std::shared_ptr<TaskComEquality> com_task()
-    {
-      return com_task_;
-    }
-
-    void set_com_ref(Vector3 ref)
+    void Talos::set_com_ref(const Vector3& ref)
     {
       traj_com_->setReference(ref);
-      sample_com_ = traj_com_->computeNext();
+      TrajectorySample sample_com_ = traj_com_->computeNext();
       com_task_->setReference(sample_com_);
     }
 
-  private:
-    // TALOS CONFIG
-    double lxp_ = 0.1;                                //foot length in positive x direction
-    double lxn_ = 0.11;                               //foot length in negative x direction
-    double lyp_ = 0.069;                              //foot length in positive y direction
-    double lyn_ = 0.069;                              //foot length in negative y direction
-    double lz_ = 0.107;                               //foot sole height with respect to ankle joint
-    double mu_ = 0.3;                                 //friction coefficient
-    double fMin_ = 5.0;                               //minimum normal force
-    double fMax_ = 1500.0;                            //maximum normal force
-    std::string rf_frame_name_ = "leg_right_6_joint"; // right foot joint name
-    std::string lf_frame_name_ = "leg_left_6_joint";  // left foot joint name
-    Vector3 contactNormal_ = Vector3::UnitZ();        // direction of the normal to the contact surface
-    double w_com_ = 1.0;                              //  weight of center of mass task
-    double w_posture_ = 0.75;                         //  weight of joint posture task
-    double w_forceRef_feet_ = 1e-3;                   //# weight of force regularization task
-    double w_forceRef_hands_ = 1e-3;                  //# weight of force regularization task
-    double w_floatingb_ = 20.0;                       //# weight of floatingb task
-    double w_velocity_ = 1.0;                         //# weight of velocity bounds
-    double w_rh_ = 10.0;                              //# weight of right hand  task
-    double w_lh_ = 10.0;                              //# weight of left hand  task
-    double w_rf_ = 1.0;                               //# weight of right foot  task
-    double w_lf_ = 1.0;                               //# weight of left foot  task
-    double kp_contact_ = 30.0;                        //# proportional gain of contact constraint
-    double kp_com_ = 3000.0;                          //# proportional gain of center of mass task
-    double kp_posture_ = 30.0;                        //# proportional gain of joint posture task
-    double kp_floatingb_ = 3000.0;                    //# proportional gain of floatingb task
-    double kp_rh_ = 300.0;                            //# proportional gain of right hand task
-    double kp_lh_ = 300.0;                            //# proportional gain of left hand task
-    double kp_rf_ = 30.0;                             //# proportional gain of right foot task
-    double kp_lf_ = 30.0;                             //# proportional gain of left foot task
-    double dt_;
-    bool verbose_;
-
-    double t_;
-
-    Vector q_tsid_;       //tsid joint positions
-    Vector v_tsid_;       //tsid joint velocities
-    Vector a_tsid_;       //tsid joint accelerations
-    Vector tau_tsid_;     //tsid joint torques
-    Eigen::VectorXd q0_;  //tsid joint positions resized for dart
-    Eigen::VectorXd q_;   //tsid joint positions resized for dart
-    Eigen::VectorXd dq_;  //tsid joint velocities resized for dart
-    Eigen::VectorXd ddq_; //tsid joint accelerations resized for dart
-    Eigen::VectorXd tau_; //tsid joint torques resized for dart
-
-    std::shared_ptr<RobotWrapper> robot_;
-    std::shared_ptr<InverseDynamicsFormulationAccForce> tsid_;
-    SolverHQPBase *solver_;
-
-    //contacts
-    Matrix3x contact_points_;
-    pinocchio::SE3 contact_rf_ref_, contact_lf_ref_;
-    std::shared_ptr<Contact6d> contactRF_;
-    std::shared_ptr<Contact6d> contactLF_;
-
-    //tasks
-    std::shared_ptr<TaskComEquality> com_task_;
-    std::shared_ptr<TaskJointPosture> posture_task_;
-    std::shared_ptr<TaskSE3Equality> floatingb_task_;
-    std::shared_ptr<TaskSE3Equality> lf_task_;
-    std::shared_ptr<TaskSE3Equality> rf_task_;
-    std::shared_ptr<TaskSE3Equality> lh_task_;
-    std::shared_ptr<TaskSE3Equality> rh_task_;
-
-    //limits (position, velocity, acceleration)
-    Vector q_lb_;    //lower position bound
-    Vector q_ub_;    //upper position bound
-    Vector dq_max_;  //max velocity bound
-    Vector ddq_max_; //max acceleration bound
-    std::shared_ptr<TaskJointPosVelAccBounds> bounds_task_;
-
-    //com ref
-    Vector3 com_init_, com_ref_;
-    std::shared_ptr<TrajectoryEuclidianConstant> traj_com_;
-    TrajectorySample sample_com_;
-
-    //posture ref
-    Vector posture_init_, posture_ref_;
-    std::shared_ptr<TrajectoryBase> traj_posture_;
-    TrajectorySample sample_posture_;
-
-    //floatingb ref
-    pinocchio::SE3 floatingb_init_, floatingb_ref_;
-    std::shared_ptr<TrajectorySE3Constant> traj_floatingb_;
-    TrajectorySample sample_floatingb_;
-
-    // Left Foot ref
-    pinocchio::SE3 lf_init_, lf_ref_;
-    std::shared_ptr<TrajectorySE3Constant> traj_lf_;
-    TrajectorySample sample_lf_;
-
-    // Right Foot ref
-    pinocchio::SE3 rf_init_, rf_ref_;
-    std::shared_ptr<TrajectorySE3Constant> traj_rf_;
-    TrajectorySample sample_rf_;
-
-    // Left Hand ref
-    pinocchio::SE3 lh_init_, lh_ref_;
-    std::shared_ptr<TrajectorySE3Constant> traj_lh_;
-    TrajectorySample sample_lh_;
-
-    // Right Hand ref
-    pinocchio::SE3 rh_init_, rh_ref_;
-    std::shared_ptr<TrajectorySE3Constant> traj_rh_;
-    TrajectorySample sample_rh_;
-  };
-
 } // namespace tsid_sot
-#endif
