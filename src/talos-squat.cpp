@@ -63,7 +63,7 @@ int main()
 
     //////////////////// INIT DART ROBOT //////////////////////////////////////
     std::srand(std::time(NULL));
-    std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "/home/user/rf_ws/src/talos_robot/talos_description"}};
+    std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto global_robot = std::make_shared<robot_dart::Robot>(params.urdf_path, packages);
     global_robot->set_position_enforced(true);
     // Set actuator types to VELOCITY motors so that they stay in position without any controller
@@ -80,6 +80,7 @@ int main()
     auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu);
     simu.set_graphics(graphics);
     graphics->look_at({0., 3.5, 2.}, {0., 0., 0.25});
+    graphics->record_video("talos_squat.mp4");
 #endif
     simu.add_robot(global_robot);
     simu.add_checkerboard_floor();
@@ -88,24 +89,26 @@ int main()
     auto com_init = talos_sot.com_init();
     auto com_final = com_init;
     com_final(2) -= 0.2;
-    float trajectory_duration = 5;
-    auto trajectory = trajectory_handler::compute_traj(com_init, com_final, dt, trajectory_duration);
+    float trajectory_duration = 3;
+    auto trajectory1 = trajectory_handler::compute_traj(com_init, com_final, dt, trajectory_duration);
+    auto trajectory2 = trajectory_handler::compute_traj(com_final, com_init, dt, trajectory_duration);
 
     Vector3 ref;
     //////////////////// PLAY SIMULATION //////////////////////////////////////
-    for (int i = 0; i < duration; i++)
-    {
-        if (i < trajectory.size())
+    int k = 0;
+    while (true) {
+        ++k;
+        std::cout<<"---- k="<<k<<std::endl;
+        for (int i = 0; i < trajectory1.size(); i++)
         {
-            ref = trajectory[i];
+            ref = (k % 2 == 0) ? trajectory1[i] : trajectory2[i];
             talos_sot.set_com_ref(ref);
+            talos_sot.solve();
+            auto cmd = compute_spd(global_robot->skeleton(), talos_sot.q());
+            global_robot->set_commands(cmd);
+            simu.step_world();
         }
-        talos_sot.solve();
-        auto cmd = compute_spd(global_robot->skeleton(), talos_sot.q());
-        global_robot->set_commands(cmd);
-        simu.step_world();
     }
-
-    // global_robot.reset();
+     global_robot.reset();
     return 0;
 }

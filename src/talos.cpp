@@ -6,6 +6,7 @@
 
 #include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
+#include <robot_dart/robot.hpp>
 
 #include <dart/collision/fcl/FCLCollisionDetector.hpp>
 #include <dart/constraint/ConstraintSolver.hpp>
@@ -20,7 +21,7 @@ int main()
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
     float dt = 0.001;
     int duration = 20 / dt;
-    float arm_speed = 0.01;
+    float arm_speed = 0.05;
     tsid_sot::talos_sot::Params params = {"../res/models/talos.urdf",
                                           "../res/models/talos_configurations.srdf",
                                           dt};
@@ -32,8 +33,10 @@ int main()
 
     //////////////////// INIT DART ROBOT //////////////////////////////////////
     std::srand(std::time(NULL));
-    std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "/home/user/rf_ws/src/talos_robot/talos_description"}};
-    auto global_robot = std::make_shared<robot_dart::Robot>(params.urdf_path, packages);
+    std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
+    auto global_robot = std::make_shared<robot_dart::Robot>("talos/talos.urdf", packages);
+    global_robot->skeleton()->setPosition(5, 1.2);
+    global_robot->skeleton()->setPosition(2, 1.57);
     global_robot->set_position_enforced(true);
     // Set actuator types to VELOCITY motors so that they stay in position without any controller
     global_robot->set_actuator_types(dart::dynamics::Joint::VELOCITY);
@@ -49,6 +52,7 @@ int main()
     auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu);
     simu.set_graphics(graphics);
     graphics->look_at({0., 3.5, 2.}, {0., 0., 0.25});
+    graphics->record_video("talos.mp4");
 #endif
     simu.add_robot(global_robot);
     simu.add_checkerboard_floor();
@@ -56,7 +60,7 @@ int main()
     //////////////////// PLAY SIMULATION //////////////////////////////////////
     for (int i = 0; i < duration; i++)
     {
-        talos_sot.add_to_lh_ref(0.0, 0.0, arm_speed * dt);
+        talos_sot.add_to_lh_ref(0.0, 0.0, arm_speed * dt * sin(duration / 100));
         talos_sot.solve();
         cmd = talos_sot.dq().tail(ncontrollable);
         global_robot->set_commands(cmd, controllable_dofs);
