@@ -51,7 +51,6 @@ int main()
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
     float dt = 0.001;
     int duration = 20 / dt;
-    float arm_speed = 0.01;
     tsid_sot::talos_sot::Params params = {"../res/models/talos.urdf",
                                           "../res/models/talos_configurations.srdf",
                                           dt};
@@ -98,7 +97,6 @@ int main()
     int k = 0;
     while (true) {
         ++k;
-        std::cout<<"---- k="<<k<<std::endl;
         for (int i = 0; i < trajectory1.size(); i++)
         {
             ref = (k % 2 == 0) ? trajectory1[i] : trajectory2[i];
