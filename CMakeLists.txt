@@ -7,7 +7,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128")
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
-find_package(trajectory_utils REQUIRED)
 
 # we ask for Magnum because we want to build the graphics
 if(BUILD_GRAPHICS)
@@ -22,7 +21,6 @@ list(APPEND DEPENDENCIES_LIBS
                     tsid::tsid
                     RobotDART::Simu
                     ${YAML_CPP_LIBRARIES}
-                    ${trajectory_utils_LIBRARIES}
 )
 
 list(APPEND DEPENDENCIES_INCS

@@ -407,8 +407,7 @@ namespace tsid_sot
 
     Eigen::VectorXd q() { return q_; }
 
-
-    //COM trajectory control    
+    //COM trajectory control
     Vector3 com_init()
     {
       return com_init_;

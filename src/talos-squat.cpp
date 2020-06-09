@@ -86,32 +86,26 @@ int main()
 
     //////////////////// DEFINE COM REFERENCES  //////////////////////////////////////
     auto com_init = talos_sot.com_init();
+    auto com_final = com_init;
+    com_final(2) -= 0.2;
     float trajectory_duration = 5;
-    auto trj_generator = std::make_shared<trajectory_utils::trajectory_generator>(dt);
-    KDL::Frame com_init_kdl(KDL::Rotation::Identity(), KDL::Vector(com_init(0), com_init(1), com_init(2)));
-    KDL::Frame com_ref_kdl(KDL::Rotation::Identity(), KDL::Vector(com_init(0), com_init(1), com_init(2) - 0.2));
-    trajectory_handler::computeTrj(trj_generator, com_init_kdl, com_ref_kdl, trajectory_duration);
+    auto trajectory = trajectory_handler::compute_traj(com_init, com_final, dt, trajectory_duration);
 
-    KDL::Frame reference_frame;
     Vector3 ref;
-
     //////////////////// PLAY SIMULATION //////////////////////////////////////
     for (int i = 0; i < duration; i++)
     {
-        if (talos_sot.com_task()->position_error().norm() < 0.1)
+        if (i < trajectory.size())
         {
-            reference_frame = trj_generator->Pos();
-            ref << reference_frame.p.x(), reference_frame.p.y(), reference_frame.p.z();
-            trj_generator->updateTrj();
+            ref = trajectory[i];
             talos_sot.set_com_ref(ref);
         }
-
         talos_sot.solve();
         auto cmd = compute_spd(global_robot->skeleton(), talos_sot.q());
         global_robot->set_commands(cmd);
         simu.step_world();
     }
 
-    global_robot.reset();
+    // global_robot.reset();
     return 0;
 }
