@@ -1,19 +1,13 @@
-#include <algorithm>
-#include <cstdlib>
 #include <iostream>
 
-#include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
-
-#include <dart/collision/fcl/FCLCollisionDetector.hpp>
-#include <dart/constraint/ConstraintSolver.hpp>
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
 
 #include "tsid_sot_talos.hpp"
-#include "trajectory-handler.hpp"
+#include "trajectory_handler.hpp"
 
 
 Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, Eigen::VectorXd targetpos)
@@ -64,25 +58,25 @@ int main()
     //////////////////// INIT DART ROBOT //////////////////////////////////////
     std::srand(std::time(NULL));
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
-    auto global_robot = std::make_shared<robot_dart::Robot>(params.urdf_path, packages);
-    global_robot->set_position_enforced(true);
-    // Set actuator types to VELOCITY motors so that they stay in position without any controller
-    global_robot->set_actuator_types(dart::dynamics::Joint::FORCE);
+    auto robot = std::make_shared<robot_dart::Robot>(params.urdf_path, packages);
+    robot->set_position_enforced(true);
+
+    robot->set_actuator_types(dart::dynamics::Joint::FORCE);
     // First 6-DOFs should always be FORCE if robot is floating base
     for (size_t i = 0; i < 6; i++)
-        global_robot->set_actuator_type(i, dart::dynamics::Joint::FORCE);
-    global_robot->set_positions(talos_sot.q0(), all_dofs);
+        robot->set_actuator_type(i, dart::dynamics::Joint::FORCE);
+    robot->set_positions(talos_sot.q0(), all_dofs);
 
     //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
     robot_dart::RobotDARTSimu simu(dt);
-    simu.world()->getConstraintSolver()->setCollisionDetector(dart::collision::FCLCollisionDetector::create());
+    simu.set_collision_detector("fcl");
 #ifdef GRAPHIC
     auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu);
     simu.set_graphics(graphics);
     graphics->look_at({0., 3.5, 2.}, {0., 0., 0.25});
     graphics->record_video("talos_squat.mp4");
 #endif
-    simu.add_robot(global_robot);
+    simu.add_robot(robot);
     simu.add_checkerboard_floor();
 
     //////////////////// DEFINE COM REFERENCES  //////////////////////////////////////
@@ -96,18 +90,18 @@ int main()
     tsid::math::Vector3 ref;
     //////////////////// PLAY SIMULATION //////////////////////////////////////
     int k = 0;
-    while (true) {
+    while (!simu.graphics()->done()) {
         ++k;
-        for (int i = 0; i < trajectory1.size(); i++)
+        for (int i = 0; i < trajectory1.size() && !simu.graphics()->done(); i++)
         {
             ref = (k % 2 == 0) ? trajectory1[i] : trajectory2[i];
             talos_sot.set_com_ref(ref);
             talos_sot.solve();
-            auto cmd = compute_spd(global_robot->skeleton(), talos_sot.q());
-            global_robot->set_commands(cmd);
+            auto cmd = compute_spd(robot->skeleton(), talos_sot.q());
+            robot->set_commands(cmd);
             simu.step_world();
         }
     }
-     global_robot.reset();
+
     return 0;
 }

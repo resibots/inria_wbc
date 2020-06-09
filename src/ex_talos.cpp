@@ -7,9 +7,6 @@
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robot.hpp>
 
-#include <dart/collision/fcl/FCLCollisionDetector.hpp>
-#include <dart/constraint/ConstraintSolver.hpp>
-
 #include "tsid_sot_talos.hpp"
 
 
@@ -37,7 +34,7 @@ int main()
     std::srand(std::time(NULL));
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto global_robot = std::make_shared<robot_dart::Robot>("talos/talos.urdf", packages);
-    global_robot->skeleton()->setPosition(5, 1.2);
+    global_robot->skeleton()->setPosition(5, 1.1);
     global_robot->skeleton()->setPosition(2, 1.57);
     global_robot->set_position_enforced(true);
     // Set actuator types to VELOCITY motors so that they stay in position without any controller
@@ -49,7 +46,8 @@ int main()
 
     //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
     robot_dart::RobotDARTSimu simu(dt);
-    simu.world()->getConstraintSolver()->setCollisionDetector(dart::collision::FCLCollisionDetector::create());
+    simu.set_collision_detector("fcl");
+
 #ifdef GRAPHIC
     auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu);
     simu.set_graphics(graphics);
