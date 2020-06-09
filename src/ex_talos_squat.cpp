@@ -6,7 +6,7 @@
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
 
-#include "tsid_sot_talos.hpp"
+#include "talos_pos_tracking.hpp"
 #include "trajectory_handler.hpp"
 
 
@@ -46,10 +46,10 @@ int main()
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
     float dt = 0.001;
     int duration = 20 / dt;
-    tsid_sot::Talos::Params params = {"../res/models/talos.urdf",
+    tsid_sot::TalosPosTracking::Params params = {"../res/models/talos.urdf",
                                           "../res/models/talos_configurations.srdf",
                                           dt};
-    auto talos_sot = tsid_sot::Talos(params, "../res/yaml/sot-squat.yaml", true);
+    auto talos_sot = tsid_sot::TalosPosTracking(params, "../res/yaml/sot-squat.yaml", true);
     auto all_dofs = talos_sot.all_dofs();
     auto controllable_dofs = talos_sot.controllable_dofs();
     uint ncontrollable = controllable_dofs.size();

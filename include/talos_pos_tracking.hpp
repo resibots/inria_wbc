@@ -6,6 +6,8 @@
 
 #include <tsid/math/fwd.hpp>
 #include <pinocchio/spatial/se3.hpp>
+
+// forward declaration to speed-up compilation
 namespace tsid {
     class InverseDynamicsFormulationAccForce;
     namespace trajectories {
@@ -32,7 +34,7 @@ namespace tsid {
 } // namespace tsid
 
 namespace tsid_sot {
-    class Talos {
+    class TalosPosTracking {
     public:
         struct Params {
             std::string urdf_path;
@@ -40,12 +42,9 @@ namespace tsid_sot {
             float dt;
         };
 
-        Talos(const Params& params, const std::string& sot_config_path = "", bool verbose = true);
-        ~Talos(){};
+        TalosPosTracking(const Params& params, const std::string& sot_config_path = "", bool verbose = true);
+        ~TalosPosTracking(){};
 
-        void parse_configuration_yaml(const std::string& sot_config_path);
-        void set_stack_configuration();
-        void init_references();
         bool solve();
 
         // Removes the universe and root (floating base) joint names
@@ -70,6 +69,10 @@ namespace tsid_sot {
         void set_com_ref(const tsid::math::Vector3& ref);
 
     private:
+        void parse_configuration_yaml(const std::string& sot_config_path);
+        void set_stack_configuration();
+        void init_references();
+
         // TALOS CONFIG
         double lxp_ = 0.1; // foot length in positive x direction
         double lxn_ = 0.11; // foot length in negative x direction

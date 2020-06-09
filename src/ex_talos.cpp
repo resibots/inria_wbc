@@ -7,7 +7,7 @@
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robot.hpp>
 
-#include "tsid_sot_talos.hpp"
+#include "talos_pos_tracking.hpp"
 
 
 #ifdef GRAPHIC
@@ -21,10 +21,10 @@ int main()
     float dt = 0.001;
     int duration = 20 / dt;
     float arm_speed = 0.05;
-    tsid_sot::Talos::Params params = {"../res/models/talos.urdf",
+    tsid_sot::TalosPosTracking::Params params = {"../res/models/talos.urdf",
                                           "../res/models/talos_configurations.srdf",
                                           dt};
-    auto talos_sot = tsid_sot::Talos(params, "../res/yaml/sot.yaml", true);
+    auto talos_sot = tsid_sot::TalosPosTracking(params, "../res/yaml/sot.yaml", true);
     auto all_dofs = talos_sot.all_dofs();
     auto controllable_dofs = talos_sot.controllable_dofs();
     uint ncontrollable = controllable_dofs.size();

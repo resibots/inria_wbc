@@ -36,7 +36,7 @@
 #include <tsid/robots/robot-wrapper.hpp>
 
 
-#include "tsid_sot_talos.hpp"
+#include "talos_pos_tracking.hpp"
 
 using namespace tsid;
 using namespace tsid::trajectories;
@@ -49,7 +49,7 @@ using namespace std;
 
 namespace tsid_sot
 {
-    Talos::Talos(const Params &params, const std::string &sot_config_path, bool verbose)
+    TalosPosTracking::TalosPosTracking(const Params &params, const std::string &sot_config_path, bool verbose)
     {
       dt_ = params.dt;
       verbose_ = verbose;
@@ -93,7 +93,7 @@ namespace tsid_sot
     }
 
 
-    void Talos::parse_configuration_yaml(const std::string &sot_config_path)
+    void TalosPosTracking::parse_configuration_yaml(const std::string &sot_config_path)
     {
       std::ifstream yamlConfigFile(sot_config_path);
       if (!yamlConfigFile.good())
@@ -131,7 +131,7 @@ namespace tsid_sot
       }
     }
 
-    void Talos::set_stack_configuration()
+    void TalosPosTracking::set_stack_configuration()
     {
       ////////////////////Gather Initial Pose //////////////////////////////////////
       q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
@@ -257,7 +257,7 @@ namespace tsid_sot
       tsid_->addMotionTask(*bounds_task_, w_velocity_, 0); //add pos vel acc bounds
     }
 
-    void Talos::init_references()
+    void TalosPosTracking::init_references()
     {
       com_init_ = robot_->com(tsid_->data());
       posture_init_ = q_tsid_.tail(robot_->na());
@@ -300,7 +300,7 @@ namespace tsid_sot
       rh_task_->setReference(sample_rh_);
     }
 
-    bool Talos::solve()
+    bool TalosPosTracking::solve()
     {
       //Compute the current data from the current position and solve to find next position
       const HQPData &HQPData = tsid_->computeProblemData(t_, q_tsid_, v_tsid_);
@@ -336,14 +336,14 @@ namespace tsid_sot
     }
 
     // Removes the universe and root (floating base) joint names
-    std::vector<std::string> Talos::controllable_dofs()
+    std::vector<std::string> TalosPosTracking::controllable_dofs()
     {
       auto na = robot_->model().names;
       return std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
     }
 
     // Order of the floating base in q_ according to dart naming convention
-    std::vector<std::string> Talos::floating_base_dofs()
+    std::vector<std::string> TalosPosTracking::floating_base_dofs()
     {
       std::vector<std::string> floating_base_dofs = {"reference_pos_x",
                                                      "reference_pos_y",
@@ -354,7 +354,7 @@ namespace tsid_sot
       return floating_base_dofs;
     }
 
-    std::vector<std::string> Talos::all_dofs()
+    std::vector<std::string> TalosPosTracking::all_dofs()
     {
       std::vector<std::string> all_dofs = floating_base_dofs();
       std::vector<std::string> control_dofs = controllable_dofs();
@@ -363,7 +363,7 @@ namespace tsid_sot
     }
 
     //Left hand trajectory control
-    void Talos::add_to_lh_ref(float delta_x, float delta_y, float delta_z)
+    void TalosPosTracking::add_to_lh_ref(float delta_x, float delta_y, float delta_z)
     {
       lh_ref_.translation()(0) += delta_x;
       lh_ref_.translation()(1) += delta_y;
@@ -374,7 +374,7 @@ namespace tsid_sot
     }
 
 
-    void Talos::set_com_ref(const Vector3& ref)
+    void TalosPosTracking::set_com_ref(const Vector3& ref)
     {
       traj_com_->setReference(ref);
       TrajectorySample sample_com_ = traj_com_->computeNext();
