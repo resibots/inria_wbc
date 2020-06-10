@@ -16,20 +16,6 @@
 
 int main()
 {
-
-    //////////////////// INIT STACK OF TASK //////////////////////////////////////
-    float dt = 0.001;
-    int duration = 20 / dt;
-    float arm_speed = 0.05;
-    tsid_sot::TalosPosTracking::Params params = {"../res/models/talos.urdf",
-                                          "../res/models/talos_configurations.srdf",
-                                          dt};
-    auto talos_sot = tsid_sot::TalosPosTracking(params, "../res/yaml/sot.yaml", true);
-    auto all_dofs = talos_sot.all_dofs();
-    auto controllable_dofs = talos_sot.controllable_dofs();
-    uint ncontrollable = controllable_dofs.size();
-    Eigen::VectorXd cmd = Eigen::VectorXd::Zero(ncontrollable);
-
     //////////////////// INIT DART ROBOT //////////////////////////////////////
     std::srand(std::time(NULL));
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
@@ -42,6 +28,20 @@ int main()
     // First 6-DOFs should always be FORCE if robot is floating base
     for (size_t i = 0; i < 6; i++)
         global_robot->set_actuator_type(i, dart::dynamics::Joint::FORCE);
+
+    //////////////////// INIT STACK OF TASK //////////////////////////////////////
+    float dt = 0.001;
+    int duration = 20 / dt;
+    float arm_speed = 0.05;
+    tsid_sot::TalosPosTracking::Params params = {global_robot->model_filename(),
+                                                 "../res/models/talos_configurations.srdf",
+                                                 dt};
+    auto talos_sot = tsid_sot::TalosPosTracking(params, "../res/yaml/sot.yaml");
+    auto all_dofs = talos_sot.all_dofs();
+    auto controllable_dofs = talos_sot.controllable_dofs();
+    uint ncontrollable = controllable_dofs.size();
+    Eigen::VectorXd cmd = Eigen::VectorXd::Zero(ncontrollable);
+
     global_robot->set_positions(talos_sot.q0(), all_dofs);
 
     //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////

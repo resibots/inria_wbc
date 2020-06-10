@@ -49,20 +49,25 @@ using namespace std;
 
 namespace tsid_sot
 {
-    TalosPosTracking::TalosPosTracking(const Params &params, const std::string &sot_config_path, bool verbose)
+    TalosPosTracking::TalosPosTracking(const Params &params, const std::string &sot_config_path, const std::string& fb_joint_name, bool verbose)
     {
       dt_ = params.dt;
       verbose_ = verbose;
       t_ = 0.0;
 
       pinocchio::Model robot_model;
-      pinocchio::urdf::buildModel(params.urdf_path, robot_model, false); //allows to parse the floating base joint which is in the urdf
+      if(!fb_joint_name.empty())
+      {
+        fb_joint_name_ = fb_joint_name;//floating base joint already in urdf
+        pinocchio::urdf::buildModel(params.urdf_path, robot_model, false);
+      }
+      else
+      {
+        pinocchio::urdf::buildModel(params.urdf_path, pinocchio::JointModelFreeFlyer(), robot_model, false); 
+        fb_joint_name_ = "root_joint";
+      }
       robot_ = std::make_shared<RobotWrapper>(robot_model, false);
       pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, false); //the srdf contains initial joint positions
-
-      //if your urdf doesn't have a floating base link use this :
-      // std::vector<std::string> p = {""};
-      // robot_ = std::make_shared<RobotWrapper>(params.urdf_path, p, pinocchio::JointModelFreeFlyer(), true);
 
       uint nactuated = robot_->na();
       uint ndofs = robot_->nv(); // na + 6 (floating base)
@@ -194,7 +199,7 @@ namespace tsid_sot
       tsid_->addMotionTask(*posture_task_, w_posture_, 1);
 
       ////////// Add the floatingb task
-      floatingb_task_ = std::make_shared<TaskSE3Equality>("task-floatingb", *robot_, "reference");
+      floatingb_task_ = std::make_shared<TaskSE3Equality>("task-floatingb", *robot_, fb_joint_name_);
       floatingb_task_->Kp(kp_floatingb_ * Vector::Ones(6));
       floatingb_task_->Kd(2.0 * floatingb_task_->Kp().cwiseSqrt());
       Vector mask_floatingb = Vector::Ones(6);
@@ -261,7 +266,7 @@ namespace tsid_sot
     {
       com_init_ = robot_->com(tsid_->data());
       posture_init_ = q_tsid_.tail(robot_->na());
-      floatingb_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("reference"));
+      floatingb_init_ = robot_->position(tsid_->data(), robot_->model().getJointId(fb_joint_name_));
       lf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_left_6_joint"));
       rf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
       lh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("arm_left_6_joint"));
@@ -345,12 +350,27 @@ namespace tsid_sot
     // Order of the floating base in q_ according to dart naming convention
     std::vector<std::string> TalosPosTracking::floating_base_dofs()
     {
-      std::vector<std::string> floating_base_dofs = {"reference_pos_x",
-                                                     "reference_pos_y",
-                                                     "reference_pos_z",
-                                                     "reference_rot_x",
-                                                     "reference_rot_y",
-                                                     "reference_rot_z"};
+      std::vector<std::string> floating_base_dofs;
+      if(fb_joint_name_=="root_joint")
+      {
+        floating_base_dofs = {"rootJoint_pos_x",
+                              "rootJoint_pos_y",
+                              "rootJoint_pos_z",
+                              "rootJoint_rot_x",
+                              "rootJoint_rot_y",
+                              "rootJoint_rot_z"};
+
+      }
+      else{
+        floating_base_dofs = {fb_joint_name_+"_pos_x",
+                              fb_joint_name_+"_pos_y",
+                              fb_joint_name_+"_pos_z",
+                              fb_joint_name_+"_rot_x",
+                              fb_joint_name_+"_rot_y",
+                              fb_joint_name_+"_rot_z"};
+
+      }
+      
       return floating_base_dofs;
     }
 

@@ -49,7 +49,7 @@ int main()
     tsid_sot::TalosPosTracking::Params params = {"../res/models/talos.urdf",
                                           "../res/models/talos_configurations.srdf",
                                           dt};
-    auto talos_sot = tsid_sot::TalosPosTracking(params, "../res/yaml/sot-squat.yaml", true);
+    auto talos_sot = tsid_sot::TalosPosTracking(params, "../res/yaml/sot-squat.yaml","reference");
     auto all_dofs = talos_sot.all_dofs();
     auto controllable_dofs = talos_sot.controllable_dofs();
     uint ncontrollable = controllable_dofs.size();

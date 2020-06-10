@@ -42,7 +42,7 @@ namespace tsid_sot {
             float dt;
         };
 
-        TalosPosTracking(const Params& params, const std::string& sot_config_path = "", bool verbose = true);
+        TalosPosTracking(const Params& params, const std::string& sot_config_path = "", const std::string& fb_joint_name ="", bool verbose = true);
         ~TalosPosTracking(){};
 
         bool solve();
@@ -108,6 +108,7 @@ namespace tsid_sot {
         bool verbose_;
 
         double t_;
+        std::string fb_joint_name_;//name of the floating base joint
 
         tsid::math::Vector q_tsid_; // tsid joint positions
         tsid::math::Vector v_tsid_; // tsid joint velocities
