@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <robot name="talos">
     <group_state name="pal_start" group="all">
-        <joint name="reference" value="0. 0. 1.05 0. 0. 0.707 0.707" />
+        <joint name="root_joint" value="0. 0. 1.05 0. 0. 0.707 0.707" />
         <joint name="arm_left_1_joint" value="0.4" />
         <joint name="arm_left_2_joint" value="0.24" />
         <joint name="arm_left_3_joint" value="-0.6" />
@@ -32,5 +32,20 @@
         <joint name="leg_right_6_joint" value="-0.0" />
         <joint name="torso_1_joint" value="0" />
         <joint name="torso_2_joint" value="0.05" />
+        <joint name="gripper_left_inner_double_joint" value="0" />
+        <joint name="gripper_left_fingertip_1_joint" value="0" />
+        <joint name="gripper_left_fingertip_2_joint" value="0" />
+        <joint name="gripper_left_inner_single_joint" value="0" />
+        <joint name="gripper_left_fingertip_3_joint" value="0" />
+        <joint name="gripper_left_joint" value="0" />
+        <joint name="gripper_left_motor_single_joint" value="0" />
+        <joint name="gripper_right_inner_double_joint" value="0" />
+        <joint name="gripper_right_fingertip_1_joint" value="0" />
+        <joint name="gripper_right_fingertip_2_joint" value="0" />
+        <joint name="gripper_right_inner_single_joint" value="0" />
+        <joint name="gripper_right_fingertip_3_joint" value="0" />
+        <joint name="gripper_right_joint" value="0" />
+        <joint name="gripper_right_motor_single_joint" value="0" />
+
     </group_state>
 </robot>

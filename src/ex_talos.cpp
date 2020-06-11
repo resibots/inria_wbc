@@ -9,7 +9,6 @@
 
 #include "talos_pos_tracking.hpp"
 
-
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
@@ -20,8 +19,6 @@ int main()
     std::srand(std::time(NULL));
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto global_robot = std::make_shared<robot_dart::Robot>("talos/talos.urdf", packages);
-    global_robot->skeleton()->setPosition(5, 1.1);
-    global_robot->skeleton()->setPosition(2, 1.57);
     global_robot->set_position_enforced(true);
     // Set actuator types to VELOCITY motors so that they stay in position without any controller
     global_robot->set_actuator_types(dart::dynamics::Joint::VELOCITY);
@@ -36,12 +33,11 @@ int main()
     tsid_sot::TalosPosTracking::Params params = {global_robot->model_filename(),
                                                  "../res/models/talos_configurations.srdf",
                                                  dt};
-    auto talos_sot = tsid_sot::TalosPosTracking(params, "../res/yaml/sot.yaml");
+    auto talos_sot = tsid_sot::TalosPosTracking(params, "../res/yaml/sot.yaml", "", global_robot->mimic_dof_names());
     auto all_dofs = talos_sot.all_dofs();
     auto controllable_dofs = talos_sot.controllable_dofs();
     uint ncontrollable = controllable_dofs.size();
     Eigen::VectorXd cmd = Eigen::VectorXd::Zero(ncontrollable);
-
     global_robot->set_positions(talos_sot.q0(), all_dofs);
 
     //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////

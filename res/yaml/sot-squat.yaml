@@ -3,7 +3,7 @@ SOT:
   w_posture_: 0.75
   w_forceRef_feet_: 1e-3
   w_forceRef_hands_: 1e-3
-  w_waist_: 1000.0
+  w_floatingb_: 1000.0
   w_rh_: 1.0
   w_lh_: 1.0
   w_rf_: 1.0

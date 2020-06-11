@@ -10,7 +10,7 @@
 
 #include <cstdlib>
 #include <yaml-cpp/yaml.h>
-
+#include <unordered_set>
 // To convert quaternions to euler angles
 // source https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
 struct Quaternion
@@ -61,6 +61,34 @@ void parse(type &parameter, std::string parameterName, YAML::Node &config, bool 
     if (verbose)
       std::cout << "Parameter " << parameterName << " found : " << parameter << std::endl;
   }
+}
+
+template <typename T>
+std::vector<T> remove_intersection(const std::vector<T> &vec, const std::vector<T> &b)
+{
+  std::vector<T> a = vec;
+  std::unordered_multiset<T> st;
+  st.insert(a.begin(), a.end());
+  st.insert(b.begin(), b.end());
+  auto predicate = [&st](const T &k) { return st.count(k) > 1; };
+  a.erase(std::remove_if(a.begin(), a.end(), predicate), a.end());
+  return a;
+}
+
+Eigen::VectorXd slice_vec(const Eigen::VectorXd &vec, const std::vector<int> &indexes)
+{
+  Eigen::VectorXd filtered(indexes.size());
+  uint k = 0;
+  for (uint i = 0; i < vec.size(); i++)
+  {
+    auto it = std::find(indexes.begin(), indexes.end(), i);
+    if (it != indexes.end())
+    {
+      filtered(k) = vec(i);
+      k++;
+    }
+  }
+  return filtered;
 }
 
 #endif

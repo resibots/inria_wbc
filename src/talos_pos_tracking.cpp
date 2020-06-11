@@ -13,6 +13,8 @@
 #include "string"
 #include "vector"
 #include "utils.hpp"
+#include <unordered_map>
+
 
 #include <tsid/contacts/contact-6d.hpp>
 #include <tsid/contacts/contact-point.hpp>
@@ -23,6 +25,7 @@
 #include <tsid/tasks/task-actuation-bounds.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
+#include <tsid/trajectories/trajectory-base.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
 #include <tsid/solvers/solver-HQP-factory.hxx>
@@ -49,7 +52,11 @@ using namespace std;
 
 namespace tsid_sot
 {
-    TalosPosTracking::TalosPosTracking(const Params &params, const std::string &sot_config_path, const std::string& fb_joint_name, bool verbose)
+    TalosPosTracking::TalosPosTracking(const Params &params, 
+                                       const std::string &sot_config_path, 
+                                       const std::string& fb_joint_name, 
+                                       const std::vector<std::string> &mimic_joint_names, 
+                                       bool verbose)
     {
       dt_ = params.dt;
       verbose_ = verbose;
@@ -59,15 +66,15 @@ namespace tsid_sot
       if(!fb_joint_name.empty())
       {
         fb_joint_name_ = fb_joint_name;//floating base joint already in urdf
-        pinocchio::urdf::buildModel(params.urdf_path, robot_model, false);
+        pinocchio::urdf::buildModel(params.urdf_path, robot_model, verbose_);
       }
       else
       {
-        pinocchio::urdf::buildModel(params.urdf_path, pinocchio::JointModelFreeFlyer(), robot_model, false); 
+        pinocchio::urdf::buildModel(params.urdf_path, pinocchio::JointModelFreeFlyer(), robot_model, verbose_); 
         fb_joint_name_ = "root_joint";
       }
-      robot_ = std::make_shared<RobotWrapper>(robot_model, false);
-      pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, false); //the srdf contains initial joint positions
+      robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
+      pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, verbose_); //the srdf contains initial joint positions
 
       uint nactuated = robot_->na();
       uint ndofs = robot_->nv(); // na + 6 (floating base)
@@ -93,10 +100,41 @@ namespace tsid_sot
       if (!sot_config_path.empty())
         parse_configuration_yaml(sot_config_path);
 
+      mimic_joint_names_ = mimic_joint_names;    
+      tsid_joint_names_ = all_dofs(false);
+      non_mimic_indexes_ = get_non_mimics_indexes();
+
       set_stack_configuration();
       init_references();
     }
 
+
+    std::vector<int> TalosPosTracking::get_non_mimics_indexes()
+    {
+      std::vector<int> non_mimic_indexes;
+      std::vector<int> mimic_indexes;
+      if(!mimic_joint_names_.empty())
+      {
+        for (auto &m : mimic_joint_names_)
+        {
+          auto it = std::find(tsid_joint_names_.begin(), tsid_joint_names_.end(), m);
+          assert(it!=tsid_joint_names_.end());
+          mimic_indexes.push_back(std::distance(tsid_joint_names_.begin(), it));
+        }
+        for (int i = 0; i < q_.size(); i++)
+        {
+          auto it = std::find(mimic_indexes.begin(), mimic_indexes.end(), i);
+          if (it == mimic_indexes.end())
+            non_mimic_indexes.push_back(i);
+        }
+      }
+      else
+      {
+        non_mimic_indexes.resize(q_.size());
+        std::generate(non_mimic_indexes.begin(), non_mimic_indexes.end(), [n = 0]() mutable { return n++; });
+      }
+      return non_mimic_indexes;
+    }
 
     void TalosPosTracking::parse_configuration_yaml(const std::string &sot_config_path)
     {
@@ -211,7 +249,7 @@ namespace tsid_sot
       tsid_->addMotionTask(*floatingb_task_, w_floatingb_, 1);
 
       ////////// Add the left hand  task
-      lh_task_ = std::make_shared<TaskSE3Equality>("task-lh", *robot_, "arm_left_6_joint");
+      lh_task_ = std::make_shared<TaskSE3Equality>("task-lh", *robot_, "gripper_left_joint");
       lh_task_->Kp(kp_lh_ * Vector::Ones(6));
       lh_task_->Kd(2.0 * lh_task_->Kp().cwiseSqrt());
       Vector mask_lh = Vector::Ones(6);
@@ -223,7 +261,7 @@ namespace tsid_sot
       tsid_->addMotionTask(*lh_task_, w_lh_, 1);
 
       ////////// Add the right hand task
-      rh_task_ = std::make_shared<TaskSE3Equality>("task-rh", *robot_, "arm_right_6_joint");
+      rh_task_ = std::make_shared<TaskSE3Equality>("task-rh", *robot_, "gripper_right_joint");
       rh_task_->Kp(kp_rh_ * Vector::Ones(6));
       rh_task_->Kd(2.0 * rh_task_->Kp().cwiseSqrt());
       Vector mask_rh = Vector::Ones(6);
@@ -251,7 +289,7 @@ namespace tsid_sot
       tsid_->addMotionTask(*rf_task_, w_rf_, 1);
 
       ////////// Add the position, velocity and acceleration limits
-      bounds_task_ = std::make_shared<TaskJointPosVelAccBounds>("task-posVelAcc-bounds", *robot_, dt_);
+      bounds_task_ = std::make_shared<TaskJointPosVelAccBounds>("task-posVelAcc-bounds", *robot_, dt_, verbose_);
       dq_max_ = robot_->model().velocityLimit.tail(robot_->na());
       ddq_max_ = dq_max_ / dt_;
       bounds_task_->setVelocityBounds(dq_max_);
@@ -269,8 +307,8 @@ namespace tsid_sot
       floatingb_init_ = robot_->position(tsid_->data(), robot_->model().getJointId(fb_joint_name_));
       lf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_left_6_joint"));
       rf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
-      lh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("arm_left_6_joint"));
-      rh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("arm_right_6_joint"));
+      lh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_left_joint"));
+      rh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_right_joint"));
 
       com_ref_ = com_init_;
       posture_ref_ = posture_init_;
@@ -303,6 +341,8 @@ namespace tsid_sot
       rf_task_->setReference(sample_rf_);
       lh_task_->setReference(sample_lh_);
       rh_task_->setReference(sample_rh_);
+
+      set_task_traj_map();
     }
 
     bool TalosPosTracking::solve()
@@ -341,10 +381,14 @@ namespace tsid_sot
     }
 
     // Removes the universe and root (floating base) joint names
-    std::vector<std::string> TalosPosTracking::controllable_dofs()
+    std::vector<std::string> TalosPosTracking::controllable_dofs(bool filter_mimics)
     {
       auto na = robot_->model().names;
-      return std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
+      auto tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
+      if(filter_mimics)
+        return remove_intersection(tsid_controllables, mimic_joint_names_);
+      else
+        return tsid_controllables;
     }
 
     // Order of the floating base in q_ according to dart naming convention
@@ -374,12 +418,15 @@ namespace tsid_sot
       return floating_base_dofs;
     }
 
-    std::vector<std::string> TalosPosTracking::all_dofs()
+    std::vector<std::string> TalosPosTracking::all_dofs(bool filter_mimics)
     {
       std::vector<std::string> all_dofs = floating_base_dofs();
-      std::vector<std::string> control_dofs = controllable_dofs();
+      std::vector<std::string> control_dofs = controllable_dofs(filter_mimics);
       all_dofs.insert(all_dofs.end(), control_dofs.begin(), control_dofs.end());
-      return all_dofs;
+      if(filter_mimics)
+        return remove_intersection(all_dofs, mimic_joint_names_);
+      else
+        return all_dofs;
     }
 
     //Left hand trajectory control
@@ -393,12 +440,86 @@ namespace tsid_sot
       lh_task_->setReference(sample_lh_);
     }
 
-
     void TalosPosTracking::set_com_ref(const Vector3& ref)
     {
       traj_com_->setReference(ref);
       TrajectorySample sample_com_ = traj_com_->computeNext();
       com_task_->setReference(sample_com_);
     }
+
+    Eigen::VectorXd TalosPosTracking::dq(bool filter_mimics)
+    {
+      if(filter_mimics)
+        return slice_vec(dq_,non_mimic_indexes_);
+      else
+        return dq_;
+    }
+
+    Eigen::VectorXd TalosPosTracking::q(bool filter_mimics)
+    {
+      if(filter_mimics)
+        return slice_vec(q_,non_mimic_indexes_);
+      else
+        return q_;
+    }
+
+    Eigen::VectorXd TalosPosTracking::q0(bool filter_mimics)
+    {
+      if(filter_mimics)
+        return slice_vec(q0_,non_mimic_indexes_);
+      else
+        return q0_;
+    }
+
+    Eigen::VectorXd TalosPosTracking::filter_cmd(const Eigen::VectorXd& cmd)
+    {
+      return slice_vec(cmd,non_mimic_indexes_);
+    }
+
+    void TalosPosTracking::set_task_traj_map()
+    {
+      TaskTrajReferenceVector3 com = {.task = com_task_, .ref = com_init_, .traj = traj_com_};
+      task_traj_map_["com"] = com;
+      TaskTrajReferenceSE3 lh = {.task = lh_task_, .ref = lh_init_, .traj = traj_lh_};
+      task_traj_map_["lh"] = lh;
+      TaskTrajReferenceSE3 rh = {.task = rh_task_, .ref = rh_init_, .traj = traj_rh_};
+      task_traj_map_["rh"] = rh;
+    }
+
+    // template <typename ReferenceType>
+    // void TalosPosTracking::set_ref(ReferenceType ref, std::string task_name)
+    // {
+    //   auto it = task_traj_map_.find(task_name);
+    //   assert(it!= task_traj_map_.end());
+     
+    //   auto task_traj = it->second;
+    //   if (TaskTrajReferenceVector3* task_traj_vector3 = boost::get<TaskTrajReferenceVector3>(&task_traj))
+    //   {
+    //     task_traj_vector3->ref = ref;
+    //     task_traj_vector3->traj->setReference(task_traj_vector3->ref);
+    //     TrajectorySample sample = task_traj_vector3->traj->computeNext();
+    //     task_traj_vector3->task->setReference(sample);
+    //   }
+    //   else if (TaskTrajReferenceSE3* task_traj_se3 = boost::get<TaskTrajReferenceSE3>(&task_traj))
+    //   {
+    //     task_traj_se3->ref = ref;
+    //     task_traj_se3->traj->setReference(task_traj_se3->ref);
+    //     TrajectorySample sample = task_traj_se3->traj->computeNext();
+    //     task_traj_se3->task->setReference(sample);
+    //   }
+    //   // boost::apply_visitor(task_visitor(), task_traj);
+    // }
+
+    // struct task_visitor : boost::static_visitor<>
+    // {
+    //   template <typename TaskTrajReference>
+    //   void operator()(TaskTrajReference &task_traj) const
+    //   {
+    //     task_traj.traj->setReference(task_traj.ref);
+    //     task_traj.traj_samp = task_traj.traj->computeNext();
+    //     task_traj.task->setReference(task_traj.traj_samp);
+    //   }
+    // };
+
 
 } // namespace tsid_sot
