@@ -486,40 +486,6 @@ namespace tsid_sot
       task_traj_map_["rh"] = rh;
     }
 
-    // template <typename ReferenceType>
-    // void TalosPosTracking::set_ref(ReferenceType ref, std::string task_name)
-    // {
-    //   auto it = task_traj_map_.find(task_name);
-    //   assert(it!= task_traj_map_.end());
-     
-    //   auto task_traj = it->second;
-    //   if (TaskTrajReferenceVector3* task_traj_vector3 = boost::get<TaskTrajReferenceVector3>(&task_traj))
-    //   {
-    //     task_traj_vector3->ref = ref;
-    //     task_traj_vector3->traj->setReference(task_traj_vector3->ref);
-    //     TrajectorySample sample = task_traj_vector3->traj->computeNext();
-    //     task_traj_vector3->task->setReference(sample);
-    //   }
-    //   else if (TaskTrajReferenceSE3* task_traj_se3 = boost::get<TaskTrajReferenceSE3>(&task_traj))
-    //   {
-    //     task_traj_se3->ref = ref;
-    //     task_traj_se3->traj->setReference(task_traj_se3->ref);
-    //     TrajectorySample sample = task_traj_se3->traj->computeNext();
-    //     task_traj_se3->task->setReference(sample);
-    //   }
-    //   // boost::apply_visitor(task_visitor(), task_traj);
-    // }
-
-    // struct task_visitor : boost::static_visitor<>
-    // {
-    //   template <typename TaskTrajReference>
-    //   void operator()(TaskTrajReference &task_traj) const
-    //   {
-    //     task_traj.traj->setReference(task_traj.ref);
-    //     task_traj.traj_samp = task_traj.traj->computeNext();
-    //     task_traj.task->setReference(task_traj.traj_samp);
-    //   }
-    // };
 
 
 } // namespace tsid_sot

@@ -48,12 +48,9 @@ int main()
     robot->set_position_enforced(true);
     robot->set_actuator_types(dart::dynamics::Joint::FORCE);
     // First 6-DOFs should always be FORCE if robot is floating base
-    for (size_t i = 0; i < 6; i++)
-        robot->set_actuator_type(i, dart::dynamics::Joint::FORCE);
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
     float dt = 0.001;
-    int duration = 20 / dt;
     tsid_sot::TalosPosTracking::Params params = {robot->model_filename(),
                                                  "../res/models/talos_configurations.srdf",
                                                  dt};
@@ -63,9 +60,6 @@ int main()
     uint ncontrollable = controllable_dofs.size();
     Eigen::VectorXd cmd = Eigen::VectorXd::Zero(ncontrollable);
     robot->set_positions(talos_sot.q0(), all_dofs);
-    for(auto &c : talos_sot.all_dofs(false)){
-        std::cout << c << std::endl;
-    }
 
     //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
     robot_dart::RobotDARTSimu simu(dt);
@@ -93,14 +87,13 @@ int main()
     while (!simu.graphics()->done())
     {
         ++k;
-        for (int i = 0; i < trajectory1.size() && !simu.graphics()->done(); i++)
+        for (uint i = 0; i < trajectory1.size() && !simu.graphics()->done(); i++)
         {
             ref = (k % 2 == 0) ? trajectory1[i] : trajectory2[i];
             talos_sot.set_com_ref(ref);
             talos_sot.solve();
-            auto cmd = compute_spd(robot->skeleton(), talos_sot.q());
+            auto cmd = compute_spd(robot->skeleton(), talos_sot.q(false));
             robot->set_commands(talos_sot.filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
-            // robot->set_commands(cmd);
             simu.step_world();
         }
     }

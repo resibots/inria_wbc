@@ -102,7 +102,7 @@ namespace tsid_sot {
             auto task_traj = it->second;
             boost::apply_visitor(TaskVisitor(), task_traj);
         }
-
+        
         class TaskVisitor : public boost::static_visitor<void>
         {
             public:        
