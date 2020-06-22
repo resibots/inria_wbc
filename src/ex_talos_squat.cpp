@@ -1,6 +1,7 @@
 #include <iostream>
-
+#include <chrono>
 #include <robot_dart/robot_dart_simu.hpp>
+#include <signal.h>
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
@@ -37,6 +38,11 @@ Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, Eigen::VectorXd t
     Eigen::VectorXd qddot = invM * (-robot->getCoriolisAndGravityForces() + p + d + robot->getConstraintForces());
     Eigen::VectorXd commands = p + d - Kd * qddot * robot->getTimeStep();
     return commands;
+}
+
+volatile sig_atomic_t stop;
+void stopsig(int signum) {
+    stop = 1;
 }
 
 int main()
@@ -82,21 +88,31 @@ int main()
     auto trajectory2 = trajectory_handler::compute_traj(com_final, com_init, dt, trajectory_duration);
     
     tsid::math::Vector3 ref;
+    std::chrono::high_resolution_clock::time_point timer_start_, timer_end_;
+    std::vector<double> timer_data;
+
     //////////////////// PLAY SIMULATION //////////////////////////////////////
     int k = 0;
-    while (!simu.graphics()->done())
+    signal(SIGINT, stopsig); // to stop the simulation loop
+    while (!stop)    
     {
         ++k;
-        for (uint i = 0; i < trajectory1.size() && !simu.graphics()->done(); i++)
+        for (uint i = 0; i < trajectory1.size() && !stop; i++)
         {
             ref = (k % 2 == 0) ? trajectory1[i] : trajectory2[i];
+            timer_start_ = std::chrono::high_resolution_clock::now();
             talos_sot.set_com_ref(ref);
             talos_sot.solve();
             auto cmd = compute_spd(robot->skeleton(), talos_sot.q(false));
             robot->set_commands(talos_sot.filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+            timer_end_ = std::chrono::high_resolution_clock::now();
+            auto t_diff =  std::chrono::duration_cast<std::chrono::microseconds>(timer_end_ - timer_start_).count();
+            timer_data.push_back(static_cast<double>(t_diff) / 1000000.0);
             simu.step_world();
         }
     }
 
+    double average = std::accumulate(timer_data.begin(), timer_data.end(), 0.0) / timer_data.size(); 
+    std::cout << "Average Loop Time " << average << " seconds" << std::endl;
     return 0;
 }

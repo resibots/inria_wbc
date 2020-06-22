@@ -31,17 +31,16 @@ add_executable(talos src/ex_talos.cpp src/talos_pos_tracking.cpp)
 target_link_libraries(talos PUBLIC ${DEPENDENCIES_LIBS})
 target_include_directories(talos  PUBLIC ${DEPENDENCIES_INCS})
 
+add_executable(talos_squat src/ex_talos_squat.cpp src/talos_pos_tracking.cpp)
+target_link_libraries(talos_squat PUBLIC ${DEPENDENCIES_LIBS})
+target_include_directories(talos_squat  PUBLIC ${DEPENDENCIES_INCS})
+
 if(RobotDART_Magnum_FOUND)
     list(APPEND DEPENDENCIES_LIBS RobotDART::Magnum)
     add_executable(talos_graphics src/ex_talos.cpp src/talos_pos_tracking.cpp)
     target_link_libraries(talos_graphics PUBLIC ${DEPENDENCIES_LIBS})
     target_include_directories(talos_graphics  PUBLIC ${DEPENDENCIES_INCS})
 endif()
-
-
-add_executable(talos_squat src/ex_talos_squat.cpp src/talos_pos_tracking.cpp)
-target_link_libraries(talos_squat PUBLIC ${DEPENDENCIES_LIBS})
-target_include_directories(talos_squat  PUBLIC ${DEPENDENCIES_INCS})
 
 if(RobotDART_Magnum_FOUND)
     list(APPEND DEPENDENCIES_LIBS RobotDART::Magnum)
