@@ -1,3 +1,5 @@
+#ifndef TRAJECTORY_HANDLER_HPP
+#define TRAJECTORY_HANDLER_HPP
 #include <cassert>
 #define assertm(exp, msg) assert(((void)msg, exp))
 namespace trajectory_handler
@@ -42,4 +44,5 @@ namespace trajectory_handler
         return trajectory;
     }
 
-}; // namespace trajectory_handler
+} // namespace trajectory_handler
+#endif

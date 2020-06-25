@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-project(tsid_talos_dart)
+project(tsid_controllers)
 
 option(BUILD_GRAPHICS "Build  graphics" ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128")
@@ -27,24 +27,46 @@ list(APPEND DEPENDENCIES_INCS
                     ${CMAKE_SOURCE_DIR}/include
 )
 
-add_executable(talos src/ex_talos.cpp src/talos_pos_tracking.cpp)
-target_link_libraries(talos PUBLIC ${DEPENDENCIES_LIBS})
-target_include_directories(talos  PUBLIC ${DEPENDENCIES_INCS})
 
-add_executable(talos_squat src/ex_talos_squat.cpp src/talos_pos_tracking.cpp)
-target_link_libraries(talos_squat PUBLIC ${DEPENDENCIES_LIBS})
-target_include_directories(talos_squat  PUBLIC ${DEPENDENCIES_INCS})
+set(TSID_CONTROLLERS_HEADERS
+                    include/controllers/talos_base_controller.hpp
+                    include/controllers/talos_pos_tracking.hpp
+                    include/examples/factory.hpp
+                    include/examples/talos_squat.hpp
+                    include/utils/trajectory_handler.hpp
+                    include/utils/utils.hpp
+)
+
+set(TSID_CONTROLLERS_SOURCES
+                    src/controllers/talos_base_controller.cpp
+                    src/controllers/talos_pos_tracking.cpp
+                    src/examples/talos_squat.cpp
+
+)
+
+add_library(tsid_controllers SHARED
+                    ${TSID_CONTROLLERS_HEADERS}
+                    ${TSID_CONTROLLERS_SOURCES}
+)
+
+
+target_link_libraries(tsid_controllers PUBLIC ${DEPENDENCIES_LIBS})
+
+target_include_directories(tsid_controllers
+                                PUBLIC
+                                $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/build/include>
+                                $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+                                $<INSTALL_INTERFACE:include>
+                                ${DEPENDENCIES_INCS}
+)
+
+
+
+add_executable(test-controller src/robot_dart/test_controller.cpp)
+target_link_libraries(test-controller PUBLIC tsid_controllers)
 
 if(RobotDART_Magnum_FOUND)
-    list(APPEND DEPENDENCIES_LIBS RobotDART::Magnum)
-    add_executable(talos_graphics src/ex_talos.cpp src/talos_pos_tracking.cpp)
-    target_link_libraries(talos_graphics PUBLIC ${DEPENDENCIES_LIBS})
-    target_include_directories(talos_graphics  PUBLIC ${DEPENDENCIES_INCS})
+    add_executable(test-controller-graphics src/robot_dart/test_controller.cpp)
+    target_link_libraries(test-controller-graphics PUBLIC tsid_controllers RobotDART::Magnum)
 endif()
 
-if(RobotDART_Magnum_FOUND)
-    list(APPEND DEPENDENCIES_LIBS RobotDART::Magnum)
-    add_executable(talos_squat_graphics src/ex_talos_squat.cpp src/talos_pos_tracking.cpp)
-    target_link_libraries(talos_squat_graphics PUBLIC ${DEPENDENCIES_LIBS})
-    target_include_directories(talos_squat_graphics  PUBLIC ${DEPENDENCIES_INCS})
-endif()
