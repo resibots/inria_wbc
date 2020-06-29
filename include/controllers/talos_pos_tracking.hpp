@@ -31,6 +31,7 @@ namespace tsid_sot
             // Left hand trajectory control
             void add_to_lh_ref(float delta_x, float delta_y, float delta_z);
             void set_com_ref(const tsid::math::Vector3 &ref);
+            void set_lh_ref(const pinocchio::SE3 &ref);
 
         private:
             void parse_configuration_yaml(const std::string &sot_config_path);
@@ -49,7 +50,7 @@ namespace tsid_sot
             std::string rf_frame_name_ = "leg_right_6_joint";                  // right foot joint name
             std::string lf_frame_name_ = "leg_left_6_joint";                   // left foot joint name
             tsid::math::Vector3 contactNormal_ = tsid::math::Vector3::UnitZ(); // direction of the normal to the contact surface
-            double w_com_ = 1.0;                                               //  weight of center of mass task
+            double w_com_ = 10.0;                                               //  weight of center of mass task
             double w_posture_ = 0.75;                                          //  weight of joint posture task
             double w_forceRef_feet_ = 1e-3;                                    //# weight of force regularization task
             double w_forceRef_hands_ = 1e-3;                                   //# weight of force regularization task

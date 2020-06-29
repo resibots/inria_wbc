@@ -33,6 +33,7 @@ set(TSID_CONTROLLERS_HEADERS
                     include/controllers/talos_pos_tracking.hpp
                     include/examples/factory.hpp
                     include/examples/talos_squat.hpp
+                    include/examples/talos_move_arm.hpp
                     include/utils/trajectory_handler.hpp
                     include/utils/utils.hpp
 )
@@ -41,6 +42,8 @@ set(TSID_CONTROLLERS_SOURCES
                     src/controllers/talos_base_controller.cpp
                     src/controllers/talos_pos_tracking.cpp
                     src/examples/talos_squat.cpp
+                    src/examples/talos_move_arm.cpp
+
 
 )
 

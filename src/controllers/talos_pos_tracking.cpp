@@ -277,6 +277,13 @@ namespace tsid_sot
       com_task_->setReference(sample_com_);
     }
 
+    void TalosPosTracking::set_lh_ref(const pinocchio::SE3 &ref)
+    {
+      traj_lh_->setReference(ref);
+      TrajectorySample sample_lh_ = traj_lh_->computeNext();
+      lh_task_->setReference(sample_lh_);
+    }
+
     void TalosPosTracking::set_task_traj_map()
     {
       TaskTrajReferenceVector3 com = {.task = com_task_, .ref = com_init_, .traj = traj_com_};

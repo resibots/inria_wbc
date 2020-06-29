@@ -1,7 +1,6 @@
 #ifndef TALOS_FACTORY_HPP
 #define TALOS_FACTORY_HPP
 #include "controllers/talos_base_controller.hpp"
-// #include "examples/talos_squat.hpp"
 
 namespace tsid_sot
 {
@@ -65,22 +64,37 @@ namespace tsid_sot
                 auto it = example_map_.find(example_name);
                 if (it != example_map_.end())
                     return it->second(params, sot_config_path, fb_joint_name, mimic_joint_names, verbose);
+                else
+                    std::cerr << "Error :  " << example_name << " is not in the example factory" << std::endl;
+            }
+
+            void controller_names()
+            {
+                for (auto &it : example_map_)
+                {
+                    std::cout << it.first << std::endl;
+                }
             }
 
         private:
-            ExampleFactory()
-            {
-                // register_example("tsid-squat", [](const tsid_sot::controllers::TalosBaseController::Params &params,
-                //                                   const std::string &sot_config_path = "",
-                //                                   const std::string &fb_joint_name = "",
-                //                                   const std::vector<std::string> &mimic_joint_names = {},
-                //                                   bool verbose = false) {
-                //     return std::make_shared<tsid_sot::example::>(params, sot_config_path, fb_joint_name, mimic_joint_names, verbose);
-                // })
-            }
+            ExampleFactory() {}
             ExampleFactory(const ExampleFactory &) {}
             ExampleFactory &operator=(const ExampleFactory &) { return *this; }
             std::map<std::string, example_creator_t> example_map_;
+        };
+        template <typename ExampleClass>
+        struct AutoRegister
+        {
+            AutoRegister(std::string example_name)
+            {
+                ExampleFactory::instance().register_example(example_name, [](const tsid_sot::controllers::TalosBaseController::Params &params,
+                                                                             const std::string &sot_config_path = "",
+                                                                             const std::string &fb_joint_name = "",
+                                                                             const std::vector<std::string> &mimic_joint_names = {},
+                                                                             bool verbose = false) {
+                    return std::make_shared<ExampleClass>(params, sot_config_path, fb_joint_name, mimic_joint_names, verbose);
+                });
+            }
         };
 
     } // namespace example

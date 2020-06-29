@@ -48,7 +48,7 @@ void stopsig(int signum)
 {
     stop = 1;
 }
-int main()
+int main(int argc, char *argv[])
 {
     //////////////////// INIT DART ROBOT //////////////////////////////////////
     std::srand(std::time(NULL));
@@ -68,9 +68,12 @@ int main()
     tsid_sot::controllers::TalosBaseController::Params params = {robot->model_filename(),
                                                                  "../etc/models/talos_configurations.srdf",
                                                                  dt};
-
-    // auto example = tsid_sot::example::ExampleFactory::instance().create_example("tsid-squat", params, "../etc/yaml/sot-squat.yaml", "", robot->mimic_dof_names());
-    auto example = std::make_shared<tsid_sot::example::TalosSquat>(params, "../etc/yaml/sot-squat.yaml", "", robot->mimic_dof_names());
+    std::string sot_config_path = "../etc/yaml/sot.yaml";
+    std::string example_name;
+    YAML::Node config = YAML::LoadFile(sot_config_path);
+    tsid_sot::utils::parse(example_name, "example_name_", config, false, "EXAMPLE");
+    auto example = tsid_sot::example::ExampleFactory::instance().create_example(example_name, params, sot_config_path, "", robot->mimic_dof_names(), false);
+    // auto example = std::make_shared<tsid_sot::example::TalosSquat>(params, "../etc/yaml/sot-squat.yaml", "", robot->mimic_dof_names());
 
     auto controller = example->controller();
     auto all_dofs = controller->all_dofs();

@@ -5,7 +5,7 @@
 namespace trajectory_handler
 {
 
-    Eigen::VectorXd minimum_jerk_polynom(Eigen::VectorXd x0, Eigen::VectorXd xf, double t, double trajectory_duration)
+    inline Eigen::VectorXd minimum_jerk_polynom(Eigen::VectorXd x0, Eigen::VectorXd xf, double t, double trajectory_duration)
     {
         assertm(x0.size() == xf.size(), "minimum_jerk_polynom x0 and xf should have the same size");
         double td = t / trajectory_duration;
@@ -13,7 +13,7 @@ namespace trajectory_handler
         return xt;
     }
 
-    std::vector<Eigen::VectorXd> compute_traj(const Eigen::VectorXd &start, const Eigen::VectorXd &dest, double dt, double trajectory_duration)
+    inline std::vector<Eigen::VectorXd> compute_traj(const Eigen::VectorXd &start, const Eigen::VectorXd &dest, double dt, double trajectory_duration)
     {
         std::vector<Eigen::VectorXd> trajectory;
         uint n_steps = std::floor(trajectory_duration / dt);
@@ -24,7 +24,7 @@ namespace trajectory_handler
         return trajectory;
     }
 
-    std::vector<pinocchio::SE3> compute_traj(const pinocchio::SE3 &start, const pinocchio::SE3 &dest, double dt, double trajectory_duration)
+    inline std::vector<pinocchio::SE3> compute_traj(const pinocchio::SE3 &start, const pinocchio::SE3 &dest, double dt, double trajectory_duration)
     {
         Eigen::VectorXd eig_start(7), eig_dest(7), eig_xt(7);
         eig_start << start.translation(), Eigen::Quaterniond(start.rotation());
