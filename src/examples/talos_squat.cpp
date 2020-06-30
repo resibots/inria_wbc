@@ -4,19 +4,7 @@ namespace tsid_sot
 {
     namespace example
     {
-        // struct AutoRegister
-        // {
-        //     AutoRegister()
-        //     {
-        //         ExampleFactory::instance().register_example("tsid-squat", [](const tsid_sot::controllers::TalosBaseController::Params &params,
-        //                                           const std::string &sot_config_path = "",
-        //                                           const std::string &fb_joint_name = "",
-        //                                           const std::vector<std::string> &mimic_joint_names = {},
-        //                                           bool verbose = false) {
-        //             return std::make_shared<TalosSquat>(params, sot_config_path, fb_joint_name, mimic_joint_names, verbose);
-        //         });
-        //     }
-        // };
+
         static AutoRegister<TalosSquat> __talos_squat("talos-squat");
 
         TalosSquat::TalosSquat(const tsid_sot::controllers::TalosBaseController::Params &params,

@@ -66,13 +66,18 @@ int main(int argc, char *argv[])
     int duration = 20 / dt;
     float arm_speed = 0.05;
     tsid_sot::controllers::TalosBaseController::Params params = {robot->model_filename(),
-                                                                 "../etc/models/talos_configurations.srdf",
+                                                                 "../etc/talos_configurations.srdf",
                                                                  dt};
-    std::string sot_config_path = "../etc/yaml/sot.yaml";
+    std::string sot_config_path = "../etc/sot.yaml";
     std::string example_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
     tsid_sot::utils::parse(example_name, "example_name_", config, false, "EXAMPLE");
     auto example = tsid_sot::example::ExampleFactory::instance().create_example(example_name, params, sot_config_path, "", robot->mimic_dof_names(), false);
+
+    for (auto &n : robot->mimic_dof_names())
+    {
+        std::cout << n << std::endl;
+    }
     // auto example = std::make_shared<tsid_sot::example::TalosSquat>(params, "../etc/yaml/sot-squat.yaml", "", robot->mimic_dof_names());
 
     auto controller = example->controller();

@@ -1,0 +1,38 @@
+# - Config file for the dartwrapper package
+# It defines the following variables
+#  TSID_CONTROLLERS_INCLUDE_DIRS - include directories for dartwrapper
+#  TSID_CONTROLLERS_LIBRARY_DIRS    - libraries to link against
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+
+set(COMPILE_ROBOT_DART_EXAMPLE "@COMPILE_ROBOT_DART_EXAMPLE@")
+set(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "@COMPILE_ROBOT_DART_EXAMPLE@")
+
+
+if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
+    # we ask for Magnum because we want to build the graphics
+    if(${COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS} STREQUAL "ON")
+        find_package(RobotDART REQUIRED OPTIONAL_COMPONENTS Magnum)
+    else()
+        find_package(RobotDART REQUIRED)
+    endif()
+endif()
+
+find_package(tsid REQUIRED)
+find_package(pinocchio REQUIRED)
+find_package(yaml-cpp REQUIRED)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128")
+
+include("${CMAKE_CURRENT_LIST_DIR}/tsid_controllersTargets.cmake")
+
+set_and_check(TSID_CONTROLLERS_INCLUDE_DIRS "@PACKAGE_INCLUDE_INSTALL_DIR@")
+set_and_check(TSID_CONTROLLERS_LIBRARY_DIRS "@PACKAGE_LIBRARY_INSTALL_DIR@")
+
+
+set(TSID_CONTROLLERS_LIBRARIES "@LIBRARY@")
+set(TSID_CONTROLLERS_DEFINITIONS "@DEFINITIONS@")
+set(TSID_CONTROLLERS_DEPENDENCIES_LIBS "@DEPENDENCIES_LIBS@")
+set(TSID_CONTROLLERS_DEPENDENCIES_INCS "@DEPENDENCIES_INCS@")
+
+

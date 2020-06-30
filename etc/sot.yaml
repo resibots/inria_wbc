@@ -12,10 +12,10 @@ SOT:
   kp_com_: 3000.0
   kp_posture_: 30.0
   kp_waist_: 3000.0
-  kp_rh_: 300.0
+  kp_rh_: 300.0 
   kp_lh_: 300.0
   kp_rf_: 30.0
   kp_lf_: 30.0
 EXAMPLE:
-  # example_name_ : talos-squat
-  example_name_ : talos-move-arm
+  example_name_ : talos-squat
+  # example_name_ : talos-move-arm
