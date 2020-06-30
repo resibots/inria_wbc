@@ -98,31 +98,6 @@ namespace tsid_sot
             Eigen::VectorXd q0(bool filter_mimics = true);
             Eigen::VectorXd q(bool filter_mimics = true);
 
-            template <typename ReferenceType>
-            void set_ref(ReferenceType ref, std::string task_name)
-            {
-                auto it = task_traj_map_.find(task_name);
-                assert(it != task_traj_map_.end());
-                auto task_traj = it->second;
-                boost::apply_visitor(TaskVisitor(), task_traj);
-            }
-
-            // TODO : pass reference to TaskTrajReference
-            class TaskVisitor : public boost::static_visitor<void>
-            {
-            public:
-                TaskVisitor(){};
-
-                template <typename TaskTrajReference>
-                void operator()(const TaskTrajReference &task_traj) const
-                {
-                    // task_traj.ref = new_ref;
-                    task_traj.traj->setReference(task_traj.ref);
-                    tsid::trajectories::TrajectorySample sample = task_traj.traj->computeNext();
-                    task_traj.task->setReference(sample);
-                }
-            };
-
         private:
             std::vector<int> get_non_mimics_indexes();
             virtual void parse_configuration_yaml(const std::string &sot_config_path) = 0;

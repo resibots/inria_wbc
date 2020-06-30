@@ -26,7 +26,7 @@ namespace tsid_sot
         {
 
             auto ref = current_trajectory_[time_];
-            std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->set_lh_ref(ref);
+            std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref,"lh");
             controller_->solve();
             time_++;
             if (time_ == current_trajectory_.size())

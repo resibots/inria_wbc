@@ -259,15 +259,30 @@ namespace tsid_sot
       set_task_traj_map();
     }
 
-    //Left hand trajectory control
-    void TalosPosTracking::add_to_lh_ref(float delta_x, float delta_y, float delta_z)
+    void TalosPosTracking::set_task_traj_map()
     {
-      lh_ref_.translation()(0) += delta_x;
-      lh_ref_.translation()(1) += delta_y;
-      lh_ref_.translation()(2) += delta_z;
-      traj_lh_->setReference(lh_ref_);
-      TrajectorySample sample_lh_ = traj_lh_->computeNext();
-      lh_task_->setReference(sample_lh_);
+      TaskTrajReferenceSE3 lh = {.task = lh_task_, .ref = lh_init_, .traj = traj_lh_};
+      TaskTrajReferenceSE3 rh = {.task = rh_task_, .ref = rh_init_, .traj = traj_rh_};
+      TaskTrajReferenceSE3 lf = {.task = lf_task_, .ref = lf_init_, .traj = traj_lf_};
+      TaskTrajReferenceSE3 rf = {.task = rf_task_, .ref = rf_init_, .traj = traj_rf_};
+      TaskTrajReferenceSE3 floatingb = {.task = floatingb_task_, .ref = floatingb_init_, .traj = traj_floatingb_};
+
+      se3_task_traj_map_["lh"] = lh;
+      se3_task_traj_map_["rh"] = rh;
+      se3_task_traj_map_["lf"] = lf;
+      se3_task_traj_map_["rf"] = rf;
+      se3_task_traj_map_["floatingb"] = floatingb;
+    }
+
+    void TalosPosTracking::set_se3_ref(pinocchio::SE3 ref, std::string task_name)
+    {
+      auto it = se3_task_traj_map_.find(task_name);
+      assert(it != se3_task_traj_map_.end());
+      auto task_traj = it->second;
+      task_traj.ref = ref;
+      task_traj.traj->setReference(task_traj.ref);
+      tsid::trajectories::TrajectorySample sample = task_traj.traj->computeNext();
+      task_traj.task->setReference(sample);
     }
 
     void TalosPosTracking::set_com_ref(const Vector3 &ref)
@@ -277,21 +292,12 @@ namespace tsid_sot
       com_task_->setReference(sample_com_);
     }
 
-    void TalosPosTracking::set_lh_ref(const pinocchio::SE3 &ref)
+    void TalosPosTracking::set_posture_ref(tsid::math::Vector ref, std::string task_name)
     {
-      traj_lh_->setReference(ref);
-      TrajectorySample sample_lh_ = traj_lh_->computeNext();
-      lh_task_->setReference(sample_lh_);
+      traj_posture_->setReference(ref);
+      TrajectorySample sample_posture_ = traj_posture_->computeNext();
+      posture_task_->setReference(sample_posture_);
     }
 
-    void TalosPosTracking::set_task_traj_map()
-    {
-      TaskTrajReferenceVector3 com = {.task = com_task_, .ref = com_init_, .traj = traj_com_};
-      task_traj_map_["com"] = com;
-      TaskTrajReferenceSE3 lh = {.task = lh_task_, .ref = lh_init_, .traj = traj_lh_};
-      task_traj_map_["lh"] = lh;
-      TaskTrajReferenceSE3 rh = {.task = rh_task_, .ref = rh_init_, .traj = traj_rh_};
-      task_traj_map_["rh"] = rh;
-    }
   } // namespace controllers
 } // namespace tsid_sot

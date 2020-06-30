@@ -24,10 +24,9 @@ namespace tsid_sot
             tsid::math::Vector3 com_init() { return com_init_; }
             pinocchio::SE3 lh_init() { return lh_init_; }
 
-            // Left hand trajectory control
-            void add_to_lh_ref(float delta_x, float delta_y, float delta_z);
             void set_com_ref(const tsid::math::Vector3 &ref);
-            void set_lh_ref(const pinocchio::SE3 &ref);
+            void set_se3_ref(pinocchio::SE3 ref, std::string task_name);
+            void set_posture_ref(tsid::math::Vector ref, std::string task_name);
 
         private:
             void parse_configuration_yaml(const std::string &sot_config_path);
@@ -93,7 +92,7 @@ namespace tsid_sot
 
             // posture ref
             tsid::math::Vector posture_init_, posture_ref_;
-            std::shared_ptr<tsid::trajectories::TrajectoryBase> traj_posture_;
+            std::shared_ptr<tsid::trajectories::TrajectoryEuclidianConstant> traj_posture_;
 
             // floatingb ref
             pinocchio::SE3 floatingb_init_, floatingb_ref_;
@@ -115,7 +114,7 @@ namespace tsid_sot
             pinocchio::SE3 rh_init_, rh_ref_;
             std::shared_ptr<tsid::trajectories::TrajectorySE3Constant> traj_rh_;
 
-            std::unordered_map<std::string, boost::variant<TaskTrajReferenceSE3, TaskTrajReferenceVector3>> task_traj_map_;
+            std::unordered_map<std::string, TaskTrajReferenceSE3> se3_task_traj_map_;
         };
     } // namespace controllers
 } // namespace tsid_sot
