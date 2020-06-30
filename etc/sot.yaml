@@ -19,3 +19,23 @@ SOT:
 EXAMPLE:
   example_name_ : talos-squat
   # example_name_ : talos-move-arm
+PARAMS:
+  urdf_path: /home/user/robot_dart/robots/talos/talos.urdf
+  srdf_path: /home/user/tsid_talos_dart/etc/talos_configurations.srdf
+  sot_config_path: /home/user/tsid_talos_dart/etc/sot.yaml
+  floating_base_joint_name: ""
+  dt: 0.001
+  verbose: false
+  mimic_dof_names : ["gripper_left_inner_double_joint",
+                     "gripper_left_fingertip_1_joint",
+                     "gripper_left_fingertip_2_joint",
+                     "gripper_left_inner_single_joint",
+                     "gripper_left_fingertip_3_joint",
+                     "gripper_left_motor_single_joint",
+                     "gripper_right_inner_double_joint",
+                     "gripper_right_fingertip_1_joint",
+                     "gripper_right_fingertip_2_joint",
+                     "gripper_right_inner_single_joint",
+                     "gripper_right_fingertip_3_joint",
+                     "gripper_right_motor_single_joint"]
+

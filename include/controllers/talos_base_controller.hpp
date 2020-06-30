@@ -61,7 +61,11 @@ namespace tsid_sot
             {
                 std::string urdf_path;
                 std::string srdf_path;
+                std::string sot_config_path;
+                std::string floating_base_joint_name;
                 float dt;
+                bool verbose;
+                std::vector<std::string> mimic_dof_names;
             };
 
             template <typename TaskType, typename ReferenceType, typename TrajType>
@@ -75,11 +79,7 @@ namespace tsid_sot
             using TaskTrajReferenceVector3 = TaskTrajReference<tsid::tasks::TaskComEquality, tsid::math::Vector3, tsid::trajectories::TrajectoryEuclidianConstant>;
             // typedef boost::variant<pinocchio::SE3, tsid::math::Vector3> ReferenceType;
 
-            TalosBaseController(const Params &params,
-                                const std::string &sot_config_path = "",
-                                const std::string &fb_joint_name = "",
-                                const std::vector<std::string> &mimic_joint_names = {},
-                                bool verbose = false);
+            TalosBaseController(const Params &params);
 
             ~TalosBaseController(){};
 
@@ -136,7 +136,7 @@ namespace tsid_sot
             double dt_;
 
             std::string fb_joint_name_; //name of the floating base joint
-            std::vector<std::string> mimic_joint_names_;
+            std::vector<std::string> mimic_dof_names_;
             std::vector<std::string> tsid_joint_names_; //contain floating base and mimics
             std::vector<int> non_mimic_indexes_;
 
@@ -162,6 +162,8 @@ namespace tsid_sot
 
             std::unordered_map<std::string, boost::variant<TaskTrajReferenceSE3, TaskTrajReferenceVector3>> task_traj_map_;
         };
+
+        tsid_sot::controllers::TalosBaseController::Params parse_params(YAML::Node config);
     } // namespace controllers
 } // namespace tsid_sot
 #endif

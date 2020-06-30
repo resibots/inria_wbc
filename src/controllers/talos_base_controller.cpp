@@ -52,20 +52,16 @@ namespace tsid_sot
 {
   namespace controllers
   {
-    TalosBaseController::TalosBaseController(const Params &params,
-                                             const std::string &sot_config_path,
-                                             const std::string &fb_joint_name,
-                                             const std::vector<std::string> &mimic_joint_names,
-                                             bool verbose)
+    TalosBaseController::TalosBaseController(const Params &params)
     {
       dt_ = params.dt;
-      verbose_ = verbose;
+      verbose_ = params.verbose;
       t_ = 0.0;
 
       pinocchio::Model robot_model;
-      if (!fb_joint_name.empty())
+      if (!params.floating_base_joint_name.empty())
       {
-        fb_joint_name_ = fb_joint_name; //floating base joint already in urdf
+        fb_joint_name_ = params.floating_base_joint_name; //floating base joint already in urdf
         pinocchio::urdf::buildModel(params.urdf_path, robot_model, verbose_);
       }
       else
@@ -97,7 +93,7 @@ namespace tsid_sot
       ddq_.setZero(ddq_.size());
       tau_.setZero(tau_.size());
 
-      mimic_joint_names_ = mimic_joint_names;
+      mimic_dof_names_ = params.mimic_dof_names;
       tsid_joint_names_ = all_dofs(false);
       non_mimic_indexes_ = get_non_mimics_indexes();
     }
@@ -106,9 +102,9 @@ namespace tsid_sot
     {
       std::vector<int> non_mimic_indexes;
       std::vector<int> mimic_indexes;
-      if (!mimic_joint_names_.empty())
+      if (!mimic_dof_names_.empty())
       {
-        for (auto &m : mimic_joint_names_)
+        for (auto &m : mimic_dof_names_)
         {
           auto it = std::find(tsid_joint_names_.begin(), tsid_joint_names_.end(), m);
           assert(it != tsid_joint_names_.end());
@@ -170,7 +166,7 @@ namespace tsid_sot
       auto na = robot_->model().names;
       auto tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
       if (filter_mimics)
-        return remove_intersection(tsid_controllables, mimic_joint_names_);
+        return remove_intersection(tsid_controllables, mimic_dof_names_);
       else
         return tsid_controllables;
     }
@@ -207,7 +203,7 @@ namespace tsid_sot
       std::vector<std::string> control_dofs = controllable_dofs(filter_mimics);
       all_dofs.insert(all_dofs.end(), control_dofs.begin(), control_dofs.end());
       if (filter_mimics)
-        return remove_intersection(all_dofs, mimic_joint_names_);
+        return remove_intersection(all_dofs, mimic_dof_names_);
       else
         return all_dofs;
     }
@@ -240,5 +236,34 @@ namespace tsid_sot
     {
       return slice_vec(cmd, non_mimic_indexes_);
     }
+
+    tsid_sot::controllers::TalosBaseController::Params parse_params(YAML::Node config)
+    {
+      std::string urdf_path = "";
+      std::string srdf_path = "";
+      std::string sot_config_path = "";
+      std::string floating_base_joint_name = "";
+      float dt = 0.001;
+      bool verbose = false;
+      std::vector<std::string> mimic_dof_names = {};
+      parse(urdf_path, "urdf_path", config, false, "PARAMS");
+      parse(srdf_path, "srdf_path", config, false, "PARAMS");
+      parse(sot_config_path, "sot_config_path", config, false, "PARAMS");
+      parse(floating_base_joint_name, "floating_base_joint_name", config, false, "PARAMS");
+      parse(dt, "dt", config, false, "PARAMS");
+      parse(verbose, "verbose", config, false, "PARAMS");
+      parse(mimic_dof_names, "mimic_dof_names", config, false, "PARAMS");
+
+      TalosBaseController::Params params = {urdf_path,
+                                            srdf_path,
+                                            sot_config_path,
+                                            floating_base_joint_name,
+                                            dt,
+                                            verbose,
+                                            mimic_dof_names};
+
+      return params;
+    }
+
   } // namespace controllers
 } // namespace tsid_sot

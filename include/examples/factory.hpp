@@ -10,11 +10,7 @@ namespace tsid_sot
         {
         public:
             Example(){};
-            Example(const tsid_sot::controllers::TalosBaseController::Params &params,
-                    const std::string &sot_config_path = "",
-                    const std::string &fb_joint_name = "",
-                    const std::vector<std::string> &mimic_joint_names = {},
-                    bool verbose = false);
+            Example(const tsid_sot::controllers::TalosBaseController::Params &params);
 
             virtual Eigen::VectorXd cmd() = 0;
 
@@ -35,11 +31,7 @@ namespace tsid_sot
                 return instance;
             }
             typedef std::shared_ptr<Example> example_ptr_t;
-            typedef std::function<example_ptr_t(const tsid_sot::controllers::TalosBaseController::Params &,
-                                                const std::string &,
-                                                const std::string &,
-                                                const std::vector<std::string> &,
-                                                bool verbose)>
+            typedef std::function<example_ptr_t(const tsid_sot::controllers::TalosBaseController::Params &)>
                 example_creator_t;
 
             void register_example(const std::string &example_name, example_creator_t pfn_create_example)
@@ -55,15 +47,11 @@ namespace tsid_sot
             }
 
             example_ptr_t create_example(const std::string &example_name,
-                                         const tsid_sot::controllers::TalosBaseController::Params &params,
-                                         const std::string &sot_config_path = "",
-                                         const std::string &fb_joint_name = "",
-                                         const std::vector<std::string> &mimic_joint_names = {},
-                                         bool verbose = false)
+                                         const tsid_sot::controllers::TalosBaseController::Params &params)
             {
                 auto it = example_map_.find(example_name);
                 if (it != example_map_.end())
-                    return it->second(params, sot_config_path, fb_joint_name, mimic_joint_names, verbose);
+                    return it->second(params);
                 else
                     std::cerr << "Error :  " << example_name << " is not in the example factory" << std::endl;
             }
@@ -87,12 +75,8 @@ namespace tsid_sot
         {
             AutoRegister(std::string example_name)
             {
-                ExampleFactory::instance().register_example(example_name, [](const tsid_sot::controllers::TalosBaseController::Params &params,
-                                                                             const std::string &sot_config_path = "",
-                                                                             const std::string &fb_joint_name = "",
-                                                                             const std::vector<std::string> &mimic_joint_names = {},
-                                                                             bool verbose = false) {
-                    return std::make_shared<ExampleClass>(params, sot_config_path, fb_joint_name, mimic_joint_names, verbose);
+                ExampleFactory::instance().register_example(example_name, [](const tsid_sot::controllers::TalosBaseController::Params &params) {
+                    return std::make_shared<ExampleClass>(params);
                 });
             }
         };

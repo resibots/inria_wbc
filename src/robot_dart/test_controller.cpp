@@ -65,20 +65,22 @@ int main(int argc, char *argv[])
     float dt = 0.001;
     int duration = 20 / dt;
     float arm_speed = 0.05;
+    std::string sot_config_path = "../etc/sot.yaml";
     tsid_sot::controllers::TalosBaseController::Params params = {robot->model_filename(),
                                                                  "../etc/talos_configurations.srdf",
-                                                                 dt};
-    std::string sot_config_path = "../etc/sot.yaml";
+                                                                 sot_config_path,
+                                                                 "",
+                                                                 dt,
+                                                                 false,
+                                                                 robot->mimic_dof_names()};
+
     std::string example_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
     tsid_sot::utils::parse(example_name, "example_name_", config, false, "EXAMPLE");
-    auto example = tsid_sot::example::ExampleFactory::instance().create_example(example_name, params, sot_config_path, "", robot->mimic_dof_names(), false);
-
-    for (auto &n : robot->mimic_dof_names())
-    {
-        std::cout << n << std::endl;
-    }
-    // auto example = std::make_shared<tsid_sot::example::TalosSquat>(params, "../etc/yaml/sot-squat.yaml", "", robot->mimic_dof_names());
+    // params = tsid_sot::controllers::parse_params(config);
+   
+    auto example = tsid_sot::example::ExampleFactory::instance().create_example(example_name, params);
+    // auto example = std::make_shared<tsid_sot::example::TalosSquat>(params);
 
     auto controller = example->controller();
     auto all_dofs = controller->all_dofs();

@@ -10,14 +10,10 @@ namespace tsid_sot
         class TalosPosTracking : public TalosBaseController
         {
         public:
-            TalosPosTracking(const Params &params,
-                             const std::string &sot_config_path = "",
-                             const std::string &fb_joint_name = "",
-                             const std::vector<std::string> &mimic_joint_names = {},
-                             bool verbose = false) : TalosBaseController(params, sot_config_path, fb_joint_name, mimic_joint_names, verbose)
+            TalosPosTracking(const Params &params) : TalosBaseController(params)
             {
-                if (!sot_config_path.empty())
-                    parse_configuration_yaml(sot_config_path);
+                if (!params.sot_config_path.empty())
+                    parse_configuration_yaml(params.sot_config_path);
                 set_stack_configuration();
                 init_references();
             };
@@ -50,7 +46,7 @@ namespace tsid_sot
             std::string rf_frame_name_ = "leg_right_6_joint";                  // right foot joint name
             std::string lf_frame_name_ = "leg_left_6_joint";                   // left foot joint name
             tsid::math::Vector3 contactNormal_ = tsid::math::Vector3::UnitZ(); // direction of the normal to the contact surface
-            double w_com_ = 10.0;                                               //  weight of center of mass task
+            double w_com_ = 10.0;                                              //  weight of center of mass task
             double w_posture_ = 0.75;                                          //  weight of joint posture task
             double w_forceRef_feet_ = 1e-3;                                    //# weight of force regularization task
             double w_forceRef_hands_ = 1e-3;                                   //# weight of force regularization task

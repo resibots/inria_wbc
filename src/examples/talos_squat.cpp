@@ -7,14 +7,10 @@ namespace tsid_sot
 
         static AutoRegister<TalosSquat> __talos_squat("talos-squat");
 
-        TalosSquat::TalosSquat(const tsid_sot::controllers::TalosBaseController::Params &params,
-                               const std::string &sot_config_path,
-                               const std::string &fb_joint_name,
-                               const std::vector<std::string> &mimic_joint_names,
-                               bool verbose)
+        TalosSquat::TalosSquat(const tsid_sot::controllers::TalosBaseController::Params &params)
         {
             //////////////////// INIT STACK OF TASK //////////////////////////////////////
-            controller_ = std::make_shared<tsid_sot::controllers::TalosPosTracking>(params, sot_config_path, fb_joint_name, mimic_joint_names, verbose);
+            controller_ = std::make_shared<tsid_sot::controllers::TalosPosTracking>(params);
 
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;

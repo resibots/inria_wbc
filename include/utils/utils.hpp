@@ -57,13 +57,13 @@ namespace tsid_sot
       if (!config[prevName][parameterName])
       {
         if (verbose)
-          std::cout << "No parameter " << parameterName << " found taking the default one : " << parameter << std::endl;
+          std::cout << "No parameter " << parameterName << " found taking the default one" << std::endl;
       }
       else
       {
         parameter = config[prevName][parameterName].as<type>();
         if (verbose)
-          std::cout << "Parameter " << parameterName << " found : " << parameter << std::endl;
+          std::cout << "Parameter " << parameterName << " found" << std::endl;
       }
     }
 
