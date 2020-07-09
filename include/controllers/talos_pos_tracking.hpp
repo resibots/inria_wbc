@@ -22,11 +22,11 @@ namespace tsid_sot
 
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return com_task_; }
             tsid::math::Vector3 com_init() { return com_init_; }
-            pinocchio::SE3 lh_init() { return lh_init_; }
-
+            
+            pinocchio::SE3 get_se3_ref(const std::string &task_name);
             void set_com_ref(const tsid::math::Vector3 &ref);
-            void set_se3_ref(pinocchio::SE3 ref, std::string task_name);
-            void set_posture_ref(tsid::math::Vector ref, std::string task_name);
+            void set_se3_ref(const pinocchio::SE3 &ref, const std::string &task_name);
+            void set_posture_ref(const tsid::math::Vector &ref, const std::string &task_name);
 
         private:
             void parse_configuration_yaml(const std::string &sot_config_path);

@@ -13,7 +13,7 @@ namespace tsid_sot
 
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto lh_init = std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->lh_init();
+            auto lh_init = std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->get_se3_ref("lh");
             auto lh_final = lh_init;
             lh_final.translation()(2) += 0.05;
             float trajectory_duration = 3;
@@ -26,7 +26,7 @@ namespace tsid_sot
         {
 
             auto ref = current_trajectory_[time_];
-            std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref,"lh");
+            std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
             controller_->solve();
             time_++;
             if (time_ == current_trajectory_.size())

@@ -17,7 +17,11 @@ SOT:
   kp_rf_: 30.0
   kp_lf_: 30.0
 EXAMPLE:
-  example_name_ : talos-squat
+  example_name_ : talos-teleop
+  teleoperation_file : /home/user/xsens_parser/tests/etc/covid19-002.mvnx
+  start_frame : 0
+  end_frame : 250
+  # example_name_ : talos-squat
   # example_name_ : talos-move-arm
 PARAMS:
   urdf_path: /home/user/robot_dart/robots/talos/talos.urdf

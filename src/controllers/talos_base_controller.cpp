@@ -54,6 +54,7 @@ namespace tsid_sot
   {
     TalosBaseController::TalosBaseController(const Params &params)
     {
+      params_ = params;
       dt_ = params.dt;
       verbose_ = params.verbose;
       t_ = 0.0;

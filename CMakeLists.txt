@@ -14,16 +14,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128")
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(xsens_parser)
 
 list(APPEND DEPENDENCIES_LIBS
                              pinocchio::pinocchio
                              tsid::tsid
                              RobotDART::Simu
                              ${YAML_CPP_LIBRARIES}
+                             ${XSENS_PARSER_LIBRARIES}
+                             ${XSENS_PARSER_DEPENDENCIES_LIBS}
 )
 
 list(APPEND DEPENDENCIES_INCS
                              ${CMAKE_SOURCE_DIR}/include
+                             ${XSENS_PARSER_DEPENDENCIES_INCS}
 )
 
 set(TSID_CONTROLLERS_HEADERS
@@ -32,6 +36,7 @@ set(TSID_CONTROLLERS_HEADERS
                             include/examples/factory.hpp
                             include/examples/talos_squat.hpp
                             include/examples/talos_move_arm.hpp
+                            include/examples/talos_teleop.hpp
                             include/utils/trajectory_handler.hpp
                             include/utils/utils.hpp
 )
@@ -41,6 +46,7 @@ set(TSID_CONTROLLERS_SOURCES
                             src/controllers/talos_pos_tracking.cpp
                             src/examples/talos_squat.cpp
                             src/examples/talos_move_arm.cpp
+                            src/examples/talos_teleop.cpp
 )
 
 add_library(tsid_controllers SHARED ${TSID_CONTROLLERS_HEADERS} ${TSID_CONTROLLERS_SOURCES})
