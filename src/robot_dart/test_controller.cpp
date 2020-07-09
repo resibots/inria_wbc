@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     simu.add_checkerboard_floor();
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
-    std::string sot_config_path = "../etc/sot.yaml";
+    std::string sot_config_path = argv[1];
     tsid_sot::controllers::TalosBaseController::Params params = {robot->model_filename(),
                                                                  "../etc/talos_configurations.srdf",
                                                                  sot_config_path,
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 
     std::string example_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    tsid_sot::utils::parse(example_name, "example_name_", config, false, "EXAMPLE");
+    tsid_sot::utils::parse(example_name, "name", config, false, "BEHAVIOR");
     // params = tsid_sot::controllers::parse_params(config);
    
     auto example = tsid_sot::behaviors::Factory::instance().create(example_name, params);

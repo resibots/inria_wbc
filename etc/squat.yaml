@@ -16,9 +16,8 @@ SOT:
   kp_lh_: 300.0
   kp_rf_: 30.0
   kp_lf_: 30.0
-EXAMPLE:
-  example_name_ : talos-squat
-  # example_name_ : talos-move-arm
+BEHAVIOR:
+  name : talos-squat
 PARAMS:
   urdf_path: /home/user/robot_dart/robots/talos/talos.urdf
   srdf_path: /home/user/tsid_talos_dart/etc/talos_configurations.srdf

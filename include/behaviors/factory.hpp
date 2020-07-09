@@ -58,6 +58,7 @@ namespace tsid_sot
             Factory &operator=(const Factory &) { return *this; }
             std::map<std::string, behavior_creator_t> behavior_map_;
         };
+        
         template <typename BehaviorClass>
         struct AutoRegister
         {
