@@ -1,17 +1,15 @@
-#include "examples/talos_squat.hpp"
+#include "behaviors/talos_squat.hpp"
 
 namespace tsid_sot
 {
-    namespace example
+    namespace behaviors
     {
 
         static AutoRegister<TalosSquat> __talos_squat("talos-squat");
 
-        TalosSquat::TalosSquat(const tsid_sot::controllers::TalosBaseController::Params &params)
+        TalosSquat::TalosSquat(const tsid_sot::controllers::TalosBaseController::Params &params) :
+            Behavior(std::make_shared<tsid_sot::controllers::TalosPosTracking>(params))
         {
-            //////////////////// INIT STACK OF TASK //////////////////////////////////////
-            controller_ = std::make_shared<tsid_sot::controllers::TalosPosTracking>(params);
-
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
             auto com_init = std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->com_init();
@@ -40,5 +38,5 @@ namespace tsid_sot
             return controller_->q(false);
         }
 
-    } // namespace example
+    } // namespace behaviors
 } // namespace tsid_sot

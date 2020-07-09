@@ -7,8 +7,7 @@
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robot.hpp>
 
-#include "examples/factory.hpp"
-#include "examples/talos_squat.hpp"
+#include "behaviors/factory.hpp"
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
@@ -50,21 +49,30 @@ void stopsig(int signum)
 }
 int main(int argc, char *argv[])
 {
+    // dt of the simulation and the controller
+    float dt = 0.001;
+
     //////////////////// INIT DART ROBOT //////////////////////////////////////
     std::srand(std::time(NULL));
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto robot = std::make_shared<robot_dart::Robot>("talos/talos.urdf", packages);
     robot->set_position_enforced(true);
-    // Set actuator types to VELOCITY motors so that they stay in position without any controller
-    robot->set_actuator_types(dart::dynamics::Joint::FORCE);
-    // First 6-DOFs should always be FORCE if robot is floating base
-    // for (size_t i = 0; i < 6; i++)
-    //     robot->set_actuator_type(i, dart::dynamics::Joint::FORCE);
+    robot->set_actuator_types("torque");
+
+    //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
+    robot_dart::RobotDARTSimu simu(dt);
+    simu.set_collision_detector("fcl");
+
+#ifdef GRAPHIC
+    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu);
+    simu.set_graphics(graphics);
+    graphics->look_at({0., 3.5, 2.}, {0., 0., 0.25});
+    //graphics->record_video("talos.mp4");
+#endif
+    simu.add_robot(robot);
+    simu.add_checkerboard_floor();
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
-    float dt = 0.001;
-    int duration = 20 / dt;
-    float arm_speed = 0.05;
     std::string sot_config_path = "../etc/sot.yaml";
     tsid_sot::controllers::TalosBaseController::Params params = {robot->model_filename(),
                                                                  "../etc/talos_configurations.srdf",
@@ -79,7 +87,7 @@ int main(int argc, char *argv[])
     tsid_sot::utils::parse(example_name, "example_name_", config, false, "EXAMPLE");
     // params = tsid_sot::controllers::parse_params(config);
    
-    auto example = tsid_sot::example::ExampleFactory::instance().create_example(example_name, params);
+    auto example = tsid_sot::behaviors::Factory::instance().create(example_name, params);
     // auto example = std::make_shared<tsid_sot::example::TalosSquat>(params);
 
     auto controller = example->controller();
@@ -88,25 +96,14 @@ int main(int argc, char *argv[])
     robot->set_positions(controller->q0(), all_dofs);
     uint ncontrollable = controllable_dofs.size();
 
-    //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
-    robot_dart::RobotDARTSimu simu(dt);
-    simu.set_collision_detector("fcl");
 
-#ifdef GRAPHIC
-    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu);
-    simu.set_graphics(graphics);
-    graphics->look_at({0., 3.5, 2.}, {0., 0., 0.25});
-    graphics->record_video("talos.mp4");
-#endif
-    simu.add_robot(robot);
-    simu.add_checkerboard_floor();
-
-    //////////////////// PLAY SIMULATION //////////////////////////////////////
-    signal(SIGINT, stopsig); // to stop the simulation loop
-    while (!stop)
-    {
-        auto cmd = compute_spd(robot->skeleton(), example->cmd());
-        robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+    //////////////////// START SIMULATION //////////////////////////////////////
+    simu.set_control_freq(1000); // 1000 Hz
+    while (simu.scheduler().next_time() < 20. && !simu.graphics()->done()) {
+        if (simu.schedule(simu.control_freq())) {
+            auto cmd = compute_spd(robot->skeleton(), example->cmd());
+            robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+        }
         simu.step_world();
     }
 

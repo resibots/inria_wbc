@@ -1,16 +1,15 @@
-#include "examples/talos_move_arm.hpp"
+#include "behaviors/talos_move_arm.hpp"
 
 namespace tsid_sot
 {
-    namespace example
+    namespace behaviors
     {
         static AutoRegister<TalosMoveArm> __talos_move_arm("talos-move-arm");
 
-        TalosMoveArm::TalosMoveArm(const tsid_sot::controllers::TalosBaseController::Params &params)
+        TalosMoveArm::TalosMoveArm(const tsid_sot::controllers::TalosBaseController::Params &params) :
+            Behavior(std::make_shared<tsid_sot::controllers::TalosPosTracking>(params))
         {
-            //////////////////// INIT STACK OF TASK //////////////////////////////////////
-            controller_ = std::make_shared<tsid_sot::controllers::TalosPosTracking>(params);
-
+            
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
             auto lh_init = std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->lh_init();
@@ -39,5 +38,5 @@ namespace tsid_sot
             return controller_->q(false);
         }
 
-    } // namespace example
+    } // namespace behaviors
 } // namespace tsid_sot

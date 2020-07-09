@@ -81,7 +81,7 @@ namespace tsid_sot
 
             TalosBaseController(const Params &params);
 
-            ~TalosBaseController(){};
+            virtual ~TalosBaseController(){};
 
             bool solve();
 
