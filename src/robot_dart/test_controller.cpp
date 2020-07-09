@@ -49,6 +49,9 @@ void stopsig(int signum)
 }
 int main(int argc, char *argv[])
 {
+    // take the name of the behavior as a argument
+    std::string sot_config_path = argc > 1 ? argv[1] : "../etc/squat.yaml";
+    std::cout << "using configuration:" << sot_config_path<<std::endl;
     // dt of the simulation and the controller
     float dt = 0.001;
 
@@ -73,7 +76,7 @@ int main(int argc, char *argv[])
     simu.add_checkerboard_floor();
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
-    std::string sot_config_path = argv[1];
+
     tsid_sot::controllers::TalosBaseController::Params params = {robot->model_filename(),
                                                                  "../etc/talos_configurations.srdf",
                                                                  sot_config_path,
@@ -82,15 +85,14 @@ int main(int argc, char *argv[])
                                                                  false,
                                                                  robot->mimic_dof_names()};
 
-    std::string example_name;
+    std::string behavior_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    tsid_sot::utils::parse(example_name, "name", config, false, "BEHAVIOR");
+    tsid_sot::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
     // params = tsid_sot::controllers::parse_params(config);
    
-    auto example = tsid_sot::behaviors::Factory::instance().create(example_name, params);
-    // auto example = std::make_shared<tsid_sot::example::TalosSquat>(params);
+    auto behavior = tsid_sot::behaviors::Factory::instance().create(behavior_name, params);
 
-    auto controller = example->controller();
+    auto controller = behavior->controller();
     auto all_dofs = controller->all_dofs();
     auto controllable_dofs = controller->controllable_dofs();
     robot->set_positions(controller->q0(), all_dofs);
@@ -101,12 +103,11 @@ int main(int argc, char *argv[])
     simu.set_control_freq(1000); // 1000 Hz
     while (simu.scheduler().next_time() < 20. && !simu.graphics()->done()) {
         if (simu.schedule(simu.control_freq())) {
-            auto cmd = compute_spd(robot->skeleton(), example->cmd());
+            auto cmd = compute_spd(robot->skeleton(), behavior->cmd());
             robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
         }
         simu.step_world();
     }
 
-    robot.reset();
     return 0;
 }
