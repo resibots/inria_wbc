@@ -17,7 +17,10 @@ SOT:
   kp_rf_: 30.0
   kp_lf_: 30.0
 BEHAVIOR:
-  name : talos-move-arm
+  name : talos-teleop
+  teleoperation_file : /home/user/xsens_parser/tests/etc/covid19-002.mvnx
+  start_frame : 0
+  end_frame : 250
 PARAMS:
   urdf_path: /home/user/robot_dart/robots/talos/talos.urdf
   srdf_path: /home/user/tsid_talos_dart/etc/talos_configurations.srdf

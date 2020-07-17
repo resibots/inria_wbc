@@ -97,6 +97,12 @@ namespace tsid_sot
             Eigen::VectorXd dq(bool filter_mimics = true);
             Eigen::VectorXd q0(bool filter_mimics = true);
             Eigen::VectorXd q(bool filter_mimics = true);
+            double dt() { return dt_; };
+            Params params() { return params_; };
+            
+            std::vector<double> pinocchio_model_masses();
+            std::vector<double> pinocchio_model_cumulated_masses();
+            std::vector<std::string> pinocchio_joint_names();
 
         private:
             std::vector<int> get_non_mimics_indexes();
@@ -106,6 +112,7 @@ namespace tsid_sot
             virtual void set_task_traj_map() = 0;
 
         protected:
+            Params params_;
             bool verbose_;
             double t_;
             double dt_;

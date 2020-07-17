@@ -14,16 +14,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128")
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
+# find_package(xsens_parser)
 
 list(APPEND DEPENDENCIES_LIBS
                              pinocchio::pinocchio
                              tsid::tsid
                              RobotDART::Simu
                              ${YAML_CPP_LIBRARIES}
+                            #  ${XSENS_PARSER_LIBRARIES}
+                            #  ${XSENS_PARSER_DEPENDENCIES_LIBS}
 )
 
 list(APPEND DEPENDENCIES_INCS
                              ${CMAKE_SOURCE_DIR}/include
+                             ${XSENS_PARSER_DEPENDENCIES_INCS}
 )
 
 set(TSID_CONTROLLERS_HEADERS

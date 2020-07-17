@@ -274,7 +274,20 @@ namespace tsid_sot
       se3_task_traj_map_["floatingb"] = floatingb;
     }
 
-    void TalosPosTracking::set_se3_ref(pinocchio::SE3 ref, std::string task_name)
+    pinocchio::SE3 TalosPosTracking::get_se3_ref(const std::string &task_name)
+    {
+      auto it = se3_task_traj_map_.find(task_name);
+      assert(it != se3_task_traj_map_.end());
+      auto task_traj = it->second;
+      return task_traj.ref;
+    }
+
+    tsid::math::Vector3 TalosPosTracking::get_pinocchio_com()
+    {
+      return robot_->com(tsid_->data());
+    }
+
+    void TalosPosTracking::set_se3_ref(const pinocchio::SE3 &ref, const std::string &task_name)
     {
       auto it = se3_task_traj_map_.find(task_name);
       assert(it != se3_task_traj_map_.end());
@@ -292,7 +305,7 @@ namespace tsid_sot
       com_task_->setReference(sample_com_);
     }
 
-    void TalosPosTracking::set_posture_ref(tsid::math::Vector ref, std::string task_name)
+    void TalosPosTracking::set_posture_ref(const tsid::math::Vector &ref, const std::string &task_name)
     {
       traj_posture_->setReference(ref);
       TrajectorySample sample_posture_ = traj_posture_->computeNext();

@@ -54,6 +54,7 @@ namespace tsid_sot
   {
     TalosBaseController::TalosBaseController(const Params &params)
     {
+      params_ = params;
       dt_ = params.dt;
       verbose_ = params.verbose;
       t_ = 0.0;
@@ -235,6 +236,27 @@ namespace tsid_sot
     Eigen::VectorXd TalosBaseController::filter_cmd(const Eigen::VectorXd &cmd)
     {
       return slice_vec(cmd, non_mimic_indexes_);
+    }
+
+    std::vector<double> TalosBaseController::pinocchio_model_masses()
+    {
+      std::vector<double> masses;
+      for (int i = 0; i < robot_->model().inertias.size(); i++)
+      {
+        //order corresponds to robot_->model().names
+        masses.push_back(robot_->model().inertias[i].mass());
+      }
+      return masses;
+    }
+
+    std::vector<double> TalosBaseController::pinocchio_model_cumulated_masses()
+    {
+      return tsid_->data().mass;
+    }
+
+    std::vector<std::string> TalosBaseController::pinocchio_joint_names()
+    {
+      return robot_->model().names;
     }
 
     tsid_sot::controllers::TalosBaseController::Params parse_params(YAML::Node config)
