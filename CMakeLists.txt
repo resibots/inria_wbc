@@ -47,6 +47,12 @@ set(TSID_CONTROLLERS_SOURCES
                             src/behaviors/talos_move_arm.cpp
 )
 
+set(EXAMPLE_LIST 
+                src/robot_dart/evaluate_cop.cpp
+                src/robot_dart/test_controller.cpp
+                src/robot_dart/test_masses.cpp
+)
+
 add_library(tsid_controllers SHARED ${TSID_CONTROLLERS_HEADERS} ${TSID_CONTROLLERS_SOURCES})
 
 
@@ -61,6 +67,21 @@ target_include_directories(tsid_controllers
 )
 
 
+function(compile_examples)
+    foreach(EXAMPLE ${ARGN})
+        string(REPLACE ".cpp" "" EXAMPLE_NAME ${EXAMPLE} )
+        string(REPLACE "src/robot_dart/" "" EXAMPLE_NAME ${EXAMPLE_NAME} )
+        message("COMPILING EXAMPLE ${EXAMPLE_NAME}")
+        add_executable(${EXAMPLE_NAME} ${EXAMPLE})
+        target_link_libraries(${EXAMPLE_NAME} PUBLIC tsid_controllers)
+        if(RobotDART_Magnum_FOUND)
+            add_executable(${EXAMPLE_NAME}_graphics ${EXAMPLE})
+            target_link_libraries(${EXAMPLE_NAME}_graphics PUBLIC tsid_controllers RobotDART::Magnum)
+        endif()
+    endforeach()
+endfunction()
+
+
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
     # we ask for Magnum because we want to build the graphics
     if(${COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS} STREQUAL "ON")
@@ -68,14 +89,7 @@ if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
     else()
         find_package(RobotDART REQUIRED)
     endif()
-
-    add_executable(test-controller src/robot_dart/test_controller.cpp)
-    target_link_libraries(test-controller PUBLIC tsid_controllers)
-
-    if(RobotDART_Magnum_FOUND)
-        add_executable(test-controller-graphics src/robot_dart/test_controller.cpp)
-        target_link_libraries(test-controller-graphics PUBLIC tsid_controllers RobotDART::Magnum)
-    endif()
+    compile_examples(${EXAMPLE_LIST})
 endif()
 
 

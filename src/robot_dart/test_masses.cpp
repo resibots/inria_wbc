@@ -59,12 +59,10 @@ int main(int argc, char *argv[])
     std::srand(std::time(NULL));
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto robot = std::make_shared<robot_dart::Robot>("talos/talos.urdf", packages);
-    // robot->set_position_enforced(true);
-    // robot->set_actuator_types("torque");
 
     robot->set_position_enforced(true);
-    // robot->skeleton()->setPosition(5, 1.1);
-    // robot->skeleton()->setPosition(2, 1.57);
+    robot->skeleton()->setPosition(5, 1.1);
+    robot->skeleton()->setPosition(2, 1.57);
     robot->set_actuator_types("velocity");
 
     //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
@@ -92,49 +90,30 @@ int main(int argc, char *argv[])
     std::string behavior_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
     tsid_sot::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
-    // params = tsid_sot::controllers::parse_params(config);
 
     auto behavior = tsid_sot::behaviors::Factory::instance().create(behavior_name, params);
-
     auto controller = behavior->controller();
-    auto all_dofs = controller->all_dofs();
-    auto controllable_dofs = controller->controllable_dofs();
-    robot->set_positions(controller->q0(), all_dofs);
-    // ghost->set_positions(controller->q0(), all_dofs);
-    uint ncontrollable = controllable_dofs.size();
 
     auto masses = controller->pinocchio_model_masses();
-    std::vector<std::string> joint_names =  controller->pinocchio_joint_names();
-    
+    std::vector<std::string> joint_names = controller->pinocchio_joint_names();
+
+    std::cout << "PINOCCHIO" << std::endl;
     double total_mass_pin = 0.0;
-    for (int i = 0; i < masses.size(); i++)
+    for (uint i = 0; i < masses.size(); i++)
     {
         std::cout << "mass : " << joint_names[i] << " = " << masses[i] << std::endl;
         total_mass_pin += masses[i];
     }
-    std::cout << total_mass_pin << std::endl;
+    std::cout << "total mass : " << total_mass_pin << std::endl;
+
+    std::cout << "\nDART" << std::endl;
     double total_mass = 0.0;
     for (auto &s : robot->body_names())
     {
         std::cout << "mass: " << s << " = " << robot->body_mass(s) << std::endl;
         total_mass += robot->body_mass(s);
     }
-    std::cout << total_mass << std::endl;
-
-    //////////////////// START SIMULATION //////////////////////////////////////
-    simu.set_control_freq(1000); // 1000 Hz
-    while (simu.scheduler().next_time() < 20. && !simu.graphics()->done())
-    {
-        if (simu.schedule(simu.control_freq()))
-        {
-            auto cmd = compute_spd(robot->skeleton(), behavior->cmd());
-            // robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
-            // ghost->set_positions(controller->q(), all_dofs);
-            // std::cout << "dart : " << robot->com().transpose() << std::endl;
-            // std::cout << "dart ghost: " << ghost->com().transpose() << std::endl;
-        }
-        simu.step_world();
-    }
+    std::cout << "total mass : " << total_mass << std::endl;
 
     return 0;
 }
