@@ -104,7 +104,7 @@ install(TARGETS inria_wbc
                                INCLUDES DESTINATION ${CMAKE_INSTALL_PREFIX}/include
 )
 
-install(FILES ${INRIA_WBC_HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/inria_wbc/)
+install(DIRECTORY include/inria_wbc DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
 set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include)
 set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib)
 set(LIBRARY inria_wbc)
