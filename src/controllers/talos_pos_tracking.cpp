@@ -34,7 +34,7 @@
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
 
-#include "controllers/talos_pos_tracking.hpp"
+#include "inria_wbc/controllers/talos_pos_tracking.hpp"
 
 using namespace tsid;
 using namespace tsid::trajectories;
@@ -44,8 +44,8 @@ using namespace tsid::tasks;
 using namespace tsid::solvers;
 using namespace tsid::robots;
 using namespace std;
-using namespace tsid_sot::utils;
-namespace tsid_sot
+using namespace inria_wbc::utils;
+namespace inria_wbc
 {
   namespace controllers
   {
@@ -313,4 +313,4 @@ namespace tsid_sot
     }
 
   } // namespace controllers
-} // namespace tsid_sot
+} // namespace inria_wbc

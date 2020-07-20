@@ -1,9 +1,9 @@
-#ifndef TSID_POS_TRACKING_HPP
-#define TSID_POS_TRACKING_HPP
+#ifndef IWBC_POS_TRACKING_HPP
+#define IWBC_POS_TRACKING_HPP
 
-#include "controllers/talos_base_controller.hpp"
+#include <inria_wbc/controllers/talos_base_controller.hpp>
 
-namespace tsid_sot
+namespace inria_wbc
 {
     namespace controllers
     {
@@ -119,5 +119,5 @@ namespace tsid_sot
             std::unordered_map<std::string, TaskTrajReferenceSE3> se3_task_traj_map_;
         };
     } // namespace controllers
-} // namespace tsid_sot
+} // namespace inria_wbc
 #endif

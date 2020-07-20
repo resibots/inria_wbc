@@ -7,11 +7,12 @@
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robot.hpp>
 
-#include "behaviors/factory.hpp"
-
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
+
+#include "inria_wbc/behaviors/factory.hpp"
+
 
 void evaluate_cop(const Eigen::Vector6d &lf_torque_force, const Eigen::Vector6d &rf_torque_force)
 {
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
 
-    tsid_sot::controllers::TalosBaseController::Params params = {robot->model_filename(),
+    inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
                                                                  "../etc/talos_configurations.srdf",
                                                                  sot_config_path,
                                                                  "",
@@ -97,10 +98,10 @@ int main(int argc, char *argv[])
 
     std::string behavior_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    tsid_sot::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
-    // params = tsid_sot::controllers::parse_params(config);
+    inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
+    // params = inria_wbc::controllers::parse_params(config);
 
-    auto behavior = tsid_sot::behaviors::Factory::instance().create(behavior_name, params);
+    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
 
     auto controller = behavior->controller();
     auto all_dofs = controller->all_dofs();

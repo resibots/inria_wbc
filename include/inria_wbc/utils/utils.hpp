@@ -1,5 +1,5 @@
-#ifndef UTILS_HPP
-#define UTILS_HPP
+#ifndef IWBC_UTILS_HPP
+#define IWBC_UTILS_HPP
 
 /*!
  * \file utils.hpp
@@ -13,7 +13,7 @@
 #include <unordered_set>
 // To convert quaternions to euler angles
 // source https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-namespace tsid_sot
+namespace inria_wbc
 {
   namespace utils
   {
@@ -95,5 +95,5 @@ namespace tsid_sot
       return filtered;
     }
   } // namespace utils
-} // namespace tsid_sot
+} // namespace inria_wbc
 #endif

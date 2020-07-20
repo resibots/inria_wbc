@@ -1,20 +1,20 @@
-#ifndef TALOS_SQUAT_HPP
-#define TALOS_SQUAT_HPP
+#ifndef IWBC_SQUAT_HPP
+#define IWBC_SQUAT_HPP
 #include <iostream>
 #include <chrono>
 #include <signal.h>
-#include "controllers/talos_pos_tracking.hpp"
-#include "utils/trajectory_handler.hpp"
-#include "behaviors/factory.hpp"
+#include <inria_wbc/controllers/talos_pos_tracking.hpp>
+#include <inria_wbc/utils/trajectory_handler.hpp>
+#include <inria_wbc/behaviors/factory.hpp>
 
-namespace tsid_sot
+namespace inria_wbc
 {
     namespace behaviors
     {
         class TalosSquat : public Behavior
         {
         public:
-            TalosSquat(const tsid_sot::controllers::TalosBaseController::Params &params);
+            TalosSquat(const inria_wbc::controllers::TalosBaseController::Params &params);
             TalosSquat() = delete;
             Eigen::VectorXd cmd();
             virtual ~TalosSquat() {}
@@ -25,5 +25,5 @@ namespace tsid_sot
             std::vector<Eigen::VectorXd> current_trajectory_;
         };
     } // namespace behaviors
-} // namespace tsid_sot
+} // namespace inria_wbc
 #endif

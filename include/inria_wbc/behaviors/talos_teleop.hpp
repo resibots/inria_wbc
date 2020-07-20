@@ -1,21 +1,21 @@
-#ifndef TALOS_SQUAT_HPP
-#define TALOS_SQUAT_HPP
-#include "examples/factory.hpp"
+#ifndef IWBC_TELEOP_HPP
+#define IWBC_TELEOP_HPP
 #include <iostream>
 #include <chrono>
 #include <signal.h>
-#include "controllers/talos_pos_tracking.hpp"
-#include "utils/trajectory_handler.hpp"
-#include "xsens_parser/xsens_joint_trajectory.hpp"
 
-namespace tsid_sot
+#include <inria_wbc/controllers/talos_pos_tracking.hpp>
+#include <inria_wbc/utils/trajectory_handler.hpp>
+#include <inria_wbc/xsens_parser/xsens_joint_trajectory.hpp>
+
+namespace inria_wbc
 {
     namespace example
     {
         class TalosTeleop : public Example
         {
         public:
-            TalosTeleop(const tsid_sot::controllers::TalosBaseController::Params &params);
+            TalosTeleop(const inria_wbc::controllers::TalosBaseController::Params &params);
             TalosTeleop() = delete;
             Eigen::VectorXd cmd();
 
@@ -25,5 +25,5 @@ namespace tsid_sot
             std::shared_ptr<XSensJointTrajectory> xsens_trajectory_;
         };
     } // namespace example
-} // namespace tsid_sot
+} // namespace inria_wbc
 #endif

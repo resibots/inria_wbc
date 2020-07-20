@@ -1,21 +1,23 @@
-#ifndef TALOS_BASE_CONTROLLER_HPP
-#define TALOS_BASE_CONTROLLER_HPP
+#ifndef IWBC_TALOS_BASE_CONTROLLER_HPP
+#define IWBC_TALOS_BASE_CONTROLLER_HPP
 
 #include <Eigen/Core>
 #include <string>
 #include <unordered_map>
 #include <iostream>
-#include "boost/variant.hpp"
-#include "string"
-#include "utils/utils.hpp"
+#include <boost/variant.hpp>
+
+#include <pinocchio/spatial/se3.hpp>
 
 #include <tsid/math/fwd.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
 #include <tsid/trajectories/trajectory-se3.hpp>
 #include <tsid/trajectories/trajectory-euclidian.hpp>
-#include <pinocchio/spatial/se3.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-se3-equality.hpp>
+
+#include <inria_wbc/utils/utils.hpp>
+
 
 // forward declaration to speed-up compilation
 namespace tsid
@@ -50,7 +52,7 @@ namespace tsid
     } // namespace tasks
 } // namespace tsid
 
-namespace tsid_sot
+namespace inria_wbc
 {
     namespace controllers
     {
@@ -145,7 +147,7 @@ namespace tsid_sot
             std::unordered_map<std::string, boost::variant<TaskTrajReferenceSE3, TaskTrajReferenceVector3>> task_traj_map_;
         };
 
-        tsid_sot::controllers::TalosBaseController::Params parse_params(YAML::Node config);
+        inria_wbc::controllers::TalosBaseController::Params parse_params(YAML::Node config);
     } // namespace controllers
-} // namespace tsid_sot
+} // namespace inria_wbc
 #endif
