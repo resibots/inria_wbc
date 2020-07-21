@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-project(tsid_controllers)
+project(inria_wbc)
 
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(TSID_CONTROLLERS_VERSION 1.0.0)
+set(INRIA_WBC_VERSION 1.0.0)
 
 option(COMPILE_ROBOT_DART_EXAMPLE "compile robot-dart example" ON)
 option(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "compile robot-dart example with graphics" ON)
@@ -30,17 +30,17 @@ list(APPEND DEPENDENCIES_INCS
                              ${XSENS_PARSER_DEPENDENCIES_INCS}
 )
 
-set(TSID_CONTROLLERS_HEADERS
-                            include/controllers/talos_base_controller.hpp
-                            include/controllers/talos_pos_tracking.hpp
-                            include/behaviors/factory.hpp
-                            include/behaviors/talos_squat.hpp
-                            include/behaviors/talos_move_arm.hpp
-                            include/utils/trajectory_handler.hpp
-                            include/utils/utils.hpp
+set(INRIA_WBC_HEADERS
+                            include/inria_wbc/controllers/talos_base_controller.hpp
+                            include/inria_wbc/controllers/talos_pos_tracking.hpp
+                            include/inria_wbc/behaviors/factory.hpp
+                            include/inria_wbc/behaviors/talos_squat.hpp
+                            include/inria_wbc/behaviors/talos_move_arm.hpp
+                            include/inria_wbc/utils/trajectory_handler.hpp
+                            include/inria_wbc/utils/utils.hpp
 )
 
-set(TSID_CONTROLLERS_SOURCES
+set(INRIA_WBC_SOURCES
                             src/controllers/talos_base_controller.cpp
                             src/controllers/talos_pos_tracking.cpp
                             src/behaviors/talos_squat.cpp
@@ -53,12 +53,12 @@ set(EXAMPLE_LIST
                 src/robot_dart/test_masses.cpp
 )
 
-add_library(tsid_controllers SHARED ${TSID_CONTROLLERS_HEADERS} ${TSID_CONTROLLERS_SOURCES})
+add_library(inria_wbc SHARED ${INRIA_WBC_HEADERS} ${INRIA_WBC_SOURCES})
 
 
-target_link_libraries(tsid_controllers PUBLIC ${DEPENDENCIES_LIBS})
+target_link_libraries(inria_wbc PUBLIC ${DEPENDENCIES_LIBS})
 
-target_include_directories(tsid_controllers
+target_include_directories(inria_wbc
                                            PUBLIC
                                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/build/include>
                                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
@@ -73,10 +73,10 @@ function(compile_examples)
         string(REPLACE "src/robot_dart/" "" EXAMPLE_NAME ${EXAMPLE_NAME} )
         message("COMPILING EXAMPLE ${EXAMPLE_NAME}")
         add_executable(${EXAMPLE_NAME} ${EXAMPLE})
-        target_link_libraries(${EXAMPLE_NAME} PUBLIC tsid_controllers)
+        target_link_libraries(${EXAMPLE_NAME} PUBLIC inria_wbc)
         if(RobotDART_Magnum_FOUND)
             add_executable(${EXAMPLE_NAME}_graphics ${EXAMPLE})
-            target_link_libraries(${EXAMPLE_NAME}_graphics PUBLIC tsid_controllers RobotDART::Magnum)
+            target_link_libraries(${EXAMPLE_NAME}_graphics PUBLIC inria_wbc RobotDART::Magnum)
         endif()
     endforeach()
 endfunction()
@@ -94,9 +94,9 @@ endif()
 
 
 
-generate_export_header(tsid_controllers)
+generate_export_header(inria_wbc)
 
-install(TARGETS tsid_controllers
+install(TARGETS inria_wbc
                                EXPORT targets
                                LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
                                ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
@@ -104,15 +104,15 @@ install(TARGETS tsid_controllers
                                INCLUDES DESTINATION ${CMAKE_INSTALL_PREFIX}/include
 )
 
-install(FILES ${TSID_CONTROLLERS_HEADERS} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/tsid_controllers/)
+install(DIRECTORY include/inria_wbc DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
 set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include)
 set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib)
-set(LIBRARY tsid_controllers)
+set(LIBRARY inria_wbc)
 
-configure_package_config_file("cmake/tsid_controllers.cmake.in"
-                              "${CMAKE_CURRENT_BINARY_DIR}/tsid_controllersConfig.cmake"
+configure_package_config_file("cmake/inria_wbc.cmake.in"
+                              "${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfig.cmake"
                               INSTALL_DESTINATION 
-                              "${LIBRARY_INSTALL_DIR}/cmake/tsid_controllers"
+                              "${LIBRARY_INSTALL_DIR}/cmake/inria_wbc"
                               PATH_VARS 
                               INCLUDE_INSTALL_DIR 
                               LIBRARY_INSTALL_DIR LIBRARY
@@ -121,19 +121,19 @@ configure_package_config_file("cmake/tsid_controllers.cmake.in"
 
 install(EXPORT targets
                      FILE
-                     tsid_controllersTargets.cmake
+                     inria_wbcTargets.cmake
                      DESTINATION
-                     ${LIBRARY_INSTALL_DIR}/cmake/tsid_controllers
+                     ${LIBRARY_INSTALL_DIR}/cmake/inria_wbc
 )
 
-write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/tsid_controllersConfigVersion.cmake"
-                                 VERSION ${TSID_CONTROLLERS_VERSION}
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfigVersion.cmake"
+                                 VERSION ${INRIA_WBC_VERSION}
                                  COMPATIBILITY AnyNewerVersion
 )
 
 install(FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/tsid_controllersConfig.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/tsid_controllersConfigVersion.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfigVersion.cmake"
         DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/lib/cmake/tsid_controllers
+        ${CMAKE_INSTALL_PREFIX}/lib/cmake/inria_wbc
 )

@@ -1,5 +1,5 @@
-#ifndef TRAJECTORY_HANDLER_HPP
-#define TRAJECTORY_HANDLER_HPP
+#ifndef IWBC_TRAJECTORY_HANDLER_HPP
+#define IWBC_TRAJECTORY_HANDLER_HPP
 #include <cassert>
 #define assertm(exp, msg) assert(((void)msg, exp))
 namespace trajectory_handler

@@ -1,10 +1,10 @@
-#ifndef TALOS_FACTORY_HPP
-#define TALOS_FACTORY_HPP
+#ifndef IWBC_FACTORY_HPP
+#define IWBC_FACTORY_HPP
 
 
-#include "behavior.hpp"
+#include <inria_wbc/behaviors/behavior.hpp>
 
-namespace tsid_sot
+namespace inria_wbc
 {
     namespace behaviors
     {
@@ -19,7 +19,7 @@ namespace tsid_sot
                 return instance;
             }
             typedef std::shared_ptr<Behavior> behavior_ptr_t;
-            typedef std::function<behavior_ptr_t(const tsid_sot::controllers::TalosBaseController::Params &)>
+            typedef std::function<behavior_ptr_t(const inria_wbc::controllers::TalosBaseController::Params &)>
                 behavior_creator_t;
 
             void register_behavior(const std::string &behavior_name, behavior_creator_t pfn_create_behavior)
@@ -35,7 +35,7 @@ namespace tsid_sot
             }
 
             behavior_ptr_t create(const std::string &behavior_name,
-                                         const tsid_sot::controllers::TalosBaseController::Params &params)
+                                         const inria_wbc::controllers::TalosBaseController::Params &params)
             {
                 auto it = behavior_map_.find(behavior_name);
                 if (it != behavior_map_.end())
@@ -64,12 +64,12 @@ namespace tsid_sot
         {
             AutoRegister(std::string behavior_name)
             {
-                Factory::instance().register_behavior(behavior_name, [](const tsid_sot::controllers::TalosBaseController::Params &params) {
+                Factory::instance().register_behavior(behavior_name, [](const inria_wbc::controllers::TalosBaseController::Params &params) {
                     return std::make_shared<BehaviorClass>(params);
                 });
             }
         };
 
     } // namespace behavior
-} // namespace tsid_sot
+} // namespace inria_wbc
 #endif

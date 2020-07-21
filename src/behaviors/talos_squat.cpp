@@ -1,18 +1,18 @@
-#include "behaviors/talos_squat.hpp"
+#include "inria_wbc/behaviors/talos_squat.hpp"
 
-namespace tsid_sot
+namespace inria_wbc
 {
     namespace behaviors
     {
 
         static AutoRegister<TalosSquat> __talos_squat("talos-squat");
 
-        TalosSquat::TalosSquat(const tsid_sot::controllers::TalosBaseController::Params &params) :
-            Behavior(std::make_shared<tsid_sot::controllers::TalosPosTracking>(params))
+        TalosSquat::TalosSquat(const inria_wbc::controllers::TalosBaseController::Params &params) :
+            Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto com_init = std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->com_init();
+            auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->com_init();
             auto com_final = com_init;
             com_final(2) -= 0.2;
             float trajectory_duration = 3;
@@ -25,7 +25,7 @@ namespace tsid_sot
         {
 
             auto ref = current_trajectory_[time_];
-            std::static_pointer_cast<tsid_sot::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
+            std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
             controller_->solve();
             time_++;
             if (time_ == current_trajectory_.size())
@@ -39,4 +39,4 @@ namespace tsid_sot
         }
 
     } // namespace behaviors
-} // namespace tsid_sot
+} // namespace inria_wbc

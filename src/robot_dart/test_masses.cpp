@@ -7,11 +7,11 @@
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robot.hpp>
 
-#include "behaviors/factory.hpp"
-
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
+
+#include "inria_wbc/behaviors/factory.hpp"
 
 Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, Eigen::VectorXd targetpos)
 {
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
 
-    tsid_sot::controllers::TalosBaseController::Params params = {robot->model_filename(),
+    inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
                                                                  "../etc/talos_configurations.srdf",
                                                                  sot_config_path,
                                                                  "",
@@ -89,9 +89,9 @@ int main(int argc, char *argv[])
 
     std::string behavior_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    tsid_sot::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
+    inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
 
-    auto behavior = tsid_sot::behaviors::Factory::instance().create(behavior_name, params);
+    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
     auto controller = behavior->controller();
 
     auto masses = controller->pinocchio_model_masses();
