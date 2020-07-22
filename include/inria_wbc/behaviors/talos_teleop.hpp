@@ -17,7 +17,9 @@ namespace inria_wbc
         public:
             TalosTeleop(const inria_wbc::controllers::TalosBaseController::Params &params);
             TalosTeleop() = delete;
-            Eigen::VectorXd cmd();
+            TalosTeleop(const TalosTeleop& c) { assert(0); /* not ready yet*/ }
+            virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TalosTeleop>(*this); }
+            Eigen::VectorXd cmd() override;
 
         private:
             int time_ = 0;

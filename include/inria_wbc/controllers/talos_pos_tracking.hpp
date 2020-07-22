@@ -17,8 +17,13 @@ namespace inria_wbc
                 set_stack_configuration();
                 init_references();
             };
+            TalosPosTracking(const TalosPosTracking& other);
+            virtual std::shared_ptr<TalosBaseController> clone() const override 
+            {
+                return std::make_shared<TalosPosTracking>(*this);
+            }
 
-            ~TalosPosTracking(){};
+            virtual ~TalosPosTracking(){};
 
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return com_task_; }
             tsid::math::Vector3 com_init() { return com_init_; }
@@ -31,10 +36,13 @@ namespace inria_wbc
             void set_posture_ref(const tsid::math::Vector &ref, const std::string &task_name);
 
         private:
-            void parse_configuration_yaml(const std::string &sot_config_path);
-            void set_stack_configuration();
-            void init_references();
-            void set_task_traj_map();
+            void parse_configuration_yaml(const std::string &sot_config_path) override;
+            void set_stack_configuration() override;
+            void init_references() override;
+            void set_task_traj_map() override;
+            // should not be used (see clone)
+            TalosPosTracking& operator=(const TalosPosTracking& o) const = delete;
+
             // TALOS CONFIG
             double lxp_ = 0.1;                                                 // foot length in positive x direction
             double lxn_ = 0.11;                                                // foot length in negative x direction

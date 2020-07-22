@@ -55,10 +55,7 @@ namespace inria_wbc
     TalosBaseController::TalosBaseController(const Params &params)
     {
       params_ = params;
-      dt_ = params.dt;
-      verbose_ = params.verbose;
-      t_ = 0.0;
-
+      verbose_ = params_.verbose;
       pinocchio::Model robot_model;
       if (!params.floating_base_joint_name.empty())
       {
@@ -72,6 +69,29 @@ namespace inria_wbc
       }
       robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
       pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, verbose_); //the srdf contains initial joint positions
+
+      _reset();
+    }
+
+    TalosBaseController::TalosBaseController(const TalosBaseController& other)
+    {
+          std::cout<<"copy TalosBaseController"<<std::endl;
+
+      // this copy contructor is mostly designed to clone a "blank" object
+      // it is NOT designed to copy all the internal state!
+      assert(other.t_ == 0);
+      params_ = other.params_;
+      robot_ = std::make_shared<RobotWrapper>(other.robot_->model(), params_.verbose);
+      // the model should already contain the configuration
+      _reset(); 
+    }
+
+    // reset everything (useful when cloning)
+    void TalosBaseController::_reset() 
+    {
+      dt_ = params_.dt;
+      mimic_dof_names_ = params_.mimic_dof_names;
+      t_ = 0.0;
 
       uint nactuated = robot_->na();
       uint ndofs = robot_->nv(); // na + 6 (floating base)
@@ -94,7 +114,6 @@ namespace inria_wbc
       ddq_.setZero(ddq_.size());
       tau_.setZero(tau_.size());
 
-      mimic_dof_names_ = params.mimic_dof_names;
       tsid_joint_names_ = all_dofs(false);
       non_mimic_indexes_ = get_non_mimics_indexes();
     }

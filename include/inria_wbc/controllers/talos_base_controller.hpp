@@ -82,6 +82,9 @@ namespace inria_wbc
             // typedef boost::variant<pinocchio::SE3, tsid::math::Vector3> ReferenceType;
 
             TalosBaseController(const Params &params);
+            // copy (but only from a blank object that has just been initialized, i.e. t_ == 0)
+            TalosBaseController(const TalosBaseController& other);
+            virtual std::shared_ptr<TalosBaseController> clone() const = 0;
 
             virtual ~TalosBaseController(){};
 
@@ -112,8 +115,11 @@ namespace inria_wbc
             virtual void set_stack_configuration() = 0;
             virtual void init_references() = 0;
             virtual void set_task_traj_map() = 0;
-
+            // should not be used (see clone)
+            TalosBaseController& operator=(const TalosBaseController& o) = delete;
         protected:
+            void _reset();
+
             Params params_;
             bool verbose_;
             double t_;
@@ -136,7 +142,7 @@ namespace inria_wbc
 
             std::shared_ptr<tsid::robots::RobotWrapper> robot_;
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
-            tsid::solvers::SolverHQPBase *solver_;
+            std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
 
             // limits (position, velocity, acceleration)
             tsid::math::Vector q_lb_;    // lower position bound
