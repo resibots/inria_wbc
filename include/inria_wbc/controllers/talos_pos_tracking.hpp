@@ -10,13 +10,7 @@ namespace inria_wbc
         class TalosPosTracking : public TalosBaseController
         {
         public:
-            TalosPosTracking(const Params &params) : TalosBaseController(params)
-            {
-                if (!params.sot_config_path.empty())
-                    parse_configuration_yaml(params.sot_config_path);
-                set_stack_configuration();
-                init_references();
-            };
+            TalosPosTracking(const Params &params);
             TalosPosTracking(const TalosPosTracking& other);
             virtual std::shared_ptr<TalosBaseController> clone() const override 
             {

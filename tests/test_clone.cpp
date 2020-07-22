@@ -31,9 +31,6 @@ template <typename T> void compare_cmds(const T& cmds, const T& cmds2)
 {
     BOOST_CHECK_EQUAL(cmds.first.size(), cmds2.first.size());
     for (int i = 0; i < cmds.first.size(); ++i) {
-        std::cout<<"["<<i<<"] "<<cmds.first[i].transpose()<<std::endl;
-        std::cout<<"["<<i<<"] "<<cmds2.first[i].transpose()<<std::endl;
-        std::cout<<std::endl;
         BOOST_CHECK(cmds.first[i].isApprox(cmds2.first[i], 1e-8));
         BOOST_CHECK(cmds.second[i].isApprox(cmds2.second[i], 1e-8));
     }
@@ -41,6 +38,7 @@ template <typename T> void compare_cmds(const T& cmds, const T& cmds2)
 
 BOOST_AUTO_TEST_CASE(clone_test)
 {
+    srand(time(0));
     auto behaviors = {"../etc/squat.yaml", "../etc/arm.yaml"};
     std::vector<std::pair<std::string, std::string>> packages
         = {{"talos_description", "talos/talos_description"}};
@@ -64,6 +62,7 @@ BOOST_AUTO_TEST_CASE(clone_test)
 
         auto cmds = test_behavior(behavior);
         auto cmds2 = test_behavior(behavior2);
+    
         compare_cmds(cmds, cmds2);
     }
 }

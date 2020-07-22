@@ -75,14 +75,14 @@ namespace inria_wbc
 
     TalosBaseController::TalosBaseController(const TalosBaseController& other)
     {
-          std::cout<<"copy TalosBaseController"<<std::endl;
-
       // this copy contructor is mostly designed to clone a "blank" object
       // it is NOT designed to copy all the internal state!
       assert(other.t_ == 0);
       params_ = other.params_;
+      fb_joint_name_ = other.fb_joint_name_;
+
       robot_ = std::make_shared<RobotWrapper>(other.robot_->model(), params_.verbose);
-      // the model should already contain the configuration
+      assert(robot_->model() == other.robot_->model());
       _reset(); 
     }
 
@@ -148,8 +148,12 @@ namespace inria_wbc
     bool TalosBaseController::solve()
     {
       //Compute the current data from the current position and solve to find next position
+      assert(tsid_);
       const HQPData &HQPData = tsid_->computeProblemData(t_, q_tsid_, v_tsid_);
+
+      assert(solver_);
       const HQPOutput &sol = solver_->solve(HQPData);
+      
       if (sol.status == HQP_STATUS_OPTIMAL)
       {
         const Vector &tau = tsid_->getActuatorForces(sol);

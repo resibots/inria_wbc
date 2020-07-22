@@ -49,6 +49,14 @@ namespace inria_wbc
 {
   namespace controllers
   {
+    TalosPosTracking::TalosPosTracking(const Params &params) : TalosBaseController(params)
+    {
+        if (!params.sot_config_path.empty())
+            parse_configuration_yaml(params.sot_config_path);
+        set_stack_configuration();
+        init_references();
+    }
+    
     TalosPosTracking::TalosPosTracking(const TalosPosTracking& other) : TalosBaseController(other)
     {
       std::cout<<"copy TalosPosTracking"<<std::endl;
@@ -121,7 +129,6 @@ namespace inria_wbc
       ////////////////////Gather Initial Pose //////////////////////////////////////
       q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
       Quaternion quat = {.w = q_tsid_(6), .x = q_tsid_(3), .y = q_tsid_(4), .z = q_tsid_(5)}; //convert quaternion to euler for dart
-      std::cout<<"=>"<<sqrt(quat.w * quat.w + quat.x * quat.x + quat.y * quat.y + quat.z * quat.z)<<std::endl;
 
       EulerAngles euler = to_euler(quat);
       q0_ << q_tsid_.head(3), euler.roll, euler.pitch, euler.yaw, q_tsid_.tail(robot_->na()); //q_tsid_ is of size 37 (pos+quat+nactuated)
