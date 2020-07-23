@@ -49,6 +49,42 @@ namespace inria_wbc
 {
   namespace controllers
   {
+    TalosPosTracking::TalosPosTracking(const Params &params) : TalosBaseController(params)
+    {
+        if (!params.sot_config_path.empty())
+            parse_configuration_yaml(params.sot_config_path);
+        set_stack_configuration();
+        init_references();
+    }
+    
+    TalosPosTracking::TalosPosTracking(const TalosPosTracking& other) : TalosBaseController(other)
+    {
+      std::cout<<"copy TalosPosTracking"<<std::endl;
+      // copy the parameters
+      w_com_ = other.w_com_;
+      w_posture_ = other.w_posture_;
+      w_forceRef_feet_ = other.w_forceRef_feet_;
+      w_forceRef_hands_ = other.w_forceRef_hands_;
+      w_floatingb_ = other.w_floatingb_;
+      w_velocity_ = other.w_velocity_;
+      w_rh_ = other.w_rh_;
+      w_rh_ = other.w_rh_;
+      w_rf_ = other.w_rf_;
+      w_lf_ = other.w_lf_;
+      kp_contact_ = other.kp_contact_;
+      kp_com_ = other.kp_com_;
+      kp_posture_ = other.kp_posture_;
+      kp_floatingb_ = other.kp_floatingb_;
+      kp_rh_ = other.kp_rh_;
+      kp_lh_ = other.kp_lh_;
+      kp_lh_ = other.kp_lh_;
+      kp_rf_ = other.kp_rf_;
+      kp_lf_ = other.kp_lf_;
+
+      // initialize everything
+      set_stack_configuration();
+      init_references();
+    }
 
     void TalosPosTracking::parse_configuration_yaml(const std::string &sot_config_path)
     {
@@ -93,6 +129,7 @@ namespace inria_wbc
       ////////////////////Gather Initial Pose //////////////////////////////////////
       q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
       Quaternion quat = {.w = q_tsid_(6), .x = q_tsid_(3), .y = q_tsid_(4), .z = q_tsid_(5)}; //convert quaternion to euler for dart
+
       EulerAngles euler = to_euler(quat);
       q0_ << q_tsid_.head(3), euler.roll, euler.pitch, euler.yaw, q_tsid_.tail(robot_->na()); //q_tsid_ is of size 37 (pos+quat+nactuated)
 
@@ -100,9 +137,10 @@ namespace inria_wbc
       tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
 
       ////////////////////Create an HQP solver /////////////////////////////////////
-      solver_ = SolverHQPFactory::createNewSolver(SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog");
+      using solver_t = std::shared_ptr<tsid::solvers::SolverHQPBase>;
+      solver_ = solver_t(SolverHQPFactory::createNewSolver(SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
       solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
-
+     
       ////////////////////Compute Problem Data at init /////////////////////////////
       const uint nv = robot_->nv();
       tsid_->computeProblemData(dt_, q_tsid_, Vector::Zero(nv));

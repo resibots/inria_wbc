@@ -20,7 +20,7 @@ namespace inria_wbc
             trajectories_.push_back(trajectory_handler::compute_traj(com_final, com_init, params.dt, trajectory_duration));
             current_trajectory_ = trajectories_[traj_selector_];
         }
-
+        
         Eigen::VectorXd TalosSquat::cmd()
         {
 

@@ -53,6 +53,7 @@ set(EXAMPLE_LIST
                 src/robot_dart/test_masses.cpp
 )
 
+
 add_library(inria_wbc SHARED ${INRIA_WBC_HEADERS} ${INRIA_WBC_SOURCES})
 
 
@@ -137,3 +138,6 @@ install(FILES
         DESTINATION
         ${CMAKE_INSTALL_PREFIX}/lib/cmake/inria_wbc
 )
+
+ADD_SUBDIRECTORY(tests)
+
