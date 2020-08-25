@@ -1,63 +1,17 @@
-# tsid_talos_dart
+# inria_wbc
 
-A talos simulation with robot_dart using a tsid stack of tasks
+A talos whole body control framework using tsid
 
-# Install
+Optionally, robot_dart can be used for simulation
 
-Create an installation directory
-```
-cd ~
-mkdir install
-```
+# Installation
 
-## yaml-cpp
+You will need 4 main components:
+* yaml-cpp
+* [pinocchio](https://github.com/stack-of-tasks/pinocchio)
+* [tsid](https://github.com/stack-of-tasks/tsid)
+* [robot_dart](https://github.com/resibots/robot_dart) (optional)
 
-```
-sudo apt-get install libyaml-cpp-dev
-```
-
-## pinocchio
-
-Install pinnochio following [this](https://github.com/stack-of-tasks/pinocchio)
-
-Use master branch and :
-```
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX='~/install' -DCMAKE_PREFIX_PATH='~/install' ..
-make 
-sudo make install
-```
-## tsid
-
-Install tsid following [this](https://github.com/stack-of-tasks/tsid)
-
-Use master branch and :
-```
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX='~/install' -DCMAKE_PREFIX_PATH='~/install' ..
-make 
-sudo make install
-```
-
-## robot_dart
-
-Install tsid following [this](https://github.com/stack-of-tasks/tsid)
-Install dart in ~/install
-Use master branch and :
-```
-./waf configure --dart=~/install --prefix=~/install
-./waf
-./waf install
-```
-
-## tsid_robot_dart
-```
-cd tsid_robot_dart
-mkdir build
-cd build
-cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX='~/install' -DCMAKE_PREFIX_PATH='~/install' ..
-make 
-sudo make install
-```
+Please refer to one of those:
+* [Manual Installation](docs/installation.md)
+* [Docker file and image](https://gitlab.inria.fr/locolearn/public/docker_inria_wbc)
