@@ -19,7 +19,7 @@ namespace inria_wbc
             TalosTeleop() = delete;
             TalosTeleop(const TalosTeleop& c) { assert(0); /* not ready yet*/ }
             virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TalosTeleop>(*this); }
-            Eigen::VectorXd cmd() override;
+            bool cmd(Eigen::VectorXd &) override;
 
         private:
             int time_ = 0;

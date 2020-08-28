@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 
 
     //////////////////// START SIMULATION //////////////////////////////////////
-    simu.set_control_freq(2000); // 1000 Hz
+    simu.set_control_freq(1000); // 1000 Hz
     simu.set_graphics_freq(100);
     
     // for benchmarking
@@ -113,16 +113,23 @@ int main(int argc, char *argv[])
     
     // the main loop
     using namespace std::chrono;
+    Eigen::VectorXd q;
     while (simu.scheduler().next_time() < 20. && !simu.graphics()->done()) {
         // step the command
         if (simu.schedule(simu.control_freq())) {
-
             auto t1 = high_resolution_clock::now();
-            auto cmd = compute_spd(robot->skeleton(), behavior->cmd());
+            bool solution_found = behavior->cmd(q);
+            if(solution_found)
+            {
+                auto cmd = compute_spd(robot->skeleton(), q);
+                robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+            }
+            else
+            {
+                return -1;
+            }
             auto t2 = high_resolution_clock::now();
             time_cmd += duration_cast<milliseconds>(t2 - t1).count();
-
-            robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
             ++it_cmd;
         }
         // step the simulation
@@ -142,8 +149,8 @@ int main(int argc, char *argv[])
             it_cmd = 0;
             time_cmd = 0;
             time_simu = 0;
+            
         }
     }
-
     return 0;
 }
