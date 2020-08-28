@@ -19,7 +19,7 @@ namespace inria_wbc
             TalosMoveArm() = delete;
             TalosMoveArm(const TalosMoveArm& other) = default;
             virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TalosMoveArm>(*this); }
-            Eigen::VectorXd cmd() override;
+            bool cmd(Eigen::VectorXd &) override;
             virtual ~TalosMoveArm() {}
         private:
             int time_ = 0;

@@ -9,7 +9,7 @@ namespace inria_wbc
         TalosMoveArm::TalosMoveArm(const inria_wbc::controllers::TalosBaseController::Params &params) :
             Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
         {
-            
+
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
             auto lh_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("lh");
@@ -21,21 +21,27 @@ namespace inria_wbc
             current_trajectory_ = trajectories_[traj_selector_];
         }
 
-        Eigen::VectorXd TalosMoveArm::cmd()
+        bool TalosMoveArm::cmd(Eigen::VectorXd &q)
         {
-
             auto ref = current_trajectory_[time_];
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
-            controller_->solve();
-            time_++;
-            if (time_ == current_trajectory_.size())
+            if (controller_->solve())
             {
-                time_ = 0;
-                traj_selector_ = ++traj_selector_ % trajectories_.size();
-                current_trajectory_ = trajectories_[traj_selector_];
+                time_++;
+                if (time_ == current_trajectory_.size())
+                {
+                    time_ = 0;
+                    traj_selector_ = ++traj_selector_ % trajectories_.size();
+                    current_trajectory_ = trajectories_[traj_selector_];
+                }
+                q.resize(controller_->q(false).size());
+                q = controller_->q(false);
+                return true;
             }
-
-            return controller_->q(false);
+            else
+            {
+                return false;
+            }
         }
 
     } // namespace behaviors

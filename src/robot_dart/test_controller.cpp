@@ -105,13 +105,20 @@ int main(int argc, char *argv[])
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
     simu.set_graphics_freq(100);
+    Eigen::VectorXd q;
     while (simu.scheduler().next_time() < 20. && !simu.graphics()->done()) {
         if (simu.schedule(simu.control_freq())) {
-            auto cmd = compute_spd(robot->skeleton(), behavior->cmd());
-            robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+            if(behavior->cmd(q))
+            {
+                auto cmd = compute_spd(robot->skeleton(), q);
+                robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+            }
+            else
+            {
+                return -1;
+            }
         }
         simu.step_world();
     }
-
     return 0;
 }

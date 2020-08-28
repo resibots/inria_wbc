@@ -175,11 +175,8 @@ namespace inria_wbc
       }
       else
       {
-        if (verbose_)
-        {
-          std::cout << "Controller failed, can't solve problem " << std::endl;
-          std::cout << "Status " + toString(sol.status) << std::endl;
-        }
+        std::cerr << "Controller failed, can't solve problem " << std::endl;
+        std::cerr << "Status " + toString(sol.status) << std::endl;
         return false;
       }
     }

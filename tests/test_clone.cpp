@@ -18,10 +18,15 @@ std::pair<std::vector<Eigen::VectorXd>, std::vector<Eigen::VectorXd>> test_behav
     uint ncontrollable = controllable_dofs.size();
 
     std::vector<Eigen::VectorXd> cmds, cmds_filtered;
+    Eigen::VectorXd cmd;
+    bool is_valid = false;
     for (int i = 0; i < 3; ++i) {
-        auto cmd = behavior->cmd();
-        cmds.push_back(cmd);
-        cmds_filtered.push_back(controller->filter_cmd(cmd).tail(ncontrollable));
+        is_valid = behavior->cmd(cmd);
+        if(is_valid)
+        {
+            cmds.push_back(cmd);
+            cmds_filtered.push_back(controller->filter_cmd(cmd).tail(ncontrollable));
+        }
     }
     std::cout << "done" << std::endl;
     return std::make_pair(cmds, cmds_filtered);

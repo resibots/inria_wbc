@@ -36,7 +36,7 @@ namespace inria_wbc
             std::cout << rh_init.translation().transpose() << " " << rh_final.translation().transpose() << std::endl;
         }
 
-        Eigen::VectorXd TalosTeleop::cmd()
+        bool TalosTeleop::cmd(Eigen::VectorXd &q)
         {
             if (time_ < trajectories_[0].size())
             {
@@ -54,11 +54,19 @@ namespace inria_wbc
             //     ref = xsens_trajectory_->getDhmCurrentFramePin("right_hand");
             //     std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "rh");
             // }
-            controller_->solve();
-            time_++;
-            std::cout << q.size() << std::endl;
-            return controller_->q(false);//size 50
+            if (controller_->solve())
+            {
+                time_++;
+                q.resize(controller_->q(false).size()); //size 50)
+                q = controller_->q(false);
+                std::cout << q.size() << std::endl;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
-    } // namespace example
+    } // namespace behaviors
 } // namespace inria_wbc

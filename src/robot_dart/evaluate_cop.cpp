@@ -78,10 +78,12 @@ int main(int argc, char *argv[])
     simu.set_collision_detector("fcl");
 
 #ifdef GRAPHIC
-    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu);
+    robot_dart::gui::magnum::GraphicsConfiguration configuration;
+    configuration.width = 1280;
+    configuration.height = 960;
+    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu, configuration);
     simu.set_graphics(graphics);
-    graphics->look_at({0., 3.5, 2.}, {0., 0., 0.25});
-    //graphics->record_video("talos.mp4");
+    graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
 #endif
     simu.add_robot(robot);
     simu.add_checkerboard_floor();
