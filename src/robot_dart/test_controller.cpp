@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#include <chrono>
 #include <signal.h>
 #include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
@@ -103,14 +104,45 @@ int main(int argc, char *argv[])
 
 
     //////////////////// START SIMULATION //////////////////////////////////////
-    simu.set_control_freq(1000); // 1000 Hz
+    simu.set_control_freq(2000); // 1000 Hz
     simu.set_graphics_freq(100);
+    
+    // for benchmarking
+    double time_simu = 0, time_cmd = 0;
+    int it_simu = 0, it_cmd = 0;
+    
+    // the main loop
+    using namespace std::chrono;
     while (simu.scheduler().next_time() < 20. && !simu.graphics()->done()) {
+        // step the command
         if (simu.schedule(simu.control_freq())) {
+
+            auto t1 = high_resolution_clock::now();
             auto cmd = compute_spd(robot->skeleton(), behavior->cmd());
+            auto t2 = high_resolution_clock::now();
+            time_cmd += duration_cast<milliseconds>(t2 - t1).count();
+
             robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+            ++it_cmd;
         }
-        simu.step_world();
+        // step the simulation
+        {
+            auto t1 = high_resolution_clock::now();
+            simu.step_world();
+            auto t2 = high_resolution_clock::now();
+            time_simu += duration_cast<milliseconds>(t2 - t1).count();
+            ++it_simu;
+        }
+        // print timing information
+        if (it_simu == 100) {
+            std::cout<<"Average time (iteration simu): "<<time_simu / it_simu << " ms"
+                     << "\tAverage time(iteration command):"<< time_cmd / it_cmd << " ms"
+                     << std::endl;;
+            it_simu = 0;
+            it_cmd = 0;
+            time_cmd = 0;
+            time_simu = 0;
+        }
     }
 
     return 0;
