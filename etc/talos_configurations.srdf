@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <robot name="talos">
     <group_state name="pal_start" group="all">
-        <joint name="root_joint" value="0. 0. 1.05 0. 0. 0.7071067812 0.7071067812" />
+        <joint name="root_joint" value="0. 0. 1.01927 0. 0. 0. 1." />
         <joint name="arm_left_1_joint" value="0.4" />
         <joint name="arm_left_2_joint" value="0.24" />
         <joint name="arm_left_3_joint" value="-0.6" />

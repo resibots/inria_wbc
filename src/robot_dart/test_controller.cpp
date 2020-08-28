@@ -67,9 +67,13 @@ int main(int argc, char *argv[])
     simu.set_collision_detector("fcl");
 
 #ifdef GRAPHIC
-    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu);
+    robot_dart::gui::magnum::GraphicsConfiguration configuration;
+    configuration.width = 1280;
+    configuration.height = 960;
+    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu, configuration);
     simu.set_graphics(graphics);
-    graphics->look_at({0., 3.5, 2.}, {0., 0., 0.25});
+    graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
+    
     //graphics->record_video("talos.mp4");
 #endif
     simu.add_robot(robot);
@@ -101,6 +105,7 @@ int main(int argc, char *argv[])
 
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
+    simu.set_graphics_freq(100);
     while (simu.scheduler().next_time() < 20. && !simu.graphics()->done()) {
         if (simu.schedule(simu.control_freq())) {
             auto cmd = compute_spd(robot->skeleton(), behavior->cmd());
