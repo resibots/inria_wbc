@@ -27,9 +27,11 @@ namespace trajectory_handler
     inline std::vector<pinocchio::SE3> compute_traj(const pinocchio::SE3 &start, const pinocchio::SE3 &dest, double dt, double trajectory_duration)
     {
         Eigen::VectorXd eig_start(7), eig_dest(7), eig_xt(7);
-        eig_start << start.translation(), Eigen::Quaterniond(start.rotation());
-        eig_dest << dest.translation(), Eigen::Quaterniond(dest.rotation());
-
+        Eigen::Quaterniond start_rotation(start.rotation());
+        Eigen::Quaterniond dest_rotation(dest.rotation());
+        eig_start << start.translation(), start_rotation.coeffs();
+        eig_dest << dest.translation(), dest_rotation.coeffs();
+        
         std::vector<pinocchio::SE3> trajectory;
         uint n_steps = std::floor(trajectory_duration / dt);
 
