@@ -99,13 +99,15 @@ int main(int argc, char *argv[])
     auto controller = behavior->controller();
     auto all_dofs = controller->all_dofs();
     auto controllable_dofs = controller->controllable_dofs();
-    robot->set_positions(controller->q0(), all_dofs);
-    uint ncontrollable = controllable_dofs.size();
 
+    
+    robot->set_positions(controller->q0(), all_dofs);
+    
+
+    uint ncontrollable = controllable_dofs.size();
 
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
-    simu.set_graphics_freq(100);
     
     // for benchmarking
     double time_simu = 0, time_cmd = 0;
