@@ -6,60 +6,57 @@ namespace inria_wbc
     {
         static AutoRegister<TalosTeleop> __talos_squat("talos-teleop");
 
-        TalosTeleop::TalosTeleop(const inria_wbc::controllers::TalosBaseController::Params &params) :
-            Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
+        TalosTeleop::TalosTeleop(const inria_wbc::controllers::TalosBaseController::Params &params) : Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
         {
             //////////////////// INIT STACK OF TASK //////////////////////////////////////
             controller_ = std::make_shared<inria_wbc::controllers::TalosPosTracking>(params);
             //////////////////// INIT XSensTraj //////////////////////////////////////
-            std::string teleoperation_file = "/home/user/xsens_parser/tests/etc/covid19-002.mvnx";
+            std::string teleoperation_file = "/home/user/talos_xsens/test1-003#S3.mvnx";
             int start_frame = 0;
-            int end_frame = 250;
+            int end_frame = 6000;
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             inria_wbc::utils::parse(teleoperation_file, "teleoperation_file", config, false, "EXAMPLE");
             inria_wbc::utils::parse(start_frame, "start_frame", config, false, "EXAMPLE");
             inria_wbc::utils::parse(end_frame, "end_frame", config, false, "EXAMPLE");
             xsens_trajectory_ = std::make_shared<XSensJointTrajectory>(teleoperation_file, start_frame, end_frame);
-            xsens_trajectory_->initialize(controller_->dt());
+            xsens_trajectory_->initialize(controller_->dt(), "Pelvis");
 
             //////////////////// Go To initial xsens position  //////////////////////////////////////
-            auto lh_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("lh");
-            auto lh_final = lh_init;
-            lh_final.translation() = xsens_trajectory_->getDhmCurrentFramePin("left_hand").translation();
-            auto rh_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("rh");
-            auto rh_final = rh_init;
-            rh_final.translation() = xsens_trajectory_->getDhmCurrentFramePin("left_hand").translation();
-            float trajectory_duration = 2;
-            trajectories_.push_back(trajectory_handler::compute_traj(lh_init, lh_final, params.dt, trajectory_duration));
-            trajectories_.push_back(trajectory_handler::compute_traj(rh_init, rh_final, params.dt, trajectory_duration));
-            std::cout << lh_init.translation().transpose() << " " << lh_final.translation().transpose() << std::endl;
-            std::cout << rh_init.translation().transpose() << " " << rh_final.translation().transpose() << std::endl;
+            lh_talos_init_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("lh");
+            lh_talos_cmd_ = lh_talos_init_;
+
+            rh_talos_init_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("rh");
+            rh_talos_init_ = rh_talos_init_;
+
+            floating_base_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("floatingb");
+
+            lh_dhm_init_ = xsens_trajectory_->getDhmCurrentFramePin("left_hand");
+            rh_dhm_init_ = xsens_trajectory_->getDhmCurrentFramePin("right_hand");
         }
 
         bool TalosTeleop::cmd(Eigen::VectorXd &q)
         {
-            if (time_ < trajectories_[0].size())
+
+            if (xsens_trajectory_->updateStep())
             {
-                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(trajectories_[0][time_], "lh");
-                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(trajectories_[1][time_], "rh");
+                auto ref = xsens_trajectory_->getDhmCurrentFramePin("left_hand");
+                lh_talos_cmd_.translation() = lh_talos_init_.translation() + ref.translation() - lh_dhm_init_.translation();
+                // lh_talos_cmd.rotation() = ref.rotation();
+                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(lh_talos_cmd_.actInv(floating_base_), "lh");
+                ref = xsens_trajectory_->getDhmCurrentFramePin("right_hand");
+                rh_talos_cmd_.translation() = rh_talos_init_.translation() + ref.translation() - rh_dhm_init_.translation();
+                // rh_talos_cmd.rotation() = ref.rotation();
+                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(rh_talos_cmd_.actInv(floating_base_), "rh");
+                // std::cout << "lh_talos_cmd traj " << lh_talos_cmd.translation().transpose() << std::endl;
             }
             else
             {
-                std::cout << "INITIALIZATION IS DONE" << std::endl;
+                return false;
             }
-            // if (xsens_trajectory_->updateStep())
-            // {
-            //     auto ref = xsens_trajectory_->getDhmCurrentFramePin("left_hand");
-            //     std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
-            //     ref = xsens_trajectory_->getDhmCurrentFramePin("right_hand");
-            //     std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "rh");
-            // }
             if (controller_->solve())
             {
-                time_++;
-                q.resize(controller_->q(false).size()); //size 50)
+                q.resize(controller_->q(false).size()); //size 50
                 q = controller_->q(false);
-                std::cout << q.size() << std::endl;
                 return true;
             }
             else
