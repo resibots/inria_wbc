@@ -11,7 +11,7 @@ namespace inria_wbc
             //////////////////// INIT STACK OF TASK //////////////////////////////////////
             controller_ = std::make_shared<inria_wbc::controllers::TalosPosTracking>(params);
             //////////////////// INIT XSensTraj //////////////////////////////////////
-            std::string teleoperation_file = "/home/user/talos_xsens/test1-003#S3.mvnx";
+            std::string teleoperation_file = "/home/user/talos_xsens/test1-004#S3.mvnx";
             int start_frame = 0;
             int end_frame = 6000;
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
@@ -41,12 +41,12 @@ namespace inria_wbc
             {
                 auto ref = xsens_trajectory_->getDhmCurrentFramePin("left_hand");
                 lh_talos_cmd_.translation() = lh_talos_init_.translation() + ref.translation() - lh_dhm_init_.translation();
-                // lh_talos_cmd.rotation() = ref.rotation();
-                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(lh_talos_cmd_.actInv(floating_base_), "lh");
+                lh_talos_cmd_.rotation() = ref.rotation();
+                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(lh_talos_cmd_, "lh");
                 ref = xsens_trajectory_->getDhmCurrentFramePin("right_hand");
                 rh_talos_cmd_.translation() = rh_talos_init_.translation() + ref.translation() - rh_dhm_init_.translation();
-                // rh_talos_cmd.rotation() = ref.rotation();
-                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(rh_talos_cmd_.actInv(floating_base_), "rh");
+                rh_talos_cmd_.rotation() = ref.rotation();
+                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(rh_talos_cmd_, "rh");
                 // std::cout << "lh_talos_cmd traj " << lh_talos_cmd.translation().transpose() << std::endl;
             }
             else

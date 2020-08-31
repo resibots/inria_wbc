@@ -128,10 +128,13 @@ namespace inria_wbc
     {
       ////////////////////Gather Initial Pose //////////////////////////////////////
       q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
-      Quaternion quat = {.w = q_tsid_(6), .x = q_tsid_(3), .y = q_tsid_(4), .z = q_tsid_(5)}; //convert quaternion to euler for dart
+      Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
+      Eigen::AngleAxisd aaxis(quat);
+      q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na()); //q_tsid_ is of size 37 (pos+quat+nactuated)
 
-      EulerAngles euler = to_euler(quat);
-      q0_ << q_tsid_.head(3), euler.roll, euler.pitch, euler.yaw, q_tsid_.tail(robot_->na()); //q_tsid_ is of size 37 (pos+quat+nactuated)
+      //Quaternion quat = {.w = q_tsid_(6), .x = q_tsid_(3), .y = q_tsid_(4), .z = q_tsid_(5)}; //convert quaternion to euler for dart
+
+      //EulerAngles euler = to_euler(quat);
 
       ////////////////////Create the inverse-dynamics formulation///////////////////
       tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
