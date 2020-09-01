@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
-    
+    simu.set_graphics_freq(1000);
     // for benchmarking
     double time_simu = 0, time_cmd = 0;
     int it_simu = 0, it_cmd = 0;
