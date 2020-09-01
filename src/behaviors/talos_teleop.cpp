@@ -54,15 +54,9 @@ namespace inria_wbc
                 return false;
             }
             if (controller_->solve())
-            {
-                // q.resize(controller_->q(false).size()); //size 50
-                // q = controller_->q(false);
                 return true;
-            }
             else
-            {
                 return false;
-            }
         }
 
     } // namespace behaviors

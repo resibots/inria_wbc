@@ -34,8 +34,6 @@ namespace inria_wbc
                     traj_selector_ = ++traj_selector_ % trajectories_.size();
                     current_trajectory_ = trajectories_[traj_selector_];
                 }
-                // q.resize(controller_->q(false).size());
-                // q = controller_->q(false);
                 return true;
             }
             else
