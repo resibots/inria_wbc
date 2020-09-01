@@ -34,7 +34,7 @@ namespace inria_wbc
             rh_dhm_init_ = xsens_trajectory_->getDhmCurrentFramePin("right_hand");
         }
 
-        bool TalosTeleop::cmd(Eigen::VectorXd &q)
+        bool TalosTeleop::update()
         {
 
             if (xsens_trajectory_->updateStep())
@@ -55,8 +55,8 @@ namespace inria_wbc
             }
             if (controller_->solve())
             {
-                q.resize(controller_->q(false).size()); //size 50
-                q = controller_->q(false);
+                // q.resize(controller_->q(false).size()); //size 50
+                // q = controller_->q(false);
                 return true;
             }
             else

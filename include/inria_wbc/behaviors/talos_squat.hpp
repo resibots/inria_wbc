@@ -18,7 +18,7 @@ namespace inria_wbc
             TalosSquat() = delete;
             TalosSquat(const TalosSquat& other) = default;
             virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TalosSquat>(*this); }
-            bool cmd(Eigen::VectorXd &) override;
+            bool update() override;
             virtual ~TalosSquat() {}
         private:
             int time_ = 0;

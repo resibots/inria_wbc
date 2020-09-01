@@ -99,12 +99,15 @@ namespace inria_wbc
             std::vector<int> non_mimic_indexes() { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd &cmd);
 
+            Eigen::VectorXd ddq(bool filter_mimics = true);
             Eigen::VectorXd dq(bool filter_mimics = true);
             Eigen::VectorXd q0(bool filter_mimics = true);
             Eigen::VectorXd q(bool filter_mimics = true);
+            
             double dt() { return dt_; };
             Params params() { return params_; };
-            
+
+            std::shared_ptr<tsid::robots::RobotWrapper> robot() { return robot_; };
             std::vector<double> pinocchio_model_masses();
             std::vector<double> pinocchio_model_cumulated_masses();
             std::vector<std::string> pinocchio_joint_names();

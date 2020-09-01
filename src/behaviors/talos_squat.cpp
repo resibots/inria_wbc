@@ -21,7 +21,7 @@ namespace inria_wbc
             current_trajectory_ = trajectories_[traj_selector_];
         }
 
-        bool TalosSquat::cmd(Eigen::VectorXd &q)
+        bool TalosSquat::update()
         {
             auto ref = current_trajectory_[time_];
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
@@ -34,8 +34,8 @@ namespace inria_wbc
                     traj_selector_ = ++traj_selector_ % trajectories_.size();
                     current_trajectory_ = trajectories_[traj_selector_];
                 }
-                q.resize(controller_->q(false).size());
-                q = controller_->q(false);
+                // q.resize(controller_->q(false).size());
+                // q = controller_->q(false);
                 return true;
             }
             else
