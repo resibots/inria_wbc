@@ -14,7 +14,7 @@
 
 #include "inria_wbc/behaviors/factory.hpp"
 
-Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, Eigen::VectorXd targetpos)
+Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos)
 {
     Eigen::VectorXd q = robot->getPositions();
     Eigen::VectorXd dq = robot->getVelocities();
@@ -43,6 +43,15 @@ Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, Eigen::VectorXd t
     Eigen::VectorXd commands = p + d - Kd * qddot * robot->getTimeStep();
     return commands;
 }
+
+
+Eigen::VectorXd compute_velocities(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos, double dt)
+{
+    Eigen::VectorXd q = robot->getPositions();
+    Eigen::VectorXd vel = (targetpos - q) / dt;
+    return vel;
+}
+
 volatile sig_atomic_t stop;
 void stopsig(int signum)
 {
@@ -60,11 +69,15 @@ int main(int argc, char *argv[])
     std::srand(std::time(NULL));
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto robot = std::make_shared<robot_dart::Robot>("talos/talos.urdf", packages);
+//      auto robot = std::make_shared<robot_dart::Robot>("talos/talos_fast.urdf", packages);
+  
     robot->set_position_enforced(true);
+//    robot->set_actuator_types("velocity");
     robot->set_actuator_types("torque");
 
     //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
     robot_dart::RobotDARTSimu simu(dt);
+//    simu.set_collision_detector("dart");
     simu.set_collision_detector("fcl");
 
 #ifdef GRAPHIC
@@ -124,6 +137,7 @@ int main(int argc, char *argv[])
             if(solution_found)
             {
                 auto cmd = compute_spd(robot->skeleton(), q);
+                // auto cmd = compute_velocities(robot->skeleton(), q, dt);
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
             }
             else
@@ -131,7 +145,7 @@ int main(int argc, char *argv[])
                 return -1;
             }
             auto t2 = high_resolution_clock::now();
-            time_cmd += duration_cast<milliseconds>(t2 - t1).count();
+            time_cmd += duration_cast<microseconds>(t2 - t1).count();
             ++it_cmd;
         }
         // step the simulation
@@ -139,13 +153,13 @@ int main(int argc, char *argv[])
             auto t1 = high_resolution_clock::now();
             simu.step_world();
             auto t2 = high_resolution_clock::now();
-            time_simu += duration_cast<milliseconds>(t2 - t1).count();
+            time_simu += duration_cast<microseconds>(t2 - t1).count();
             ++it_simu;
         }
         // print timing information
-        if (it_simu == 100) {
-            std::cout<<"Average time (iteration simu): "<<time_simu / it_simu << " ms"
-                     << "\tAverage time(iteration command):"<< time_cmd / it_cmd << " ms"
+        if (it_simu == 1000) {
+            std::cout<<"Average time (iteration simu): "<<time_simu / it_simu / 1000. << " ms"
+                     << "\tAverage time(iteration command):"<< time_cmd / it_cmd / 1000. << " ms"
                      << std::endl;;
             it_simu = 0;
             it_cmd = 0;
