@@ -1,5 +1,6 @@
 SOT:
   w_com_: 100.0
+  w_floatingb_: 100.0
   w_posture_: 0.75
   w_forceRef_feet_: 1e-3
   w_forceRef_hands_: 1e-3
@@ -8,8 +9,10 @@ SOT:
   w_lh_: 10.0
   w_rf_: 1.0
   w_lf_: 1.0
+  w_velocity_: 1.0
   kp_contact_: 30.0
   kp_com_: 3000.0
+  kp_floatingb_: 3000.0
   kp_posture_: 30.0
   kp_waist_: 3000.0
   kp_rh_: 300.0 
@@ -18,10 +21,12 @@ SOT:
   kp_lf_: 30.0
 BEHAVIOR:
   name : talos-move-arm
+  trajectory_duration : 6
+  motion_size : 0.05
 PARAMS:
-  urdf_path: /home/user/robot_dart/robots/talos/talos.urdf
-  srdf_path: /home/user/tsid_talos_dart/etc/talos_configurations.srdf
-  sot_config_path: /home/user/tsid_talos_dart/etc/sot.yaml
+  urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
+  srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
+  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/squat.yaml
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false

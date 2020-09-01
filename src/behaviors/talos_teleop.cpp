@@ -15,9 +15,9 @@ namespace inria_wbc
             int start_frame = 0;
             int end_frame = 6000;
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            inria_wbc::utils::parse(teleoperation_file, "teleoperation_file", config, false, "EXAMPLE");
-            inria_wbc::utils::parse(start_frame, "start_frame", config, false, "EXAMPLE");
-            inria_wbc::utils::parse(end_frame, "end_frame", config, false, "EXAMPLE");
+            inria_wbc::utils::parse(teleoperation_file, "teleoperation_file", config, false, "BEHAVIOR");
+            inria_wbc::utils::parse(start_frame, "start_frame", config, false, "BEHAVIOR");
+            inria_wbc::utils::parse(end_frame, "end_frame", config, false, "BEHAVIOR");
             xsens_trajectory_ = std::make_shared<XSensJointTrajectory>(teleoperation_file, start_frame, end_frame);
             xsens_trajectory_->initialize(controller_->dt(), "Pelvis");
 

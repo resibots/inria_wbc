@@ -17,7 +17,7 @@ namespace inria_wbc
         public:
             TalosMoveArm(const inria_wbc::controllers::TalosBaseController::Params &params);
             TalosMoveArm() = delete;
-            TalosMoveArm(const TalosMoveArm& other) = default;
+            TalosMoveArm(const TalosMoveArm &other) = default;
             virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TalosMoveArm>(*this); }
             bool update() override;
             virtual ~TalosMoveArm() {}
@@ -26,6 +26,8 @@ namespace inria_wbc
             int traj_selector_ = 0;
             std::vector<std::vector<pinocchio::SE3>> trajectories_;
             std::vector<pinocchio::SE3> current_trajectory_;
+            float trajectory_duration_ = 3; //will be changed if specified in yaml
+            float motion_size_ = 0.05;      //will be changed if specified in yaml
         };
     } // namespace behaviors
 } // namespace inria_wbc

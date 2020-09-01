@@ -13,11 +13,16 @@ namespace inria_wbc
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
             auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->com_init();
+
+            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
+            inria_wbc::utils::parse(trajectory_duration_, "trajectory_duration", config, false, "BEHAVIOR");
+            inria_wbc::utils::parse(motion_size_, "motion_size", config, false, "BEHAVIOR");
+
             auto com_final = com_init;
-            com_final(2) -= 0.2;
-            float trajectory_duration = 3;
-            trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_final, params.dt, trajectory_duration));
-            trajectories_.push_back(trajectory_handler::compute_traj(com_final, com_init, params.dt, trajectory_duration));
+            com_final(2) -= motion_size_;
+
+            trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_final, params.dt, trajectory_duration_));
+            trajectories_.push_back(trajectory_handler::compute_traj(com_final, com_init, params.dt, trajectory_duration_));
             current_trajectory_ = trajectories_[traj_selector_];
         }
 

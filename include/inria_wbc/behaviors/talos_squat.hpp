@@ -16,15 +16,18 @@ namespace inria_wbc
         public:
             TalosSquat(const inria_wbc::controllers::TalosBaseController::Params &params);
             TalosSquat() = delete;
-            TalosSquat(const TalosSquat& other) = default;
+            TalosSquat(const TalosSquat &other) = default;
             virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TalosSquat>(*this); }
             bool update() override;
             virtual ~TalosSquat() {}
+
         private:
             int time_ = 0;
             int traj_selector_ = 0;
             std::vector<std::vector<Eigen::VectorXd>> trajectories_;
             std::vector<Eigen::VectorXd> current_trajectory_;
+            float trajectory_duration_ = 3; //will be changed if specified in yaml
+            float motion_size_ = 0.2;       //will be changed if specified in yaml
         };
     } // namespace behaviors
 } // namespace inria_wbc
