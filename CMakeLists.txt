@@ -8,8 +8,6 @@ set(INRIA_WBC_VERSION 1.0.0)
 
 option(COMPILE_ROBOT_DART_EXAMPLE "compile robot-dart example" ON)
 option(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "compile robot-dart example with graphics" ON)
-option(COMPILE_TELEOPERATION "find xsens_parser library for teleoperation example" ON)
-
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128 -std=c++14")
 
@@ -42,7 +40,6 @@ set(INRIA_WBC_SOURCES
                             src/controllers/talos_pos_tracking.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
-                            src/behaviors/talos_teleop.cpp
 )
 
 set(EXAMPLE_LIST 
@@ -50,12 +47,6 @@ set(EXAMPLE_LIST
                 src/robot_dart/test_controller.cpp
                 src/robot_dart/test_masses.cpp
 )
-
-if(${COMPILE_TELEOPERATION} STREQUAL "ON")
-    find_package(xsens_parser)
-    list(APPEND DEPENDENCIES_LIBS ${XSENS_PARSER_LIBRARIES} )
-    list(APPEND DEPENDENCIES_INCS  ${XSENS_PARSER_DEPENDENCIES_INCS})
-endif()
 
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
     list(APPEND DEPENDENCIES_LIBS RobotDART::Simu)
@@ -144,6 +135,9 @@ install(FILES
         DESTINATION
         ${CMAKE_INSTALL_PREFIX}/lib/cmake/inria_wbc
 )
+
+
+install(DIRECTORY etc/  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/inria_wbc/etc)
 
 ADD_SUBDIRECTORY(tests)
 

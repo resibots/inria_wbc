@@ -1,31 +1,26 @@
-# - Config file for the dartwrapper package
+# - Config file for the inria_wbc package
 # It defines the following variables
-#  INRIA_WBC_INCLUDE_DIRS - include directories for dartwrapper
+#  INRIA_WBC_INCLUDE_DIRS - include directories for inria_wbc
 #  INRIA_WBC_LIBRARY_DIRS    - libraries to link against
 @PACKAGE_INIT@
 include(CMakeFindDependencyMacro)
 
 set(COMPILE_ROBOT_DART_EXAMPLE "@COMPILE_ROBOT_DART_EXAMPLE@")
 set(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "@COMPILE_ROBOT_DART_EXAMPLE@")
-set(COMPILE_TELEOPERATION "@COMPILE_TELEOPERATION@")
 
 
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
     # we ask for Magnum because we want to build the graphics
     if(${COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS} STREQUAL "ON")
-        find_package(RobotDART OPTIONAL_COMPONENTS Magnum)
+        find_package(RobotDART REQUIRED OPTIONAL_COMPONENTS Magnum)
     else()
-        find_package(RobotDART QUIET)
+        find_package(RobotDART REQUIRED)
     endif()
 endif()
 
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
-
-if(${COMPILE_TELEOPERATION} STREQUAL "ON")
-    find_package(xsens_parser)
-endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128 -std=c++14")
 
