@@ -228,6 +228,14 @@ namespace inria_wbc
       else
         return all_dofs;
     }
+    
+    Eigen::VectorXd TalosBaseController::ddq(bool filter_mimics)
+    {
+      if (filter_mimics)
+        return slice_vec(ddq_, non_mimic_indexes_);
+      else
+        return ddq_;
+    }
 
     Eigen::VectorXd TalosBaseController::dq(bool filter_mimics)
     {

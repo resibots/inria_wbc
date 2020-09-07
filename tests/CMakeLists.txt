@@ -3,7 +3,10 @@ find_package(Boost COMPONENTS unit_test_framework)
 enable_testing()
 set(BINARY ${CMAKE_PROJECT_NAME}_test)
 
-set(TEST_SOURCES test_clone.cpp)
+
+if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
+        set(TEST_SOURCES test_clone.cpp)
+endif()
 
 foreach(TEST ${TEST_SOURCES})
         string(REPLACE ".cpp" "" TEST_NAME ${TEST})

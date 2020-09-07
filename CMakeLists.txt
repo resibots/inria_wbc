@@ -9,25 +9,20 @@ set(INRIA_WBC_VERSION 1.0.0)
 option(COMPILE_ROBOT_DART_EXAMPLE "compile robot-dart example" ON)
 option(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "compile robot-dart example with graphics" ON)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128 -std=c++14")
 
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
-# find_package(xsens_parser)
 
 list(APPEND DEPENDENCIES_LIBS
                              pinocchio::pinocchio
                              tsid::tsid
-                             RobotDART::Simu
                              ${YAML_CPP_LIBRARIES}
-                            #  ${XSENS_PARSER_LIBRARIES}
-                            #  ${XSENS_PARSER_DEPENDENCIES_LIBS}
 )
 
 list(APPEND DEPENDENCIES_INCS
                              ${CMAKE_SOURCE_DIR}/include
-                             ${XSENS_PARSER_DEPENDENCIES_INCS}
 )
 
 set(INRIA_WBC_HEADERS
@@ -53,9 +48,11 @@ set(EXAMPLE_LIST
                 src/robot_dart/test_masses.cpp
 )
 
+if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
+    list(APPEND DEPENDENCIES_LIBS RobotDART::Simu)
+endif()
 
 add_library(inria_wbc SHARED ${INRIA_WBC_HEADERS} ${INRIA_WBC_SOURCES})
-
 
 target_link_libraries(inria_wbc PUBLIC ${DEPENDENCIES_LIBS})
 
@@ -139,5 +136,9 @@ install(FILES
         ${CMAKE_INSTALL_PREFIX}/lib/cmake/inria_wbc
 )
 
+
+install(DIRECTORY etc/  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/inria_wbc/etc)
+
 ADD_SUBDIRECTORY(tests)
+
 

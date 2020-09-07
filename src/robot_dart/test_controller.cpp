@@ -121,19 +121,19 @@ int main(int argc, char *argv[])
 
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
-    
+    // simu.set_graphics_freq(1000);
     // for benchmarking
     double time_simu = 0, time_cmd = 0;
     int it_simu = 0, it_cmd = 0;
     
     // the main loop
     using namespace std::chrono;
-    Eigen::VectorXd q;
     while (simu.scheduler().next_time() < 20. && !simu.graphics()->done()) {
         // step the command
         if (simu.schedule(simu.control_freq())) {
             auto t1 = high_resolution_clock::now();
-            bool solution_found = behavior->cmd(q);
+            bool solution_found = behavior->update();
+            auto q = controller->q(false);
             if(solution_found)
             {
                 auto cmd = compute_spd(robot->skeleton(), q);
