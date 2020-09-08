@@ -45,7 +45,7 @@ namespace inria_wbc
                 else if(it != behavior_map_.end())
                 {
                     auto behavior = it->second.first(params);
-                    it->second.second = behavior;
+                    it->second.second = behavior->clone();
                     return behavior;
                 }
                 else

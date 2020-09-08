@@ -31,11 +31,13 @@ BOOST_AUTO_TEST_CASE(factory_test)
 
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
         auto behavior2 = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
-        auto behavior3 = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
 
 
         auto cmds = test_behavior(behavior);
         auto cmds2 = test_behavior(behavior2);
+
+        auto behavior3 = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
+
         auto cmds3 = test_behavior(behavior3);
 
         compare_cmds(cmds, cmds2);
