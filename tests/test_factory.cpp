@@ -8,7 +8,7 @@
 
 #include "test_behavior.hpp"
 
-BOOST_AUTO_TEST_CASE(clone_test)
+BOOST_AUTO_TEST_CASE(factory_test)
 {
     srand(time(0));
     auto behaviors = {"../etc/squat.yaml", "../etc/arm.yaml"};
@@ -30,11 +30,15 @@ BOOST_AUTO_TEST_CASE(clone_test)
         inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
 
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
-        auto behavior2 = behavior->clone();
+        auto behavior2 = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
+        auto behavior3 = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
+
 
         auto cmds = test_behavior(behavior);
         auto cmds2 = test_behavior(behavior2);
-    
+        auto cmds3 = test_behavior(behavior3);
+
+        compare_cmds(cmds, cmds2);
         compare_cmds(cmds, cmds2);
     }
 }
