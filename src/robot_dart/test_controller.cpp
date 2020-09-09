@@ -182,10 +182,8 @@ int main(int argc, char *argv[])
             if (solution_found)
             {
                 Eigen::VectorXd cmd;
-                if (vm["actuators"].as<std::string>() == "velocity")
+                if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = compute_velocities(robot->skeleton(), q, dt);
-                else if (vm["actuators"].as<std::string>() == "servo")
-                    cmd = q;
                 else // torque
                     cmd = compute_spd(robot->skeleton(), q);
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
@@ -202,7 +200,7 @@ int main(int argc, char *argv[])
         // step the simulation
         {
             auto t1 = high_resolution_clock::now();
-            simu.step_world();
+            simu.step_world();  
             auto t2 = high_resolution_clock::now();
             time_simu += duration_cast<microseconds>(t2 - t1).count();
             ++it_simu;
