@@ -59,7 +59,6 @@ namespace inria_wbc
     
     TalosPosTracking::TalosPosTracking(const TalosPosTracking& other) : TalosBaseController(other)
     {
-      std::cout<<"copy TalosPosTracking"<<std::endl;
       // copy the parameters
       w_com_ = other.w_com_;
       w_posture_ = other.w_posture_;
@@ -68,7 +67,7 @@ namespace inria_wbc
       w_floatingb_ = other.w_floatingb_;
       w_velocity_ = other.w_velocity_;
       w_rh_ = other.w_rh_;
-      w_rh_ = other.w_rh_;
+      w_lh_ = other.w_lh_;
       w_rf_ = other.w_rf_;
       w_lf_ = other.w_lf_;
       kp_contact_ = other.kp_contact_;
@@ -77,13 +76,13 @@ namespace inria_wbc
       kp_floatingb_ = other.kp_floatingb_;
       kp_rh_ = other.kp_rh_;
       kp_lh_ = other.kp_lh_;
-      kp_lh_ = other.kp_lh_;
       kp_rf_ = other.kp_rf_;
       kp_lf_ = other.kp_lf_;
 
       // initialize everything
       set_stack_configuration();
       init_references();
+     
     }
 
     void TalosPosTracking::parse_configuration_yaml(const std::string &sot_config_path)
@@ -131,7 +130,6 @@ namespace inria_wbc
       Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
       Eigen::AngleAxisd aaxis(quat);
       q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na()); //q_tsid_ is of size 37 (pos+quat+nactuated)
-
       //Quaternion quat = {.w = q_tsid_(6), .x = q_tsid_(3), .y = q_tsid_(4), .z = q_tsid_(5)}; //convert quaternion to euler for dart
 
       //EulerAngles euler = to_euler(quat);
@@ -246,7 +244,7 @@ namespace inria_wbc
       ////////// Add the position, velocity and acceleration limits
       bounds_task_ = std::make_shared<TaskJointPosVelAccBounds>("task-posVelAcc-bounds", *robot_, dt_, verbose_);
       dq_max_ = robot_->model().velocityLimit.tail(robot_->na());
-      ddq_max_ = dq_max_ / dt_;
+      ddq_max_ = dq_max_ / dt_;      
       bounds_task_->setVelocityBounds(dq_max_);
       bounds_task_->setAccelerationBounds(ddq_max_);
       q_lb_ = robot_->model().lowerPositionLimit.tail(robot_->na());

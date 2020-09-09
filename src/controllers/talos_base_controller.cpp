@@ -37,6 +37,7 @@
 #include <tsid/robots/robot-wrapper.hpp>
 
 #include "inria_wbc/controllers/talos_base_controller.hpp"
+#include <chrono>
 
 using namespace tsid;
 using namespace tsid::trajectories;
@@ -80,6 +81,7 @@ namespace inria_wbc
       assert(other.t_ == 0);
       params_ = other.params_;
       fb_joint_name_ = other.fb_joint_name_;
+      verbose_ = params_.verbose;
 
       robot_ = std::make_shared<RobotWrapper>(other.robot_->model(), params_.verbose);
       assert(robot_->model() == other.robot_->model());
@@ -109,6 +111,8 @@ namespace inria_wbc
       dq_.resize(ndofs);
       ddq_.resize(ndofs);
       tau_.resize(ndofs);
+
+      //q0_ is set with the stack from q_tsid
       q_.setZero(q_.size());
       dq_.setZero(dq_.size());
       ddq_.setZero(ddq_.size());

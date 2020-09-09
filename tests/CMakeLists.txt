@@ -3,9 +3,9 @@ find_package(Boost COMPONENTS unit_test_framework)
 enable_testing()
 set(BINARY ${CMAKE_PROJECT_NAME}_test)
 
-
+# the tests require Dart to run (for now?)
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
-        set(TEST_SOURCES test_clone.cpp)
+        set(TEST_SOURCES test_clone.cpp test_factory.cpp)
 endif()
 
 foreach(TEST ${TEST_SOURCES})
