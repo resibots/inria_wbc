@@ -16,7 +16,12 @@ namespace inria_wbc
         public:
             TalosSquat(const inria_wbc::controllers::TalosBaseController::Params &params);
             TalosSquat() = delete;
-            TalosSquat(const TalosSquat &other) = default;
+            TalosSquat(const TalosSquat &other) : Behavior(other) {
+                trajectories_ = other.trajectories_;
+                current_trajectory_ = other.current_trajectory_;
+                trajectory_duration_ = other.trajectory_duration_;
+                motion_size_ = other.motion_size_;
+            }
             virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TalosSquat>(*this); }
             bool update() override;
             virtual ~TalosSquat() {}
