@@ -85,6 +85,10 @@ namespace inria_wbc
             // copy (but only from a blank object that has just been initialized, i.e. t_ == 0)
             TalosBaseController(const TalosBaseController& other);
             virtual std::shared_ptr<TalosBaseController> clone() const = 0;
+            virtual std::shared_ptr<TalosBaseController> clone(const std::map<std::string, double>& opt_params) const {
+                return clone();
+            } 
+
             TalosBaseController& operator=(const TalosBaseController& o) = delete;
             virtual ~TalosBaseController(){};
 
@@ -111,6 +115,14 @@ namespace inria_wbc
             std::vector<double> pinocchio_model_masses();
             std::vector<double> pinocchio_model_cumulated_masses();
             std::vector<std::string> pinocchio_joint_names();
+
+            // parameters that can be optimized / tuned online
+            // (e.g., weights of task, gains of the tasks, etc.)
+            virtual const std::map<std::string, double>& opt_params() const {
+                 assert(0 && "calling opt_params but no param to set"); 
+                 static std::map<std::string, double> x;
+                 return x;
+            }
 
         private:
             std::vector<int> get_non_mimics_indexes();

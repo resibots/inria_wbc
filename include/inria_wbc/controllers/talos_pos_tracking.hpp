@@ -10,11 +10,21 @@ namespace inria_wbc
         class TalosPosTracking : public TalosBaseController
         {
         public:
+            // use default values for parameters
             TalosPosTracking(const Params &params);
+            // copy and use the same parameters
             TalosPosTracking(const TalosPosTracking& other);
+            // copy but use different parameters
+            TalosPosTracking(const TalosPosTracking& other, const std::map<std::string, double>& opt_params);
+            
             virtual std::shared_ptr<TalosBaseController> clone() const override 
             {
                 return std::make_shared<TalosPosTracking>(*this);
+            }
+            // clone but change the parameters
+            virtual std::shared_ptr<TalosBaseController> clone(const std::map<std::string, double>& opt_params) const override 
+            {
+                return std::make_shared<TalosPosTracking>(*this, opt_params);
             }
 
             virtual ~TalosPosTracking(){};
@@ -29,11 +39,14 @@ namespace inria_wbc
             void set_se3_ref(const pinocchio::SE3 &ref, const std::string &task_name);
             void set_posture_ref(const tsid::math::Vector &ref, const std::string &task_name);
 
+            virtual const std::map<std::string, double>& opt_params() const override { return opt_params_; }
+
         private:
             void parse_configuration_yaml(const std::string &sot_config_path) override;
             void set_stack_configuration() override;
             void init_references() override;
             void set_task_traj_map() override;
+            void set_default_opt_params(std::map<std::string, double>& p);
             // should not be used (see clone)
             TalosPosTracking& operator=(const TalosPosTracking& o) const = delete;
 
@@ -49,24 +62,8 @@ namespace inria_wbc
             std::string rf_frame_name_ = "leg_right_6_joint";                  // right foot joint name
             std::string lf_frame_name_ = "leg_left_6_joint";                   // left foot joint name
             tsid::math::Vector3 contactNormal_ = tsid::math::Vector3::UnitZ(); // direction of the normal to the contact surface
-            double w_com_ = 10.0;                                              //  weight of center of mass task
-            double w_posture_ = 0.75;                                          //  weight of joint posture task
-            double w_forceRef_feet_ = 1e-3;                                    //# weight of force regularization task
-            double w_forceRef_hands_ = 1e-3;                                   //# weight of force regularization task
-            double w_floatingb_ = 20.0;                                        //# weight of floatingb task
-            double w_velocity_ = 1.0;                                          //# weight of velocity bounds
-            double w_rh_ = 10.0;                                               //# weight of right hand  task
-            double w_lh_ = 10.0;                                               //# weight of left hand  task
-            double w_rf_ = 1.0;                                                //# weight of right foot  task
-            double w_lf_ = 1.0;                                                //# weight of left foot  task
-            double kp_contact_ = 30.0;                                         //# proportional gain of contact constraint
-            double kp_com_ = 3000.0;                                           //# proportional gain of center of mass task
-            double kp_posture_ = 30.0;                                         //# proportional gain of joint posture task
-            double kp_floatingb_ = 3000.0;                                     //# proportional gain of floatingb task
-            double kp_rh_ = 300.0;                                             //# proportional gain of right hand task
-            double kp_lh_ = 300.0;                                             //# proportional gain of left hand task
-            double kp_rf_ = 30.0;                                              //# proportional gain of right foot task
-            double kp_lf_ = 30.0;                                              //# proportional gain of left foot task
+            std::map<std::string, double> opt_params_;                          // the parameters that we can tune with an optimizer (e.g., task weights)
+         
 
             // contacts
             tsid::math::Matrix3x contact_points_;

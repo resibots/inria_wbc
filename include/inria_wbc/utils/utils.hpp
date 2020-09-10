@@ -67,6 +67,14 @@ namespace inria_wbc
       }
     }
 
+    // special case for strings
+    inline std::string parse(std::string parameterName, YAML::Node &config, bool verbose = true, std::string prevName = "SOT")
+    {
+      std::string str;
+      parse(str, parameterName, config, verbose, prevName);
+      return str;
+    }
+
     template <typename T>
     inline std::vector<T> remove_intersection(const std::vector<T> &vec, const std::vector<T> &b)
     {
