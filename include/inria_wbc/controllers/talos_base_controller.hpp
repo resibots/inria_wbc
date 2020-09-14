@@ -59,6 +59,7 @@ namespace inria_wbc
         class TalosBaseController
         {
         public:
+            using opt_params_t =  std::map<std::string, double>;           
             struct Params
             {
                 std::string urdf_path;
@@ -68,6 +69,7 @@ namespace inria_wbc
                 float dt;
                 bool verbose;
                 std::vector<std::string> mimic_dof_names;
+                opt_params_t opt_params; // parameters that can be optimized
             };
 
             template <typename TaskType, typename ReferenceType, typename TrajType>
@@ -79,15 +81,18 @@ namespace inria_wbc
             };
             using TaskTrajReferenceSE3 = TaskTrajReference<tsid::tasks::TaskSE3Equality, pinocchio::SE3, tsid::trajectories::TrajectorySE3Constant>;
             using TaskTrajReferenceVector3 = TaskTrajReference<tsid::tasks::TaskComEquality, tsid::math::Vector3, tsid::trajectories::TrajectoryEuclidianConstant>;
-            // typedef boost::variant<pinocchio::SE3, tsid::math::Vector3> ReferenceType;
+
 
             TalosBaseController(const Params &params);
             // copy (but only from a blank object that has just been initialized, i.e. t_ == 0)
             TalosBaseController(const TalosBaseController& other);
+            TalosBaseController(const TalosBaseController& other, const Params& params);
+
             virtual std::shared_ptr<TalosBaseController> clone() const = 0;
-            virtual std::shared_ptr<TalosBaseController> clone(const std::map<std::string, double>& opt_params) const {
+            // we can clone but with different optimisation parameters
+            virtual std::shared_ptr<TalosBaseController> clone(const Params& params) const {
                 return clone();
-            } 
+            }
 
             TalosBaseController& operator=(const TalosBaseController& o) = delete;
             virtual ~TalosBaseController(){};
@@ -118,9 +123,9 @@ namespace inria_wbc
 
             // parameters that can be optimized / tuned online
             // (e.g., weights of task, gains of the tasks, etc.)
-            virtual const std::map<std::string, double>& opt_params() const {
-                 assert(0 && "calling opt_params but no param to set"); 
-                 static std::map<std::string, double> x;
+            virtual const opt_params_t& opt_params() const {
+                 assert(0 && "calling opt_params but no param to set in base controller"); 
+                 static opt_params_t x;
                  return x;
             }
 

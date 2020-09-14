@@ -10,21 +10,18 @@ namespace inria_wbc
         class TalosPosTracking : public TalosBaseController
         {
         public:
-            // use default values for parameters
             TalosPosTracking(const Params &params);
-            // copy and use the same parameters
             TalosPosTracking(const TalosPosTracking& other);
-            // copy but use different parameters
-            TalosPosTracking(const TalosPosTracking& other, const std::map<std::string, double>& opt_params);
-            
+            TalosPosTracking(const TalosPosTracking& other, const Params& params);
+
             virtual std::shared_ptr<TalosBaseController> clone() const override 
             {
                 return std::make_shared<TalosPosTracking>(*this);
             }
-            // clone but change the parameters
-            virtual std::shared_ptr<TalosBaseController> clone(const std::map<std::string, double>& opt_params) const override 
+            // clone but change the parameters (esp. the opt_params)
+            virtual std::shared_ptr<TalosBaseController> clone(const Params& params) const override 
             {
-                return std::make_shared<TalosPosTracking>(*this, opt_params);
+                return std::make_shared<TalosPosTracking>(*this, params);
             }
 
             virtual ~TalosPosTracking(){};
@@ -39,7 +36,7 @@ namespace inria_wbc
             void set_se3_ref(const pinocchio::SE3 &ref, const std::string &task_name);
             void set_posture_ref(const tsid::math::Vector &ref, const std::string &task_name);
 
-            virtual const std::map<std::string, double>& opt_params() const override { return opt_params_; }
+            virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
 
         private:
             void parse_configuration_yaml(const std::string &sot_config_path) override;
