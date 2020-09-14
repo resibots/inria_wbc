@@ -11,19 +11,8 @@ namespace inria_wbc
         {
         public:
             TalosPosTracking(const Params &params);
-            TalosPosTracking(const TalosPosTracking& other);
-            TalosPosTracking(const TalosPosTracking& other, const Params& params);
-
-            virtual std::shared_ptr<TalosBaseController> clone() const override 
-            {
-                return std::make_shared<TalosPosTracking>(*this);
-            }
-            // clone but change the parameters (esp. the opt_params)
-            virtual std::shared_ptr<TalosBaseController> clone(const Params& params) const override 
-            {
-                return std::make_shared<TalosPosTracking>(*this, params);
-            }
-
+            TalosPosTracking(const TalosPosTracking& other) = delete;
+            TalosPosTracking& operator=(const TalosPosTracking& o) const = delete;
             virtual ~TalosPosTracking(){};
 
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return com_task_; }
@@ -44,8 +33,6 @@ namespace inria_wbc
             void init_references() override;
             void set_task_traj_map() override;
             void set_default_opt_params(std::map<std::string, double>& p);
-            // should not be used (see clone)
-            TalosPosTracking& operator=(const TalosPosTracking& o) const = delete;
 
             // TALOS CONFIG
             double lxp_ = 0.1;                                                 // foot length in positive x direction

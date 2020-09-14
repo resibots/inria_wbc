@@ -17,13 +17,8 @@ namespace inria_wbc
         public:
             TalosMoveArm(const inria_wbc::controllers::TalosBaseController::Params &params);
             TalosMoveArm() = delete;
-            TalosMoveArm(const TalosMoveArm &other) : Behavior(other) {
-                trajectories_ = other.trajectories_;
-                current_trajectory_ = other.current_trajectory_;
-                trajectory_duration_ = other.trajectory_duration_;
-                motion_size_ = other.motion_size_;
-            };
-            virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TalosMoveArm>(*this); }
+            TalosMoveArm(const TalosMoveArm&) = delete;
+
             bool update() override;
             virtual ~TalosMoveArm() {}
         private:

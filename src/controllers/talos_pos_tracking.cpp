@@ -59,26 +59,6 @@ namespace inria_wbc
       init_references();
     }
 
-    TalosPosTracking::TalosPosTracking(const TalosPosTracking &other) : TalosBaseController(other)
-    {
-      set_default_opt_params(params_.opt_params); // prefill to get the size
-      assert(other.params_.opt_params.size() == params_.opt_params.size());
-
-      params_.opt_params = other.params_.opt_params;
-      set_stack_configuration();
-      init_references();
-    }
-    TalosPosTracking::TalosPosTracking(const TalosPosTracking &other, const Params& p) : TalosBaseController(other, p)
-    {
-      // params will be set in the base class constructor
-      set_default_opt_params(params_.opt_params); // prefill to get the size
-      assert(other.params_.opt_params.size() == params_.opt_params.size());
-
-      params_.opt_params = other.params_.opt_params;
-      set_stack_configuration();
-      init_references();
-    }
-
    void TalosPosTracking::set_default_opt_params(std::map<std::string, double>& p) {      
       p["w_com"] = 10.0;           //# weight of center of mass task
       p["w_posture"] = 0.75;        //# weight of joint posture task
