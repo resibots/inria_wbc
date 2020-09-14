@@ -20,7 +20,7 @@ namespace inria_wbc
             typedef std::shared_ptr<Behavior> behavior_ptr_t;
             typedef std::function<behavior_ptr_t(const inria_wbc::controllers::TalosBaseController::Params &)>
                 behavior_creator_t;
-            typedef inria_wbc::controllers::TalosBaseController::Params behavior_params_t;
+            typedef inria_wbc::controllers::TalosBaseController::Params params_t;
 
             void register_behavior(const std::string &behavior_name, behavior_creator_t pfn_create_behavior)
             {
@@ -35,7 +35,7 @@ namespace inria_wbc
                 }
             }
             // standard creation : one new object each time
-            behavior_ptr_t create(const std::string &behavior_name, const behavior_params_t& params)
+            behavior_ptr_t create(const std::string &behavior_name, const params_t& params)
             {
                 auto it = behavior_map_.find(behavior_name);
                 if(it != behavior_map_.end())
@@ -54,7 +54,7 @@ namespace inria_wbc
             // first call, create the object like create()
             // second time, return a (clean, reset) clone to avoid parsing costs
             // WARNING: the params are ignored the second time!
-            behavior_ptr_t create_or_clone(const std::string &behavior_name, const behavior_params_t& params=behavior_params_t())
+            behavior_ptr_t create_or_clone(const std::string &behavior_name, const params_t& params=params_t())
             {
                 // std::optional is c++17 only, this is why we use boost for now
                 auto it = behavior_map_.find(behavior_name);
@@ -79,7 +79,7 @@ namespace inria_wbc
             struct BehaviorInfo {
                 behavior_creator_t creator_function;
                 behavior_ptr_t prototype;
-                behavior_params_t params;
+                Factory::params_t params;
             };
             Factory() {}
             Factory &operator=(const Factory &) { return *this; }

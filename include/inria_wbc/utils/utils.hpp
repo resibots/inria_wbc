@@ -52,18 +52,20 @@ namespace inria_wbc
     }
 
     template <typename type>
-    inline void parse(type &parameter, std::string parameterName, YAML::Node &config, bool verbose = true, std::string prevName = "SOT")
+    inline bool parse(type &parameter, std::string parameterName, YAML::Node &config, bool verbose = true, std::string prevName = "SOT")
     {
       if (!config[prevName][parameterName])
       {
         if (verbose)
           std::cout << "No parameter " << parameterName << " found taking the default one" << std::endl;
+        return false;
       }
       else
       {
         parameter = config[prevName][parameterName].as<type>();
         if (verbose)
           std::cout << "Parameter " << parameterName << " found" << std::endl;
+          return true;
       }
     }
 

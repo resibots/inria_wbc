@@ -76,10 +76,24 @@ namespace inria_wbc
 
     TalosBaseController::TalosBaseController(const TalosBaseController& other)
     {
-      // this copy contructor is mostly designed to clone a "blank" object
+      // this copy contructor is designed to clone a "blank" object
       // it is NOT designed to copy all the internal state!
       assert(other.t_ == 0);
       params_ = other.params_;
+      fb_joint_name_ = other.fb_joint_name_;
+      verbose_ = params_.verbose;
+
+      robot_ = std::make_shared<RobotWrapper>(other.robot_->model(), params_.verbose);
+      assert(robot_->model() == other.robot_->model());
+      _reset(); 
+    }
+
+    TalosBaseController::TalosBaseController(const TalosBaseController& other, const Params& params)
+    {
+      // this copy contructor is designed to clone a "blank" object
+      // it is NOT designed to copy all the internal state!
+      assert(other.t_ == 0);
+      params_ = params;
       fb_joint_name_ = other.fb_joint_name_;
       verbose_ = params_.verbose;
 

@@ -5,7 +5,7 @@ set(BINARY ${CMAKE_PROJECT_NAME}_test)
 
 # the tests require Dart to run (for now?)
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
-        set(TEST_SOURCES test_clone.cpp test_factory.cpp)
+        set(TEST_SOURCES test_clone.cpp test_factory.cpp test_behaviors.cpp)
 endif()
 
 foreach(TEST ${TEST_SOURCES})

@@ -52,8 +52,6 @@ namespace inria_wbc
     
     TalosPosTracking::TalosPosTracking(const Params &params) : TalosBaseController(params)
     {
-      set_default_opt_params(opt_params_);
-
       if (!params.sot_config_path.empty())
         parse_configuration_yaml(params.sot_config_path);
 
@@ -63,24 +61,23 @@ namespace inria_wbc
 
     TalosPosTracking::TalosPosTracking(const TalosPosTracking &other) : TalosBaseController(other)
     {
-      set_default_opt_params(opt_params_); // prefill to get the size
-      assert(other.opt_params_.size() == opt_params_.size());
+      set_default_opt_params(params_.opt_params); // prefill to get the size
+      assert(other.params_.opt_params.size() == params_.opt_params.size());
 
-      opt_params_ = other.opt_params_;
+      params_.opt_params = other.params_.opt_params;
       set_stack_configuration();
       init_references();
     }
-
-     TalosPosTracking::TalosPosTracking(const TalosPosTracking &other, const std::map<std::string, double>& opt_params) : TalosBaseController(other)
+    TalosPosTracking::TalosPosTracking(const TalosPosTracking &other, const Params& p) : TalosBaseController(other, p)
     {
-      set_default_opt_params(opt_params_); // prefill to get the size
-      assert(opt_params.size() == opt_params_.size());
+      // params will be set in the base class constructor
+      set_default_opt_params(params_.opt_params); // prefill to get the size
+      assert(other.params_.opt_params.size() == params_.opt_params.size());
 
-      opt_params_ = opt_params;
+      params_.opt_params = other.params_.opt_params;
       set_stack_configuration();
       init_references();
     }
-
 
    void TalosPosTracking::set_default_opt_params(std::map<std::string, double>& p) {      
       p["w_com"] = 10.0;           //# weight of center of mass task
@@ -119,14 +116,23 @@ namespace inria_wbc
         if (verbose_)
           std::cout << "Taking the stack of tasks parameters in " << sot_config_path << std::endl;
 
+        // for the opt_params (task weight and gains) we keep the value if we have it
+        // if not found, we look at the YAML file
+        // if not found, we take the default value from the map (set_defautlt_opt_params)
+        opt_params_t p;
+        set_default_opt_params(p);
         YAML::Node config = YAML::LoadFile(sot_config_path);
-        for (auto &x : opt_params_)
-            parse(x.second, x.first, config, verbose_);
-      }
+        for (auto &x : p)
+          if (params_.opt_params.find(x.first) == params_.opt_params.end())
+            if (!parse(params_.opt_params[x.first], x.first, config, verbose_))
+              params_.opt_params[x.first] = p[x.first];
+          }
+
     }
 
     void TalosPosTracking::set_stack_configuration()
     {
+      const opt_params_t& p = params_.opt_params;
       ////////////////////Gather Initial Pose //////////////////////////////////////
       q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
       Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
@@ -156,41 +162,41 @@ namespace inria_wbc
       contactRF_ = std::make_shared<Contact6d>("contact_rfoot", *robot_, rf_frame_name_,
                                                contact_points_, contactNormal_,
                                                mu_, fMin_, fMax_);
-      contactRF_->Kp(opt_params_.at("kp_contact") * Vector::Ones(6));
+      contactRF_->Kp(p.at("kp_contact") * Vector::Ones(6));
       contactRF_->Kd(2.0 * contactRF_->Kp().cwiseSqrt());
       contact_rf_ref_ = robot_->position(data, robot_->model().getJointId(rf_frame_name_));
       contactRF_->setReference(contact_rf_ref_);
-      tsid_->addRigidContact(*contactRF_, opt_params_.at("w_forceRef_feet"));
+      tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
 
       contactLF_ = std::make_shared<Contact6d>("contact_lfoot", *robot_, lf_frame_name_,
                                                contact_points_, contactNormal_,
                                                mu_, fMin_, fMax_);
-      contactLF_->Kp(opt_params_.at("kp_contact") * Vector::Ones(6));
+      contactLF_->Kp(p.at("kp_contact") * Vector::Ones(6));
       contactLF_->Kd(2.0 * contactLF_->Kp().cwiseSqrt());
       contact_lf_ref_ = robot_->position(data, robot_->model().getJointId(lf_frame_name_));
       contactLF_->setReference(contact_lf_ref_);
-      tsid_->addRigidContact(*contactLF_, opt_params_.at("w_forceRef_feet"));
+      tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
 
       ////////// Add the com task
       com_task_ = std::make_shared<TaskComEquality>("task-com", *robot_);
-      com_task_->Kp(opt_params_.at("kp_com") * Vector::Ones(3));
+      com_task_->Kp(p.at("kp_com") * Vector::Ones(3));
       com_task_->Kd(2.0 * com_task_->Kp().cwiseSqrt());
-      tsid_->addMotionTask(*com_task_, opt_params_.at("w_com"), 1);
+      tsid_->addMotionTask(*com_task_, p.at("w_com"), 1);
 
       ////////// Add the posture task
       posture_task_ = std::make_shared<TaskJointPosture>("task-posture", *robot_);
-      posture_task_->Kp(opt_params_.at("kp_posture") * Vector::Ones(nv - 6));
+      posture_task_->Kp(p.at("kp_posture") * Vector::Ones(nv - 6));
       posture_task_->Kd(2.0 * posture_task_->Kp().cwiseSqrt());
       Vector mask_post = Vector::Ones(nv - 6);
       // for(int i =0; i < 11; i++){
       //   mask_post[i] = 0;
       // }
       posture_task_->setMask(mask_post);
-      tsid_->addMotionTask(*posture_task_, opt_params_.at("w_posture"), 1);
+      tsid_->addMotionTask(*posture_task_, p.at("w_posture"), 1);
 
       ////////// Add the floatingb task
       floatingb_task_ = std::make_shared<TaskSE3Equality>("task-floatingb", *robot_, fb_joint_name_);
-      floatingb_task_->Kp(opt_params_.at("kp_floatingb") * Vector::Ones(6));
+      floatingb_task_->Kp(p.at("kp_floatingb") * Vector::Ones(6));
       floatingb_task_->Kd(2.0 * floatingb_task_->Kp().cwiseSqrt());
       Vector mask_floatingb = Vector::Ones(6);
       for (int i = 0; i < 3; i++)
@@ -198,11 +204,11 @@ namespace inria_wbc
         mask_floatingb[i] = 0; // DO NOT CONSTRAIN floatingb POSITION IN SOT
       }
       floatingb_task_->setMask(mask_floatingb);
-      tsid_->addMotionTask(*floatingb_task_, opt_params_.at("w_floatingb"), 1);
+      tsid_->addMotionTask(*floatingb_task_, p.at("w_floatingb"), 1);
 
       ////////// Add the left hand  task
       lh_task_ = std::make_shared<TaskSE3Equality>("task-lh", *robot_, "gripper_left_joint");
-      lh_task_->Kp(opt_params_.at("kp_lh") * Vector::Ones(6));
+      lh_task_->Kp(p.at("kp_lh") * Vector::Ones(6));
       lh_task_->Kd(2.0 * lh_task_->Kp().cwiseSqrt());
       Vector mask_lh = Vector::Ones(6);
       for (int i = 3; i < 6; i++)
@@ -210,11 +216,11 @@ namespace inria_wbc
         mask_lh[i] = 0; // DO NOT CONSTRAIN HAND ORIENTATION IN SOT
       }
       lh_task_->setMask(mask_lh);
-      tsid_->addMotionTask(*lh_task_, opt_params_.at("w_lh"), 1);
+      tsid_->addMotionTask(*lh_task_, p.at("w_lh"), 1);
 
       ////////// Add the right hand task
       rh_task_ = std::make_shared<TaskSE3Equality>("task-rh", *robot_, "gripper_right_joint");
-      rh_task_->Kp(opt_params_.at("kp_rh") * Vector::Ones(6));
+      rh_task_->Kp(p.at("kp_rh") * Vector::Ones(6));
       rh_task_->Kd(2.0 * rh_task_->Kp().cwiseSqrt());
       Vector mask_rh = Vector::Ones(6);
       for (int i = 3; i < 6; i++)
@@ -222,23 +228,23 @@ namespace inria_wbc
         mask_rh[i] = 0; // DO NOT CONSTRAIN HAND ORIENTATION IN SOT
       }
       rh_task_->setMask(mask_rh);
-      tsid_->addMotionTask(*rh_task_, opt_params_.at("w_rh"), 1);
+      tsid_->addMotionTask(*rh_task_, p.at("w_rh"), 1);
 
       ////////// Add the left foot  task
       lf_task_ = std::make_shared<TaskSE3Equality>("task-lf", *robot_, "leg_left_6_joint");
-      lf_task_->Kp(opt_params_.at("kp_lf") * Vector::Ones(6));
+      lf_task_->Kp(p.at("kp_lf") * Vector::Ones(6));
       lf_task_->Kd(2.0 * lf_task_->Kp().cwiseSqrt());
       Vector maskLf = Vector::Ones(6);
       lf_task_->setMask(maskLf);
-      tsid_->addMotionTask(*lf_task_, opt_params_.at("w_lf"), 1);
+      tsid_->addMotionTask(*lf_task_, p.at("w_lf"), 1);
 
       ////////// Add the right foot  task
       rf_task_ = std::make_shared<TaskSE3Equality>("task-rf", *robot_, "leg_right_6_joint");
-      rf_task_->Kp(opt_params_.at("kp_rf") * Vector::Ones(6));
+      rf_task_->Kp(p.at("kp_rf") * Vector::Ones(6));
       rf_task_->Kd(2.0 * rf_task_->Kp().cwiseSqrt());
       Vector maskRf = Vector::Ones(6);
       rf_task_->setMask(maskRf);
-      tsid_->addMotionTask(*rf_task_, opt_params_.at("w_rf"), 1);
+      tsid_->addMotionTask(*rf_task_, p.at("w_rf"), 1);
 
       ////////// Add the position, velocity and acceleration limits
       bounds_task_ = std::make_shared<TaskJointPosVelAccBounds>("task-posVelAcc-bounds", *robot_, dt_, verbose_);
@@ -249,7 +255,7 @@ namespace inria_wbc
       q_lb_ = robot_->model().lowerPositionLimit.tail(robot_->na());
       q_ub_ = robot_->model().upperPositionLimit.tail(robot_->na());
       bounds_task_->setPositionBounds(q_lb_, q_ub_);
-      tsid_->addMotionTask(*bounds_task_, opt_params_.at("w_velocity"), 0); //add pos vel acc bounds
+      tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0); //add pos vel acc bounds
     }
 
     void TalosPosTracking::init_references()
