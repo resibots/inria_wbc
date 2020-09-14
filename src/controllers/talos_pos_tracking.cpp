@@ -52,8 +52,6 @@ namespace inria_wbc
     
     TalosPosTracking::TalosPosTracking(const Params &params) : TalosBaseController(params)
     {
-      set_default_opt_params(params_.opt_params);
-
       if (!params.sot_config_path.empty())
         parse_configuration_yaml(params.sot_config_path);
 
@@ -118,10 +116,18 @@ namespace inria_wbc
         if (verbose_)
           std::cout << "Taking the stack of tasks parameters in " << sot_config_path << std::endl;
 
+        // for the opt_params (task weight and gains) we keep the value if we have it
+        // if not found, we look at the YAML file
+        // if not found, we take the default value from the map (set_defautlt_opt_params)
+        opt_params_t p;
+        set_default_opt_params(p);
         YAML::Node config = YAML::LoadFile(sot_config_path);
-        for (auto &x : params_.opt_params)
-            parse(x.second, x.first, config, verbose_);
-      }
+        for (auto &x : p)
+          if (params_.opt_params.find(x.first) == params_.opt_params.end())
+            if (!parse(params_.opt_params[x.first], x.first, config, verbose_))
+              params_.opt_params[x.first] = p[x.first];
+          }
+
     }
 
     void TalosPosTracking::set_stack_configuration()
