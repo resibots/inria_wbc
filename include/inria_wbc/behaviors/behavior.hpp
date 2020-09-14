@@ -12,10 +12,7 @@ namespace inria_wbc
         public:
             Behavior(const std::shared_ptr<inria_wbc::controllers::TalosBaseController>& controller) :
                 controller_(controller){}
-            
-            Behavior(const Behavior& other) { controller_ = other.controller()->clone(); }
             virtual ~Behavior(){}
-            virtual std::shared_ptr<Behavior> clone() = 0;
             virtual bool update() = 0;
             
             virtual std::shared_ptr<inria_wbc::controllers::TalosBaseController> controller() { return controller_; };

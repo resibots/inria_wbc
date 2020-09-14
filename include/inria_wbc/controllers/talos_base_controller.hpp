@@ -84,16 +84,7 @@ namespace inria_wbc
 
 
             TalosBaseController(const Params &params);
-            // copy (but only from a blank object that has just been initialized, i.e. t_ == 0)
-            TalosBaseController(const TalosBaseController& other);
-            TalosBaseController(const TalosBaseController& other, const Params& params);
-
-            virtual std::shared_ptr<TalosBaseController> clone() const = 0;
-            // we can clone but with different optimisation parameters
-            virtual std::shared_ptr<TalosBaseController> clone(const Params& params) const {
-                return clone();
-            }
-
+            TalosBaseController(const TalosBaseController&) = delete;
             TalosBaseController& operator=(const TalosBaseController& o) = delete;
             virtual ~TalosBaseController(){};
 
