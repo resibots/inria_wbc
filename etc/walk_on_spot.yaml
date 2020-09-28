@@ -1,0 +1,45 @@
+SOT:
+  w_com_: 1000.0
+  w_floatingb_: 1000.0
+  w_posture_: 100
+  w_forceRef_feet_: 1e-3
+  w_forceRef_hands_: 1e-3
+  w_waist_: 1000.0
+  w_rh_: 1.0
+  w_lh_: 1.0
+  w_rf_: 1.0
+  w_lf_: 1.0
+  w_velocity_: 1.0
+  kp_contact_: 30.0
+  kp_com_: 3000.0
+  kp_floatingb_: 3000.0
+  kp_posture_: 50.0
+  kp_waist_: 3000.0
+  kp_rh_: 30.0
+  kp_lh_: 30.0
+  kp_rf_: 30.0
+  kp_lf_: 30.0
+BEHAVIOR:
+  name : walk-on-spot
+  trajectory_duration : 5
+  motion_size : 0.12
+PARAMS:
+  urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
+  srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
+  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/squat.yaml
+  floating_base_joint_name: ""
+  dt: 0.001
+  verbose: false
+  mimic_dof_names : ["gripper_left_inner_double_joint",
+                     "gripper_left_fingertip_1_joint",
+                     "gripper_left_fingertip_2_joint",
+                     "gripper_left_inner_single_joint",
+                     "gripper_left_fingertip_3_joint",
+                     "gripper_left_motor_single_joint",
+                     "gripper_right_inner_double_joint",
+                     "gripper_right_fingertip_1_joint",
+                     "gripper_right_fingertip_2_joint",
+                     "gripper_right_inner_single_joint",
+                     "gripper_right_fingertip_3_joint",
+                     "gripper_right_motor_single_joint"]
+
