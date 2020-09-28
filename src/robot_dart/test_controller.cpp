@@ -136,13 +136,6 @@ int main(int argc, char *argv[])
     graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
     if (vm.count("video"))
         graphics->record_video(vm["video"].as<std::string>());
-    Eigen::Affine2d tf = Eigen::Affine2d::Identity();
-    tf.translate(Eigen::Vector2d(-static_cast<double>(simu.graphics()->width())/2., simu.graphics()->height()/2));
-    tf.translate(Eigen::Vector2d(0, -30));
-
-    std::string str = "[" + robot->model_filename() + "]\n";
-    std::cout<<"filename:"<<robot->model_filename()<<std::endl;
-    auto text = simu.add_text(str, tf);
 #endif
     simu.add_robot(robot);
     simu.add_checkerboard_floor();
@@ -212,14 +205,7 @@ int main(int argc, char *argv[])
             time_simu += duration_cast<microseconds>(t2 - t1).count();
             ++it_simu;
         }
-        #ifdef GRAPHIC
-        if (simu.schedule(simu.graphics_freq())) {
-            Eigen::Affine2d tf = Eigen::Affine2d::Identity();
-            tf.translate(Eigen::Vector2d(-static_cast<double>(simu.graphics()->width())/2., simu.graphics()->height()/2));
-            tf.translate(Eigen::Vector2d(0, -0.1 * simu.graphics()->height()));
-            text->transformation = tf;
-        }
-        #endif
+      
         // print timing information
         if (it_simu == 1000)
         {
