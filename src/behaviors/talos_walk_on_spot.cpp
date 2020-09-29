@@ -12,66 +12,51 @@ namespace inria_wbc
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->com_init();
 
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             inria_wbc::utils::parse(trajectory_duration_, "trajectory_duration", config, false, "BEHAVIOR");
             inria_wbc::utils::parse(motion_size_, "motion_size", config, false, "BEHAVIOR");
 
-            auto com_right = com_init;
-            auto com_left = com_init;
-            com_right(1) -= motion_size_;
-            com_left(1) += motion_size_;
-
-            // move to right foot 
-            trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_right, params.dt, trajectory_duration_/2));
-            // lift up left foot
-            trajectories_.push_back(trajectory_handler::compute_traj(com_right, com_right, params.dt, trajectory_duration_));
-            // lift down left foot
-            trajectories_.push_back(trajectory_handler::compute_traj(com_right, com_right, params.dt, trajectory_duration_));
-            // move to left foot
-            trajectories_.push_back(trajectory_handler::compute_traj(com_right, com_left, params.dt, trajectory_duration_));
-            // lift up right foot
-            trajectories_.push_back(trajectory_handler::compute_traj(com_left, com_left, params.dt, trajectory_duration_));
-            // lift down right foot
-            trajectories_.push_back(trajectory_handler::compute_traj(com_left, com_left, params.dt, trajectory_duration_));
-            // move to init pos
-            trajectories_.push_back(trajectory_handler::compute_traj(com_left, com_init, params.dt, trajectory_duration_/2));
-
-            current_trajectory_ = trajectories_[traj_selector_];
-            state_ = States::MOVE_COM;
+            state_ = States::MOVE_COM_RIGHT;
+            dt_ = params.dt;
         }
 
         bool WalkOnSpot::update()
         {
-            auto ref = current_trajectory_[time_];
-            std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
             switch (state_)
             {
-            case States::MOVE_COM:
+            case States::MOVE_COM_RIGHT:
                 if(first_run_){
                     first_run_ = false;
-                    std::cout << "move com" << std::endl;
+                    std::cout << "Move CoM to right foot" << std::endl;
+                    auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->com_init();
+                    rf_init_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_foot_SE3("rf");
+                    auto right_foot_pos = rf_init_.translation();
+                    Eigen::VectorXd com_right = com_init;
+                    com_right(0) = right_foot_pos(0);
+                    com_right(1) = right_foot_pos(1);
+                    current_trajectory_ = trajectory_handler::compute_traj(com_init, com_right, dt_, trajectory_duration_/2);
                 }
                 break;
             case States::LIFT_UP_LF:
                 if(first_run_){
                     first_run_ = false;
-                    std::cout << "lift up left foot" << std::endl;
+                    std::cout << "Lift up left foot" << std::endl;
                     std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->remove_contact("contact_lfoot");
                 }
                 break;
             case States::LIFT_DOWN_LF:
                 if(first_run_){
                     first_run_ = false;
-                    std::cout << "lift down left foot" << std::endl;
+                    std::cout << "Lift down left foot" << std::endl;
                     std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->add_contact("contact_lfoot");
                 }
                 break;
             default:
                 break;
             }
-            
+            auto ref = current_trajectory_[time_];
+            std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
             if (controller_->solve())
             {
                 time_++;

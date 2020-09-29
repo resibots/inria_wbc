@@ -341,7 +341,8 @@ namespace inria_wbc
       tsid_->removeRigidContact(contact_name);
     }
 
-    void TalosPosTracking::add_contact(const std::string &contact_name){
+    void TalosPosTracking::add_contact(const std::string &contact_name)
+    {
       const opt_params_t& p = params_.opt_params;
       const pinocchio::Data &data = tsid_->data();
       if (contact_name == "contact_rfoot")
@@ -358,6 +359,11 @@ namespace inria_wbc
       } else {
         std::cout << "unknown contact" << std::endl;
       }
+    }
+
+    pinocchio::SE3 TalosPosTracking::get_foot_SE3(const std::string &foot_name)
+    {
+      return robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
     }
   } // namespace controllers
 } // namespace inria_wbc

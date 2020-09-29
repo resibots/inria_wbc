@@ -24,6 +24,7 @@ namespace inria_wbc
 
         private:
             int time_ = 0;
+            float dt_;
             int traj_selector_ = 0;
             //std::vector<std::vector<pinocchio::SE3>> trajectories_;
             std::vector<std::vector<Eigen::VectorXd>> trajectories_;
@@ -34,14 +35,16 @@ namespace inria_wbc
             // State machine stats for walking on the spot cycle
             int state_ = -1;
             enum States {
-                MOVE_COM = 0,
-                LIFT_UP_RF = 1,
-                LIFT_DOWN_RF = 2,
-                LIFT_UP_LF = 3,
-                LIFT_DOWN_LF = 4,
+                MOVE_COM_LEFT,
+                MOVE_COM_RIGHT,
+                MOVE_COM_INIT,
+                LIFT_UP_RF,
+                LIFT_DOWN_RF,
+                LIFT_UP_LF,
+                LIFT_DOWN_LF,
             };
             bool first_run_ = true;
-            int cycle[7] {States::MOVE_COM, States::LIFT_UP_LF, States::LIFT_DOWN_LF, States::MOVE_COM, States::LIFT_UP_RF, States::LIFT_DOWN_RF, States::MOVE_COM};
+            int cycle[7] {States::MOVE_COM_RIGHT, States::LIFT_UP_LF, States::LIFT_DOWN_LF, States::MOVE_COM_LEFT, States::LIFT_UP_RF, States::LIFT_DOWN_RF, States::MOVE_COM_INIT};
             
             // Left Foot
             pinocchio::SE3  lf_init_, lf_ref_;
