@@ -37,14 +37,14 @@ namespace inria_wbc
             enum States {
                 MOVE_COM_LEFT,
                 MOVE_COM_RIGHT,
-                MOVE_COM_INIT,
                 LIFT_UP_RF,
                 LIFT_DOWN_RF,
                 LIFT_UP_LF,
                 LIFT_DOWN_LF,
             };
             bool first_run_ = true;
-            int cycle[7] {States::MOVE_COM_RIGHT, States::LIFT_UP_LF, States::LIFT_DOWN_LF, States::MOVE_COM_LEFT, States::LIFT_UP_RF, States::LIFT_DOWN_RF, States::MOVE_COM_INIT};
+            int cycle_size_ = 6;
+            int cycle_[6] {States::MOVE_COM_RIGHT, States::LIFT_UP_LF, States::LIFT_DOWN_LF, States::MOVE_COM_LEFT, States::LIFT_UP_RF, States::LIFT_DOWN_RF};
             
             // Left Foot
             pinocchio::SE3  lf_init_, lf_ref_;

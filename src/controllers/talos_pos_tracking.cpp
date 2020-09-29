@@ -361,9 +361,15 @@ namespace inria_wbc
       }
     }
 
-    pinocchio::SE3 TalosPosTracking::get_foot_SE3(const std::string &foot_name)
+    pinocchio::SE3 TalosPosTracking::get_RF_SE3()
     {
       return robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
     }
+
+    pinocchio::SE3 TalosPosTracking::get_LF_SE3()
+    {
+      return robot_->position(tsid_->data(), robot_->model().getJointId("leg_left_6_joint"));
+    }
+
   } // namespace controllers
 } // namespace inria_wbc
