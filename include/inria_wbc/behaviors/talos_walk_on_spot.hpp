@@ -30,6 +30,8 @@ namespace inria_wbc
             std::vector<Eigen::VectorXd> current_trajectory_;
             float trajectory_duration_ = 3; //will be changed if specified in yaml
             float motion_size_ = 0.2;       //will be changed if specified in yaml
+
+            // State machine stats for walking on the spot cycle
             int state_ = -1;
             enum States {
                 MOVE_COM = 0,
@@ -39,6 +41,18 @@ namespace inria_wbc
                 LIFT_DOWN_LF = 4,
             };
             bool first_run_ = true;
+            int cycle[7] {States::MOVE_COM, States::LIFT_UP_LF, States::LIFT_DOWN_LF, States::MOVE_COM, States::LIFT_UP_RF, States::LIFT_DOWN_RF, States::MOVE_COM};
+            
+            // Left Foot
+            pinocchio::SE3  lf_init_, lf_ref_;
+            std::shared_ptr<tsid::trajectories::TrajectorySE3Constant> trajLf_;
+            tsid::trajectories::TrajectorySample sampleLf_;
+
+            // Right Foot
+            pinocchio::SE3  rf_init_, rf_ref_;
+            std::shared_ptr<tsid::trajectories::TrajectorySE3Constant> trajRf_;
+            tsid::trajectories::TrajectorySample sampleRf_;
+
         };
     } // namespace behaviors
 } // namespace inria_wbc
