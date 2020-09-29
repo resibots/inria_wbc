@@ -28,7 +28,8 @@ namespace inria_wbc
             int traj_selector_ = 0;
             //std::vector<std::vector<pinocchio::SE3>> trajectories_;
             std::vector<std::vector<Eigen::VectorXd>> trajectories_;
-            std::vector<Eigen::VectorXd> current_trajectory_;
+            std::vector<Eigen::VectorXd> current_com_trajectory_;
+            std::vector<pinocchio::SE3> current_foot_trajectory_;
             float trajectory_duration_ = 3; //will be changed if specified in yaml
             float motion_size_ = 0.2;       //will be changed if specified in yaml
 
@@ -48,13 +49,9 @@ namespace inria_wbc
             
             // Left Foot
             pinocchio::SE3  lf_init_, lf_ref_;
-            std::shared_ptr<tsid::trajectories::TrajectorySE3Constant> trajLf_;
-            tsid::trajectories::TrajectorySample sampleLf_;
 
             // Right Foot
             pinocchio::SE3  rf_init_, rf_ref_;
-            std::shared_ptr<tsid::trajectories::TrajectorySE3Constant> trajRf_;
-            tsid::trajectories::TrajectorySample sampleRf_;
 
         };
     } // namespace behaviors
