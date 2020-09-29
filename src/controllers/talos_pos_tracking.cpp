@@ -336,5 +336,28 @@ namespace inria_wbc
       posture_task_->setReference(sample_posture_);
     }
 
+    void TalosPosTracking::remove_contact(const std::string &contact_name)
+    {
+      tsid_->removeRigidContact(contact_name);
+    }
+
+    void TalosPosTracking::add_contact(const std::string &contact_name){
+      const opt_params_t& p = params_.opt_params;
+      const pinocchio::Data &data = tsid_->data();
+      if (contact_name == "contact_rfoot")
+      {
+        contact_rf_ref_ = robot_->position(data, robot_->model().getJointId(rf_frame_name_));
+        contactRF_->setReference(contact_rf_ref_);
+        tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
+      } 
+      else if (contact_name == "contact_lfoot") 
+      {
+        contact_lf_ref_ = robot_->position(data, robot_->model().getJointId(lf_frame_name_));
+        contactLF_->setReference(contact_lf_ref_);
+        tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
+      } else {
+        std::cout << "unknown contact" << std::endl;
+      }
+    }
   } // namespace controllers
 } // namespace inria_wbc

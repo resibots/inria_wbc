@@ -30,7 +30,15 @@ namespace inria_wbc
             std::vector<Eigen::VectorXd> current_trajectory_;
             float trajectory_duration_ = 3; //will be changed if specified in yaml
             float motion_size_ = 0.2;       //will be changed if specified in yaml
-            
+            int state_ = -1;
+            enum States {
+                MOVE_COM = 0,
+                LIFT_UP_RF = 1,
+                LIFT_DOWN_RF = 2,
+                LIFT_UP_LF = 3,
+                LIFT_DOWN_LF = 4,
+            };
+            bool first_run_ = true;
         };
     } // namespace behaviors
 } // namespace inria_wbc

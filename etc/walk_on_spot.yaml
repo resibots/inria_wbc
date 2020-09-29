@@ -22,7 +22,7 @@ SOT:
 BEHAVIOR:
   name : walk-on-spot
   trajectory_duration : 5
-  motion_size : 0.12
+  motion_size : 0.1
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
