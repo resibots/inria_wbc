@@ -46,7 +46,10 @@ namespace inria_wbc
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, trajectory_duration_);
                     std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->remove_contact("contact_lfoot");
                     lf_init_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_LF_SE3();
-                    current_foot_trajectory_ = trajectory_handler::compute_traj(lf_init_, lf_init_, dt_, trajectory_duration_);
+                    auto left_foot_pos = lf_init_.translation();
+                    left_foot_pos(2) += 0.1;
+                    pinocchio::SE3 lf_final(lf_init_.rotation(),left_foot_pos);
+                    current_foot_trajectory_ = trajectory_handler::compute_traj(lf_init_, lf_final, dt_, trajectory_duration_);
                 }
                 std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(current_foot_trajectory_[time_], "lf");
                 break;
@@ -56,8 +59,17 @@ namespace inria_wbc
                     first_run_ = false;
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, trajectory_duration_);
-                    
-                    //std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->add_contact("contact_lfoot");
+
+                    lf_init_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_LF_SE3();
+                    auto left_foot_pos = lf_init_.translation();
+                    left_foot_pos(2) -= 0.1;
+                    pinocchio::SE3 lf_final(lf_init_.rotation(),left_foot_pos);
+                    current_foot_trajectory_ = trajectory_handler::compute_traj(lf_init_, lf_final, dt_, trajectory_duration_);
+                }
+                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(current_foot_trajectory_[time_], "lf");
+                if (time_ == current_com_trajectory_.size()-1)
+                {
+                    std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->add_contact("contact_lfoot");
                 }
                 break;
             case States::MOVE_COM_LEFT:
@@ -80,10 +92,14 @@ namespace inria_wbc
                     first_run_ = false;
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, trajectory_duration_);
-                    //std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->remove_contact("contact_rfoot");
+                    std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->remove_contact("contact_rfoot");
+                    rf_init_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_RF_SE3();
+                    auto right_foot_pos = rf_init_.translation();
+                    right_foot_pos(2) += 0.1;
+                    pinocchio::SE3 rf_final(rf_init_.rotation(),right_foot_pos);
+                    current_foot_trajectory_ = trajectory_handler::compute_traj(rf_init_, rf_final, dt_, trajectory_duration_);
                 }
-                rf_init_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_RF_SE3();
-                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(rf_init_, "lf");
+                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(current_foot_trajectory_[time_], "rf");
                 break;
             case States::LIFT_DOWN_RF:
                 if(first_run_){
@@ -91,8 +107,17 @@ namespace inria_wbc
                     first_run_ = false;
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, trajectory_duration_);
-                    
-                    //std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->add_contact("contact_lfoot");
+
+                    rf_init_ = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_RF_SE3();
+                    auto right_foot_pos = rf_init_.translation();
+                    right_foot_pos(2) -= 0.1;
+                    pinocchio::SE3 rf_final(rf_init_.rotation(),right_foot_pos);
+                    current_foot_trajectory_ = trajectory_handler::compute_traj(rf_init_, rf_final, dt_, trajectory_duration_);
+                }
+                std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(current_foot_trajectory_[time_], "rf");
+                if (time_ == current_com_trajectory_.size()-1)
+                {
+                    std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->add_contact("contact_rfoot");
                 }
                 break;
             default:

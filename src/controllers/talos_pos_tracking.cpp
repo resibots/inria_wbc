@@ -60,7 +60,7 @@ namespace inria_wbc
     }
 
    void TalosPosTracking::set_default_opt_params(std::map<std::string, double>& p) {      
-      p["w_com"] = 10.0;           //# weight of center of mass task
+      p["w_com"] = 0.0;           //# weight of center of mass task
       p["w_posture"] = 0.75;        //# weight of joint posture task
       p["w_forceRef_feet"] = 1e-3;  //# weight of force regularization task
       p["w_forceRef_hands"] = 1e-3; //# weight of force regularization task
@@ -71,7 +71,7 @@ namespace inria_wbc
       p["w_rf"] = 1.0;              //# weight of right foot  task
       p["w_lf"] = 1.0;              //# weight of left foot  task
       p["kp_contact"] = 30.0;       //# proportional gain of contact constraint
-      p["kp_com"] = 3000.0;         //# proportional gain of center of mass task
+      p["kp_com"] = 0.0;         //# proportional gain of center of mass task
       p["kp_posture"] = 30.0;       //# proportional gain of joint posture task
       p["kp_floatingb"] = 3000.0;   //# proportional gain of floatingb task
       p["kp_rh"] = 300.0;           //# proportional gain of right hand task
