@@ -48,10 +48,10 @@ namespace inria_wbc
             int cycle_[6] {States::MOVE_COM_RIGHT, States::LIFT_UP_LF, States::LIFT_DOWN_LF, States::MOVE_COM_LEFT, States::LIFT_UP_RF, States::LIFT_DOWN_RF};
             
             // Left Foot
-            pinocchio::SE3  lf_init_, lf_ref_;
+            //pinocchio::SE3  lf_init_, lf_ref_;
 
             // Right Foot
-            pinocchio::SE3  rf_init_, rf_ref_;
+            //pinocchio::SE3  rf_init_, rf_ref_;
 
         };
     } // namespace behaviors
