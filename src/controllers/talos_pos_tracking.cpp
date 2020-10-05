@@ -251,7 +251,7 @@ namespace inria_wbc {
             rf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
             lh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_left_joint"));
             rh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_right_joint"));
-            auto torso_ref = robot_->position(tsid_->data(), robot_->model().getFrameId("torso_2_link"));
+            auto torso_ref = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(torso_frame_name_));
 
             com_ref_ = com_init_;
             posture_ref_ = posture_init_;
