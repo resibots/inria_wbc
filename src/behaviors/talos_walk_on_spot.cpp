@@ -165,11 +165,11 @@ namespace inria_wbc {
                 ofs_com << controller->get_pinocchio_com().transpose() << std::endl;
                 ofs_com_ref << _last_com << std::endl;
 
-                ofs_lf << controller->get_LF_SE3() << std::endl;
-                ofs_lf_ref << _last_lf.translation() << std::endl;
+                ofs_lf << controller->get_LF_SE3().translation().transpose() << std::endl;
+                ofs_lf_ref << _last_lf.translation().transpose() << std::endl;
 
-                ofs_rf << controller->get_RF_SE3() << std::endl;
-                ofs_rf_ref << _last_rf.translation() << std::endl;
+                ofs_rf << controller->get_RF_SE3().translation().transpose() << std::endl;
+                ofs_rf_ref << _last_rf.translation().transpose() << std::endl;
             }
 #endif
             if (controller_->solve()) {
