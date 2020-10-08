@@ -16,14 +16,12 @@ namespace inria_wbc {
             WalkOnSpot(const inria_wbc::controllers::TalosBaseController::Params& params);
             WalkOnSpot() = delete;
             WalkOnSpot(const WalkOnSpot& otehr) = default;
-            //virtual std::shared_ptr<Behavior> clone() override { return std::make_shared<TestWbcCOM>(*this); }
             bool update() override;
 
         private:
             int time_ = 0;
             float dt_;
             int traj_selector_ = 0;
-            //std::vector<std::vector<pinocchio::SE3>> trajectories_;
             std::vector<std::vector<Eigen::VectorXd>> trajectories_;
             std::vector<Eigen::VectorXd> current_com_trajectory_;
             std::vector<pinocchio::SE3> current_foot_trajectory_;
@@ -40,15 +38,7 @@ namespace inria_wbc {
                 LIFT_UP_LF,
                 LIFT_DOWN_LF,
             };
-            bool first_run_ = true;
-            int cycle_size_ = 6;
-            int cycle_[6]{States::MOVE_COM_RIGHT, States::LIFT_UP_LF, States::LIFT_DOWN_LF, States::MOVE_COM_LEFT, States::LIFT_UP_RF, States::LIFT_DOWN_RF};
-
-            // Left Foot
-            //pinocchio::SE3  lf_init_, lf_ref_;
-
-            // Right Foot
-            //pinocchio::SE3  rf_init_, rf_ref_;
+            std::vector<States> cycle_;
         };
     } // namespace behaviors
 } // namespace inria_wbc

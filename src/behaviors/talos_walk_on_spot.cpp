@@ -8,24 +8,30 @@ namespace inria_wbc {
 
         WalkOnSpot::WalkOnSpot(const inria_wbc::controllers::TalosBaseController::Params& params) : Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
         {
-            //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
 
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             inria_wbc::utils::parse(trajectory_duration_, "trajectory_duration", config, false, "BEHAVIOR");
             inria_wbc::utils::parse(motion_size_, "motion_size", config, false, "BEHAVIOR");
 
-            state_ = States::MOVE_COM_RIGHT;
             dt_ = params.dt;
+
+            cycle_ = {
+                States::MOVE_COM_RIGHT,
+                States::LIFT_UP_LF,
+                States::LIFT_DOWN_LF,
+                States::MOVE_COM_LEFT,
+                States::LIFT_UP_RF,
+                States::LIFT_DOWN_RF};
+            state_ = States::MOVE_COM_RIGHT;
         }
 
         bool WalkOnSpot::update()
         {
             switch (state_) {
             case States::MOVE_COM_RIGHT:
-                if (first_run_) {
+                if (time_ == 0) {
                     std::cout << "Move CoM to right foot" << std::endl;
-                    first_run_ = false;
                     // Compute current CoM trajectory to track -> move above the right foot
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com(); // get current CoM position
                     Eigen::VectorXd com_right = com_init;
@@ -37,9 +43,8 @@ namespace inria_wbc {
                 }
                 break;
             case States::LIFT_UP_LF:
-                if (first_run_) {
+                if (time_ == 0) {
                     std::cout << "Lift up left foot" << std::endl;
-                    first_run_ = false;
                     // Compute current CoM trajectory to track -> stay still
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, trajectory_duration_);
@@ -56,9 +61,8 @@ namespace inria_wbc {
                 std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(current_foot_trajectory_[time_], "lf");
                 break;
             case States::LIFT_DOWN_LF:
-                if (first_run_) {
+                if (time_ == 0) {
                     std::cout << "Lift down left foot" << std::endl;
-                    first_run_ = false;
                     // Compute current CoM trajectory to track -> stay still
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, trajectory_duration_);
@@ -77,9 +81,8 @@ namespace inria_wbc {
                 }
                 break;
             case States::MOVE_COM_LEFT:
-                if (first_run_) {
+                if (time_ == 0) {
                     std::cout << "Move CoM to left foot" << std::endl;
-                    first_run_ = false;
                     // Compute current CoM trajectory to track -> move above the left foot
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
                     Eigen::VectorXd com_left = com_init;
@@ -91,9 +94,8 @@ namespace inria_wbc {
                 }
                 break;
             case States::LIFT_UP_RF:
-                if (first_run_) {
+                if (time_ == 0) {
                     std::cout << "Lift up right foot" << std::endl;
-                    first_run_ = false;
                     // Compute current CoM trajectory to track -> stay still
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, trajectory_duration_);
@@ -110,9 +112,8 @@ namespace inria_wbc {
                 std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(current_foot_trajectory_[time_], "rf");
                 break;
             case States::LIFT_DOWN_RF:
-                if (first_run_) {
+                if (time_ == 0) {
                     std::cout << "Lift down right foot" << std::endl;
-                    first_run_ = false;
                     // Compute current CoM trajectory to track -> stay still
                     auto com_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, trajectory_duration_);
@@ -139,8 +140,7 @@ namespace inria_wbc {
                 time_++;
                 if (time_ == current_com_trajectory_.size()) {
                     time_ = 0;
-                    first_run_ = true;
-                    traj_selector_ = ++traj_selector_ % cycle_size_;
+                    traj_selector_ = ++traj_selector_ % cycle_.size();
                     state_ = cycle_[traj_selector_];
                 }
                 return true;
