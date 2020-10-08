@@ -22,11 +22,16 @@ namespace inria_wbc {
             int time_ = 0;
             float dt_;
             int traj_selector_ = 0;
+            Eigen::VectorXd _last_com;
+            pinocchio::SE3 _last_lf;
+            pinocchio::SE3 _last_rf;
+
             std::vector<std::vector<Eigen::VectorXd>> trajectories_;
             std::vector<Eigen::VectorXd> current_com_trajectory_;
             std::vector<pinocchio::SE3> current_foot_trajectory_;
-            float trajectory_duration_ = 3; //will be changed if specified in yaml
-            float motion_size_ = 0.2; //will be changed if specified in yaml
+            float traj_com_duration_ = 3; //will be changed if specified in yaml
+            float traj_foot_duration_ = 3; //will be changed if specified in yaml
+            float step_height_ = 0.1;
 
             // State machine stats for walking on the spot cycle
             int state_ = -1;

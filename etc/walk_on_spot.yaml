@@ -10,6 +10,7 @@ SOT:
   w_rf: 1000.0
   w_lf: 1000.0
   w_velocity: 0.0
+  w_torso: 500.0
   kp_contact: 30.0
   kp_com: 3000.0
   kp_floatingb: 0.0
@@ -19,10 +20,12 @@ SOT:
   kp_lh: 30.0
   kp_rf: 3000.0
   kp_lf: 3000.0
-
+  kp_torso: 30.0
 BEHAVIOR:
   name : walk-on-spot
-  trajectory_duration : 3
+  traj_com_duration : 1.5
+  traj_foot_duration : 1.5
+  step_height : 0.3
   motion_size : 0.1
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf

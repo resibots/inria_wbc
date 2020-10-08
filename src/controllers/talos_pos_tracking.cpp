@@ -178,6 +178,8 @@ namespace inria_wbc {
             vert_torso_task_->Kd(2.0 * vert_torso_task_->Kp().cwiseSqrt());
             Vector mask_torso = Vector::Zero(6);
             mask_torso[4] = 1; // only constrain the pitch of the body
+            mask_torso[3] = 1; // only constrain the roll of the body
+
             vert_torso_task_->setMask(mask_torso);
             tsid_->addMotionTask(*vert_torso_task_, p.at("w_torso"), 1);
 
