@@ -1,14 +1,14 @@
 
 #include <algorithm>
+#include <boost/program_options.hpp>
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <chrono>
 #include <signal.h>
-#include <boost/program_options.hpp>
 
 #include <robot_dart/control/pd_control.hpp>
-#include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robot.hpp>
+#include <robot_dart/robot_dart_simu.hpp>
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
@@ -16,7 +16,7 @@
 
 #include "inria_wbc/behaviors/factory.hpp"
 
-Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd &targetpos)
+Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos)
 {
     Eigen::VectorXd q = robot->getPositions();
     Eigen::VectorXd dq = robot->getVelocities();
@@ -27,13 +27,11 @@ Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::Vect
     Eigen::MatrixXd Kp = Eigen::MatrixXd::Identity(ndofs, ndofs);
     Eigen::MatrixXd Kd = Eigen::MatrixXd::Identity(ndofs, ndofs);
 
-    for (std::size_t i = 0; i < robot->getNumDofs(); ++i)
-    {
+    for (std::size_t i = 0; i < robot->getNumDofs(); ++i) {
         Kp(i, i) = stiffness;
         Kd(i, i) = damping;
     }
-    for (std::size_t i = 0; i < 6; ++i)
-    {
+    for (std::size_t i = 0; i < 6; ++i) {
         Kp(i, i) = 0;
         Kd(i, i) = 0;
     }
@@ -46,7 +44,7 @@ Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::Vect
     return commands;
 }
 
-Eigen::VectorXd compute_velocities(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd &targetpos, double dt)
+Eigen::VectorXd compute_velocities(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos, double dt)
 {
     Eigen::VectorXd q = robot->getPositions();
     Eigen::VectorXd vel = (targetpos - q) / dt;
@@ -58,7 +56,7 @@ void stopsig(int signum)
 {
     stop = 1;
 }
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // program options
     namespace po = boost::program_options;
@@ -80,27 +78,27 @@ int main(int argc, char *argv[])
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
-    if (vm.count("help"))
-    {
+    if (vm.count("help")) {
         std::cout << desc << std::endl;
         return 0;
     }
 
     // clang-format off
     std::cout<< "------ CONFIGURATION ------" << std::endl;
+    std::ostringstream oss_conf;
     for (const auto& kv : vm){
-        std::cout << kv.first << " ";
-        try { std::cout << kv.second.as<std::string>();
+        oss_conf << kv.first << " ";
+        try { oss_conf << kv.second.as<std::string>();
         } catch(...) {/* do nothing */ }
-        try { std::cout << kv.second.as<bool>();
+        try { oss_conf << kv.second.as<bool>();
         } catch(...) {/* do nothing */ }
-        try { std::cout << kv.second.as<int>();
+        try { oss_conf << kv.second.as<int>();
         } catch(...) {/* do nothing */ }
-        std::cout<< std::endl;
+        oss_conf << std::endl;
     }
+    std::cout << oss_conf.str();
     std::cout << "--------------------------" << std::endl;
     // clang-format on
-
 
     // dt of the simulation and the controller
     float dt = 0.001;
@@ -120,17 +118,15 @@ int main(int argc, char *argv[])
 
 #ifdef GRAPHIC
     robot_dart::gui::magnum::GraphicsConfiguration configuration;
-    if (vm.count("big_window"))
-    {
+    if (vm.count("big_window")) {
         configuration.width = 1280;
         configuration.height = 960;
     }
-    else
-    {
+    else {
         configuration.width = 800;
-        configuration.height = 500;        
+        configuration.height = 500;
     }
-    
+
     auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu, configuration);
     simu.set_graphics(graphics);
     graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
@@ -143,12 +139,12 @@ int main(int argc, char *argv[])
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
     std::string sot_config_path = vm["conf"].as<std::string>();
     inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
-                                                                  "../etc/talos_configurations.srdf",
-                                                                  sot_config_path,
-                                                                  "",
-                                                                  dt,
-                                                                  false,
-                                                                  robot->mimic_dof_names()};
+        "../etc/talos_configurations.srdf",
+        sot_config_path,
+        "",
+        dt,
+        false,
+        robot->mimic_dof_names()};
 
     std::string behavior_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
@@ -171,16 +167,13 @@ int main(int argc, char *argv[])
 
     // the main loop
     using namespace std::chrono;
-    while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done())
-    {
+    while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
         // step the command
-        if (simu.schedule(simu.control_freq()))
-        {
+        if (simu.schedule(simu.control_freq())) {
             auto t1 = high_resolution_clock::now();
             bool solution_found = behavior->update();
             auto q = controller->q(false);
-            if (solution_found)
-            {
+            if (solution_found) {
                 Eigen::VectorXd cmd;
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = compute_velocities(robot->skeleton(), q, dt);
@@ -188,8 +181,7 @@ int main(int argc, char *argv[])
                     cmd = compute_spd(robot->skeleton(), q);
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
             }
-            else
-            {
+            else {
                 std::cerr << "Solver failed! aborting" << std::endl;
                 return -1;
             }
@@ -200,19 +192,26 @@ int main(int argc, char *argv[])
         // step the simulation
         {
             auto t1 = high_resolution_clock::now();
-            simu.step_world();  
+            simu.step_world();
             auto t2 = high_resolution_clock::now();
             time_simu += duration_cast<microseconds>(t2 - t1).count();
             ++it_simu;
         }
-      
+
         // print timing information
-        if (it_simu == 1000)
-        {
-            std::cout << "Average time (iteration simu): " << time_simu / it_simu / 1000. << " ms"
-                      << "\tAverage time(iteration command):" << time_cmd / it_cmd / 1000. << " ms"
+        if (it_simu == 100) {
+            double t_sim = time_simu / it_simu / 1000.;
+            double t_cmd = time_cmd / it_cmd / 1000.;
+            std::cout << "Average time (iteration simu): " << t_sim << " ms"
+                      << "\tAverage time(iteration command):" << t_cmd << " ms"
                       << std::endl;
-            ;
+            std::ostringstream oss;
+            oss.precision(3);
+            oss << "[Sim: " << t_sim << " ms]" << std::endl;
+            oss << "[Cmd: " << t_cmd << " ms]" << std::endl;
+            oss << oss_conf.str();
+            if (!vm.count("video"))
+                simu.set_text_panel(oss.str());
             it_simu = 0;
             it_cmd = 0;
             time_cmd = 0;
