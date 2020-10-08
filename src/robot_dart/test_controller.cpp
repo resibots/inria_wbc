@@ -133,7 +133,6 @@ int main(int argc, char* argv[])
     if (vm.count("video"))
         graphics->record_video(vm["video"].as<std::string>());
 #endif
-    simu.enable_text_panel();
     simu.add_robot(robot);
     simu.add_checkerboard_floor();
 
