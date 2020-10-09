@@ -163,7 +163,7 @@ namespace inria_wbc {
                 static std::ofstream ofs_rf_ref("rf_ref.dat");
 
                 ofs_com << controller->get_pinocchio_com().transpose() << std::endl;
-                ofs_com_ref << _last_com << std::endl;
+                ofs_com_ref << _last_com.transpose() << std::endl;
 
                 ofs_lf << controller->get_LF_SE3().translation().transpose() << std::endl;
                 ofs_lf_ref << _last_lf.translation().transpose() << std::endl;
