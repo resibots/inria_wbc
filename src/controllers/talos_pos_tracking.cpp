@@ -110,7 +110,12 @@ namespace inria_wbc {
 
         void TalosPosTracking::set_stack_configuration()
         {
+
             const opt_params_t& p = params_.opt_params;
+            if (verbose_)
+                for (auto& x : p)
+                    std::cout << x.first << " => " << params_.opt_params[x.first] << std::endl;
+
             ////////////////////Gather Initial Pose //////////////////////////////////////
             q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
             Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
@@ -178,6 +183,8 @@ namespace inria_wbc {
             vert_torso_task_->Kd(2.0 * vert_torso_task_->Kp().cwiseSqrt());
             Vector mask_torso = Vector::Zero(6);
             mask_torso[4] = 1; // only constrain the pitch of the body
+            mask_torso[3] = 1; // only constrain the roll of the body
+
             vert_torso_task_->setMask(mask_torso);
             tsid_->addMotionTask(*vert_torso_task_, p.at("w_torso"), 1);
 
@@ -342,6 +349,40 @@ namespace inria_wbc {
             traj_posture_->setReference(ref);
             TrajectorySample sample_posture_ = traj_posture_->computeNext();
             posture_task_->setReference(sample_posture_);
+        }
+
+        void TalosPosTracking::remove_contact(const std::string& contact_name)
+        {
+            tsid_->removeRigidContact(contact_name);
+        }
+
+        void TalosPosTracking::add_contact(const std::string& contact_name)
+        {
+            const opt_params_t& p = params_.opt_params;
+            const pinocchio::Data& data = tsid_->data();
+            if (contact_name == "contact_rfoot") {
+                contact_rf_ref_ = robot_->position(data, robot_->model().getJointId(rf_frame_name_));
+                contactRF_->setReference(contact_rf_ref_);
+                tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
+            }
+            else if (contact_name == "contact_lfoot") {
+                contact_lf_ref_ = robot_->position(data, robot_->model().getJointId(lf_frame_name_));
+                contactLF_->setReference(contact_lf_ref_);
+                tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
+            }
+            else {
+                std::cout << "unknown contact" << std::endl;
+            }
+        }
+
+        pinocchio::SE3 TalosPosTracking::get_RF_SE3()
+        {
+            return robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
+        }
+
+        pinocchio::SE3 TalosPosTracking::get_LF_SE3()
+        {
+            return robot_->position(tsid_->data(), robot_->model().getJointId("leg_left_6_joint"));
         }
 
     } // namespace controllers

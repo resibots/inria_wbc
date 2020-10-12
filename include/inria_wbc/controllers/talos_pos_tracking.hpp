@@ -22,6 +22,11 @@ namespace inria_wbc {
             void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
             void set_posture_ref(const tsid::math::Vector& ref, const std::string& task_name);
 
+            void remove_contact(const std::string &contact_name);
+            void add_contact(const std::string &contact_name);
+            pinocchio::SE3 get_RF_SE3();
+            pinocchio::SE3 get_LF_SE3();
+
             virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
 
         private:
