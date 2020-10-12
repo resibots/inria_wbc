@@ -72,6 +72,7 @@ int main(int argc, char* argv[])
     ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
     ("video,v", po::value<std::string>(), "save the display to a video [filename]")
     ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
+    ("ghost,g", "display the ghost (Pinocchio model)")
     ;
     // clang-format on
     po::variables_map vm;
@@ -154,8 +155,10 @@ int main(int argc, char* argv[])
 
     auto controller = behavior->controller();
     auto all_dofs = controller->all_dofs();
-    auto controllable_dofs = controller->controllable_dofs();
+    auto floating_base = all_dofs;
+    floating_base.resize(6);
 
+    auto controllable_dofs = controller->controllable_dofs();
     robot->set_positions(controller->q0(), all_dofs);
 
     uint ncontrollable = controllable_dofs.size();
@@ -165,6 +168,15 @@ int main(int argc, char* argv[])
     double time_simu = 0, time_cmd = 0;
     int it_simu = 0, it_cmd = 0;
 
+    std::ofstream ofs_com("com_dart.dat");
+
+    std::shared_ptr<robot_dart::Robot> ghost;
+    if (vm.count("ghost")) {
+        ghost = robot->clone_ghost();
+        ghost->skeleton()->setPosition(4, -1.57);
+        ghost->skeleton()->setPosition(5, 1.1);
+        simu.add_robot(ghost);
+    }
     // the main loop
     using namespace std::chrono;
     while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
@@ -180,6 +192,12 @@ int main(int argc, char* argv[])
                 else // torque
                     cmd = compute_spd(robot->skeleton(), q);
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+                if (ghost) {
+                    Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
+                    translate_ghost(0) -= 1;
+                    ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
+                    ghost->set_positions(q.head(6) + translate_ghost, floating_base);
+                }
             }
             else {
                 std::cerr << "Solver failed! aborting" << std::endl;
@@ -198,20 +216,25 @@ int main(int argc, char* argv[])
             ++it_simu;
         }
 
+        ofs_com << robot->com().transpose() << std::endl;
+
         // print timing information
         if (it_simu == 100) {
             double t_sim = time_simu / it_simu / 1000.;
             double t_cmd = time_cmd / it_cmd / 1000.;
-            std::cout << "Average time (iteration simu): " << t_sim << " ms"
-                      << "\tAverage time(iteration command):" << t_cmd << " ms"
+            std::cout << "t=" << simu.scheduler().current_time() << "\tit. simu: "
+                      << t_sim << " ms"
+                      << "\tit. command:" << t_cmd << " ms"
                       << std::endl;
             std::ostringstream oss;
             oss.precision(3);
             oss << "[Sim: " << t_sim << " ms]" << std::endl;
             oss << "[Cmd: " << t_cmd << " ms]" << std::endl;
-            oss << oss_conf.str();
+            //oss << oss_conf.str();
+#ifdef GRAPHICS
             if (!vm.count("video"))
                 simu.set_text_panel(oss.str());
+#endif
             it_simu = 0;
             it_cmd = 0;
             time_cmd = 0;
