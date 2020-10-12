@@ -157,7 +157,27 @@ namespace inria_wbc {
             }
             else {
                 std::cerr << "Controller failed, can't solve problem " << std::endl;
-                std::cerr << "Status " + toString(sol.status) << std::endl;
+                std::cerr << "Status : " + toString(sol.status);
+                switch (sol.status) {
+                case -1:
+                    std::cerr << " => Unknown";
+                    break;
+                case 1:
+                    std::cerr << " => Infeasible ";
+                    break;
+                case 2:
+                    std::cerr << " => Unbounded ";
+                    break;
+                case 3:
+                    std::cerr << " => Max iter reached ";
+                    break;
+                case 4:
+                    std::cerr << " => Error ";
+                    break;
+                default:
+                    std::cerr << " => Uknown status";
+                }
+                std::cerr << std::endl;
                 return false;
             }
         }
