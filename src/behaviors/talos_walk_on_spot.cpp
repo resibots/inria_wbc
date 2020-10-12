@@ -111,7 +111,8 @@ namespace inria_wbc {
                     std::cout << "Lift up right foot" << std::endl;
                     // Compute current CoM trajectory to track -> stay still
                     current_com_trajectory_ = trajectory_handler::compute_traj(_last_com, _last_com, dt_, traj_foot_duration_);
-                    current_lf_trajectory_ = trajectory_handler::compute_traj(_last_lf, _last_lf, dt_, traj_com_duration_);
+                    current_lf_trajectory_ = trajectory_handler::compute_traj(_last_lf, _last_lf, dt_, traj_foot_duration_);
+
                     // Remove right foot contact
                     controller->remove_contact("contact_rfoot");
                     // Compute current right foot trajectory to track -> Lift up 10cm
@@ -128,7 +129,7 @@ namespace inria_wbc {
                     // Compute current CoM trajectory to track -> stay still
                     auto com_init = _last_com;
                     current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, traj_foot_duration_);
-                    current_lf_trajectory_ = trajectory_handler::compute_traj(_last_lf, _last_lf, dt_, traj_com_duration_);
+                    current_lf_trajectory_ = trajectory_handler::compute_traj(_last_lf, _last_lf, dt_, traj_foot_duration_);
                     // Compute current right foot trajectory to track -> Lift down 10cm
                     auto rf_init = _last_rf;
                     auto right_foot_pos = rf_init.translation();
@@ -144,6 +145,10 @@ namespace inria_wbc {
             default:
                 break;
             }
+            assert(time_ < current_com_trajectory_.size());
+            assert(time_ < current_lf_trajectory_.size());
+            assert(time_ < current_rf_trajectory_.size());
+
             // follow the trajectories
             _last_com = current_com_trajectory_[time_];
             _last_lf = current_lf_trajectory_[time_];
