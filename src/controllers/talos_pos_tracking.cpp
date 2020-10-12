@@ -110,7 +110,12 @@ namespace inria_wbc {
 
         void TalosPosTracking::set_stack_configuration()
         {
+
             const opt_params_t& p = params_.opt_params;
+            if (verbose_)
+                for (auto& x : p)
+                    std::cout << x.first << " => " << params_.opt_params[x.first] << std::endl;
+
             ////////////////////Gather Initial Pose //////////////////////////////////////
             q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
             Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));

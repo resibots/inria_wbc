@@ -70,9 +70,10 @@ int main(int argc, char* argv[])
     ("actuators,a", po::value<std::string>()->default_value("torque"), "actuator model torque/velocity/servo (always for position control) [default:torque]")
     ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
     ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
-    ("video,v", po::value<std::string>(), "save the display to a video [filename]")
+    ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
     ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
     ("ghost,g", "display the ghost (Pinocchio model)")
+    ("verbose,v", "verbose mode (controller)")
     ;
     // clang-format on
     po::variables_map vm;
@@ -100,6 +101,8 @@ int main(int argc, char* argv[])
     std::cout << oss_conf.str();
     std::cout << "--------------------------" << std::endl;
     // clang-format on
+
+    bool verbose = vm.count("verbose") == 0 ? false : true;
 
     // dt of the simulation and the controller
     float dt = 0.001;
@@ -144,7 +147,7 @@ int main(int argc, char* argv[])
         sot_config_path,
         "",
         dt,
-        false,
+        verbose,
         robot->mimic_dof_names()};
 
     std::string behavior_name;
