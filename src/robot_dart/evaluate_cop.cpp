@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     robot_dart::gui::magnum::GraphicsConfiguration configuration;
     configuration.width = 1280;
     configuration.height = 960;
-    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu, configuration);
+    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(configuration);
     simu.set_graphics(graphics);
     graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
 #endif
