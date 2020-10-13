@@ -108,6 +108,7 @@ namespace inria_wbc
             Params params() { return params_; };
 
             std::shared_ptr<tsid::robots::RobotWrapper> robot() { return robot_; };
+            std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid() { return tsid_; };
             std::vector<double> pinocchio_model_masses();
             std::vector<double> pinocchio_model_cumulated_masses();
             std::vector<std::string> pinocchio_joint_names();
