@@ -33,6 +33,7 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/behaviors/talos_move_arm.hpp
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
+                            include/inria_wbc/utils/torque_safety.hpp
 )
 
 set(INRIA_WBC_SOURCES
@@ -40,12 +41,14 @@ set(INRIA_WBC_SOURCES
                             src/controllers/talos_pos_tracking.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
+                            src/utils/torque_safety.cpp
 )
 
-set(EXAMPLE_LIST 
+set(EXAMPLE_LIST
                 src/robot_dart/evaluate_cop.cpp
                 src/robot_dart/test_controller.cpp
                 src/robot_dart/test_masses.cpp
+                src/robot_dart/test_torque_safety.cpp
 )
 
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
@@ -111,10 +114,10 @@ set(LIBRARY inria_wbc)
 
 configure_package_config_file("cmake/inria_wbc.cmake.in"
                               "${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfig.cmake"
-                              INSTALL_DESTINATION 
+                              INSTALL_DESTINATION
                               "${LIBRARY_INSTALL_DIR}/cmake/inria_wbc"
-                              PATH_VARS 
-                              INCLUDE_INSTALL_DIR 
+                              PATH_VARS
+                              INCLUDE_INSTALL_DIR
                               LIBRARY_INSTALL_DIR LIBRARY
                               DEPENDENCIES_LIBS DEPENDENCIES_INCS
 )
@@ -142,5 +145,3 @@ install(FILES
 install(DIRECTORY etc/  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/inria_wbc/etc)
 
 ADD_SUBDIRECTORY(tests)
-
-
