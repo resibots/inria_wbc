@@ -99,6 +99,7 @@ namespace inria_wbc
             std::vector<int> non_mimic_indexes() { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd &cmd);
 
+            Eigen::VectorXd tau();
             Eigen::VectorXd ddq(bool filter_mimics = true);
             Eigen::VectorXd dq(bool filter_mimics = true);
             Eigen::VectorXd q0(bool filter_mimics = true);
