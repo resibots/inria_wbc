@@ -1,5 +1,7 @@
 #include "inria_wbc/behaviors/talos_walk_on_spot.hpp"
+#include <chrono>
 
+//#define LOG_WALK_ON_SPOT
 namespace inria_wbc {
     namespace behaviors {
 
@@ -36,6 +38,7 @@ namespace inria_wbc {
         bool WalkOnSpot::update()
         {
             auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_);
+            auto t1_traj = std::chrono::high_resolution_clock::now();
 
             switch (state_) {
             case States::MOVE_COM_RIGHT:
@@ -156,6 +159,8 @@ namespace inria_wbc {
             controller->set_com_ref(_last_com);
             controller->set_se3_ref(_last_lf, "lf");
             controller->set_se3_ref(_last_rf, "rf");
+            auto t2_traj = std::chrono::high_resolution_clock::now();
+            double step_traj = std::chrono::duration_cast<std::chrono::microseconds>(t2_traj - t1_traj).count() / 1000.0;
 
 #ifdef LOG_WALK_ON_SPOT
             {
@@ -165,6 +170,7 @@ namespace inria_wbc {
                 static std::ofstream ofs_lf_ref("lf_ref.dat");
                 static std::ofstream ofs_rf("rf.dat");
                 static std::ofstream ofs_rf_ref("rf_ref.dat");
+                static std::ofstream ofs_time_traj("time_traj.dat");
 
                 ofs_com << controller->get_pinocchio_com().transpose() << std::endl;
                 ofs_com_ref << _last_com.transpose() << std::endl;
@@ -174,6 +180,8 @@ namespace inria_wbc {
 
                 ofs_rf << controller->get_RF_SE3().translation().transpose() << std::endl;
                 ofs_rf_ref << _last_rf.translation().transpose() << std::endl;
+
+                ofs_time_traj << step_traj << std::endl;
             }
 #endif
             if (controller_->solve()) {
