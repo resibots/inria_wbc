@@ -69,12 +69,26 @@ int main(int argc, char* argv[])
     ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
     ("ghost,g", "display the ghost (Pinocchio model)")
     ("verbose,v", "verbose mode (controller)")
-    ("log,l", po::value<std::vector<std::string>>(), "log the trajectory of a dart body [with urdf names] or timing or CoM, example: -l timing -l com -l lf")
+    ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), "log the trajectory of a dart body [with urdf names] or timing or CoM, example: -l timing -l com -l lf")
     ;
     // clang-format on
     po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+    }
+    catch (po::too_many_positional_options_error& e) {
+        // A positional argument like `opt2=option_value_2` was given
+        std::cerr << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
+    catch (po::error_with_option_name& e) {
+        // Another usage error occurred
+        std::cerr << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
 
     if (vm.count("help")) {
         std::cout << desc << std::endl;
