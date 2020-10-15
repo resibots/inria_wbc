@@ -2,10 +2,10 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
-#include <signal.h>
 #include <robot_dart/control/pd_control.hpp>
-#include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robot.hpp>
+#include <robot_dart/robot_dart_simu.hpp>
+#include <signal.h>
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
@@ -24,13 +24,11 @@ Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, Eigen::VectorXd t
     Eigen::MatrixXd Kp = Eigen::MatrixXd::Identity(ndofs, ndofs);
     Eigen::MatrixXd Kd = Eigen::MatrixXd::Identity(ndofs, ndofs);
 
-    for (std::size_t i = 0; i < robot->getNumDofs(); ++i)
-    {
+    for (std::size_t i = 0; i < robot->getNumDofs(); ++i) {
         Kp(i, i) = stiffness;
         Kd(i, i) = damping;
     }
-    for (std::size_t i = 0; i < 6; ++i)
-    {
+    for (std::size_t i = 0; i < 6; ++i) {
         Kp(i, i) = 0;
         Kd(i, i) = 0;
     }
@@ -47,7 +45,7 @@ void stopsig(int signum)
 {
     stop = 1;
 }
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // take the name of the behavior as a argument
     std::string sot_config_path = argc > 1 ? argv[1] : "../etc/squat.yaml";
@@ -72,7 +70,7 @@ int main(int argc, char *argv[])
     robot_dart::gui::magnum::GraphicsConfiguration configuration;
     configuration.width = 1280;
     configuration.height = 960;
-    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(&simu, configuration);
+    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(configuration);
     simu.set_graphics(graphics);
     graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
 #endif
@@ -82,12 +80,12 @@ int main(int argc, char *argv[])
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
 
     inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
-                                                                 "../etc/talos_configurations.srdf",
-                                                                 sot_config_path,
-                                                                 "",
-                                                                 dt,
-                                                                 false,
-                                                                 robot->mimic_dof_names()};
+        "../etc/talos_configurations.srdf",
+        sot_config_path,
+        "",
+        dt,
+        false,
+        robot->mimic_dof_names()};
 
     std::string behavior_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
@@ -101,8 +99,7 @@ int main(int argc, char *argv[])
 
     std::cout << "PINOCCHIO" << std::endl;
     double total_mass_pin = 0.0;
-    for (uint i = 0; i < masses.size(); i++)
-    {
+    for (uint i = 0; i < masses.size(); i++) {
         std::cout << "mass : " << joint_names[i] << " = " << masses[i] << std::endl;
         total_mass_pin += masses[i];
     }
@@ -110,8 +107,7 @@ int main(int argc, char *argv[])
 
     std::cout << "\nDART" << std::endl;
     double total_mass = 0.0;
-    for (auto &s : robot->body_names())
-    {
+    for (auto& s : robot->body_names()) {
         std::cout << "mass: " << s << " = " << robot->body_mass(s) << std::endl;
         total_mass += robot->body_mass(s);
     }

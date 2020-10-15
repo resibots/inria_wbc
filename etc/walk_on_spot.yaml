@@ -22,8 +22,8 @@ SOT:
   kp_torso: 30.0
 BEHAVIOR:
   name : walk-on-spot
-  traj_com_duration : 3
-  traj_foot_duration : 10
+  traj_com_duration : 2
+  traj_foot_duration : 2
   step_height : 0.1
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf

@@ -1,5 +1,4 @@
 #include "inria_wbc/behaviors/talos_walk_on_spot.hpp"
-#define LOG_WALK_ON_SPOT
 
 namespace inria_wbc {
     namespace behaviors {
