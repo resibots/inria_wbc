@@ -2,10 +2,10 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
-#include <signal.h>
 #include <robot_dart/control/pd_control.hpp>
-#include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robot.hpp>
+#include <robot_dart/robot_dart_simu.hpp>
+#include <signal.h>
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
@@ -13,8 +13,7 @@
 
 #include "inria_wbc/behaviors/factory.hpp"
 
-
-void evaluate_cop(const Eigen::Vector6d &lf_torque_force, const Eigen::Vector6d &rf_torque_force)
+void evaluate_cop(const Eigen::Vector6d& lf_torque_force, const Eigen::Vector6d& rf_torque_force)
 {
     Eigen::Vector2d CoP(0., 0.);
     double ankle_height_ = 0.114;
@@ -58,7 +57,7 @@ void stopsig(int signum)
 {
     stop = 1;
 }
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // take the name of the behavior as a argument
     std::string sot_config_path = argc > 1 ? argv[1] : "../etc/squat.yaml";
@@ -91,12 +90,12 @@ int main(int argc, char *argv[])
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
 
     inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
-                                                                 "../etc/talos_configurations.srdf",
-                                                                 sot_config_path,
-                                                                 "",
-                                                                 dt,
-                                                                 false,
-                                                                 robot->mimic_dof_names()};
+        "../etc/talos_configurations.srdf",
+        sot_config_path,
+        "",
+        dt,
+        false,
+        robot->mimic_dof_names()};
 
     std::string behavior_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
@@ -115,10 +114,8 @@ int main(int argc, char *argv[])
 
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
-    while (!simu.graphics()->done())
-    {
-        if (simu.schedule(simu.control_freq()))
-        {
+    while (!simu.graphics()->done()) {
+        if (simu.schedule(simu.control_freq())) {
             lf_torque_force = robot->force_torque(robot->joint_index("leg_left_6_joint"));
             rf_torque_force = robot->force_torque(robot->joint_index("leg_right_6_joint"));
             evaluate_cop(lf_torque_force.first, rf_torque_force.first);

@@ -51,11 +51,6 @@ Eigen::VectorXd compute_velocities(dart::dynamics::SkeletonPtr robot, const Eige
     return vel;
 }
 
-volatile sig_atomic_t stop;
-void stopsig(int signum)
-{
-    stop = 1;
-}
 int main(int argc, char* argv[])
 {
     // program options
@@ -74,11 +69,26 @@ int main(int argc, char* argv[])
     ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
     ("ghost,g", "display the ghost (Pinocchio model)")
     ("verbose,v", "verbose mode (controller)")
+    ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), "log the trajectory of a dart body [with urdf names] or timing or CoM, example: -l timing -l com -l lf")
     ;
     // clang-format on
     po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+    }
+    catch (po::too_many_positional_options_error& e) {
+        // A positional argument like `opt2=option_value_2` was given
+        std::cerr << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
+    catch (po::error_with_option_name& e) {
+        // Another usage error occurred
+        std::cerr << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
 
     if (vm.count("help")) {
         std::cout << desc << std::endl;
@@ -102,7 +112,10 @@ int main(int argc, char* argv[])
     std::cout << "--------------------------" << std::endl;
     // clang-format on
 
-    bool verbose = vm.count("verbose") == 0 ? false : true;
+    bool verbose = (vm.count("verbose") != 0);
+    std::map<std::string, std::shared_ptr<std::ofstream>> log_files;
+    for (auto& x : vm["log"].as<std::vector<std::string>>())
+        log_files[x] = std::make_shared<std::ofstream>((x + ".dat").c_str());
 
     // dt of the simulation and the controller
     float dt = 0.001;
@@ -168,10 +181,8 @@ int main(int argc, char* argv[])
 
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
-    double time_simu = 0, time_cmd = 0;
+    double time_simu = 0, time_cmd = 0, time_solver = 0;
     int it_simu = 0, it_cmd = 0;
-
-    std::ofstream ofs_com("com_dart.dat");
 
     std::shared_ptr<robot_dart::Robot> ghost;
     if (vm.count("ghost")) {
@@ -183,17 +194,25 @@ int main(int argc, char* argv[])
     // the main loop
     using namespace std::chrono;
     while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
+        double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
         // step the command
         if (simu.schedule(simu.control_freq())) {
-            auto t1 = high_resolution_clock::now();
+            auto t1_solver = high_resolution_clock::now();
             bool solution_found = behavior->update();
             auto q = controller->q(false);
+            auto t2_solver = high_resolution_clock::now();
+            time_step_solver = duration_cast<microseconds>(t2_solver - t1_solver).count();
+
             if (solution_found) {
+                auto t1_cmd = high_resolution_clock::now();
                 Eigen::VectorXd cmd;
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = compute_velocities(robot->skeleton(), q, dt);
                 else // torque
                     cmd = compute_spd(robot->skeleton(), q);
+                auto t2_cmd = high_resolution_clock::now();
+                time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
+
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
                 if (ghost) {
                     Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
@@ -206,35 +225,48 @@ int main(int argc, char* argv[])
                 std::cerr << "Solver failed! aborting" << std::endl;
                 return -1;
             }
-            auto t2 = high_resolution_clock::now();
-            time_cmd += duration_cast<microseconds>(t2 - t1).count();
             ++it_cmd;
         }
         // step the simulation
         {
-            auto t1 = high_resolution_clock::now();
+            auto t1_simu = high_resolution_clock::now();
             simu.step_world();
-            auto t2 = high_resolution_clock::now();
-            time_simu += duration_cast<microseconds>(t2 - t1).count();
+            auto t2_simu = high_resolution_clock::now();
+            time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
             ++it_simu;
         }
 
-        ofs_com << robot->com().transpose() << std::endl;
-
+        // log if needed
+        for (auto& x : log_files) {
+            if (x.first == "timing")
+                (*x.second) << time_step_solver / 1000.0 << "\t" << time_step_cmd / 1000.0 << "\t" << time_step_simu / 1000.0 << std::endl;
+            else if (x.first == "com")
+                (*x.second) << robot->com().transpose() << std::endl;
+            else
+                (*x.second) << robot->body_pose(x.first).translation() << "\t" << robot->body_pose(x.first).rotation() << std::endl;
+        }
         // print timing information
+        time_simu += time_step_simu;
+        time_cmd += time_step_cmd;
+        time_solver += time_step_solver;
         if (it_simu == 100) {
             double t_sim = time_simu / it_simu / 1000.;
             double t_cmd = time_cmd / it_cmd / 1000.;
-            std::cout << "t=" << simu.scheduler().current_time() << "\tit. simu: "
-                      << t_sim << " ms"
-                      << "\tit. command:" << t_cmd << " ms"
+            double t_solver = time_solver / it_cmd / 1000.;
+
+            std::cout << "t=" << simu.scheduler().current_time()
+                      << "\tit. simu: " << t_sim << " ms"
+                      << "\tit. solver:" << t_solver << " ms"
+                      << "\tit. cmd:" << t_cmd << " ms"
                       << std::endl;
             std::ostringstream oss;
             oss.precision(3);
             oss << "[Sim: " << t_sim << " ms]" << std::endl;
+            oss << "[Solver: " << t_solver << " ms]" << std::endl;
             oss << "[Cmd: " << t_cmd << " ms]" << std::endl;
+
             //oss << oss_conf.str();
-#ifdef GRAPHICS
+#ifdef GRAPHIC
             if (!vm.count("video"))
                 simu.set_text_panel(oss.str());
 #endif
@@ -242,6 +274,7 @@ int main(int argc, char* argv[])
             it_cmd = 0;
             time_cmd = 0;
             time_simu = 0;
+            time_solver = 0;
         }
     }
     return 0;
