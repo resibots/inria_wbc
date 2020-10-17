@@ -1,7 +1,7 @@
 #include "inria_wbc/behaviors/talos_walk_on_spot.hpp"
 #include <chrono>
 
-#define LOG_WALK_ON_SPOT
+//#define LOG_WALK_ON_SPOT
 namespace inria_wbc {
     namespace behaviors {
 
