@@ -157,7 +157,6 @@ namespace inria_wbc {
                     if (_current_traj == 0)
                         _current_traj++;
                     state_ = cycle_[_current_traj];
-                    std::cout << "state:" << state_ << std::endl;
                 }
                 return true;
             }
