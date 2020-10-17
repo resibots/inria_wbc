@@ -1,7 +1,7 @@
 #include "inria_wbc/behaviors/talos_walk_on_spot.hpp"
 #include <chrono>
 
-//#define LOG_WALK_ON_SPOT
+#define LOG_WALK_ON_SPOT
 namespace inria_wbc {
     namespace behaviors {
 
@@ -9,8 +9,6 @@ namespace inria_wbc {
 
         WalkOnSpot::WalkOnSpot(const inria_wbc::controllers::TalosBaseController::Params& params) : Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
         {
-            traj_selector_ = 0;
-
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             inria_wbc::utils::parse(traj_foot_duration_, "traj_foot_duration", config, false, "BEHAVIOR");
             inria_wbc::utils::parse(traj_com_duration_, "traj_com_duration", config, false, "BEHAVIOR");
@@ -18,21 +16,88 @@ namespace inria_wbc {
 
             dt_ = params.dt;
 
+            state_ = States::INIT;
+            time_ = 0;
+            _generate_trajectories();
+        }
+
+        void WalkOnSpot::_generate_trajectories()
+        {
             cycle_ = {
-                States::MOVE_COM_RIGHT,
+                States::INIT, // will be skipped
                 States::LIFT_UP_LF,
                 States::LIFT_DOWN_LF,
                 States::MOVE_COM_LEFT,
                 States::LIFT_UP_RF,
-                States::LIFT_DOWN_RF};
-            // cycle_ = {
-            //     States::MOVE_COM_RIGHT,
-            //     States::MOVE_COM_LEFT};
-            state_ = States::MOVE_COM_RIGHT;
+                States::LIFT_DOWN_RF,
+                States::MOVE_COM_RIGHT};
+
             auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_);
-            _last_com = controller->get_pinocchio_com();
-            _last_lf = controller->get_LF_SE3();
-            _last_rf = controller->get_RF_SE3();
+            auto translate_up = [](const pinocchio::SE3& p, double v) {
+                auto p2 = p;
+                p2.translation()(2) += v;
+                return p2;
+            };
+            // set the waypoints for the feet
+            Eigen::VectorXd high = (Eigen::VectorXd(3) << 0, step_height_, 0).finished();
+            auto lf_low = controller->get_LF_SE3();
+            auto lf_high = translate_up(lf_low, step_height_);
+
+            auto rf_low = controller->get_RF_SE3();
+            auto rf_high = translate_up(rf_low, step_height_);
+
+            // set the waypoints for the CoM : lf/rf but same height
+            auto com_init = controller->get_pinocchio_com();
+            auto com_lf = lf_low.translation();
+            com_lf(2) = com_init(2);
+            auto com_rf = rf_low.translation();
+            com_rf(2) = com_init(2);
+
+            // we do this so that we can simply alter the cycle_ vector (like, not lifting feet)
+            for (auto c : cycle_) {
+                switch (c) {
+                case States::INIT:
+                    _rf_trajs.push_back(trajectory_handler::compute_traj(rf_low, rf_low, dt_, traj_com_duration_));
+                    _lf_trajs.push_back(trajectory_handler::compute_traj(lf_low, lf_low, dt_, traj_com_duration_));
+                    _com_trajs.push_back(trajectory_handler::compute_traj(com_init, com_rf, dt_, traj_com_duration_));
+                    break;
+                case States::LIFT_UP_LF:
+                    _rf_trajs.push_back(trajectory_handler::compute_traj(rf_low, rf_low, dt_, traj_foot_duration_));
+                    _lf_trajs.push_back(trajectory_handler::compute_traj(lf_low, lf_high, dt_, traj_foot_duration_));
+                    _com_trajs.push_back(trajectory_handler::compute_traj(com_rf, com_rf, dt_, traj_foot_duration_));
+                    break;
+                case States::LIFT_DOWN_LF:
+                    _rf_trajs.push_back(trajectory_handler::compute_traj(rf_low, rf_low, dt_, traj_foot_duration_));
+                    _lf_trajs.push_back(trajectory_handler::compute_traj(lf_high, lf_low, dt_, traj_foot_duration_));
+                    _com_trajs.push_back(trajectory_handler::compute_traj(com_rf, com_rf, dt_, traj_foot_duration_));
+                    break;
+                case States::MOVE_COM_LEFT:
+                    _rf_trajs.push_back(trajectory_handler::compute_traj(rf_low, rf_low, dt_, traj_com_duration_));
+                    _lf_trajs.push_back(trajectory_handler::compute_traj(lf_low, lf_low, dt_, traj_com_duration_));
+                    _com_trajs.push_back(trajectory_handler::compute_traj(com_rf, com_lf, dt_, traj_com_duration_));
+                    break;
+                case States::LIFT_UP_RF:
+                    _rf_trajs.push_back(trajectory_handler::compute_traj(rf_low, rf_high, dt_, traj_foot_duration_));
+                    _lf_trajs.push_back(trajectory_handler::compute_traj(lf_low, lf_high, dt_, traj_foot_duration_));
+                    _com_trajs.push_back(trajectory_handler::compute_traj(com_lf, com_lf, dt_, traj_foot_duration_));
+                    break;
+                case States::LIFT_DOWN_RF:
+                    _rf_trajs.push_back(trajectory_handler::compute_traj(rf_high, rf_low, dt_, traj_foot_duration_));
+                    _lf_trajs.push_back(trajectory_handler::compute_traj(lf_high, lf_low, dt_, traj_foot_duration_));
+                    _com_trajs.push_back(trajectory_handler::compute_traj(com_lf, com_lf, dt_, traj_foot_duration_));
+                    break;
+                case States::MOVE_COM_RIGHT:
+                    _rf_trajs.push_back(trajectory_handler::compute_traj(rf_low, rf_low, dt_, traj_com_duration_));
+                    _lf_trajs.push_back(trajectory_handler::compute_traj(lf_low, lf_low, dt_, traj_com_duration_));
+                    _com_trajs.push_back(trajectory_handler::compute_traj(com_lf, com_rf, dt_, traj_com_duration_));
+                    break;
+                default:
+                    assert(0 && "unknown state");
+                }
+            }
+            assert(_rf_trajs.size() == cycle_.size());
+            assert(_lf_trajs.size() == cycle_.size());
+            assert(_com_trajs.size() == cycle_.size());
         }
 
         bool WalkOnSpot::update()
@@ -40,125 +105,24 @@ namespace inria_wbc {
             auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_);
             auto t1_traj = std::chrono::high_resolution_clock::now();
 
-            switch (state_) {
-            case States::MOVE_COM_RIGHT:
-                if (time_ == 0) {
-                    std::cout << "Move CoM to right foot" << std::endl;
-                    // feet do not move
-                    current_rf_trajectory_ = trajectory_handler::compute_traj(_last_rf, _last_rf, dt_, traj_com_duration_);
-                    current_lf_trajectory_ = trajectory_handler::compute_traj(_last_lf, _last_lf, dt_, traj_com_duration_);
-                    // Compute current CoM trajectory to track -> move above the right foot
-                    auto com_init = _last_com;
-                    Eigen::VectorXd com_right = com_init;
-                    auto rf_init = _last_rf;
-                    auto right_foot_pos = rf_init.translation();
-                    com_right(0) = right_foot_pos(0);
-                    com_right(1) = right_foot_pos(1);
-                    current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_right, dt_, traj_com_duration_);
-                }
-                break;
-            case States::LIFT_UP_LF:
-                if (time_ == 0) {
-                    std::cout << "Lift up left foot" << std::endl;
-                    // Compute current CoM trajectory to track -> stay still
-                    current_com_trajectory_ = trajectory_handler::compute_traj(_last_com, _last_com, dt_, traj_foot_duration_);
-                    // rf does not move
-                    current_rf_trajectory_ = trajectory_handler::compute_traj(_last_rf, _last_rf, dt_, traj_foot_duration_);
-                    // Remove left foot contact with the ground
-                    controller->remove_contact("contact_lfoot");
-                    // Compute current Left foot trajectory to track -> Lift up 10cm
-                    auto lf_init = _last_lf;
-                    auto left_foot_pos = lf_init.translation();
-                    left_foot_pos(2) += step_height_;
-                    pinocchio::SE3 lf_final(lf_init.rotation(), left_foot_pos);
-                    current_lf_trajectory_ = trajectory_handler::compute_traj(lf_init, lf_final, dt_, traj_foot_duration_);
-                }
-                break;
-            case States::LIFT_DOWN_LF:
-                if (time_ == 0) {
-                    std::cout << "Lift down left foot" << std::endl;
-                    // Compute current CoM trajectory to track -> stay still
-                    current_com_trajectory_ = trajectory_handler::compute_traj(_last_com, _last_com, dt_, traj_foot_duration_);
-                    // rf does not move
-                    current_rf_trajectory_ = trajectory_handler::compute_traj(_last_rf, _last_rf, dt_, traj_foot_duration_);
-                    // Compute current Left foot trajectory to track -> Lift down 10cm
-                    auto lf_init = _last_lf;
-                    auto left_foot_pos = lf_init.translation();
-                    left_foot_pos(2) -= step_height_;
-                    pinocchio::SE3 lf_final(lf_init.rotation(), left_foot_pos);
-                    current_lf_trajectory_ = trajectory_handler::compute_traj(lf_init, lf_final, dt_, traj_foot_duration_);
-                }
-                // add left foot contact at the end of the lifting down
-                if (time_ == current_com_trajectory_.size() - 1) {
-                    controller->add_contact("contact_lfoot");
-                }
-                break;
-            case States::MOVE_COM_LEFT:
-                if (time_ == 0) {
-                    std::cout << "Move CoM to left foot" << std::endl;
-                    current_rf_trajectory_ = trajectory_handler::compute_traj(_last_rf, _last_rf, dt_, traj_com_duration_);
-                    current_lf_trajectory_ = trajectory_handler::compute_traj(_last_lf, _last_lf, dt_, traj_com_duration_);
-                    // Compute current CoM trajectory to track -> move above the left foot
-                    auto com_init = _last_com; //controller->get_pinocchio_com();
-                    Eigen::VectorXd com_left = com_init;
-                    auto lf_init = _last_lf;
-                    auto left_foot_pos = lf_init.translation();
-                    com_left(0) = left_foot_pos(0);
-                    com_left(1) = left_foot_pos(1);
-                    current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_left, dt_, traj_com_duration_);
-                }
-                break;
-            case States::LIFT_UP_RF:
-                if (time_ == 0) {
-                    std::cout << "Lift up right foot" << std::endl;
-                    // Compute current CoM trajectory to track -> stay still
-                    current_com_trajectory_ = trajectory_handler::compute_traj(_last_com, _last_com, dt_, traj_foot_duration_);
-                    current_lf_trajectory_ = trajectory_handler::compute_traj(_last_lf, _last_lf, dt_, traj_foot_duration_);
+            // add and remove contacts
+            if (time_ == 0 && state_ == States::LIFT_UP_LF)
+                controller->remove_contact("contact_lfoot");
+            if (time_ == 0 && state_ == States::LIFT_UP_RF)
+                controller->remove_contact("contact_rfoot");
+            if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_LF)
+                controller->add_contact("contact_lfoot");
+            if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_RF)
+                controller->add_contact("contact_rfoot");
 
-                    // Remove right foot contact
-                    controller->remove_contact("contact_rfoot");
-                    // Compute current right foot trajectory to track -> Lift up 10cm
-                    auto rf_init = _last_rf;
-                    auto right_foot_pos = rf_init.translation();
-                    right_foot_pos(2) += step_height_;
-                    pinocchio::SE3 rf_up(rf_init.rotation(), right_foot_pos);
-                    current_rf_trajectory_ = trajectory_handler::compute_traj(rf_init, rf_up, dt_, traj_foot_duration_);
-                }
-                break;
-            case States::LIFT_DOWN_RF:
-                if (time_ == 0) {
-                    std::cout << "Lift down right foot" << std::endl;
-                    // Compute current CoM trajectory to track -> stay still
-                    auto com_init = _last_com;
-                    current_com_trajectory_ = trajectory_handler::compute_traj(com_init, com_init, dt_, traj_foot_duration_);
-                    current_lf_trajectory_ = trajectory_handler::compute_traj(_last_lf, _last_lf, dt_, traj_foot_duration_);
-                    // Compute current right foot trajectory to track -> Lift down 10cm
-                    auto rf_init = _last_rf;
-                    auto right_foot_pos = rf_init.translation();
-                    right_foot_pos(2) -= step_height_;
-                    pinocchio::SE3 rf_down(rf_init.rotation(), right_foot_pos);
-                    current_rf_trajectory_ = trajectory_handler::compute_traj(rf_init, rf_down, dt_, traj_foot_duration_);
-                }
-                // add right foot contact at the end of the lifting down
-                if (time_ == current_com_trajectory_.size() - 1) {
-                    controller->add_contact("contact_rfoot");
-                }
-                break;
-            default:
-                break;
-            }
-            assert(time_ < current_com_trajectory_.size());
-            assert(time_ < current_lf_trajectory_.size());
-            assert(time_ < current_rf_trajectory_.size());
+            assert(time_ < _com_trajs[_current_traj].size());
+            assert(time_ < _rf_trajs[_current_traj].size());
+            assert(time_ < _lf_trajs[_current_traj].size());
 
-            // follow the trajectories
-            _last_com = current_com_trajectory_[time_];
-            _last_lf = current_lf_trajectory_[time_];
-            _last_rf = current_rf_trajectory_[time_];
+            controller->set_com_ref(_com_trajs[_current_traj][time_]);
+            controller->set_se3_ref(_lf_trajs[_current_traj][time_], "lf");
+            controller->set_se3_ref(_rf_trajs[_current_traj][time_], "rf");
 
-            controller->set_com_ref(_last_com);
-            controller->set_se3_ref(_last_lf, "lf");
-            controller->set_se3_ref(_last_rf, "rf");
             auto t2_traj = std::chrono::high_resolution_clock::now();
             double step_traj = std::chrono::duration_cast<std::chrono::microseconds>(t2_traj - t1_traj).count() / 1000.0;
 
@@ -186,10 +150,14 @@ namespace inria_wbc {
 #endif
             if (controller_->solve()) {
                 time_++;
-                if (time_ == current_com_trajectory_.size()) {
+                if (time_ == _com_trajs[_current_traj].size()) {
                     time_ = 0;
-                    traj_selector_ = ++traj_selector_ % cycle_.size();
-                    state_ = cycle_[traj_selector_];
+                    _current_traj = ++_current_traj % cycle_.size();
+                    // we skip the init_traj
+                    if (_current_traj == 0)
+                        _current_traj++;
+                    state_ = cycle_[_current_traj];
+                    std::cout << "state:" << state_ << std::endl;
                 }
                 return true;
             }

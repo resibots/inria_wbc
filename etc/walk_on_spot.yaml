@@ -23,8 +23,8 @@ SOT:
 BEHAVIOR:
   name : walk-on-spot
   traj_com_duration : 2
-  traj_foot_duration : 2
-  step_height : 0.1
+  traj_foot_duration : 3
+  step_height : 0.3
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
