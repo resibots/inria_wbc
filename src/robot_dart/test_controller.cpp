@@ -147,8 +147,8 @@ int main(int argc, char* argv[])
     auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(configuration);
     simu.set_graphics(graphics);
     graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
-    if (vm.count("video"))
-        graphics->record_video(vm["video"].as<std::string>());
+    if (vm.count("mp4"))
+        graphics->record_video(vm["mp4"].as<std::string>());
 #endif
     simu.add_robot(robot);
     simu.add_checkerboard_floor();
@@ -179,6 +179,12 @@ int main(int argc, char* argv[])
 
     uint ncontrollable = controllable_dofs.size();
 
+    if (vm.count("log")) {
+        std::ofstream ofs("all_dofs.dat");
+        for (auto& c : all_dofs)
+            ofs << c << std::endl;
+    }
+
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
     double time_simu = 0, time_cmd = 0, time_solver = 0;
@@ -195,7 +201,9 @@ int main(int argc, char* argv[])
     using namespace std::chrono;
     while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
         double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
+
         // step the command
+        Eigen::VectorXd cmd;
         if (simu.schedule(simu.control_freq())) {
             auto t1_solver = high_resolution_clock::now();
             bool solution_found = behavior->update();
@@ -205,7 +213,6 @@ int main(int argc, char* argv[])
 
             if (solution_found) {
                 auto t1_cmd = high_resolution_clock::now();
-                Eigen::VectorXd cmd;
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = compute_velocities(robot->skeleton(), q, dt);
                 else // torque
@@ -240,6 +247,8 @@ int main(int argc, char* argv[])
         for (auto& x : log_files) {
             if (x.first == "timing")
                 (*x.second) << time_step_solver / 1000.0 << "\t" << time_step_cmd / 1000.0 << "\t" << time_step_simu / 1000.0 << std::endl;
+            else if (x.first == "cmd")
+                (*x.second) << cmd.transpose() << std::endl;
             else if (x.first == "com")
                 (*x.second) << robot->com().transpose() << std::endl;
             else
@@ -267,7 +276,7 @@ int main(int argc, char* argv[])
 
             //oss << oss_conf.str();
 #ifdef GRAPHIC
-            if (!vm.count("video"))
+            if (!vm.count("mp4"))
                 simu.set_text_panel(oss.str());
 #endif
             it_simu = 0;

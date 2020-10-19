@@ -22,7 +22,7 @@ SOT:
   kp_torso: 30.0
 BEHAVIOR:
   name : walk-on-spot
-  traj_com_duration : 2
+  traj_com_duration : 2.5
   traj_foot_duration : 3
   step_height : 0.3
 PARAMS:
