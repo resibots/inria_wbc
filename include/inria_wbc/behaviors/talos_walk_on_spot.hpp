@@ -19,17 +19,17 @@ namespace inria_wbc {
             bool update() override;
 
         private:
+            void _generate_trajectories();
             int time_ = 0;
             float dt_;
-            int traj_selector_ = 0;
+            int _current_traj = 0;
             Eigen::VectorXd _last_com;
             pinocchio::SE3 _last_lf;
             pinocchio::SE3 _last_rf;
 
-            std::vector<std::vector<Eigen::VectorXd>> trajectories_;
-            std::vector<Eigen::VectorXd> current_com_trajectory_;
-            std::vector<pinocchio::SE3> current_lf_trajectory_;
-            std::vector<pinocchio::SE3> current_rf_trajectory_;
+            std::vector<std::vector<Eigen::VectorXd>> _com_trajs;
+            std::vector<std::vector<pinocchio::SE3>> _lf_trajs;
+            std::vector<std::vector<pinocchio::SE3>> _rf_trajs;
             float traj_com_duration_ = 3; //will be changed if specified in yaml
             float traj_foot_duration_ = 3; //will be changed if specified in yaml
             float step_height_ = 0.1;
@@ -37,6 +37,7 @@ namespace inria_wbc {
             // State machine stats for walking on the spot cycle
             int state_ = -1;
             enum States {
+                INIT = 0,
                 MOVE_COM_LEFT,
                 MOVE_COM_RIGHT,
                 LIFT_UP_RF,

@@ -42,5 +42,13 @@ namespace trajectory_handler {
         return trajectory;
     }
 
+    template <typename T>
+    inline std::vector<T> constant_traj(const T& p, double dt, double trajectory_duration)
+    {
+        uint n_steps = std::floor(trajectory_duration / dt);
+        std::vector<T> trajectory(n_steps);
+        std::fill(trajectory.begin(), trajectory.end(), p);
+        return trajectory;
+    }
 } // namespace trajectory_handler
 #endif
