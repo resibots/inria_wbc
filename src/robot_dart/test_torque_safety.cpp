@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     ("conf,c", po::value<std::string>()->default_value("../etc/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
     ("fast,f", "fast (simplified) Talos [default: false]")
     ("big_window,b", "use a big window (nicer but slower) [default:true]")
-    ("actuators,a", po::value<std::string>()->default_value("velocity"), "actuator model torque/velocity/servo (always for position control) [default:torque]")
+    ("actuators,a", po::value<std::string>()->default_value("torque"), "actuator model torque/velocity/servo (always for position control) [default:torque]")
     ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
     ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
     ("video,v", po::value<std::string>(), "save the display to a video [filename]")
@@ -128,6 +128,9 @@ int main(int argc, char *argv[])
     auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
     robot->set_position_enforced(vm["enforce_position"].as<bool>());
     robot->set_actuator_types(vm["actuators"].as<std::string>());
+
+    robot->set_cfriction_coeffs(0.0);
+    robot->set_damping_coeffs(0.0);
     
     //robot->set_actuator_types("velocity");
 
@@ -156,6 +159,7 @@ int main(int argc, char *argv[])
 #endif
     simu.add_robot(robot);
     simu.add_checkerboard_floor();
+    
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
     std::string sot_config_path = vm["conf"].as<std::string>();
@@ -183,15 +187,26 @@ int main(int argc, char *argv[])
 
 
     ///////////////// TORQUE COLLISION SAFETY CHECK ////////////////////////////
-    TorqueCollisionDetection torque_collision(robot->dof_names());
-
+    for(auto a : robot->body_names())
+        std::cout << a << std::endl;
+    robot->set_draw_axis("arm_left_2_link");
+    robot->set_draw_axis("arm_left_4_link");
+    
     // add joint torque sensor to the simulation
     std::vector<std::string> joints_with_tq = 
         {"leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint", 
         "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
         "torso_1_joint", "torso_2_joint", 
         "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
-        "arm_right_1_joint", "arm_right_2_joint","arm_right_3_joint", "arm_right_4_joint"};
+        "arm_right_1_joint", "arm_right_2_joint","arm_right_3_joint", "arm_right_4_joint"}; // id 17 left_arm_4
+
+    Eigen::VectorXd torque_threshold(joints_with_tq.size());
+    torque_threshold << 3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
+                3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
+                4.8e-04, 1.6e-01, 4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03, 
+                4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03;
+
+    TorqueCollisionDetection torque_collision(joints_with_tq, torque_threshold, 11);
     
     std::vector<int> tq_joints_idx;
     std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
@@ -208,10 +223,14 @@ int main(int argc, char *argv[])
     Eigen::VectorXd tsid_tau = Eigen::VectorXd::Zero(joints_with_tq.size());
 
 
+    Eigen::IOFormat fmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", "\n", "", "");
+    std::cout.precision(7);
+
     //////////////////// START SIMULATION //////////////////////////////////////
     simu.set_control_freq(1000); // 1000 Hz
     double time_simu = 0, time_cmd = 0;
     int it_simu = 0, it_cmd = 0;
+    int sec = 0;
 
     // the main loop
     using namespace std::chrono;
@@ -226,17 +245,26 @@ int main(int argc, char *argv[])
             for(auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
                 tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
 
-            std::cerr << "tsid: " << std::endl << tsid_tau.transpose() << std::endl;
-            std::cerr << "sensors: " << std::endl << tq_sensors.transpose() << std::endl;
 
             // safety check on torque sensors (check prevous command with actual sensor measurement)
-            if(vm["actuators"].as<std::string>() == "torque" && it_cmd > 0)
+            if(vm["actuators"].as<std::string>() == "velocity" && it_cmd > 0)
             {
                 
-                if( !torque_collision.safety_check(tq_sensors, tsid_tau) )
+                if( !torque_collision.check(tsid_tau, tq_sensors, TorqueCollisionDetection::MedianFilter() ) )
+                {
                     std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
-                else
-                    std::cerr << "torque max discrepancy: " << torque_collision.get_discrepancy().maxCoeff() << '\n';
+                    auto inv = torque_collision.get_invalid_ids();
+                    
+                    std::cerr <<"invalid dofs: [";
+                    for(auto v : inv) std::cerr << v <<" ";
+                    std::cerr <<"] with discrepancy [";
+                    for(auto v : inv) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
+                    std::cerr << "]\n";
+                }
+
+                Eigen::VectorXd output_data(tsid_tau.size() + tq_sensors.size());
+                output_data << tsid_tau, torque_collision.get_filtered_sensors(); //tq_sensors;
+                std::cout << output_data.transpose().format(fmt) << std::endl;
             }
 
             bool solution_found = behavior->update();
@@ -252,12 +280,18 @@ int main(int argc, char *argv[])
                 {
                     cmd = compute_spd(robot->skeleton(), q);
                 }
+                
+                //cmd(tq_joints_idx[15]) = 0;
+                //cmd(tq_joints_idx[16]) = 0;
+                //cmd(tq_joints_idx[17]) = 0;
+                //std::cerr << "\n\ncommand: " << cmd.transpose() << std::endl;
 
                 auto cmd_filtered = controller->filter_cmd(cmd).tail(ncontrollable);
+                //std::cerr << "cmd: " << cmd_filtered.transpose() << std::endl;
                 robot->set_commands(cmd_filtered, controllable_dofs);
 
 
-                std::cerr << "commands: " << std::endl << vector_select(cmd, tq_joints_idx).transpose() << std::endl;
+                // std::cerr << "commands: " << std::endl << vector_select(cmd, tq_joints_idx).transpose() << std::endl;
 
                 // update the expected torque from tsid solution
                 tsid_tau = vector_select(controller->tau(), tq_joints_idx);
@@ -272,17 +306,18 @@ int main(int argc, char *argv[])
             time_cmd += duration_cast<microseconds>(t2 - t1).count();
             ++it_cmd;
 
+            std::set<int> check_sec = {2, 3, 9, 15, 16};
 
             // apply some external forces
-            if(it_cmd % 1000 > 500 && it_cmd % 1000 < 800)
+            if(check_sec.count(sec) != 0)
             {
-                std::cerr << "external force applied " <<it_cmd << '\n';
-                robot->set_external_force("arm_left_4_link", Eigen::Vector3d::Constant(20.0));
+                //std::cerr << "external force applied " <<it_cmd << '\n';
+                robot->set_external_force("arm_left_2_link", Eigen::Vector3d(0.0, 1.0, 0.0), Eigen::Vector3d(0.0, 0.0, -0.30), true);
             }
             else
             {
                 // std::cerr << "zero external force " << it_cmd << '\n';
-                robot->set_external_force("arm_left_4_link", Eigen::Vector3d::Zero());
+                robot->set_external_force("arm_left_2_link", Eigen::Vector3d(0.0, 0.0, 0.0), Eigen::Vector3d(0.0, 0.0, -0.30), true);
             }
         }
         // step the simulation
@@ -297,14 +332,15 @@ int main(int argc, char *argv[])
         // print timing information
         if (it_simu == 1000)
         {
-            std::cout << "Average time (iteration simu): " << time_simu / it_simu / 1000. << " ms"
-                      << "\tAverage time(iteration command):" << time_cmd / it_cmd / 1000. << " ms"
-                      << std::endl;
+            //std::cout << "Average time (iteration simu): " << time_simu / it_simu / 1000. << " ms"
+            //          << "\tAverage time(iteration command):" << time_cmd / it_cmd / 1000. << " ms"
+            //          << std::endl;
 
             it_simu = 0;
             it_cmd = 0;
             time_cmd = 0;
             time_simu = 0;
+            ++sec;
         }
     }
     return 0;
