@@ -203,10 +203,18 @@ int main(int argc, char *argv[])
     Eigen::VectorXd torque_threshold(joints_with_tq.size());
     torque_threshold << 3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
                 3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
-                4.8e-04, 1.6e-01, 4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03, 
+                4.8e-04, 1.6e-01, 
+                4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03, 
                 4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03;
 
-    TorqueCollisionDetection torque_collision(joints_with_tq, torque_threshold, 11);
+    torque_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
+            3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
+            5e-02, 1e-01, 
+            5e-02, 5e-02,5e-02, 8e-02, 
+            5e-02, 5e-02, 5e-02, 8e-02;
+
+    TorqueCollisionDetection torque_collision(joints_with_tq, torque_threshold, 5);
+    torque_collision.set_ignore_count(5);
     
     std::vector<int> tq_joints_idx;
     std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
@@ -231,6 +239,9 @@ int main(int argc, char *argv[])
     double time_simu = 0, time_cmd = 0;
     int it_simu = 0, it_cmd = 0;
     int sec = 0;
+
+    bool external_applied = false;
+    bool external_detected = false;
 
     // the main loop
     using namespace std::chrono;
@@ -260,11 +271,26 @@ int main(int argc, char *argv[])
                     std::cerr <<"] with discrepancy [";
                     for(auto v : inv) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
                     std::cerr << "]\n";
+
+                    external_detected = true;
+                }
+                else
+                {
+                    external_detected = false;
                 }
 
                 Eigen::VectorXd output_data(tsid_tau.size() + tq_sensors.size());
                 output_data << tsid_tau, torque_collision.get_filtered_sensors(); //tq_sensors;
                 std::cout << output_data.transpose().format(fmt) << std::endl;
+            }
+
+            {
+                std::cerr << "Collision detection [";
+                if(external_applied && external_detected) std::cerr << "\033[32mOK";          // green (true positive)
+                else if(!external_applied && external_detected) std::cerr << "\033[33mKO";    // yellow (false positive)
+                else if(external_applied && !external_detected) std::cerr << "\033[31mKO";    // red (false negative)
+                else if(!external_applied && !external_detected) std::cerr << "\033[37mOK";   // white (true negative)
+                std::cerr << "\033[37m]" << std::endl;
             }
 
             bool solution_found = behavior->update();
@@ -312,12 +338,14 @@ int main(int argc, char *argv[])
             if(check_sec.count(sec) != 0)
             {
                 //std::cerr << "external force applied " <<it_cmd << '\n';
-                robot->set_external_force("arm_left_2_link", Eigen::Vector3d(0.0, 1.0, 0.0), Eigen::Vector3d(0.0, 0.0, -0.30), true);
+                robot->set_external_force("arm_left_2_link", Eigen::Vector3d(0.0, 5.0, 0.0), Eigen::Vector3d(0.0, 0.0, -0.30), true);
+                external_applied = true;
             }
             else
             {
                 // std::cerr << "zero external force " << it_cmd << '\n';
                 robot->set_external_force("arm_left_2_link", Eigen::Vector3d(0.0, 0.0, 0.0), Eigen::Vector3d(0.0, 0.0, -0.30), true);
+                external_applied = false;
             }
         }
         // step the simulation

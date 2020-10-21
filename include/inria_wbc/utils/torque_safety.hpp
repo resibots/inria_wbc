@@ -45,6 +45,8 @@ public:
     bool check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors, FilterFunctor filter);
     bool check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);
 
+    void set_ignore_count(unsigned int counter);
+
     void set_threshold(double threshold);
     void set_threshold(const Eigen::VectorXd& threshold);
 
@@ -55,6 +57,13 @@ public:
     Eigen::VectorXd get_filtered_sensors() const;
 
     std::vector<int> get_invalid_ids() const;
+
+
+protected:
+
+    void _compute_validity(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);
+
+    void compute_validity_over_steps();
 
 
 private:
@@ -68,6 +77,10 @@ private:
     Eigen::VectorXd _discrepancy;
     Eigen::VectorXd _filtered_sensors;
     ArrayXb _validity;
+
+    u_int32_t _ignore_steps;
+    Eigen::MatrixXi _previous_signs;
+    Eigen::VectorXi _invalid_steps_threshold;
 
 };
 
@@ -89,10 +102,8 @@ bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen:
         _filtered_sensors = filter(_buffer);
     }
 
-    // compare with the target
-    _discrepancy = (target - _filtered_sensors).cwiseAbs();
-
-    _validity = _discrepancy.array() < _threshold.array();
+    _compute_validity(target, _filtered_sensors);
+    _compute_compute_validity_over_steps();
 
     return _validity.all();
 }
