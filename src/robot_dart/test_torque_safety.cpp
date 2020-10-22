@@ -210,11 +210,11 @@ int main(int argc, char *argv[])
     torque_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
             3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
             5e-02, 1e-01, 
-            5e-02, 5e-02,5e-02, 8e-02, 
-            5e-02, 5e-02, 5e-02, 8e-02;
+            5e-02, 5e-02,5e-02, 1e-01, 
+            5e-02, 5e-02, 5e-02, 1e-01;
 
     TorqueCollisionDetection torque_collision(joints_with_tq, torque_threshold, 5);
-    torque_collision.set_ignore_count(5);
+    torque_collision.set_max_consecutive_invalid(1);
     
     std::vector<int> tq_joints_idx;
     std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;

@@ -5,34 +5,38 @@
 
 TorqueCollisionDetection::TorqueCollisionDetection(std::vector<std::string> joints, double threshold, int buffer_len)
 :   _nvar(joints.size()),
+    _step_count(0),
     _buffer_len(buffer_len),
-    _buffer_count(0),
     _buffer(_nvar, _buffer_len),
     _threshold(Eigen::VectorXd::Constant(_nvar, threshold)),
     _discrepancy(_nvar),
     _filtered_sensors(_nvar)
 { 
-    this->set_ignore_count(1);
+    this->set_max_consecutive_invalid(0);
 }
 
 
 TorqueCollisionDetection::TorqueCollisionDetection(std::vector<std::string> joints, Eigen::VectorXd threshold, int buffer_len)
 :   _nvar(joints.size()),
+    _step_count(0),
     _buffer_len(buffer_len),
-    _buffer_count(0),
     _buffer(_nvar, _buffer_len),
     _threshold(threshold),
     _discrepancy(_nvar),
     _filtered_sensors(_nvar)
 { 
-    this->set_ignore_count(1);
+    this->set_max_consecutive_invalid(0);
 }
 
 
 bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors)
 {
+    ++_step_count;
+
     _compute_validity(target, sensors);
-    _compute_validity_over_steps();
+    
+    if(_invalid_threshold > 0)
+        _compute_validity_over_steps();
 
     return _validity.all();
 }
@@ -73,15 +77,16 @@ std::vector<int> TorqueCollisionDetection::get_invalid_ids() const
 }
 
 
-void TorqueCollisionDetection::set_ignore_count(unsigned int counter)
+void TorqueCollisionDetection::set_max_consecutive_invalid(unsigned int counter)
 {
-    _ignore_steps = counter;
+    _invalid_threshold = counter + 1;
 
-    _previous_signs.resize(_nvar, _ignore_steps);
+    _previous_signs.resize(_nvar, _invalid_threshold);
     _previous_signs.setZero();
 
     _invalid_steps_threshold.resize(_nvar);
-    _invalid_steps_threshold.setConstant(_ignore_steps);
+    _invalid_steps_threshold.setConstant(_invalid_threshold);
+    std::cerr << "invalid steps: " << _invalid_steps_threshold.transpose() << "\n";
 }
 
 
@@ -93,12 +98,14 @@ void TorqueCollisionDetection::_compute_validity(const Eigen::VectorXd& target, 
 }
 
 
-void TorqueCollisionDetection::compute_validity_over_steps()
+void TorqueCollisionDetection::_compute_validity_over_steps()
 {
     Eigen::VectorXi sign = _discrepancy.array().sign().matrix().cast<int>();
-    _previous_signs.col(_buffer_count++ % _ignore_steps) = _validity.matrix().cast<int>().eval().cwiseProduct(sign);
+    Eigen::VectorXi nval = Eigen::VectorXi::Ones(_nvar) - _validity.matrix().cast<int>();
+    _previous_signs.col(_step_count % _invalid_threshold) = nval.cwiseProduct(sign);
 
-    Eigen::VectorXi cumulated_signs = _previous_signs.colwise().sum().cwiseAbs();
+    Eigen::VectorXi cumulated_signs = _previous_signs.rowwise().sum().cwiseAbs();
 
-    return cumulated_signs.array() < _invalid_steps_threshold.array();
+    std::cerr << cumulated_signs.transpose() << std::endl;
+    _validity = cumulated_signs.array() < _invalid_steps_threshold.array();
 }

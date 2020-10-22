@@ -45,7 +45,7 @@ public:
     bool check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors, FilterFunctor filter);
     bool check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);
 
-    void set_ignore_count(unsigned int counter);
+    void set_max_consecutive_invalid(unsigned int counter);
 
     void set_threshold(double threshold);
     void set_threshold(const Eigen::VectorXd& threshold);
@@ -63,14 +63,14 @@ protected:
 
     void _compute_validity(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);
 
-    void compute_validity_over_steps();
+    void _compute_validity_over_steps();
 
 
 private:
 
     int _nvar;
+    int _step_count;
     int _buffer_len;
-    int _buffer_count;
 
     Eigen::MatrixXd _buffer;
     Eigen::VectorXd _threshold;
@@ -78,7 +78,7 @@ private:
     Eigen::VectorXd _filtered_sensors;
     ArrayXb _validity;
 
-    u_int32_t _ignore_steps;
+    u_int32_t _invalid_threshold;
     Eigen::MatrixXi _previous_signs;
     Eigen::VectorXi _invalid_steps_threshold;
 
@@ -89,11 +89,13 @@ private:
 template <typename FilterFunctor>
 bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors, FilterFunctor filter)
 {
+    _step_count++;
+
     // keep an ordered buffer for denoising and get denoised sensor value
-    if(_buffer_count < _buffer_len)
+    if(_step_count < _buffer_len)
     {
-        _buffer.col(_buffer_count++) = sensors;
-        _filtered_sensors = filter(_buffer.leftCols(_buffer_count));
+        _buffer.col(_step_count++) = sensors;
+        _filtered_sensors = filter(_buffer.leftCols(_step_count));
     }
     else
     {
@@ -103,7 +105,9 @@ bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen:
     }
 
     _compute_validity(target, _filtered_sensors);
-    _compute_compute_validity_over_steps();
+
+    if(_invalid_threshold > 0)
+        _compute_validity_over_steps();
 
     return _validity.all();
 }
