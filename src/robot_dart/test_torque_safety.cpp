@@ -191,6 +191,12 @@ int main(int argc, char *argv[])
         std::cout << a << std::endl;
     robot->set_draw_axis("arm_left_2_link");
     robot->set_draw_axis("arm_left_4_link");
+    robot->set_draw_axis("arm_right_4_link");
+    robot->set_draw_axis("arm_right_4_link");
+    robot->set_draw_axis("torso_2_link");
+    robot->set_draw_axis("leg_left_3_link");
+    robot->set_draw_axis("leg_right_4_link");
+    robot->set_draw_axis("head_2_link");
     
     // add joint torque sensor to the simulation
     std::vector<std::string> joints_with_tq = 
@@ -209,12 +215,12 @@ int main(int argc, char *argv[])
 
     torque_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
             3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
-            5e-02, 1e-01, 
+            5e-02, 2e-01, 
             5e-02, 5e-02,5e-02, 1e-01, 
             5e-02, 5e-02, 5e-02, 1e-01;
 
     TorqueCollisionDetection torque_collision(joints_with_tq, torque_threshold, 5);
-    torque_collision.set_max_consecutive_invalid(1);
+    torque_collision.set_max_consecutive_invalid(5);
     
     std::vector<int> tq_joints_idx;
     std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
@@ -229,6 +235,19 @@ int main(int argc, char *argv[])
     Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(joints_with_tq.size());
     // expected torque from tsid
     Eigen::VectorXd tsid_tau = Eigen::VectorXd::Zero(joints_with_tq.size());
+
+
+    // set of external forxes applied during simulation
+    typedef std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d> ExternalForce; // body 
+    std::map<int, ExternalForce> external_forces;
+    external_forces[2]  = std::make_tuple("arm_left_2_link",  Eigen::Vector3d {+0.0, 5.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
+    external_forces[4]  = std::make_tuple("arm_right_2_link", Eigen::Vector3d {+0.0, 3.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
+    external_forces[6]  = std::make_tuple("torso_2_link",     Eigen::Vector3d {-5.0, 0.0, 0.0}, Eigen::Vector3d {0.0, 0.0, +0.25});
+    external_forces[9] =  std::make_tuple("arm_right_4_link", Eigen::Vector3d {+0.0, 1.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
+    external_forces[10] = std::make_tuple("arm_left_4_link",  Eigen::Vector3d {+0.0, 9.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
+    external_forces[12] = std::make_tuple("leg_right_4_link", Eigen::Vector3d {+0.0, 3.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.25});
+    external_forces[15] = std::make_tuple("leg_left_3_link",  Eigen::Vector3d {-4.0, 1.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.25});
+    external_forces[17] = std::make_tuple("head_2_link",      Eigen::Vector3d {-9.0, 1.0, 0.0}, Eigen::Vector3d {0.0, 0.0, +0.20});
 
 
     Eigen::IOFormat fmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", "\n", "", "");
@@ -263,14 +282,14 @@ int main(int argc, char *argv[])
                 
                 if( !torque_collision.check(tsid_tau, tq_sensors, TorqueCollisionDetection::MedianFilter() ) )
                 {
-                    std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
+                    /* std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
                     auto inv = torque_collision.get_invalid_ids();
                     
                     std::cerr <<"invalid dofs: [";
                     for(auto v : inv) std::cerr << v <<" ";
                     std::cerr <<"] with discrepancy [";
                     for(auto v : inv) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
-                    std::cerr << "]\n";
+                    std::cerr << "]\n"; */
 
                     external_detected = true;
                 }
@@ -286,11 +305,10 @@ int main(int argc, char *argv[])
 
             {
                 std::cerr << "Collision detection [";
-                if(external_applied && external_detected) std::cerr << "\033[32mOK";          // green (true positive)
-                else if(!external_applied && external_detected) std::cerr << "\033[33mKO";    // yellow (false positive)
-                else if(external_applied && !external_detected) std::cerr << "\033[31mKO";    // red (false negative)
-                else if(!external_applied && !external_detected) std::cerr << "\033[37mOK";   // white (true negative)
-                std::cerr << "\033[37m]" << std::endl;
+                if(external_applied && external_detected) std::cerr << "\033[32mOK\033[37m]";          // green (true positive)
+                else if(!external_applied && external_detected) std::cerr << "\033[33mKO\033[37m]";    // yellow (false positive)
+                else if(external_applied && !external_detected) std::cerr << "\033[31mKO\033[37m]";    // red (false negative)
+                else if(!external_applied && !external_detected) std::cerr << "\033[37mOK\033[37m]";   // white (true negative)
             }
 
             bool solution_found = behavior->update();
@@ -307,20 +325,17 @@ int main(int argc, char *argv[])
                     cmd = compute_spd(robot->skeleton(), q);
                 }
                 
-                //cmd(tq_joints_idx[15]) = 0;
-                //cmd(tq_joints_idx[16]) = 0;
-                //cmd(tq_joints_idx[17]) = 0;
-                //std::cerr << "\n\ncommand: " << cmd.transpose() << std::endl;
+                //if(external_detected)
+                //    cmd.setZero();
 
                 auto cmd_filtered = controller->filter_cmd(cmd).tail(ncontrollable);
-                //std::cerr << "cmd: " << cmd_filtered.transpose() << std::endl;
                 robot->set_commands(cmd_filtered, controllable_dofs);
-
-
-                // std::cerr << "commands: " << std::endl << vector_select(cmd, tq_joints_idx).transpose() << std::endl;
 
                 // update the expected torque from tsid solution
                 tsid_tau = vector_select(controller->tau(), tq_joints_idx);
+
+                //if(external_detected)
+                //    tsid_tau = vector_select(robot->gravity_forces(), tq_joints_idx);
 
             }
             else
@@ -332,21 +347,23 @@ int main(int argc, char *argv[])
             time_cmd += duration_cast<microseconds>(t2 - t1).count();
             ++it_cmd;
 
-            std::set<int> check_sec = {2, 3, 9, 15, 16};
 
-            // apply some external forces
-            if(check_sec.count(sec) != 0)
+            // apply scheduled external forces
+            auto time_f_ext = external_forces.find(sec);
+            if(time_f_ext != external_forces.end())
             {
-                //std::cerr << "external force applied " <<it_cmd << '\n';
-                robot->set_external_force("arm_left_2_link", Eigen::Vector3d(0.0, 5.0, 0.0), Eigen::Vector3d(0.0, 0.0, -0.30), true);
+                auto f_ext = time_f_ext->second;
+                robot->set_external_force(std::get<0>(f_ext), std::get<1>(f_ext), std::get<2>(f_ext), true);
                 external_applied = true;
+                std::cerr << " " << std::get<0>(f_ext);
             }
             else
             {
-                // std::cerr << "zero external force " << it_cmd << '\n';
-                robot->set_external_force("arm_left_2_link", Eigen::Vector3d(0.0, 0.0, 0.0), Eigen::Vector3d(0.0, 0.0, -0.30), true);
+                robot->clear_external_forces();
                 external_applied = false;
             }
+
+            std::cerr << std::endl;
         }
         // step the simulation
         {

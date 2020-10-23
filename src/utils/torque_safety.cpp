@@ -86,7 +86,6 @@ void TorqueCollisionDetection::set_max_consecutive_invalid(unsigned int counter)
 
     _invalid_steps_threshold.resize(_nvar);
     _invalid_steps_threshold.setConstant(_invalid_threshold);
-    std::cerr << "invalid steps: " << _invalid_steps_threshold.transpose() << "\n";
 }
 
 
@@ -106,6 +105,5 @@ void TorqueCollisionDetection::_compute_validity_over_steps()
 
     Eigen::VectorXi cumulated_signs = _previous_signs.rowwise().sum().cwiseAbs();
 
-    std::cerr << cumulated_signs.transpose() << std::endl;
     _validity = cumulated_signs.array() < _invalid_steps_threshold.array();
 }
