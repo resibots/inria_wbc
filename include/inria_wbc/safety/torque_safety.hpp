@@ -5,6 +5,11 @@
 #include <vector>
 #include <Eigen/Dense>
 
+
+namespace inria_wbc {
+namespace safety {
+
+
 class TorqueCollisionDetection
 {
 public:
@@ -112,5 +117,8 @@ bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen:
     return _validity.all();
 }
 
+
+} // namespace safety
+} // namespace inria_wbc
 
 #endif

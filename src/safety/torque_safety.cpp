@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+namespace inria_wbc {
+namespace safety {
+
 
 TorqueCollisionDetection::TorqueCollisionDetection(std::vector<std::string> joints, double threshold, int buffer_len)
 :   _nvar(joints.size()),
@@ -107,3 +110,7 @@ void TorqueCollisionDetection::_compute_validity_over_steps()
 
     _validity = cumulated_signs.array() < _invalid_steps_threshold.array();
 }
+
+
+} // namespace safety
+} // namespace inria_wbc
