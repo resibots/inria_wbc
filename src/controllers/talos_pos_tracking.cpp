@@ -253,7 +253,7 @@ namespace inria_wbc {
             const std::string& joint_name,
             const std::shared_ptr<tsid::tasks::TaskSE3Equality>& task, const std::string& name)
         {
-            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            pinocchio::SE3 ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             // the make_trajectory method is in the .hpp
             auto traj = make_trajectory<tsid::trajectories::TrajectorySE3Constant>(ref, task, name);
             se3_task_traj_map_[name] = {.task = task, .ref = ref, .traj = traj};
