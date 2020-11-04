@@ -249,91 +249,48 @@ namespace inria_wbc {
             tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0); //add pos vel acc bounds
         }
 
-        void TalosPosTracking::init_references()
+        std::shared_ptr<tsid::trajectories::TrajectorySE3Constant> TalosPosTracking::make_trajectory_se3(
+            const std::string& joint_name,
+            const std::shared_ptr<tsid::tasks::TaskSE3Equality>& task, const std::string& name)
         {
-            com_init_ = robot_->com(tsid_->data());
-            posture_init_ = q_tsid_.tail(robot_->na());
-            floatingb_init_ = robot_->position(tsid_->data(), robot_->model().getJointId(fb_joint_name_));
-            lf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_left_6_joint"));
-            rf_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
-            lh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_left_joint"));
-            rh_init_ = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_right_joint"));
-            auto torso_ref = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(torso_frame_name_));
-
-            com_ref_ = com_init_;
-            posture_ref_ = posture_init_;
-            floatingb_ref_ = floatingb_init_;
-            lf_ref_ = lf_init_;
-            rf_ref_ = rf_init_;
-            lh_ref_ = lh_init_;
-            rh_ref_ = rh_init_;
-
-            traj_com_ = std::make_shared<TrajectoryEuclidianConstant>("traj_com", com_ref_);
-            traj_posture_ = std::make_shared<TrajectoryEuclidianConstant>("traj_posture", posture_ref_);
-            traj_floatingb_ = std::make_shared<TrajectorySE3Constant>("traj_floatingb", floatingb_ref_);
-            traj_lf_ = std::make_shared<TrajectorySE3Constant>("traj_lf", lf_ref_);
-            traj_rf_ = std::make_shared<TrajectorySE3Constant>("traj_rf", rf_ref_);
-            traj_lh_ = std::make_shared<TrajectorySE3Constant>("traj_lh", lh_ref_);
-            traj_rh_ = std::make_shared<TrajectorySE3Constant>("traj_rh", rh_ref_);
-            traj_torso_ = std::make_shared<TrajectorySE3Constant>("traj_torso", torso_ref);
-
-            TrajectorySample sample_com = traj_com_->computeNext();
-            TrajectorySample sample_posture = traj_posture_->computeNext();
-            TrajectorySample sample_floatingb = traj_floatingb_->computeNext();
-            TrajectorySample sample_lf = traj_lf_->computeNext();
-            TrajectorySample sample_rf = traj_rf_->computeNext();
-            TrajectorySample sample_lh = traj_lh_->computeNext();
-            TrajectorySample sample_rh = traj_rh_->computeNext();
-            TrajectorySample sample_torso = traj_torso_->computeNext();
-
-            com_task_->setReference(sample_com);
-            posture_task_->setReference(sample_posture);
-            floatingb_task_->setReference(sample_floatingb);
-            lf_task_->setReference(sample_lf);
-            rf_task_->setReference(sample_rf);
-            lh_task_->setReference(sample_lh);
-            rh_task_->setReference(sample_rh);
-            vert_torso_task_->setReference(sample_torso);
-
-            set_task_traj_map();
+            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            // the make_trajectory method is in the .hpp
+            auto traj = make_trajectory<tsid::trajectories::TrajectorySE3Constant>(ref, task, name);
+            se3_task_traj_map_[name] = {.task = task, .ref = ref, .traj = traj};
+            return traj;
         }
 
-        void TalosPosTracking::set_task_traj_map()
+        void TalosPosTracking::init_references()
         {
-            TaskTrajReferenceSE3 lh = {.task = lh_task_, .ref = lh_init_, .traj = traj_lh_};
-            TaskTrajReferenceSE3 rh = {.task = rh_task_, .ref = rh_init_, .traj = traj_rh_};
-            TaskTrajReferenceSE3 lf = {.task = lf_task_, .ref = lf_init_, .traj = traj_lf_};
-            TaskTrajReferenceSE3 rf = {.task = rf_task_, .ref = rf_init_, .traj = traj_rf_};
-            TaskTrajReferenceSE3 floatingb = {.task = floatingb_task_, .ref = floatingb_init_, .traj = traj_floatingb_};
-
-            se3_task_traj_map_["lh"] = lh;
-            se3_task_traj_map_["rh"] = rh;
-            se3_task_traj_map_["lf"] = lf;
-            se3_task_traj_map_["rf"] = rf;
-            se3_task_traj_map_["floatingb"] = floatingb;
+            using euclidean_t = tsid::trajectories::TrajectoryEuclidianConstant;
+            traj_com_ = make_trajectory<euclidean_t>(robot_->com(tsid_->data()), com_task_, "com");
+            traj_posture_ = make_trajectory<euclidean_t>(q_tsid_.tail(robot_->na()), posture_task_, "posture");
+            traj_floatingb_ = make_trajectory_se3(fb_joint_name_, floatingb_task_, "floatingb");
+            traj_lf_ = make_trajectory_se3("leg_left_6_joint", lf_task_, "lf");
+            traj_rf_ = make_trajectory_se3("leg_right_6_joint", rf_task_, "rf");
+            traj_lh_ = make_trajectory_se3("gripper_left_joint", lh_task_, "lh");
+            traj_rh_ = make_trajectory_se3("gripper_right_joint", rh_task_, "rh");
+            traj_torso_ = make_trajectory_se3(torso_frame_name_, vert_torso_task_, "torso");
         }
 
         pinocchio::SE3 TalosPosTracking::get_se3_ref(const std::string& task_name)
         {
             auto it = se3_task_traj_map_.find(task_name);
             assert(it != se3_task_traj_map_.end());
-            auto task_traj = it->second;
-            return task_traj.ref;
-        }
-
-        tsid::math::Vector3 TalosPosTracking::get_pinocchio_com()
-        {
-            return robot_->com(tsid_->data());
+            return it->second.ref;
         }
 
         void TalosPosTracking::set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name)
         {
             auto it = se3_task_traj_map_.find(task_name);
+            //std::cout << task_name << " " << it->second.traj << std::endl;
             assert(it != se3_task_traj_map_.end());
-            auto task_traj = it->second;
+            auto& task_traj = it->second;
             task_traj.ref = ref;
             task_traj.traj->setReference(task_traj.ref);
+            assert(task_traj.traj);
             tsid::trajectories::TrajectorySample sample = task_traj.traj->computeNext();
+            assert(task_traj.task);
             task_traj.task->setReference(sample);
         }
 

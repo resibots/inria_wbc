@@ -5,14 +5,14 @@
 #include <pinocchio/parsers/srdf.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 
-#include "Eigen/Core"
-#include "map"
-#include "string"
-#include "vector"
+#include <Eigen/Core>
 #include <iomanip>
+#include <map>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <tsid/contacts/contact-6d.hpp>
 #include <tsid/contacts/contact-point.hpp>
@@ -104,7 +104,7 @@ namespace inria_wbc {
             non_mimic_indexes_ = get_non_mimics_indexes();
         }
 
-        std::vector<int> TalosBaseController::get_non_mimics_indexes()
+        std::vector<int> TalosBaseController::get_non_mimics_indexes() const
         {
             std::vector<int> non_mimic_indexes;
             std::vector<int> mimic_indexes;
@@ -183,7 +183,7 @@ namespace inria_wbc {
         }
 
         // Removes the universe and root (floating base) joint names
-        std::vector<std::string> TalosBaseController::controllable_dofs(bool filter_mimics)
+        std::vector<std::string> TalosBaseController::controllable_dofs(bool filter_mimics) const
         {
             auto na = robot_->model().names;
             auto tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
@@ -194,7 +194,7 @@ namespace inria_wbc {
         }
 
         // Order of the floating base in q_ according to dart naming convention
-        std::vector<std::string> TalosBaseController::floating_base_dofs()
+        std::vector<std::string> TalosBaseController::floating_base_dofs() const
         {
             std::vector<std::string> floating_base_dofs;
             if (fb_joint_name_ == "root_joint") {
@@ -217,7 +217,7 @@ namespace inria_wbc {
             return floating_base_dofs;
         }
 
-        std::vector<std::string> TalosBaseController::all_dofs(bool filter_mimics)
+        std::vector<std::string> TalosBaseController::all_dofs(bool filter_mimics) const
         {
             std::vector<std::string> all_dofs = floating_base_dofs();
             std::vector<std::string> control_dofs = controllable_dofs(filter_mimics);
@@ -228,7 +228,7 @@ namespace inria_wbc {
                 return all_dofs;
         }
 
-        Eigen::VectorXd TalosBaseController::ddq(bool filter_mimics)
+        Eigen::VectorXd TalosBaseController::ddq(bool filter_mimics) const
         {
             if (filter_mimics)
                 return slice_vec(ddq_, non_mimic_indexes_);
@@ -236,7 +236,7 @@ namespace inria_wbc {
                 return ddq_;
         }
 
-        Eigen::VectorXd TalosBaseController::dq(bool filter_mimics)
+        Eigen::VectorXd TalosBaseController::dq(bool filter_mimics) const
         {
             if (filter_mimics)
                 return slice_vec(dq_, non_mimic_indexes_);
@@ -244,7 +244,7 @@ namespace inria_wbc {
                 return dq_;
         }
 
-        Eigen::VectorXd TalosBaseController::q(bool filter_mimics)
+        Eigen::VectorXd TalosBaseController::q(bool filter_mimics) const
         {
             if (filter_mimics)
                 return slice_vec(q_, non_mimic_indexes_);
@@ -252,7 +252,7 @@ namespace inria_wbc {
                 return q_;
         }
 
-        Eigen::VectorXd TalosBaseController::q0(bool filter_mimics)
+        Eigen::VectorXd TalosBaseController::q0(bool filter_mimics) const
         {
             if (filter_mimics)
                 return slice_vec(q0_, non_mimic_indexes_);
@@ -260,12 +260,7 @@ namespace inria_wbc {
                 return q0_;
         }
 
-        Eigen::VectorXd TalosBaseController::filter_cmd(const Eigen::VectorXd& cmd)
-        {
-            return slice_vec(cmd, non_mimic_indexes_);
-        }
-
-        std::vector<double> TalosBaseController::pinocchio_model_masses()
+        std::vector<double> TalosBaseController::pinocchio_model_masses() const
         {
             std::vector<double> masses;
             for (int i = 0; i < robot_->model().inertias.size(); i++) {
@@ -273,16 +268,6 @@ namespace inria_wbc {
                 masses.push_back(robot_->model().inertias[i].mass());
             }
             return masses;
-        }
-
-        std::vector<double> TalosBaseController::pinocchio_model_cumulated_masses()
-        {
-            return tsid_->data().mass;
-        }
-
-        std::vector<std::string> TalosBaseController::pinocchio_joint_names()
-        {
-            return robot_->model().names;
         }
 
         inria_wbc::controllers::TalosBaseController::Params parse_params(YAML::Node config)
