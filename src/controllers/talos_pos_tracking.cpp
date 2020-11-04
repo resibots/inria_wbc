@@ -29,15 +29,12 @@
 #include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/tasks/task-se3-equality.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
-#include <tsid/trajectories/trajectory-euclidian.hpp>
-#include <tsid/trajectories/trajectory-se3.hpp>
 #include <tsid/utils/statistics.hpp>
 #include <tsid/utils/stop-watch.hpp>
 
 #include "inria_wbc/controllers/talos_pos_tracking.hpp"
 
 using namespace tsid;
-using namespace tsid::trajectories;
 using namespace tsid::math;
 using namespace tsid::contacts;
 using namespace tsid::tasks;
@@ -184,8 +181,8 @@ namespace inria_wbc {
             Vector mask_torso = Vector::Zero(6);
             mask_torso[4] = 1; // only constrain the pitch of the body
             mask_torso[3] = 1; // only constrain the roll of the body
-
             vert_torso_task_->setMask(mask_torso);
+            se3_tasks_["torso"] = vert_torso_task_;
             tsid_->addMotionTask(*vert_torso_task_, p.at("w_torso"), 1);
 
             ////////// Add the floatingb task
@@ -198,6 +195,7 @@ namespace inria_wbc {
             }
             floatingb_task_->setMask(mask_floatingb);
             tsid_->addMotionTask(*floatingb_task_, p.at("w_floatingb"), 1);
+            se3_tasks_["floatingb"] = floatingb_task_;
 
             ////////// Add the left hand  task
             lh_task_ = std::make_shared<TaskSE3Equality>("task-lh", *robot_, "gripper_left_joint");
@@ -209,6 +207,7 @@ namespace inria_wbc {
             }
             lh_task_->setMask(mask_lh);
             tsid_->addMotionTask(*lh_task_, p.at("w_lh"), 1);
+            se3_tasks_["lh"] = lh_task_;
 
             ////////// Add the right hand task
             rh_task_ = std::make_shared<TaskSE3Equality>("task-rh", *robot_, "gripper_right_joint");
@@ -220,6 +219,7 @@ namespace inria_wbc {
             }
             rh_task_->setMask(mask_rh);
             tsid_->addMotionTask(*rh_task_, p.at("w_rh"), 1);
+            se3_tasks_["rh"] = rh_task_;
 
             ////////// Add the left foot  task
             lf_task_ = std::make_shared<TaskSE3Equality>("task-lf", *robot_, "leg_left_6_joint");
@@ -228,6 +228,7 @@ namespace inria_wbc {
             Vector maskLf = Vector::Ones(6);
             lf_task_->setMask(maskLf);
             tsid_->addMotionTask(*lf_task_, p.at("w_lf"), 1);
+            se3_tasks_["lf"] = lf_task_;
 
             ////////// Add the right foot  task
             rf_task_ = std::make_shared<TaskSE3Equality>("task-rf", *robot_, "leg_right_6_joint");
@@ -236,6 +237,7 @@ namespace inria_wbc {
             Vector maskRf = Vector::Ones(6);
             rf_task_->setMask(maskRf);
             tsid_->addMotionTask(*rf_task_, p.at("w_rf"), 1);
+            se3_tasks_["rf"] = rf_task_;
 
             ////////// Add the position, velocity and acceleration limits
             bounds_task_ = std::make_shared<TaskJointPosVelAccBounds>("task-posVelAcc-bounds", *robot_, dt_, verbose_);
@@ -249,63 +251,56 @@ namespace inria_wbc {
             tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0); //add pos vel acc bounds
         }
 
-        std::shared_ptr<tsid::trajectories::TrajectorySE3Constant> TalosPosTracking::make_trajectory_se3(
-            const std::string& joint_name,
-            const std::shared_ptr<tsid::tasks::TaskSE3Equality>& task, const std::string& name)
-        {
-            pinocchio::SE3 ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
-            // the make_trajectory method is in the .hpp
-            auto traj = make_trajectory<tsid::trajectories::TrajectorySE3Constant>(ref, task, name);
-            se3_task_traj_map_[name] = {.task = task, .ref = ref, .traj = traj};
-            return traj;
-        }
-
         void TalosPosTracking::init_references()
         {
-            using euclidean_t = tsid::trajectories::TrajectoryEuclidianConstant;
-            traj_com_ = make_trajectory<euclidean_t>(robot_->com(tsid_->data()), com_task_, "com");
-            traj_posture_ = make_trajectory<euclidean_t>(q_tsid_.tail(robot_->na()), posture_task_, "posture");
-            traj_floatingb_ = make_trajectory_se3(fb_joint_name_, floatingb_task_, "floatingb");
-            traj_lf_ = make_trajectory_se3("leg_left_6_joint", lf_task_, "lf");
-            traj_rf_ = make_trajectory_se3("leg_right_6_joint", rf_task_, "rf");
-            traj_lh_ = make_trajectory_se3("gripper_left_joint", lh_task_, "lh");
-            traj_rh_ = make_trajectory_se3("gripper_right_joint", rh_task_, "rh");
-            traj_torso_ = make_trajectory_se3(torso_frame_name_, vert_torso_task_, "torso");
+            posture_task_->setReference(to_sample(q_tsid_.tail(robot_->na())));
+            com_task_->setReference(to_sample(robot_->com(tsid_->data())));
+
+            auto torso_ref = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(torso_frame_name_));
+            set_se3_ref(torso_ref, "torso");
+
+            auto floating_base_ref = robot_->position(tsid_->data(), robot_->model().getJointId(fb_joint_name_));
+            set_se3_ref(floating_base_ref, "floatingb");
+
+            auto lf_ref = robot_->position(tsid_->data(), robot_->model().getJointId("leg_left_6_joint"));
+            set_se3_ref(lf_ref, "lf");
+
+            auto rf_ref = robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
+            set_se3_ref(rf_ref, "rf");
+
+            auto lh_ref = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_left_joint"));
+            set_se3_ref(lh_ref, "lh");
+
+            auto rh_ref = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_right_joint"));
+            set_se3_ref(rh_ref, "rh");
         }
 
         pinocchio::SE3 TalosPosTracking::get_se3_ref(const std::string& task_name)
         {
-            auto it = se3_task_traj_map_.find(task_name);
-            assert(it != se3_task_traj_map_.end());
-            return it->second.ref;
+            auto it = se3_tasks_.find(task_name);
+            assert(it != se3_tasks_.end());
+            pinocchio::SE3 se3;
+            auto pos = it->second->getReference().pos;
+            tsid::math::vectorToSE3(pos, se3);
+            return se3;
         }
 
         void TalosPosTracking::set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name)
         {
-            auto it = se3_task_traj_map_.find(task_name);
-            //std::cout << task_name << " " << it->second.traj << std::endl;
-            assert(it != se3_task_traj_map_.end());
-            auto& task_traj = it->second;
-            task_traj.ref = ref;
-            task_traj.traj->setReference(task_traj.ref);
-            assert(task_traj.traj);
-            tsid::trajectories::TrajectorySample sample = task_traj.traj->computeNext();
-            assert(task_traj.task);
-            task_traj.task->setReference(sample);
+            auto it = se3_tasks_.find(task_name);
+            assert(it != se3_tasks_.end());
+            auto sample = to_sample(ref);
+            it->second->setReference(sample);
         }
 
         void TalosPosTracking::set_com_ref(const Vector3& ref)
         {
-            traj_com_->setReference(ref);
-            TrajectorySample sample_com_ = traj_com_->computeNext();
-            com_task_->setReference(sample_com_);
+            com_task_->setReference(to_sample(ref));
         }
 
-        void TalosPosTracking::set_posture_ref(const tsid::math::Vector& ref, const std::string& task_name)
+        void TalosPosTracking::set_posture_ref(const tsid::math::Vector& ref)
         {
-            traj_posture_->setReference(ref);
-            TrajectorySample sample_posture_ = traj_posture_->computeNext();
-            posture_task_->setReference(sample_posture_);
+            posture_task_->setReference(to_sample(ref));
         }
 
         void TalosPosTracking::remove_contact(const std::string& contact_name)
