@@ -1,7 +1,6 @@
 #ifndef IWBC_POS_TRACKING_HPP
 #define IWBC_POS_TRACKING_HPP
 
-#include <inria_wbc/controllers/talos_base_controller.hpp>
 #include <tsid/contacts/contact-6d.hpp>
 #include <tsid/contacts/contact-point.hpp>
 #include <tsid/math/utils.hpp>
@@ -12,6 +11,8 @@
 #include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/tasks/task-se3-equality.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
+
+#include <inria_wbc/controllers/controller.hpp>
 
 namespace inria_wbc {
     namespace controllers {

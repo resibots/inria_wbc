@@ -51,7 +51,7 @@ using namespace inria_wbc::utils;
 
 namespace inria_wbc {
     namespace controllers {
-        TalosBaseController::TalosBaseController(const Params& params)
+        Controller::Controller(const Params& params)
         {
             params_ = params;
             verbose_ = params_.verbose;
@@ -71,7 +71,7 @@ namespace inria_wbc {
         }
 
         // reset everything (called from the constructor)
-        void TalosBaseController::_reset()
+        void Controller::_reset()
         {
             dt_ = params_.dt;
             mimic_dof_names_ = params_.mimic_dof_names;
@@ -94,7 +94,7 @@ namespace inria_wbc {
             non_mimic_indexes_ = get_non_mimics_indexes();
         }
 
-        std::vector<int> TalosBaseController::get_non_mimics_indexes() const
+        std::vector<int> Controller::get_non_mimics_indexes() const
         {
             std::vector<int> non_mimic_indexes;
             std::vector<int> mimic_indexes;
@@ -117,7 +117,7 @@ namespace inria_wbc {
             return non_mimic_indexes;
         }
 
-        bool TalosBaseController::solve()
+        bool Controller::solve()
         {
             //Compute the current data from the current position and solve to find next position
             assert(tsid_);
@@ -173,7 +173,7 @@ namespace inria_wbc {
         }
 
         // Removes the universe and root (floating base) joint names
-        std::vector<std::string> TalosBaseController::controllable_dofs(bool filter_mimics) const
+        std::vector<std::string> Controller::controllable_dofs(bool filter_mimics) const
         {
             auto na = robot_->model().names;
             auto tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
@@ -184,7 +184,7 @@ namespace inria_wbc {
         }
 
         // Order of the floating base in q_ according to dart naming convention
-        std::vector<std::string> TalosBaseController::floating_base_dofs() const
+        std::vector<std::string> Controller::floating_base_dofs() const
         {
             std::vector<std::string> floating_base_dofs;
             if (fb_joint_name_ == "root_joint") {
@@ -207,7 +207,7 @@ namespace inria_wbc {
             return floating_base_dofs;
         }
 
-        std::vector<std::string> TalosBaseController::all_dofs(bool filter_mimics) const
+        std::vector<std::string> Controller::all_dofs(bool filter_mimics) const
         {
             std::vector<std::string> all_dofs = floating_base_dofs();
             std::vector<std::string> control_dofs = controllable_dofs(filter_mimics);
@@ -215,27 +215,27 @@ namespace inria_wbc {
             return filter_mimics ? remove_intersection(all_dofs, mimic_dof_names_) : all_dofs;
         }
 
-        Eigen::VectorXd TalosBaseController::ddq(bool filter_mimics) const
+        Eigen::VectorXd Controller::ddq(bool filter_mimics) const
         {
             return filter_mimics ? slice_vec(ddq_, non_mimic_indexes_) : ddq_;
         }
 
-        Eigen::VectorXd TalosBaseController::dq(bool filter_mimics) const
+        Eigen::VectorXd Controller::dq(bool filter_mimics) const
         {
             return filter_mimics ? slice_vec(dq_, non_mimic_indexes_) : dq_;
         }
 
-        Eigen::VectorXd TalosBaseController::q(bool filter_mimics) const
+        Eigen::VectorXd Controller::q(bool filter_mimics) const
         {
             return filter_mimics ? slice_vec(q_, non_mimic_indexes_) : q_;
         }
 
-        Eigen::VectorXd TalosBaseController::q0(bool filter_mimics) const
+        Eigen::VectorXd Controller::q0(bool filter_mimics) const
         {
             return filter_mimics ? slice_vec(q0_, non_mimic_indexes_) : q0_;
         }
 
-        std::vector<double> TalosBaseController::pinocchio_model_masses() const
+        std::vector<double> Controller::pinocchio_model_masses() const
         {
             std::vector<double> masses;
             for (int i = 0; i < robot_->model().inertias.size(); i++) {
@@ -245,7 +245,7 @@ namespace inria_wbc {
             return masses;
         }
 
-        inria_wbc::controllers::TalosBaseController::Params parse_params(YAML::Node config)
+        inria_wbc::controllers::Controller::Params parse_params(YAML::Node config)
         {
             std::string urdf_path = "";
             std::string srdf_path = "";
@@ -262,7 +262,7 @@ namespace inria_wbc {
             parse(verbose, "verbose", config, false, "PARAMS");
             parse(mimic_dof_names, "mimic_dof_names", config, false, "PARAMS");
 
-            TalosBaseController::Params params = {urdf_path,
+            Controller::Params params = {urdf_path,
                 srdf_path,
                 sot_config_path,
                 floating_base_joint_name,

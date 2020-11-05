@@ -20,7 +20,7 @@
 
 namespace inria_wbc {
     namespace controllers {
-        class TalosBaseController {
+        class Controller {
         public:
             using opt_params_t = std::map<std::string, double>;
             struct Params {
@@ -35,10 +35,10 @@ namespace inria_wbc {
             };
             using params_t = Params;
 
-            TalosBaseController(const Params& params);
-            TalosBaseController(const TalosBaseController&) = delete;
-            TalosBaseController& operator=(const TalosBaseController& o) = delete;
-            virtual ~TalosBaseController(){};
+            Controller(const Params& params);
+            Controller(const Controller&) = delete;
+            Controller& operator=(const Controller& o) = delete;
+            virtual ~Controller(){};
 
             bool solve();
 
@@ -109,7 +109,7 @@ namespace inria_wbc {
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
         };
 
-        inria_wbc::controllers::TalosBaseController::Params parse_params(YAML::Node config);
+        inria_wbc::controllers::Controller::Params parse_params(YAML::Node config);
     } // namespace controllers
 } // namespace inria_wbc
 #endif
