@@ -104,7 +104,7 @@ namespace inria_wbc {
             }
         }
 
-        std::shared_ptr<tsid::contacts::Contact6d> TalosPosTracking::make_contact_task(const std::string& name, const std::string frame_name, double kp)
+        std::shared_ptr<tsid::contacts::Contact6d> TalosPosTracking::make_contact_task(const std::string& name, const std::string frame_name, double kp) const
         {
             Matrix3x contact_points(3, 4);
             contact_points << -cst::lxn, -cst::lxn, cst::lxp, cst::lxp,
@@ -118,7 +118,7 @@ namespace inria_wbc {
             return contact_task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskComEquality> TalosPosTracking::make_com_task(const std::string& name, double kp)
+        std::shared_ptr<tsid::tasks::TaskComEquality> TalosPosTracking::make_com_task(const std::string& name, double kp) const
         {
             auto task = std::make_shared<TaskComEquality>(name, *robot_);
             task->Kp(kp * Vector::Ones(3));
@@ -127,7 +127,7 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskJointPosture> TalosPosTracking::make_posture_task(const std::string& name, double kp)
+        std::shared_ptr<tsid::tasks::TaskJointPosture> TalosPosTracking::make_posture_task(const std::string& name, double kp) const
         {
             auto task = std::make_shared<TaskJointPosture>(name, *robot_);
             task->Kp(kp * Vector::Ones(robot_->nv() - 6));
@@ -141,7 +141,7 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_torso_task(const std::string& name, const std::string& frame_name, double kp)
+        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_torso_task(const std::string& name, const std::string& frame_name, double kp) const
         {
             auto task = std::make_shared<TaskSE3Equality>(name, *robot_, frame_name);
             task->Kp(kp * Vector::Ones(6));
@@ -156,7 +156,7 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_floatingb_task(const std::string& name, const std::string& joint_name, double kp)
+        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_floatingb_task(const std::string& name, const std::string& joint_name, double kp) const
         {
             auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
             task->Kp(kp * Vector::Ones(6));
@@ -172,7 +172,7 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_hand_task(const std::string& name, const std::string& joint_name, double kp)
+        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_hand_task(const std::string& name, const std::string& joint_name, double kp) const
         {
             auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
             task->Kp(kp * Vector::Ones(6));
@@ -188,7 +188,7 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_foot_task(const std::string& name, const std::string& joint_name, double kp)
+        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_foot_task(const std::string& name, const std::string& joint_name, double kp) const
         {
             auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
             task->Kp(kp * Vector::Ones(6));
@@ -200,7 +200,7 @@ namespace inria_wbc {
             task->setReference(sample);
             return task;
         }
-        std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> TalosPosTracking::make_bound_task(const std::string& name)
+        std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> TalosPosTracking::make_bound_task(const std::string& name) const
         {
             auto task = std::make_shared<TaskJointPosVelAccBounds>(name, *robot_, dt_, verbose_);
             auto dq_max = robot_->model().velocityLimit.tail(robot_->na());

@@ -48,20 +48,20 @@ namespace inria_wbc {
 
             virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
 
-        private:
+        protected:
             void parse_configuration_yaml(const std::string& sot_config_path);
             void set_stack_configuration();
             void init_references();
             void set_default_opt_params(std::map<std::string, double>& p);
 
-            std::shared_ptr<tsid::contacts::Contact6d> make_contact_task(const std::string& name, const std::string frame_name, double kp);
-            std::shared_ptr<tsid::tasks::TaskComEquality> make_com_task(const std::string& name, double kp);
-            std::shared_ptr<tsid::tasks::TaskJointPosture> make_posture_task(const std::string& name, double kp);
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_torso_task(const std::string& name, const std::string& frame_name, double kp);
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_floatingb_task(const std::string& name, const std::string& joint_name, double kp);
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_hand_task(const std::string& name, const std::string& joint_name, double kp);
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_foot_task(const std::string& name, const std::string& joint_name, double kp);
-            std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> make_bound_task(const std::string& name);
+            std::shared_ptr<tsid::contacts::Contact6d> make_contact_task(const std::string& name, const std::string frame_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskComEquality> make_com_task(const std::string& name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskJointPosture> make_posture_task(const std::string& name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_torso_task(const std::string& name, const std::string& frame_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_floatingb_task(const std::string& name, const std::string& joint_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_hand_task(const std::string& name, const std::string& joint_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_foot_task(const std::string& name, const std::string& joint_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> make_bound_task(const std::string& name) const;
 
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
 
@@ -69,12 +69,15 @@ namespace inria_wbc {
             std::shared_ptr<tsid::contacts::Contact6d> contactRF_;
             std::shared_ptr<tsid::contacts::Contact6d> contactLF_;
 
-            // tasks
-            std::shared_ptr<tsid::tasks::TaskComEquality> com_task_;
+            // posture
             std::shared_ptr<tsid::tasks::TaskJointPosture> posture_task_;
+
+            // SE tasks (trajectories of joints/frames)
+            std::shared_ptr<tsid::tasks::TaskComEquality> com_task_;
             std::shared_ptr<tsid::tasks::TaskSE3Equality> floatingb_task_;
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskSE3Equality>> se3_tasks_;
 
+            // bounds
             std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> bounds_task_;
         };
 
