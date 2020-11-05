@@ -51,7 +51,6 @@ namespace inria_wbc {
                 parse_configuration_yaml(params.sot_config_path);
 
             set_stack_configuration();
-            init_references();
         }
 
         void TalosPosTracking::set_default_opt_params(std::map<std::string, double>& p)
@@ -105,6 +104,115 @@ namespace inria_wbc {
             }
         }
 
+        std::shared_ptr<tsid::contacts::Contact6d> TalosPosTracking::make_contact_task(const std::string& name, const std::string frame_name, double kp)
+        {
+            Matrix3x contact_points(3, 4);
+            contact_points << -cst::lxn, -cst::lxn, cst::lxp, cst::lxp,
+                -cst::lyn, cst::lyp, -cst::lyn, cst::lyp,
+                cst::lz, cst::lz, cst::lz, cst::lz;
+            auto contact_task = std::make_shared<Contact6d>(name, *robot_, frame_name, contact_points, cst::contact_normal, cst::mu, cst::fMin, cst::fMax);
+            contact_task->Kp(kp * Vector::Ones(6));
+            contact_task->Kd(2.0 * contact_task->Kp().cwiseSqrt());
+            auto contact_ref = robot_->position(tsid_->data(), robot_->model().getJointId(frame_name));
+            contact_task->setReference(contact_ref);
+            return contact_task;
+        }
+
+        std::shared_ptr<tsid::tasks::TaskComEquality> TalosPosTracking::make_com_task(const std::string& name, double kp)
+        {
+            auto task = std::make_shared<TaskComEquality>(name, *robot_);
+            task->Kp(kp * Vector::Ones(3));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            task->setReference(to_sample(robot_->com(tsid_->data())));
+            return task;
+        }
+
+        std::shared_ptr<tsid::tasks::TaskJointPosture> TalosPosTracking::make_posture_task(const std::string& name, double kp)
+        {
+            auto task = std::make_shared<TaskJointPosture>(name, *robot_);
+            task->Kp(kp * Vector::Ones(robot_->nv() - 6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_post = Vector::Ones(robot_->nv() - 6);
+            // for(int i =0; i < 11; i++){
+            //   mask_post[i] = 0;
+            // }
+            task->setMask(mask_post);
+            task->setReference(to_sample(q_tsid_.tail(robot_->na())));
+            return task;
+        }
+
+        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_torso_task(const std::string& name, const std::string& frame_name, double kp)
+        {
+            auto task = std::make_shared<TaskSE3Equality>(name, *robot_, frame_name);
+            task->Kp(kp * Vector::Ones(6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_torso = Vector::Zero(6);
+            mask_torso[4] = 1; // only constrain the pitch of the body
+            mask_torso[3] = 1; // only constrain the roll of the body
+            task->setMask(mask_torso);
+            auto ref = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
+            auto sample = to_sample(ref);
+            task->setReference(sample);
+            return task;
+        }
+
+        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_floatingb_task(const std::string& name, const std::string& joint_name, double kp)
+        {
+            auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
+            task->Kp(kp * Vector::Ones(6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_floatingb = Vector::Ones(6);
+            for (int i = 0; i < 3; i++) {
+                mask_floatingb[i] = 0; // DO NOT CONSTRAIN floatingb POSITION IN SOT
+            }
+            task->setMask(mask_floatingb);
+            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            auto sample = to_sample(ref);
+            task->setReference(sample);
+            return task;
+        }
+
+        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_hand_task(const std::string& name, const std::string& joint_name, double kp)
+        {
+            auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
+            task->Kp(kp * Vector::Ones(6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_lh = Vector::Ones(6);
+            for (int i = 3; i < 6; i++) {
+                mask_lh[i] = 0; // DO NOT CONSTRAIN HAND ORIENTATION IN SOT
+            }
+            task->setMask(mask_lh);
+            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            auto sample = to_sample(ref);
+            task->setReference(sample);
+            return task;
+        }
+
+        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_foot_task(const std::string& name, const std::string& joint_name, double kp)
+        {
+            auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
+            task->Kp(kp * Vector::Ones(6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector maskLf = Vector::Ones(6);
+            task->setMask(maskLf);
+            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            auto sample = to_sample(ref);
+            task->setReference(sample);
+            return task;
+        }
+        std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> TalosPosTracking::make_bound_task(const std::string& name)
+        {
+            auto task = std::make_shared<TaskJointPosVelAccBounds>(name, *robot_, dt_, verbose_);
+            auto dq_max = robot_->model().velocityLimit.tail(robot_->na());
+            auto ddq_max = dq_max / dt_;
+            task->setVelocityBounds(dq_max);
+            task->setAccelerationBounds(ddq_max);
+            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
+            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
+            task->setPositionBounds(q_lb, q_ub);
+            return task;
+        }
+
         void TalosPosTracking::set_stack_configuration()
         {
 
@@ -114,10 +222,12 @@ namespace inria_wbc {
                     std::cout << x.first << " => " << params_.opt_params[x.first] << std::endl;
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
+            //q_tsid_ is of size 37 (pos+quat+nactuated)
             q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
+            //q0_ is in "Dart format" for the floating base
             Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
             Eigen::AngleAxisd aaxis(quat);
-            q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na()); //q_tsid_ is of size 37 (pos+quat+nactuated)
+            q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
 
             ////////////////////Create the inverse-dynamics formulation///////////////////
             tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
@@ -133,146 +243,44 @@ namespace inria_wbc {
             const pinocchio::Data& data = tsid_->data();
 
             ////////////////////Compute Tasks, Bounds and Contacts ///////////////////////
-            ////////// Add the contacts
-            Matrix3x contact_points_(3, 4);
-            contact_points_ << -lxn_, -lxn_, +lxp_, +lxp_,
-                -lyn_, +lyp_, -lyn_, +lyp_,
-                lz_, lz_, lz_, lz_;
-
-            contactRF_ = std::make_shared<Contact6d>("contact_rfoot", *robot_, rf_frame_name_,
-                contact_points_, contactNormal_,
-                mu_, fMin_, fMax_);
-            contactRF_->Kp(p.at("kp_contact") * Vector::Ones(6));
-            contactRF_->Kd(2.0 * contactRF_->Kp().cwiseSqrt());
-            contact_rf_ref_ = robot_->position(data, robot_->model().getJointId(rf_frame_name_));
-            contactRF_->setReference(contact_rf_ref_);
+            contactRF_ = make_contact_task("contact_rfoot", cst::rf_joint_name, p.at("kp_contact"));
             tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
 
-            contactLF_ = std::make_shared<Contact6d>("contact_lfoot", *robot_, lf_frame_name_,
-                contact_points_, contactNormal_,
-                mu_, fMin_, fMax_);
-            contactLF_->Kp(p.at("kp_contact") * Vector::Ones(6));
-            contactLF_->Kd(2.0 * contactLF_->Kp().cwiseSqrt());
-            contact_lf_ref_ = robot_->position(data, robot_->model().getJointId(lf_frame_name_));
-            contactLF_->setReference(contact_lf_ref_);
+            contactLF_ = make_contact_task("contact_lfoot", cst::lf_joint_name, p.at("kp_contact"));
             tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
 
-            ////////// Add the com task
-            com_task_ = std::make_shared<TaskComEquality>("task-com", *robot_);
-            com_task_->Kp(p.at("kp_com") * Vector::Ones(3));
-            com_task_->Kd(2.0 * com_task_->Kp().cwiseSqrt());
+            com_task_ = make_com_task("com", p.at("kp_com"));
             tsid_->addMotionTask(*com_task_, p.at("w_com"), 1);
 
-            ////////// Add the posture task
-            posture_task_ = std::make_shared<TaskJointPosture>("task-posture", *robot_);
-            posture_task_->Kp(p.at("kp_posture") * Vector::Ones(nv - 6));
-            posture_task_->Kd(2.0 * posture_task_->Kp().cwiseSqrt());
-            Vector mask_post = Vector::Ones(nv - 6);
-            // for(int i =0; i < 11; i++){
-            //   mask_post[i] = 0;
-            // }
-            posture_task_->setMask(mask_post);
+            posture_task_ = make_posture_task("posture", p.at("kp_posture"));
             tsid_->addMotionTask(*posture_task_, p.at("w_posture"), 1);
 
-            ////////// Vertical torso task (try to keep it vertical)
-            vert_torso_task_ = std::make_shared<TaskSE3Equality>("task-vert-torso", *robot_, torso_frame_name_);
-            vert_torso_task_->Kp(p.at("kp_torso") * Vector::Ones(6));
-            vert_torso_task_->Kd(2.0 * vert_torso_task_->Kp().cwiseSqrt());
-            Vector mask_torso = Vector::Zero(6);
-            mask_torso[4] = 1; // only constrain the pitch of the body
-            mask_torso[3] = 1; // only constrain the roll of the body
-            vert_torso_task_->setMask(mask_torso);
-            se3_tasks_["torso"] = vert_torso_task_;
-            tsid_->addMotionTask(*vert_torso_task_, p.at("w_torso"), 1);
+            auto vert_torso_task = make_torso_task("torso", cst::torso_frame_name, p.at("kp_torso"));
+            tsid_->addMotionTask(*vert_torso_task, p.at("w_torso"), 1);
+            se3_tasks_[vert_torso_task->name()] = vert_torso_task;
 
-            ////////// Add the floatingb task
-            floatingb_task_ = std::make_shared<TaskSE3Equality>("task-floatingb", *robot_, fb_joint_name_);
-            floatingb_task_->Kp(p.at("kp_floatingb") * Vector::Ones(6));
-            floatingb_task_->Kd(2.0 * floatingb_task_->Kp().cwiseSqrt());
-            Vector mask_floatingb = Vector::Ones(6);
-            for (int i = 0; i < 3; i++) {
-                mask_floatingb[i] = 0; // DO NOT CONSTRAIN floatingb POSITION IN SOT
-            }
-            floatingb_task_->setMask(mask_floatingb);
-            tsid_->addMotionTask(*floatingb_task_, p.at("w_floatingb"), 1);
-            se3_tasks_["floatingb"] = floatingb_task_;
+            auto floatingb_task = make_floatingb_task("floatingb", fb_joint_name_, p.at("kp_floatingb"));
+            tsid_->addMotionTask(*floatingb_task, p.at("w_floatingb"), 1);
+            se3_tasks_[floatingb_task->name()] = floatingb_task;
 
-            ////////// Add the left hand  task
-            lh_task_ = std::make_shared<TaskSE3Equality>("task-lh", *robot_, "gripper_left_joint");
-            lh_task_->Kp(p.at("kp_lh") * Vector::Ones(6));
-            lh_task_->Kd(2.0 * lh_task_->Kp().cwiseSqrt());
-            Vector mask_lh = Vector::Ones(6);
-            for (int i = 3; i < 6; i++) {
-                mask_lh[i] = 0; // DO NOT CONSTRAIN HAND ORIENTATION IN SOT
-            }
-            lh_task_->setMask(mask_lh);
-            tsid_->addMotionTask(*lh_task_, p.at("w_lh"), 1);
-            se3_tasks_["lh"] = lh_task_;
+            auto lh_task = make_hand_task("lh", cst::lh_joint_name, p.at("kp_lh"));
+            tsid_->addMotionTask(*lh_task, p.at("w_lh"), 1);
+            se3_tasks_[lh_task->name()] = lh_task;
 
-            ////////// Add the right hand task
-            rh_task_ = std::make_shared<TaskSE3Equality>("task-rh", *robot_, "gripper_right_joint");
-            rh_task_->Kp(p.at("kp_rh") * Vector::Ones(6));
-            rh_task_->Kd(2.0 * rh_task_->Kp().cwiseSqrt());
-            Vector mask_rh = Vector::Ones(6);
-            for (int i = 3; i < 6; i++) {
-                mask_rh[i] = 0; // DO NOT CONSTRAIN HAND ORIENTATION IN SOT
-            }
-            rh_task_->setMask(mask_rh);
-            tsid_->addMotionTask(*rh_task_, p.at("w_rh"), 1);
-            se3_tasks_["rh"] = rh_task_;
+            auto rh_task = make_hand_task("rh", cst::rh_joint_name, p.at("kp_rh"));
+            tsid_->addMotionTask(*rh_task, p.at("w_rh"), 1);
+            se3_tasks_[rh_task->name()] = rh_task;
 
-            ////////// Add the left foot  task
-            lf_task_ = std::make_shared<TaskSE3Equality>("task-lf", *robot_, "leg_left_6_joint");
-            lf_task_->Kp(p.at("kp_lf") * Vector::Ones(6));
-            lf_task_->Kd(2.0 * lf_task_->Kp().cwiseSqrt());
-            Vector maskLf = Vector::Ones(6);
-            lf_task_->setMask(maskLf);
-            tsid_->addMotionTask(*lf_task_, p.at("w_lf"), 1);
-            se3_tasks_["lf"] = lf_task_;
+            auto lf_task = make_foot_task("lf", cst::lf_joint_name, p.at("kp_lf"));
+            tsid_->addMotionTask(*lf_task, p.at("w_lf"), 1);
+            se3_tasks_[lf_task->name()] = lf_task;
 
-            ////////// Add the right foot  task
-            rf_task_ = std::make_shared<TaskSE3Equality>("task-rf", *robot_, "leg_right_6_joint");
-            rf_task_->Kp(p.at("kp_rf") * Vector::Ones(6));
-            rf_task_->Kd(2.0 * rf_task_->Kp().cwiseSqrt());
-            Vector maskRf = Vector::Ones(6);
-            rf_task_->setMask(maskRf);
-            tsid_->addMotionTask(*rf_task_, p.at("w_rf"), 1);
-            se3_tasks_["rf"] = rf_task_;
+            auto rf_task = make_foot_task("rf", cst::rf_joint_name, p.at("kp_rf"));
+            tsid_->addMotionTask(*rf_task, p.at("w_rf"), 1);
+            se3_tasks_[rf_task->name()] = rf_task;
 
-            ////////// Add the position, velocity and acceleration limits
-            bounds_task_ = std::make_shared<TaskJointPosVelAccBounds>("task-posVelAcc-bounds", *robot_, dt_, verbose_);
-            dq_max_ = robot_->model().velocityLimit.tail(robot_->na());
-            ddq_max_ = dq_max_ / dt_;
-            bounds_task_->setVelocityBounds(dq_max_);
-            bounds_task_->setAccelerationBounds(ddq_max_);
-            q_lb_ = robot_->model().lowerPositionLimit.tail(robot_->na());
-            q_ub_ = robot_->model().upperPositionLimit.tail(robot_->na());
-            bounds_task_->setPositionBounds(q_lb_, q_ub_);
+            bounds_task_ = make_bound_task("task-posVelAcc-bounds");
             tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0); //add pos vel acc bounds
-        }
-
-        void TalosPosTracking::init_references()
-        {
-            posture_task_->setReference(to_sample(q_tsid_.tail(robot_->na())));
-            com_task_->setReference(to_sample(robot_->com(tsid_->data())));
-
-            auto torso_ref = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(torso_frame_name_));
-            set_se3_ref(torso_ref, "torso");
-
-            auto floating_base_ref = robot_->position(tsid_->data(), robot_->model().getJointId(fb_joint_name_));
-            set_se3_ref(floating_base_ref, "floatingb");
-
-            auto lf_ref = robot_->position(tsid_->data(), robot_->model().getJointId("leg_left_6_joint"));
-            set_se3_ref(lf_ref, "lf");
-
-            auto rf_ref = robot_->position(tsid_->data(), robot_->model().getJointId("leg_right_6_joint"));
-            set_se3_ref(rf_ref, "rf");
-
-            auto lh_ref = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_left_joint"));
-            set_se3_ref(lh_ref, "lh");
-
-            auto rh_ref = robot_->position(tsid_->data(), robot_->model().getJointId("gripper_right_joint"));
-            set_se3_ref(rh_ref, "rh");
         }
 
         pinocchio::SE3 TalosPosTracking::get_se3_ref(const std::string& task_name)
@@ -313,13 +321,13 @@ namespace inria_wbc {
             const opt_params_t& p = params_.opt_params;
             const pinocchio::Data& data = tsid_->data();
             if (contact_name == "contact_rfoot") {
-                contact_rf_ref_ = robot_->position(data, robot_->model().getJointId(rf_frame_name_));
-                contactRF_->setReference(contact_rf_ref_);
+                auto contact_rf_ref = robot_->position(data, robot_->model().getJointId(cst::rf_joint_name));
+                contactRF_->setReference(contact_rf_ref);
                 tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
             }
             else if (contact_name == "contact_lfoot") {
-                contact_lf_ref_ = robot_->position(data, robot_->model().getJointId(lf_frame_name_));
-                contactLF_->setReference(contact_lf_ref_);
+                auto contact_lf_ref = robot_->position(data, robot_->model().getJointId(cst::lf_joint_name));
+                contactLF_->setReference(contact_lf_ref);
                 tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
             }
             else {
