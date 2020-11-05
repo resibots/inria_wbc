@@ -6,7 +6,7 @@ namespace inria_wbc {
 
         // a generic factory class, to be specialized for your own class
         // first is the objects to create (abstract class), second is the parameter types for the constructor
-        template <typename T>
+        template <typename T, typename A>
         class Factory {
         public:
             ~Factory() { _map.clear(); }
@@ -17,8 +17,7 @@ namespace inria_wbc {
                 return instance;
             }
             using ptr_t = std::shared_ptr<T>;
-            using params_t = typename T::params_t;
-            using creator_t = std::function<ptr_t(const params_t&)>;
+            using creator_t = std::function<ptr_t(const A&)>;
 
             void register_creator(const std::string& name, creator_t pfn_creator)
             {
@@ -28,7 +27,7 @@ namespace inria_wbc {
                     std::cout << "Warning : there is already a " << name << " in the factory" << std::endl;
                 }
             }
-            ptr_t create(const std::string& name, const params_t& params)
+            ptr_t create(const std::string& name, const A& params)
             {
                 auto it = _map.find(name);
                 if (it != _map.end())
@@ -39,7 +38,7 @@ namespace inria_wbc {
                 return ptr_t();
             }
 
-            void names()
+            void print()
             {
                 for (auto& it : _map) {
                     std::cout << it.first << std::endl;
@@ -52,12 +51,12 @@ namespace inria_wbc {
             std::map<std::string, creator_t> _map;
         };
 
-        template <typename B, typename T>
+        template <typename B, typename T, typename C>
         struct AutoRegister {
             AutoRegister(const std::string& name)
             {
-                Factory<B>::instance().register_creator(name, [](const typename T::params_t& params) {
-                    return std::make_shared<T>(params);
+                Factory<B, C>::instance().register_creator(name, [](const C& arg) {
+                    return std::make_shared<T>(arg);
                 });
             }
         };

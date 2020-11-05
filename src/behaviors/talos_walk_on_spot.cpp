@@ -6,14 +6,14 @@ namespace inria_wbc {
 
         static Register<WalkOnSpot> __talos_walk_on_spot("walk-on-spot");
 
-        WalkOnSpot::WalkOnSpot(const controllers::Controller::Params& params) : Behavior(std::make_shared<controllers::TalosPosTracking>(params))
+        WalkOnSpot::WalkOnSpot(const controller_ptr_t& controller) : Behavior(controller)
         {
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            inria_wbc::utils::parse(traj_foot_duration_, "traj_foot_duration", config, false, "BEHAVIOR");
+            inria_wbc::utils::parse(traj_foot_duration_, "traj_foot_duration", config, false, "BEHAVIOR"); // TODO use the verbose
             inria_wbc::utils::parse(traj_com_duration_, "traj_com_duration", config, false, "BEHAVIOR");
             inria_wbc::utils::parse(step_height_, "step_height", config, false, "BEHAVIOR");
 
-            dt_ = params.dt;
+            dt_ = controller_->dt();
 
             state_ = States::INIT;
             time_ = 0;

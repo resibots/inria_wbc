@@ -163,13 +163,15 @@ int main(int argc, char* argv[])
         verbose,
         robot->mimic_dof_names()};
 
-    std::string behavior_name;
+    std::string behavior_name, controller_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
     inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
+    inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
 
-    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
+    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
+    assert(behavior);
 
-    auto controller = behavior->controller();
     auto all_dofs = controller->all_dofs();
     auto floating_base = all_dofs;
     floating_base.resize(6);

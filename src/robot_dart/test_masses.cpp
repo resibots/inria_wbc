@@ -87,12 +87,11 @@ int main(int argc, char* argv[])
         false,
         robot->mimic_dof_names()};
 
-    std::string behavior_name;
+    std::string controller_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
+    inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
 
-    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
-    auto controller = behavior->controller();
+    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
 
     auto masses = controller->pinocchio_model_masses();
     std::vector<std::string> joint_names = controller->pinocchio_joint_names();

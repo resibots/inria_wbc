@@ -5,7 +5,7 @@ namespace inria_wbc {
 
         static Register<TalosSquat> __talos_squat("talos-squat");
 
-        TalosSquat::TalosSquat(const controllers::Controller::Params& params) : Behavior(std::make_shared<controllers::TalosPosTracking>(params))
+        TalosSquat::TalosSquat(const controller_ptr_t& controller) : Behavior(controller)
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
@@ -18,8 +18,8 @@ namespace inria_wbc {
             auto com_final = com_init;
             com_final(2) -= motion_size_;
 
-            trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_final, params.dt, trajectory_duration_));
-            trajectories_.push_back(trajectory_handler::compute_traj(com_final, com_init, params.dt, trajectory_duration_));
+            trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_final, controller_->dt(), trajectory_duration_));
+            trajectories_.push_back(trajectory_handler::compute_traj(com_final, com_init, controller_->dt(), trajectory_duration_));
             current_trajectory_ = trajectories_[traj_selector_];
         }
 

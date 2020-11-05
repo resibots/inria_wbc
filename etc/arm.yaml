@@ -1,4 +1,5 @@
-SOT:
+CONTROLLER:
+  name: talos-pos-tracking
   w_com: 100.0
   w_floatingb: 100.0
   w_posture: 0.75

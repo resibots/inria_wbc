@@ -97,14 +97,14 @@ int main(int argc, char* argv[])
         false,
         robot->mimic_dof_names()};
 
-    std::string behavior_name;
+    std::string behavior_name, controller_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
     inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
-    // params = inria_wbc::controllers::parse_params(config);
+    inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
 
-    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
+    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
 
-    auto controller = behavior->controller();
     auto all_dofs = controller->all_dofs();
     auto controllable_dofs = controller->controllable_dofs();
     robot->set_positions(controller->q0(), all_dofs);

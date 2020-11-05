@@ -13,7 +13,7 @@ namespace inria_wbc {
 
         class WalkOnSpot : public Behavior {
         public:
-            WalkOnSpot(const controllers::Controller::Params& params);
+            WalkOnSpot(const controller_ptr_t& controller);
             WalkOnSpot() = delete;
             WalkOnSpot(const WalkOnSpot& otehr) = default;
             bool update() override;

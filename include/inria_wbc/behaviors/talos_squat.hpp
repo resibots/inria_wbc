@@ -12,7 +12,7 @@ namespace inria_wbc {
     namespace behaviors {
         class TalosSquat : public Behavior {
         public:
-            TalosSquat(const controllers::Controller::Params& params);
+            TalosSquat(const controller_ptr_t& controller);
             TalosSquat() = delete;
             TalosSquat(const TalosSquat& other) = delete;
 

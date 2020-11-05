@@ -24,10 +24,14 @@ BOOST_AUTO_TEST_CASE(running)
         inria_wbc::controllers::Controller::Params params = {robot->model_filename(), "../etc/talos_configurations.srdf", sot_config_path, "",
             0.001, false, robot->mimic_dof_names()};
 
-        std::string behavior_name;
-        auto config = YAML::LoadFile(sot_config_path);
+        std::string behavior_name, controller_name;
+        YAML::Node config = YAML::LoadFile(sot_config_path);
         inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
-        auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
+        inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
+
+        auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+        auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
+
         auto cmds = test_behavior(behavior);
     }
 }
@@ -51,12 +55,14 @@ BOOST_AUTO_TEST_CASE(set_opt_params)
             0.001, false, robot->mimic_dof_names(),
             opt_p};
 
-        std::string behavior_name;
-        auto config = YAML::LoadFile(sot_config_path);
+        std::string behavior_name, controller_name;
+        YAML::Node config = YAML::LoadFile(sot_config_path);
         inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
+        inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
 
         for (size_t i = 0; i < 10; ++i) {
-            auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
+            auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+            auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
             auto cmds = test_behavior(behavior);
         }
     }

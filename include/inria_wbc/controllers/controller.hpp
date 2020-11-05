@@ -9,12 +9,13 @@
 
 #include <pinocchio/spatial/se3.hpp>
 
-#include <inria_wbc/utils/utils.hpp>
-
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/fwd.hpp>
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
+
+#include <inria_wbc/utils/factory.hpp>
+#include <inria_wbc/utils/utils.hpp>
 
 namespace inria_wbc {
     namespace controllers {
@@ -31,7 +32,6 @@ namespace inria_wbc {
                 std::vector<std::string> mimic_dof_names;
                 opt_params_t opt_params; // parameters that can be optimized
             };
-            using params_t = Params;
 
             Controller(const Params& params);
             Controller(const Controller&) = delete;
@@ -108,6 +108,12 @@ namespace inria_wbc {
         };
 
         inria_wbc::controllers::Controller::Params parse_params(YAML::Node config);
+
+        using Factory = utils::Factory<Controller, Controller::Params>;
+        template <typename T>
+        struct Register : public utils::AutoRegister<Controller, T, Controller::Params> {
+            Register(const std::string& name) : utils::AutoRegister<Controller, T, Controller::Params>(name) {}
+        };
     } // namespace controllers
 } // namespace inria_wbc
 #endif

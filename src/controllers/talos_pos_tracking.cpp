@@ -26,6 +26,7 @@ using namespace tsid::math;
 
 namespace inria_wbc {
     namespace controllers {
+        static Register<TalosPosTracking> __talos_pos_tracking("talos-pos-tracking");
 
         TalosPosTracking::TalosPosTracking(const Params& params) : Controller(params)
         {

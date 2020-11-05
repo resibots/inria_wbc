@@ -4,7 +4,7 @@ namespace inria_wbc {
     namespace behaviors {
         static Register<TalosMoveArm> __talos_move_arm("talos-move-arm");
 
-        TalosMoveArm::TalosMoveArm(const controllers::Controller::Params& params) : Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
+        TalosMoveArm::TalosMoveArm(const controller_ptr_t& controller) : Behavior(controller)
         {
 
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
@@ -18,8 +18,8 @@ namespace inria_wbc {
             auto lh_final = lh_init;
             lh_final.translation()(2) += motion_size_;
 
-            trajectories_.push_back(trajectory_handler::compute_traj(lh_init, lh_final, params.dt, trajectory_duration_));
-            trajectories_.push_back(trajectory_handler::compute_traj(lh_final, lh_init, params.dt, trajectory_duration_));
+            trajectories_.push_back(trajectory_handler::compute_traj(lh_init, lh_final, controller_->dt(), trajectory_duration_));
+            trajectories_.push_back(trajectory_handler::compute_traj(lh_final, lh_init, controller_->dt(), trajectory_duration_));
             current_trajectory_ = trajectories_[traj_selector_];
         }
 

@@ -8,8 +8,8 @@ namespace inria_wbc {
     namespace behaviors {
         class Behavior {
         public:
-            using params_t = inria_wbc::controllers::Controller::params_t;
-            Behavior(const std::shared_ptr<controllers::Controller>& controller) : controller_(controller) {}
+            using controller_ptr_t = std::shared_ptr<inria_wbc::controllers::Controller>;
+            Behavior(const controller_ptr_t& controller) : controller_(controller) { assert(controller); };
             virtual ~Behavior() {}
             virtual bool update() = 0;
             virtual std::shared_ptr<controllers::Controller> controller() { return controller_; };
@@ -18,10 +18,10 @@ namespace inria_wbc {
         protected:
             std::shared_ptr<inria_wbc::controllers::Controller> controller_;
         };
-        using Factory = utils::Factory<Behavior>;
+        using Factory = utils::Factory<Behavior, Behavior::controller_ptr_t>;
         template <typename T>
-        struct Register : public utils::AutoRegister<Behavior, T> {
-            Register(const std::string& name) : utils::AutoRegister<Behavior, T>(name) {}
+        struct Register : public utils::AutoRegister<Behavior, T, Behavior::controller_ptr_t> {
+            Register(const std::string& name) : utils::AutoRegister<Behavior, T, Behavior::controller_ptr_t>(name) {}
         };
 
     } // namespace behaviors
