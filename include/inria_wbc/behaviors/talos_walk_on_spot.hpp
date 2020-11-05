@@ -13,7 +13,7 @@ namespace inria_wbc {
 
         class WalkOnSpot : public Behavior {
         public:
-            WalkOnSpot(const inria_wbc::controllers::TalosBaseController::Params& params);
+            WalkOnSpot(const controllers::Controller::Params& params);
             WalkOnSpot() = delete;
             WalkOnSpot(const WalkOnSpot& otehr) = default;
             bool update() override;

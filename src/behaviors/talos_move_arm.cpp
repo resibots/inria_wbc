@@ -4,7 +4,7 @@ namespace inria_wbc {
     namespace behaviors {
         static Register<TalosMoveArm> __talos_move_arm("talos-move-arm");
 
-        TalosMoveArm::TalosMoveArm(const inria_wbc::controllers::TalosBaseController::Params& params) : Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
+        TalosMoveArm::TalosMoveArm(const controllers::Controller::Params& params) : Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
         {
 
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////

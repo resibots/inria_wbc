@@ -16,8 +16,6 @@
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
 
-// forward declaration to speed-up compilation
-
 namespace inria_wbc {
     namespace controllers {
         class Controller {

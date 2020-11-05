@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
 
-    inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
+    inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
         "../etc/talos_configurations.srdf",
         sot_config_path,
         "",

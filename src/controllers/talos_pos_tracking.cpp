@@ -27,7 +27,7 @@ using namespace tsid::math;
 namespace inria_wbc {
     namespace controllers {
 
-        TalosPosTracking::TalosPosTracking(const Params& params) : TalosBaseController(params)
+        TalosPosTracking::TalosPosTracking(const Params& params) : Controller(params)
         {
             if (!params.sot_config_path.empty())
                 parse_configuration_yaml(params.sot_config_path);

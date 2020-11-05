@@ -6,6 +6,7 @@
 #include <pinocchio/parsers/urdf.hpp>
 
 #include <Eigen/Core>
+#include <chrono>
 #include <iomanip>
 #include <map>
 #include <memory>
@@ -36,8 +37,7 @@
 #include <tsid/utils/statistics.hpp>
 #include <tsid/utils/stop-watch.hpp>
 
-#include "inria_wbc/controllers/talos_base_controller.hpp"
-#include <chrono>
+#include "inria_wbc/controllers/controller.hpp"
 
 using namespace tsid;
 using namespace tsid::trajectories;

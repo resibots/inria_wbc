@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
     std::string sot_config_path = vm["conf"].as<std::string>();
-    inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
+    inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
         "../etc/talos_configurations.srdf",
         sot_config_path,
         "",

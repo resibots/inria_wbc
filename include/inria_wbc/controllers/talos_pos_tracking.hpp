@@ -37,7 +37,7 @@ namespace inria_wbc {
             static constexpr char torso_frame_name[] = "torso_2_link"; // left foot joint name
         }; // namespace cst
 
-        class TalosPosTracking : public TalosBaseController {
+        class TalosPosTracking : public Controller {
         public:
             TalosPosTracking(const Params& params);
             TalosPosTracking(const TalosPosTracking& other) = delete;
