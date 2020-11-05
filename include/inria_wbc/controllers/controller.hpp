@@ -9,10 +9,20 @@
 
 #include <pinocchio/spatial/se3.hpp>
 
+#include <tsid/contacts/contact-6d.hpp>
+#include <tsid/contacts/contact-point.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/fwd.hpp>
+#include <tsid/math/utils.hpp>
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
+#include <tsid/tasks/task-actuation-bounds.hpp>
+#include <tsid/tasks/task-com-equality.hpp>
+#include <tsid/tasks/task-joint-bounds.hpp>
+#include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
+#include <tsid/tasks/task-joint-posture.hpp>
+#include <tsid/tasks/task-se3-equality.hpp>
+#include <tsid/trajectories/trajectory-base.hpp>
 
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
@@ -79,6 +89,14 @@ namespace inria_wbc {
         protected:
             void _reset();
 
+            std::shared_ptr<tsid::tasks::TaskComEquality> make_com_task(const std::string& name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskJointPosture> make_posture_task(const std::string& name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_torso_task(const std::string& name, const std::string& frame_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_floatingb_task(const std::string& name, const std::string& joint_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_hand_task(const std::string& name, const std::string& joint_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_foot_task(const std::string& name, const std::string& joint_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> make_bound_task(const std::string& name) const;
+
             Params params_;
             bool verbose_;
             double t_;
@@ -107,7 +125,24 @@ namespace inria_wbc {
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
         };
 
-        inria_wbc::controllers::Controller::Params parse_params(YAML::Node config);
+        Controller::Params parse_params(YAML::Node config);
+
+        inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
+        {
+            tsid::trajectories::TrajectorySample sample;
+            sample.pos = ref;
+            sample.vel.setZero(ref.size());
+            sample.acc.setZero(ref.size());
+            return sample;
+        }
+
+        inline tsid::trajectories::TrajectorySample to_sample(const pinocchio::SE3& ref)
+        {
+            tsid::trajectories::TrajectorySample sample;
+            sample.resize(12, 6);
+            tsid::math::SE3ToVector(ref, sample.pos);
+            return sample;
+        }
 
         using Factory = utils::Factory<Controller, Controller::Params>;
         template <typename T>

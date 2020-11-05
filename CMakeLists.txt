@@ -26,18 +26,19 @@ list(APPEND DEPENDENCIES_INCS
 )
 
 set(INRIA_WBC_HEADERS
-                            include/inria_wbc/controllers/talos_base_controller.hpp
+                            include/inria_wbc/controllers/controller.hpp
                             include/inria_wbc/controllers/talos_pos_tracking.hpp
-                            include/inria_wbc/behaviors/factory.hpp
                             include/inria_wbc/behaviors/talos_squat.hpp
                             include/inria_wbc/behaviors/talos_move_arm.hpp
                             include/inria_wbc/behaviors/talos_walk_on_spot.hpp
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
+                            include/inria_wbc/utils/factory.hpp
+
 )
 
 set(INRIA_WBC_SOURCES
-                            src/controllers/talos_base_controller.cpp
+                            src/controllers/controller.cpp
                             src/controllers/talos_pos_tracking.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp

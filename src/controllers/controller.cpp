@@ -121,6 +121,8 @@ namespace inria_wbc {
         {
             //Compute the current data from the current position and solve to find next position
             assert(tsid_);
+            assert(robot_);
+            assert(solver_);
 
             const HQPData& HQPData = tsid_->computeProblemData(t_, q_tsid_, v_tsid_);
 
@@ -243,6 +245,116 @@ namespace inria_wbc {
                 masses.push_back(robot_->model().inertias[i].mass());
             }
             return masses;
+        }
+
+        std::shared_ptr<tasks::TaskComEquality> Controller::make_com_task(const std::string& name, double kp) const
+        {
+            assert(tsid_);
+            assert(robot_);
+            auto task = std::make_shared<tasks::TaskComEquality>(name, *robot_);
+            task->Kp(kp * Vector::Ones(3));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            task->setReference(to_sample(robot_->com(tsid_->data())));
+            return task;
+        }
+
+        std::shared_ptr<tasks::TaskJointPosture> Controller::make_posture_task(const std::string& name, double kp) const
+        {
+            assert(tsid_);
+            assert(robot_);
+            auto task = std::make_shared<tasks::TaskJointPosture>(name, *robot_);
+            task->Kp(kp * Vector::Ones(robot_->nv() - 6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_post = Vector::Ones(robot_->nv() - 6);
+            // for(int i =0; i < 11; i++){
+            //   mask_post[i] = 0;
+            // }
+            task->setMask(mask_post);
+            task->setReference(to_sample(q_tsid_.tail(robot_->na())));
+            return task;
+        }
+
+        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_torso_task(const std::string& name, const std::string& frame_name, double kp) const
+        {
+            assert(tsid_);
+            assert(robot_);
+            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, frame_name);
+            task->Kp(kp * Vector::Ones(6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_torso = Vector::Zero(6);
+            mask_torso[4] = 1; // only constrain the pitch of the body
+            mask_torso[3] = 1; // only constrain the roll of the body
+            task->setMask(mask_torso);
+            auto ref = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
+            auto sample = to_sample(ref);
+            task->setReference(sample);
+            return task;
+        }
+
+        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_floatingb_task(const std::string& name, const std::string& joint_name, double kp) const
+        {
+            assert(tsid_);
+            assert(robot_);
+            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
+            task->Kp(kp * Vector::Ones(6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_floatingb = Vector::Ones(6);
+            for (int i = 0; i < 3; i++) {
+                mask_floatingb[i] = 0; // DO NOT CONSTRAIN floatingb POSITION IN SOT
+            }
+            task->setMask(mask_floatingb);
+            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            auto sample = to_sample(ref);
+            task->setReference(sample);
+            return task;
+        }
+
+        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_hand_task(const std::string& name, const std::string& joint_name, double kp) const
+        {
+            assert(tsid_);
+            assert(robot_);
+            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
+            task->Kp(kp * Vector::Ones(6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_lh = Vector::Ones(6);
+            for (int i = 3; i < 6; i++) {
+                mask_lh[i] = 0; // DO NOT CONSTRAIN HAND ORIENTATION IN SOT
+            }
+            task->setMask(mask_lh);
+            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            auto sample = to_sample(ref);
+            task->setReference(sample);
+            return task;
+        }
+
+        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_foot_task(const std::string& name, const std::string& joint_name, double kp) const
+        {
+            assert(tsid_);
+            assert(robot_);
+            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
+            task->Kp(kp * Vector::Ones(6));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector maskLf = Vector::Ones(6);
+            task->setMask(maskLf);
+            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            auto sample = to_sample(ref);
+            task->setReference(sample);
+            return task;
+        }
+
+        std::shared_ptr<tasks::TaskJointPosVelAccBounds> Controller::make_bound_task(const std::string& name) const
+        {
+            assert(tsid_);
+            assert(robot_);
+            auto task = std::make_shared<tasks::TaskJointPosVelAccBounds>(name, *robot_, dt_, verbose_);
+            auto dq_max = robot_->model().velocityLimit.tail(robot_->na());
+            auto ddq_max = dq_max / dt_;
+            task->setVelocityBounds(dq_max);
+            task->setAccelerationBounds(ddq_max);
+            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
+            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
+            task->setPositionBounds(q_lb, q_ub);
+            return task;
         }
 
         inria_wbc::controllers::Controller::Params parse_params(YAML::Node config)
