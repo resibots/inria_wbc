@@ -56,10 +56,9 @@ namespace inria_wbc {
             virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
 
         protected:
-            void parse_configuration_yaml(const std::string& sot_config_path);
-            void set_stack_configuration();
-            void init_references();
-            void set_default_opt_params(std::map<std::string, double>& p);
+            virtual void parse_configuration_yaml(const std::string& sot_config_path);
+            virtual void set_stack_configuration();
+            virtual void set_default_opt_params(std::map<std::string, double>& p);
 
             std::shared_ptr<tsid::contacts::Contact6d> make_contact_task(const std::string& name, const std::string frame_name, double kp) const;
             std::shared_ptr<tsid::tasks::TaskComEquality> make_com_task(const std::string& name, double kp) const;
