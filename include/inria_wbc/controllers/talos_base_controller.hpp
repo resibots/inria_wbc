@@ -33,6 +33,7 @@ namespace inria_wbc {
                 std::vector<std::string> mimic_dof_names;
                 opt_params_t opt_params; // parameters that can be optimized
             };
+            using params_t = Params;
 
             TalosBaseController(const Params& params);
             TalosBaseController(const TalosBaseController&) = delete;

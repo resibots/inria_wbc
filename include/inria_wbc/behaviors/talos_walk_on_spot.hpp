@@ -4,7 +4,7 @@
 #include <iostream>
 #include <signal.h>
 
-#include <inria_wbc/behaviors/factory.hpp>
+#include <inria_wbc/behaviors/behavior.hpp>
 #include <inria_wbc/controllers/talos_pos_tracking.hpp>
 #include <inria_wbc/utils/trajectory_handler.hpp>
 

@@ -11,7 +11,7 @@
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
 
-#include "inria_wbc/behaviors/factory.hpp"
+#include "inria_wbc/behaviors/behavior.hpp"
 
 void evaluate_cop(const Eigen::Vector6d& lf_torque_force, const Eigen::Vector6d& rf_torque_force)
 {

@@ -14,7 +14,7 @@
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
 
-#include "inria_wbc/behaviors/factory.hpp"
+#include "inria_wbc/behaviors/behavior.hpp"
 
 Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos)
 {

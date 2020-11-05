@@ -4,7 +4,7 @@
 namespace inria_wbc {
     namespace behaviors {
 
-        static AutoRegister<WalkOnSpot> __talos_walk_on_spot("walk-on-spot");
+        static Register<WalkOnSpot> __talos_walk_on_spot("walk-on-spot");
 
         WalkOnSpot::WalkOnSpot(const inria_wbc::controllers::TalosBaseController::Params& params) : Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
         {

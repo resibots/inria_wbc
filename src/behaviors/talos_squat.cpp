@@ -3,7 +3,7 @@
 namespace inria_wbc {
     namespace behaviors {
 
-        static AutoRegister<TalosSquat> __talos_squat("talos-squat");
+        static Register<TalosSquat> __talos_squat("talos-squat");
 
         TalosSquat::TalosSquat(const inria_wbc::controllers::TalosBaseController::Params& params) : Behavior(std::make_shared<inria_wbc::controllers::TalosPosTracking>(params))
         {
