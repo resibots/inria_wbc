@@ -244,43 +244,54 @@ namespace inria_wbc {
 
             ////////////////////Compute Tasks, Bounds and Contacts ///////////////////////
             contactRF_ = make_contact_task("contact_rfoot", cst::rf_joint_name, p.at("kp_contact"));
-            tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
+            if (p.at("w_forceRef_feet") > 0)
+                tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
 
             contactLF_ = make_contact_task("contact_lfoot", cst::lf_joint_name, p.at("kp_contact"));
-            tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
+            if (p.at("w_forceRef_feet") > 0)
+                tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
 
             com_task_ = make_com_task("com", p.at("kp_com"));
-            tsid_->addMotionTask(*com_task_, p.at("w_com"), 1);
+            if (p.at("w_com") > 0)
+                tsid_->addMotionTask(*com_task_, p.at("w_com"), 1);
 
             posture_task_ = make_posture_task("posture", p.at("kp_posture"));
-            tsid_->addMotionTask(*posture_task_, p.at("w_posture"), 1);
+            if (p.at("w_posture") > 0)
+                tsid_->addMotionTask(*posture_task_, p.at("w_posture"), 1);
+
+            bounds_task_ = make_bound_task("task-posVelAcc-bounds");
+            if (p.at("w_velocity") > 0)
+                tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0);
 
             auto vert_torso_task = make_torso_task("torso", cst::torso_frame_name, p.at("kp_torso"));
-            tsid_->addMotionTask(*vert_torso_task, p.at("w_torso"), 1);
+            if (p.at("w_torso") > 0)
+                tsid_->addMotionTask(*vert_torso_task, p.at("w_torso"), 1);
             se3_tasks_[vert_torso_task->name()] = vert_torso_task;
 
             auto floatingb_task = make_floatingb_task("floatingb", fb_joint_name_, p.at("kp_floatingb"));
-            tsid_->addMotionTask(*floatingb_task, p.at("w_floatingb"), 1);
+            if (p.at("w_floatingb") > 0)
+                tsid_->addMotionTask(*floatingb_task, p.at("w_floatingb"), 1);
             se3_tasks_[floatingb_task->name()] = floatingb_task;
 
             auto lh_task = make_hand_task("lh", cst::lh_joint_name, p.at("kp_lh"));
-            tsid_->addMotionTask(*lh_task, p.at("w_lh"), 1);
+            if (p.at("w_lh") > 0)
+                tsid_->addMotionTask(*lh_task, p.at("w_lh"), 1);
             se3_tasks_[lh_task->name()] = lh_task;
 
             auto rh_task = make_hand_task("rh", cst::rh_joint_name, p.at("kp_rh"));
-            tsid_->addMotionTask(*rh_task, p.at("w_rh"), 1);
+            if (p.at("w_rh") > 0)
+                tsid_->addMotionTask(*rh_task, p.at("w_rh"), 1);
             se3_tasks_[rh_task->name()] = rh_task;
 
             auto lf_task = make_foot_task("lf", cst::lf_joint_name, p.at("kp_lf"));
-            tsid_->addMotionTask(*lf_task, p.at("w_lf"), 1);
+            if (p.at("w_lf") > 0)
+                tsid_->addMotionTask(*lf_task, p.at("w_lf"), 1);
             se3_tasks_[lf_task->name()] = lf_task;
 
             auto rf_task = make_foot_task("rf", cst::rf_joint_name, p.at("kp_rf"));
-            tsid_->addMotionTask(*rf_task, p.at("w_rf"), 1);
+            if (p.at("w_rf") > 0)
+                tsid_->addMotionTask(*rf_task, p.at("w_rf"), 1);
             se3_tasks_[rf_task->name()] = rf_task;
-
-            bounds_task_ = make_bound_task("task-posVelAcc-bounds");
-            tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0); //add pos vel acc bounds
         }
 
         pinocchio::SE3 TalosPosTracking::get_se3_ref(const std::string& task_name)
