@@ -43,8 +43,6 @@ namespace inria_wbc {
 
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
-            pinocchio::SE3 get_RF_SE3();
-            pinocchio::SE3 get_LF_SE3();
 
             virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
 

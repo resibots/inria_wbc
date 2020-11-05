@@ -1,7 +1,6 @@
 #include "inria_wbc/behaviors/talos_walk_on_spot.hpp"
 #include <chrono>
 
-//#define LOG_WALK_ON_SPOT
 namespace inria_wbc {
     namespace behaviors {
 
@@ -40,10 +39,10 @@ namespace inria_wbc {
             };
             // set the waypoints for the feet
             Eigen::VectorXd high = (Eigen::VectorXd(3) << 0, step_height_, 0).finished();
-            auto lf_low = controller->get_LF_SE3();
+            auto lf_low = controller->get_se3_ref("lf");
             auto lf_high = translate_up(lf_low, step_height_);
 
-            auto rf_low = controller->get_RF_SE3();
+            auto rf_low = controller->get_se3_ref("rf");
             auto rf_high = translate_up(rf_low, step_height_);
 
             // set the waypoints for the CoM : lf/rf but same height
@@ -126,28 +125,6 @@ namespace inria_wbc {
             auto t2_traj = std::chrono::high_resolution_clock::now();
             double step_traj = std::chrono::duration_cast<std::chrono::microseconds>(t2_traj - t1_traj).count() / 1000.0;
 
-#ifdef LOG_WALK_ON_SPOT
-            {
-                static std::ofstream ofs_com("com.dat");
-                static std::ofstream ofs_com_ref("com_ref.dat");
-                static std::ofstream ofs_lf("lf.dat");
-                static std::ofstream ofs_lf_ref("lf_ref.dat");
-                static std::ofstream ofs_rf("rf.dat");
-                static std::ofstream ofs_rf_ref("rf_ref.dat");
-                static std::ofstream ofs_time_traj("time_traj.dat");
-
-                ofs_com << controller->get_pinocchio_com().transpose() << std::endl;
-                ofs_com_ref << _last_com.transpose() << std::endl;
-
-                ofs_lf << controller->get_LF_SE3().translation().transpose() << std::endl;
-                ofs_lf_ref << _last_lf.translation().transpose() << std::endl;
-
-                ofs_rf << controller->get_RF_SE3().translation().transpose() << std::endl;
-                ofs_rf_ref << _last_rf.translation().transpose() << std::endl;
-
-                ofs_time_traj << step_traj << std::endl;
-            }
-#endif
             if (controller_->solve()) {
                 time_++;
                 if (time_ == _com_trajs[_current_traj].size()) {
