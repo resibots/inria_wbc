@@ -240,7 +240,6 @@ namespace inria_wbc {
             ////////////////////Compute Problem Data at init /////////////////////////////
             const uint nv = robot_->nv();
             tsid_->computeProblemData(dt_, q_tsid_, Vector::Zero(nv));
-            const pinocchio::Data& data = tsid_->data();
 
             ////////////////////Compute Tasks, Bounds and Contacts ///////////////////////
             contactRF_ = make_contact_task("contact_rfoot", cst::rf_joint_name, p.at("kp_contact"));

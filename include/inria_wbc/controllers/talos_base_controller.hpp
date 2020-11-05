@@ -129,10 +129,13 @@ namespace inria_wbc {
             std::vector<std::string> tsid_joint_names_; //contain floating base and mimics
             std::vector<int> non_mimic_indexes_;
 
+            //---- TSID conventions for the floating base: quaternion
             tsid::math::Vector q_tsid_; // tsid joint positions
             tsid::math::Vector v_tsid_; // tsid joint velocities
             tsid::math::Vector a_tsid_; // tsid joint accelerations
             tsid::math::Vector tau_tsid_; // tsid joint torques
+
+            //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart
             Eigen::VectorXd q_; // tsid joint positions resized for dart
             Eigen::VectorXd dq_; // tsid joint velocities resized for dart
@@ -142,14 +145,6 @@ namespace inria_wbc {
             std::shared_ptr<tsid::robots::RobotWrapper> robot_;
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
-
-            // limits (position, velocity, acceleration)
-            tsid::math::Vector q_lb_; // lower position bound
-            tsid::math::Vector q_ub_; // upper position bound
-            tsid::math::Vector dq_max_; // max velocity bound
-            tsid::math::Vector ddq_max_; // max acceleration bound
-
-            std::unordered_map<std::string, boost::variant<TaskTrajReferenceSE3, TaskTrajReferenceVector3>> task_traj_map_;
         };
 
         inria_wbc::controllers::TalosBaseController::Params parse_params(YAML::Node config);

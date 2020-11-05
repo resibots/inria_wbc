@@ -70,7 +70,7 @@ namespace inria_wbc {
             _reset();
         }
 
-        // reset everything (useful when cloning)
+        // reset everything (called from the constructor)
         void TalosBaseController::_reset()
         {
             dt_ = params_.dt;
@@ -83,22 +83,12 @@ namespace inria_wbc {
             v_tsid_ = Vector::Zero(ndofs);
             a_tsid_ = Vector::Zero(ndofs);
             tau_tsid_ = Vector::Zero(nactuated);
-            q_lb_ = Vector::Zero(nactuated);
-            q_ub_ = Vector::Zero(nactuated);
-            dq_max_ = Vector::Zero(nactuated);
-            ddq_max_ = Vector::Zero(nactuated);
 
             q0_.resize(ndofs);
-            q_.resize(ndofs);
-            dq_.resize(ndofs);
-            ddq_.resize(ndofs);
-            tau_.resize(ndofs);
-
-            //q0_ is set with the stack from q_tsid
-            q_.setZero(q_.size());
-            dq_.setZero(dq_.size());
-            ddq_.setZero(ddq_.size());
-            tau_.setZero(tau_.size());
+            q_ = Vector::Zero(ndofs);
+            dq_ = Vector::Zero(ndofs);
+            ddq_ = Vector::Zero(ndofs);
+            tau_ = Vector::Zero(ndofs);
 
             tsid_joint_names_ = all_dofs(false);
             non_mimic_indexes_ = get_non_mimics_indexes();
@@ -222,42 +212,27 @@ namespace inria_wbc {
             std::vector<std::string> all_dofs = floating_base_dofs();
             std::vector<std::string> control_dofs = controllable_dofs(filter_mimics);
             all_dofs.insert(all_dofs.end(), control_dofs.begin(), control_dofs.end());
-            if (filter_mimics)
-                return remove_intersection(all_dofs, mimic_dof_names_);
-            else
-                return all_dofs;
+            return filter_mimics ? remove_intersection(all_dofs, mimic_dof_names_) : all_dofs;
         }
 
         Eigen::VectorXd TalosBaseController::ddq(bool filter_mimics) const
         {
-            if (filter_mimics)
-                return slice_vec(ddq_, non_mimic_indexes_);
-            else
-                return ddq_;
+            return filter_mimics ? slice_vec(ddq_, non_mimic_indexes_) : ddq_;
         }
 
         Eigen::VectorXd TalosBaseController::dq(bool filter_mimics) const
         {
-            if (filter_mimics)
-                return slice_vec(dq_, non_mimic_indexes_);
-            else
-                return dq_;
+            return filter_mimics ? slice_vec(dq_, non_mimic_indexes_) : dq_;
         }
 
         Eigen::VectorXd TalosBaseController::q(bool filter_mimics) const
         {
-            if (filter_mimics)
-                return slice_vec(q_, non_mimic_indexes_);
-            else
-                return q_;
+            return filter_mimics ? slice_vec(q_, non_mimic_indexes_) : q_;
         }
 
         Eigen::VectorXd TalosBaseController::q0(bool filter_mimics) const
         {
-            if (filter_mimics)
-                return slice_vec(q0_, non_mimic_indexes_);
-            else
-                return q0_;
+            return filter_mimics ? slice_vec(q0_, non_mimic_indexes_) : q0_;
         }
 
         std::vector<double> TalosBaseController::pinocchio_model_masses() const
