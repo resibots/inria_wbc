@@ -9,44 +9,14 @@
 
 #include <pinocchio/spatial/se3.hpp>
 
+#include <inria_wbc/utils/utils.hpp>
+
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/fwd.hpp>
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
-#include <tsid/tasks/task-com-equality.hpp>
-#include <tsid/tasks/task-se3-equality.hpp>
-#include <tsid/trajectories/trajectory-base.hpp>
-#include <tsid/trajectories/trajectory-euclidian.hpp>
-#include <tsid/trajectories/trajectory-se3.hpp>
-
-#include <inria_wbc/utils/utils.hpp>
 
 // forward declaration to speed-up compilation
-namespace tsid {
-    class InverseDynamicsFormulationAccForce;
-    namespace trajectories {
-        class TrajectoryBase;
-        class TrajectorySample;
-        class TrajectorySE3Constant;
-        class TrajectoryEuclidianConstant;
-    } // namespace trajectories
-    namespace contacts {
-        class Contact6d;
-    }
-
-    namespace solvers {
-        class SolverHQPBase;
-    }
-    namespace robots {
-        class RobotWrapper;
-    }
-    namespace tasks {
-        class TaskComEquality;
-        class TaskJointPosture;
-        class TaskSE3Equality;
-        class TaskJointPosVelAccBounds;
-    } // namespace tasks
-} // namespace tsid
 
 namespace inria_wbc {
     namespace controllers {

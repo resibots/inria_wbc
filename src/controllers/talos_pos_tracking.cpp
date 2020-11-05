@@ -12,23 +12,10 @@
 #include <memory>
 #include <utility>
 
-#include <tsid/contacts/contact-6d.hpp>
-#include <tsid/contacts/contact-point.hpp>
-#include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
-#include <tsid/math/utils.hpp>
-#include <tsid/robots/fwd.hpp>
-#include <tsid/robots/robot-wrapper.hpp>
 #include <tsid/solvers/solver-HQP-base.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
 #include <tsid/solvers/solver-HQP-factory.hxx>
 #include <tsid/solvers/utils.hpp>
-#include <tsid/tasks/task-actuation-bounds.hpp>
-#include <tsid/tasks/task-com-equality.hpp>
-#include <tsid/tasks/task-joint-bounds.hpp>
-#include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
-#include <tsid/tasks/task-joint-posture.hpp>
-#include <tsid/tasks/task-se3-equality.hpp>
-#include <tsid/trajectories/trajectory-base.hpp>
 #include <tsid/utils/statistics.hpp>
 #include <tsid/utils/stop-watch.hpp>
 
@@ -36,12 +23,7 @@
 
 using namespace tsid;
 using namespace tsid::math;
-using namespace tsid::contacts;
-using namespace tsid::tasks;
-using namespace tsid::solvers;
-using namespace tsid::robots;
-using namespace std;
-using namespace inria_wbc::utils;
+
 namespace inria_wbc {
     namespace controllers {
 
@@ -99,18 +81,18 @@ namespace inria_wbc {
                 YAML::Node config = YAML::LoadFile(sot_config_path);
                 for (auto& x : p)
                     if (params_.opt_params.find(x.first) == params_.opt_params.end())
-                        if (!parse(params_.opt_params[x.first], x.first, config, verbose_))
+                        if (!utils::parse(params_.opt_params[x.first], x.first, config, verbose_))
                             params_.opt_params[x.first] = p[x.first];
             }
         }
 
-        std::shared_ptr<tsid::contacts::Contact6d> TalosPosTracking::make_contact_task(const std::string& name, const std::string frame_name, double kp) const
+        std::shared_ptr<contacts::Contact6d> TalosPosTracking::make_contact_task(const std::string& name, const std::string frame_name, double kp) const
         {
             Matrix3x contact_points(3, 4);
             contact_points << -cst::lxn, -cst::lxn, cst::lxp, cst::lxp,
                 -cst::lyn, cst::lyp, -cst::lyn, cst::lyp,
                 cst::lz, cst::lz, cst::lz, cst::lz;
-            auto contact_task = std::make_shared<Contact6d>(name, *robot_, frame_name, contact_points, cst::contact_normal, cst::mu, cst::fMin, cst::fMax);
+            auto contact_task = std::make_shared<contacts::Contact6d>(name, *robot_, frame_name, contact_points, cst::contact_normal, cst::mu, cst::fMin, cst::fMax);
             contact_task->Kp(kp * Vector::Ones(6));
             contact_task->Kd(2.0 * contact_task->Kp().cwiseSqrt());
             auto contact_ref = robot_->position(tsid_->data(), robot_->model().getJointId(frame_name));
@@ -118,18 +100,18 @@ namespace inria_wbc {
             return contact_task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskComEquality> TalosPosTracking::make_com_task(const std::string& name, double kp) const
+        std::shared_ptr<tasks::TaskComEquality> TalosPosTracking::make_com_task(const std::string& name, double kp) const
         {
-            auto task = std::make_shared<TaskComEquality>(name, *robot_);
+            auto task = std::make_shared<tasks::TaskComEquality>(name, *robot_);
             task->Kp(kp * Vector::Ones(3));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             task->setReference(to_sample(robot_->com(tsid_->data())));
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskJointPosture> TalosPosTracking::make_posture_task(const std::string& name, double kp) const
+        std::shared_ptr<tasks::TaskJointPosture> TalosPosTracking::make_posture_task(const std::string& name, double kp) const
         {
-            auto task = std::make_shared<TaskJointPosture>(name, *robot_);
+            auto task = std::make_shared<tasks::TaskJointPosture>(name, *robot_);
             task->Kp(kp * Vector::Ones(robot_->nv() - 6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             Vector mask_post = Vector::Ones(robot_->nv() - 6);
@@ -141,9 +123,9 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_torso_task(const std::string& name, const std::string& frame_name, double kp) const
+        std::shared_ptr<tasks::TaskSE3Equality> TalosPosTracking::make_torso_task(const std::string& name, const std::string& frame_name, double kp) const
         {
-            auto task = std::make_shared<TaskSE3Equality>(name, *robot_, frame_name);
+            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, frame_name);
             task->Kp(kp * Vector::Ones(6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             Vector mask_torso = Vector::Zero(6);
@@ -156,9 +138,9 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_floatingb_task(const std::string& name, const std::string& joint_name, double kp) const
+        std::shared_ptr<tasks::TaskSE3Equality> TalosPosTracking::make_floatingb_task(const std::string& name, const std::string& joint_name, double kp) const
         {
-            auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
+            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
             task->Kp(kp * Vector::Ones(6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             Vector mask_floatingb = Vector::Ones(6);
@@ -172,9 +154,9 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_hand_task(const std::string& name, const std::string& joint_name, double kp) const
+        std::shared_ptr<tasks::TaskSE3Equality> TalosPosTracking::make_hand_task(const std::string& name, const std::string& joint_name, double kp) const
         {
-            auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
+            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
             task->Kp(kp * Vector::Ones(6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             Vector mask_lh = Vector::Ones(6);
@@ -188,9 +170,9 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tsid::tasks::TaskSE3Equality> TalosPosTracking::make_foot_task(const std::string& name, const std::string& joint_name, double kp) const
+        std::shared_ptr<tasks::TaskSE3Equality> TalosPosTracking::make_foot_task(const std::string& name, const std::string& joint_name, double kp) const
         {
-            auto task = std::make_shared<TaskSE3Equality>(name, *robot_, joint_name);
+            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
             task->Kp(kp * Vector::Ones(6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             Vector maskLf = Vector::Ones(6);
@@ -200,9 +182,9 @@ namespace inria_wbc {
             task->setReference(sample);
             return task;
         }
-        std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> TalosPosTracking::make_bound_task(const std::string& name) const
+        std::shared_ptr<tasks::TaskJointPosVelAccBounds> TalosPosTracking::make_bound_task(const std::string& name) const
         {
-            auto task = std::make_shared<TaskJointPosVelAccBounds>(name, *robot_, dt_, verbose_);
+            auto task = std::make_shared<tasks::TaskJointPosVelAccBounds>(name, *robot_, dt_, verbose_);
             auto dq_max = robot_->model().velocityLimit.tail(robot_->na());
             auto ddq_max = dq_max / dt_;
             task->setVelocityBounds(dq_max);
@@ -233,8 +215,8 @@ namespace inria_wbc {
             tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
 
             ////////////////////Create an HQP solver /////////////////////////////////////
-            using solver_t = std::shared_ptr<tsid::solvers::SolverHQPBase>;
-            solver_ = solver_t(SolverHQPFactory::createNewSolver(SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+            using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
+            solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
             solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
 
             ////////////////////Compute Problem Data at init /////////////////////////////
