@@ -64,15 +64,6 @@ namespace inria_wbc {
                 opt_params_t opt_params; // parameters that can be optimized
             };
 
-            template <typename TaskType, typename ReferenceType, typename TrajType>
-            struct TaskTrajReference {
-                std::shared_ptr<TaskType> task;
-                ReferenceType ref;
-                std::shared_ptr<TrajType> traj;
-            };
-            using TaskTrajReferenceSE3 = TaskTrajReference<tsid::tasks::TaskSE3Equality, pinocchio::SE3, tsid::trajectories::TrajectorySE3Constant>;
-            using TaskTrajReferenceVector3 = TaskTrajReference<tsid::tasks::TaskComEquality, tsid::math::Vector3, tsid::trajectories::TrajectoryEuclidianConstant>;
-
             TalosBaseController(const Params& params);
             TalosBaseController(const TalosBaseController&) = delete;
             TalosBaseController& operator=(const TalosBaseController& o) = delete;
