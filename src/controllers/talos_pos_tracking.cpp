@@ -159,27 +159,27 @@ namespace inria_wbc {
                 tsid_->addMotionTask(*vert_torso_task, p.at("w_torso"), 1);
             se3_tasks_[vert_torso_task->name()] = vert_torso_task;
 
-            auto floatingb_task = make_floatingb_task("floatingb", fb_joint_name_, p.at("kp_floatingb"));
+            auto floatingb_task = make_se3_task("floatingb", fb_joint_name_, p.at("kp_floatingb"), inria_wbc::mask::rpy);
             if (p.at("w_floatingb") > 0)
                 tsid_->addMotionTask(*floatingb_task, p.at("w_floatingb"), 1);
             se3_tasks_[floatingb_task->name()] = floatingb_task;
 
-            auto lh_task = make_hand_task("lh", cst::lh_joint_name, p.at("kp_lh"));
+            auto lh_task = make_se3_task("lh", cst::lh_joint_name, p.at("kp_lh"), inria_wbc::mask::xyz);
             if (p.at("w_lh") > 0)
                 tsid_->addMotionTask(*lh_task, p.at("w_lh"), 1);
             se3_tasks_[lh_task->name()] = lh_task;
 
-            auto rh_task = make_hand_task("rh", cst::rh_joint_name, p.at("kp_rh"));
+            auto rh_task = make_se3_task("rh", cst::rh_joint_name, p.at("kp_rh"), inria_wbc::mask::xyz);
             if (p.at("w_rh") > 0)
                 tsid_->addMotionTask(*rh_task, p.at("w_rh"), 1);
             se3_tasks_[rh_task->name()] = rh_task;
 
-            auto lf_task = make_foot_task("lf", cst::lf_joint_name, p.at("kp_lf"));
+            auto lf_task = make_se3_task("lf", cst::lf_joint_name, p.at("kp_lf"), inria_wbc::mask::all);
             if (p.at("w_lf") > 0)
                 tsid_->addMotionTask(*lf_task, p.at("w_lf"), 1);
             se3_tasks_[lf_task->name()] = lf_task;
 
-            auto rf_task = make_foot_task("rf", cst::rf_joint_name, p.at("kp_rf"));
+            auto rf_task = make_se3_task("rf", cst::rf_joint_name, p.at("kp_rf"), inria_wbc::mask::all);
             if (p.at("w_rf") > 0)
                 tsid_->addMotionTask(*rf_task, p.at("w_rf"), 1);
             se3_tasks_[rf_task->name()] = rf_task;

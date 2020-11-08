@@ -291,51 +291,14 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_floatingb_task(const std::string& name, const std::string& joint_name, double kp) const
+        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_se3_task(const std::string& name, const std::string& joint_name, double kp, const mask::mask6& mask) const
         {
             assert(tsid_);
             assert(robot_);
             auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
             task->Kp(kp * Vector::Ones(6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_floatingb = Vector::Ones(6);
-            for (int i = 0; i < 3; i++) {
-                mask_floatingb[i] = 0; // DO NOT CONSTRAIN floatingb POSITION IN SOT
-            }
-            task->setMask(mask_floatingb);
-            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
-            auto sample = to_sample(ref);
-            task->setReference(sample);
-            return task;
-        }
-
-        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_hand_task(const std::string& name, const std::string& joint_name, double kp) const
-        {
-            assert(tsid_);
-            assert(robot_);
-            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
-            task->Kp(kp * Vector::Ones(6));
-            task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_lh = Vector::Ones(6);
-            for (int i = 3; i < 6; i++) {
-                mask_lh[i] = 0; // DO NOT CONSTRAIN HAND ORIENTATION IN SOT
-            }
-            task->setMask(mask_lh);
-            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
-            auto sample = to_sample(ref);
-            task->setReference(sample);
-            return task;
-        }
-
-        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_foot_task(const std::string& name, const std::string& joint_name, double kp) const
-        {
-            assert(tsid_);
-            assert(robot_);
-            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
-            task->Kp(kp * Vector::Ones(6));
-            task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector maskLf = Vector::Ones(6);
-            task->setMask(maskLf);
+            task->setMask(mask.matrix());
             auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             auto sample = to_sample(ref);
             task->setReference(sample);
