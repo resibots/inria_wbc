@@ -154,7 +154,7 @@ namespace inria_wbc {
             if (p.at("w_velocity") > 0)
                 tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0);
 
-            auto vert_torso_task = make_torso_task("torso", cst::torso_frame_name, p.at("kp_torso"));
+            auto vert_torso_task = make_se3_frame_task("torso", cst::torso_frame_name, p.at("kp_torso"), mask::roll + mask::pitch);
             if (p.at("w_torso") > 0)
                 tsid_->addMotionTask(*vert_torso_task, p.at("w_torso"), 1);
             se3_tasks_[vert_torso_task->name()] = vert_torso_task;

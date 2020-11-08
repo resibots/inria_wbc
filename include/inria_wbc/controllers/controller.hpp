@@ -107,7 +107,7 @@ namespace inria_wbc {
 
             std::shared_ptr<tsid::tasks::TaskComEquality> make_com_task(const std::string& name, double kp) const;
             std::shared_ptr<tsid::tasks::TaskJointPosture> make_posture_task(const std::string& name, double kp) const;
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_torso_task(const std::string& name, const std::string& frame_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_se3_frame_task(const std::string& name, const std::string& frame_name, double kp, const mask::mask6& mask = mask::all) const;
             std::shared_ptr<tsid::tasks::TaskSE3Equality> make_se3_task(const std::string& name, const std::string& joint_name, double kp, const mask::mask6& mask = mask::all) const;
             std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> make_bound_task(const std::string& name) const;
 
