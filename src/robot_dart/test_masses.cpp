@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 
     std::string controller_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
+    inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", true);
 
     auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
 

@@ -82,7 +82,7 @@ namespace inria_wbc {
                 YAML::Node config = YAML::LoadFile(sot_config_path);
                 for (auto& x : p)
                     if (params_.opt_params.find(x.first) == params_.opt_params.end())
-                        if (!utils::parse(params_.opt_params[x.first], x.first, config, verbose_))
+                        if (!utils::parse(params_.opt_params[x.first], x.first, config, "CONTROLLER", verbose_))
                             params_.opt_params[x.first] = p[x.first];
             }
         }

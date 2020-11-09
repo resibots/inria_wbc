@@ -26,8 +26,8 @@ BOOST_AUTO_TEST_CASE(running)
 
         std::string behavior_name, controller_name;
         YAML::Node config = YAML::LoadFile(sot_config_path);
-        inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
-        inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
+        inria_wbc::utils::parse(behavior_name, "name", config, "BEHAVIOR", true);
+        inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", true);
 
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
@@ -57,8 +57,8 @@ BOOST_AUTO_TEST_CASE(set_opt_params)
 
         std::string behavior_name, controller_name;
         YAML::Node config = YAML::LoadFile(sot_config_path);
-        inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
-        inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
+        inria_wbc::utils::parse(behavior_name, "name", config, "BEHAVIOR", true);
+        inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", true);
 
         for (size_t i = 0; i < 10; ++i) {
             auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);

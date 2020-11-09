@@ -12,8 +12,8 @@ namespace inria_wbc {
             auto com_init = std::static_pointer_cast<controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
 
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            utils::parse(trajectory_duration_, "trajectory_duration", config, false, "BEHAVIOR");
-            utils::parse(motion_size_, "motion_size", config, false, "BEHAVIOR");
+            utils::parse(trajectory_duration_, "trajectory_duration", config, "BEHAVIOR", controller_->params().verbose);
+            utils::parse(motion_size_, "motion_size", config, "BEHAVIOR", controller_->params().verbose);
 
             auto com_final = com_init;
             com_final(2) -= motion_size_;

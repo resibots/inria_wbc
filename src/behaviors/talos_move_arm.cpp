@@ -12,8 +12,8 @@ namespace inria_wbc {
             auto lh_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("lh");
 
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            inria_wbc::utils::parse(trajectory_duration_, "trajectory_duration", config, false, "BEHAVIOR");
-            inria_wbc::utils::parse(motion_size_, "motion_size", config, false, "BEHAVIOR");
+            inria_wbc::utils::parse(trajectory_duration_, "trajectory_duration", config, "BEHAVIOR", controller_->params().verbose);
+            inria_wbc::utils::parse(motion_size_, "motion_size", config, "BEHAVIOR", controller_->params().verbose);
 
             auto lh_final = lh_init;
             lh_final.translation()(2) += motion_size_;

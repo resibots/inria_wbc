@@ -165,8 +165,8 @@ int main(int argc, char* argv[])
 
     std::string behavior_name, controller_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
-    inria_wbc::utils::parse(controller_name, "name", config, false, "CONTROLLER");
+    inria_wbc::utils::parse(behavior_name, "name", config, "BEHAVIOR", verbose);
+    inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", verbose);
 
     auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
     auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);

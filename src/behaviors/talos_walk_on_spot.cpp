@@ -9,9 +9,9 @@ namespace inria_wbc {
         WalkOnSpot::WalkOnSpot(const controller_ptr_t& controller) : Behavior(controller)
         {
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            inria_wbc::utils::parse(traj_foot_duration_, "traj_foot_duration", config, false, "BEHAVIOR"); // TODO use the verbose
-            inria_wbc::utils::parse(traj_com_duration_, "traj_com_duration", config, false, "BEHAVIOR");
-            inria_wbc::utils::parse(step_height_, "step_height", config, false, "BEHAVIOR");
+            inria_wbc::utils::parse(traj_foot_duration_, "traj_foot_duration", config, "BEHAVIOR", controller_->params().verbose); // TODO use the verbose
+            inria_wbc::utils::parse(traj_com_duration_, "traj_com_duration", config, "BEHAVIOR", controller_->params().verbose);
+            inria_wbc::utils::parse(step_height_, "step_height", config, "BEHAVIOR", controller_->params().verbose);
 
             dt_ = controller_->dt();
 

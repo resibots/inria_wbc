@@ -326,13 +326,13 @@ namespace inria_wbc {
             float dt = 0.001;
             bool verbose = false;
             std::vector<std::string> mimic_dof_names = {};
-            parse(urdf_path, "urdf_path", config, false, "PARAMS");
-            parse(srdf_path, "srdf_path", config, false, "PARAMS");
-            parse(sot_config_path, "sot_config_path", config, false, "PARAMS");
-            parse(floating_base_joint_name, "floating_base_joint_name", config, false, "PARAMS");
-            parse(dt, "dt", config, false, "PARAMS");
-            parse(verbose, "verbose", config, false, "PARAMS");
-            parse(mimic_dof_names, "mimic_dof_names", config, false, "PARAMS");
+            parse(urdf_path, "urdf_path", config, "PARAMS", verbose);
+            parse(srdf_path, "srdf_path", config, "PARAMS", verbose);
+            parse(sot_config_path, "sot_config_path", config, "PARAMS", verbose);
+            parse(floating_base_joint_name, "floating_base_joint_name", config, "PARAMS", verbose);
+            parse(dt, "dt", config, "PARAMS", verbose);
+            parse(verbose, "verbose", config, "PARAMS", verbose);
+            parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
 
             Controller::Params params = {urdf_path,
                 srdf_path,
