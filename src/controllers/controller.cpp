@@ -274,7 +274,7 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_se3_frame_task(const std::string& name, const std::string& frame_name, double kp, const mask::mask6& mask) const
+        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_se3_frame_task(const std::string& name, const std::string& frame_name, double kp, const se3_mask::mask6& mask) const
         {
             assert(tsid_);
             assert(robot_);
@@ -288,7 +288,7 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_se3_task(const std::string& name, const std::string& joint_name, double kp, const mask::mask6& mask) const
+        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_se3_joint_task(const std::string& name, const std::string& joint_name, double kp, const se3_mask::mask6& mask) const
         {
             assert(tsid_);
             assert(robot_);
