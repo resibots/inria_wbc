@@ -33,15 +33,15 @@ namespace inria_wbc {
     {
         using mask6 = Eigen::Array<double, 6, 1>;
 
-        const mask6 all = (mask6() << 1, 1, 1, 1, 1, 1).finished();
-        const mask6 xyz = (mask6() << 1, 1, 1, 0, 0, 0).finished();
-        const mask6 rpy = (mask6() << 0, 0, 0, 1, 1, 1).finished();
-        const mask6 x   = (mask6() << 1, 0, 0, 0, 0, 0).finished();
-        const mask6 y   = (mask6() << 0, 1, 0, 0, 0, 0).finished();
-        const mask6 z   = (mask6() << 0, 0, 1, 0, 0, 0).finished();
-        const mask6 roll  = (mask6() << 0, 0, 0, 1, 0, 0).finished();
-        const mask6 pitch = (mask6() << 0, 0, 0, 0, 1, 0).finished();
-        const mask6 yaw   = (mask6() << 0, 0, 0, 0, 0, 1).finished();
+        static const mask6 all = (mask6() << 1, 1, 1, 1, 1, 1).finished();
+        static const mask6 xyz = (mask6() << 1, 1, 1, 0, 0, 0).finished();
+        static const mask6 rpy = (mask6() << 0, 0, 0, 1, 1, 1).finished();
+        static const mask6 x   = (mask6() << 1, 0, 0, 0, 0, 0).finished();
+        static const mask6 y   = (mask6() << 0, 1, 0, 0, 0, 0).finished();
+        static const mask6 z   = (mask6() << 0, 0, 1, 0, 0, 0).finished();
+        static const mask6 roll  = (mask6() << 0, 0, 0, 1, 0, 0).finished();
+        static const mask6 pitch = (mask6() << 0, 0, 0, 0, 1, 0).finished();
+        static const mask6 yaw   = (mask6() << 0, 0, 0, 0, 0, 1).finished();
     }
 
     namespace controllers {
