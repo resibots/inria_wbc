@@ -28,6 +28,22 @@
 #include <inria_wbc/utils/utils.hpp>
 
 namespace inria_wbc {
+
+    namespace se3_mask
+    {
+        using mask6 = Eigen::Array<double, 6, 1>;
+
+        static const mask6 all = (mask6() << 1, 1, 1, 1, 1, 1).finished();
+        static const mask6 xyz = (mask6() << 1, 1, 1, 0, 0, 0).finished();
+        static const mask6 rpy = (mask6() << 0, 0, 0, 1, 1, 1).finished();
+        static const mask6 x   = (mask6() << 1, 0, 0, 0, 0, 0).finished();
+        static const mask6 y   = (mask6() << 0, 1, 0, 0, 0, 0).finished();
+        static const mask6 z   = (mask6() << 0, 0, 1, 0, 0, 0).finished();
+        static const mask6 roll  = (mask6() << 0, 0, 0, 1, 0, 0).finished();
+        static const mask6 pitch = (mask6() << 0, 0, 0, 0, 1, 0).finished();
+        static const mask6 yaw   = (mask6() << 0, 0, 0, 0, 0, 1).finished();
+    }
+
     namespace controllers {
         class Controller {
         public:
@@ -91,10 +107,8 @@ namespace inria_wbc {
 
             std::shared_ptr<tsid::tasks::TaskComEquality> make_com_task(const std::string& name, double kp) const;
             std::shared_ptr<tsid::tasks::TaskJointPosture> make_posture_task(const std::string& name, double kp) const;
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_torso_task(const std::string& name, const std::string& frame_name, double kp) const;
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_floatingb_task(const std::string& name, const std::string& joint_name, double kp) const;
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_hand_task(const std::string& name, const std::string& joint_name, double kp) const;
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_foot_task(const std::string& name, const std::string& joint_name, double kp) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_se3_frame_task(const std::string& name, const std::string& frame_name, double kp, const se3_mask::mask6& mask = se3_mask::all) const;
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_se3_joint_task(const std::string& name, const std::string& joint_name, double kp, const se3_mask::mask6& mask = se3_mask::all) const;
             std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> make_bound_task(const std::string& name) const;
 
             Params params_;
