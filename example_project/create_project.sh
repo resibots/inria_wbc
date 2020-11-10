@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 PROJECT_NAME=$1
-PROJECT_NAME_UC=echo $1 | tr '[:lower:]' '[:upper:]'
+PROJECT_NAME_UC=$(echo $1 | tr '[:lower:]' '[:upper:]')
 
 FILES=$(find . -type f|grep -v $0)
 for i in $FILES; do
