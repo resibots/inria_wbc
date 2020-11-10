@@ -3,7 +3,7 @@
 PROJECT_NAME=$1
 PROJECT_NAME_UC=echo $1 | tr '[:lower:]' '[:upper:]'
 
-FILES=$(find .)
+FILES=$(find -fstype f .)
 for i in $FILES; do
     echo "Replacing in $i..."
     sed -i -e s/@project_name@/$PROJECT_NAME/g
