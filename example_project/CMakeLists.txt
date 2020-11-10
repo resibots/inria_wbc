@@ -96,7 +96,7 @@ set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib)
 set(LIBRARY @project_name@)
 
 configure_package_config_file("cmake/@project_name@.cmake.in"
-                              "${CMAKE_CURRENT_BINARY_DIR}/@project_name@.cmake"
+                              "${CMAKE_CURRENT_BINARY_DIR}/@project_name@Config.cmake"
                               INSTALL_DESTINATION 
                               "${LIBRARY_INSTALL_DIR}/cmake/@project_name@"
                               PATH_VARS 
