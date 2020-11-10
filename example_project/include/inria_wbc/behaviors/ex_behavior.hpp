@@ -10,14 +10,14 @@
 
 namespace inria_wbc {
     namespace behaviors {
-        class TalosMoveArm : public Behavior {
+        class ExBehavior : public Behavior {
         public:
-            TalosMoveArm(const controller_ptr_t& controller);
-            TalosMoveArm() = delete;
-            TalosMoveArm(const TalosMoveArm&) = delete;
+            ExBehavior(const controller_ptr_t& controller);
+            ExBehavior() = delete;
+            ExBehavior(const TalosMoveArm&) = delete;
 
             bool update() override;
-            virtual ~TalosMoveArm() {}
+            virtual ~ExBehavior() {}
 
         private:
             int time_ = 0;

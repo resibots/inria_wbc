@@ -22,13 +22,17 @@ list(APPEND DEPENDENCIES_INCS
 )
 
 set(@PROJECT_NAME@_HEADERS
-                            include/inria_wbc/behaviors/example_behavior.hpp
-                            include/inria_wbc/controllers/example_controller.hpp
+                            include/inria_wbc/behaviors/ex_behavior.hpp
+                            include/inria_wbc/controllers/ex_controller.hpp
+                            include/tsid/ex_task.hpp
+
 )
 
 set(@PROJECT_NAME@_SOURCES
-                            src/behaviors/example_behavior.cpp
-                            src/controllers/example_controller.cpp
+                            src/behaviors/ex_behavior.cpp
+                            src/controllers/ex_controller.cpp
+                            src/tsid/ex_task.cpp
+
 )
 
 set(EXAMPLE_LIST 
