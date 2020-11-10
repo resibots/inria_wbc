@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 name_of_project" >&2
+  exit 1
+fi
+
 PROJECT_NAME=$1
 PROJECT_NAME_UC=echo $1 | tr '[:lower:]' '[:upper:]'
 
