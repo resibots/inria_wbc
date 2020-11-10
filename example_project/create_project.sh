@@ -1,5 +1,5 @@
 #!/bin/sh
-set -x
+# set -x
 if [ "$#" -ne 1 ]; then
   echo "Usage: $0 name_of_project" >&2
   exit 1
