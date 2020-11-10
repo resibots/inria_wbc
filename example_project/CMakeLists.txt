@@ -24,7 +24,7 @@ list(APPEND DEPENDENCIES_INCS
 set(@PROJECT_NAME@_HEADERS
                             include/inria_wbc/behaviors/ex_behavior.hpp
                             include/inria_wbc/controllers/ex_controller.hpp
-                            include/tsid/ex_task.hpp
+                            include/tsid/tasks/ex_task.hpp
 
 )
 
