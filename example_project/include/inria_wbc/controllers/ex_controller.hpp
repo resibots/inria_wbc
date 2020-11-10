@@ -18,7 +18,7 @@ namespace inria_wbc {
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path) override;
             virtual void set_stack_configuration() override;
-            virtual void set_default_opt_params(std::map<std::string, double>& p);
+            virtual void set_default_opt_params(std::map<std::string, double>& p) override;
         };
 
     } // namespace controllers
