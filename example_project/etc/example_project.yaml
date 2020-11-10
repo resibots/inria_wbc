@@ -1,5 +1,5 @@
 CONTROLLER:
-  name: talos-pos-tracking
+  name: ex-controller
   w_com: 100.0
   w_floatingb: 100.0
   w_posture: 0.75
@@ -21,7 +21,7 @@ CONTROLLER:
   kp_rf: 30.0
   kp_lf: 30.0
 BEHAVIOR:
-  name : talos-move-arm
+  name : ex-behavior
   trajectory_duration : 6
   motion_size : 0.05
 PARAMS:
