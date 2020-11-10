@@ -16,6 +16,6 @@ for i in $FILES; do
 done
 mv cmake/example_project.cmake.in cmake/$PROJECT_NAME.cmake.in 
 mv cmake/example_projectConfigVersion.cmake.in cmake/${PROJECT_NAME}ConfigVersion.cmake.in 
-
+find .|grep -- -e|xargs rm
     
     
