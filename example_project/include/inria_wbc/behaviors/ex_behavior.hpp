@@ -14,7 +14,7 @@ namespace inria_wbc {
         public:
             ExBehavior(const controller_ptr_t& controller);
             ExBehavior() = delete;
-            ExBehavior(const TalosMoveArm&) = delete;
+            ExBehavior(const ExBehavior&) = delete;
 
             bool update() override;
             virtual ~ExBehavior() {}
