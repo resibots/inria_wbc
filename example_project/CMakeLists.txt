@@ -90,7 +90,7 @@ install(TARGETS @project_name@
                                INCLUDES DESTINATION ${CMAKE_INSTALL_PREFIX}/include
 )
 
-install(DIRECTORY include/@project_name@ DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
 set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include)
 set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib)
 set(LIBRARY @project_name@)
