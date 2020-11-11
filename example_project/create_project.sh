@@ -17,6 +17,9 @@ done
 mv cmake/example_project.cmake.in cmake/$PROJECT_NAME.cmake.in 
 mv cmake/example_projectConfigVersion.cmake.in cmake/${PROJECT_NAME}ConfigVersion.cmake.in
 mv etc/example_project.yaml etc/$PROJECT_NAME.yaml
-find .|grep -- -e|xargs rm
+
+#useful only on osx
+find .|grep -- -e|xargs rm -f
+
     
     
