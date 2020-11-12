@@ -87,7 +87,6 @@ namespace inria_wbc {
 
                 utils::parse(ref_config_, "ref_config", config, "CONTROLLER", verbose_);
                 std::cout << ref_config_ << std::endl;
-
             }
         }
 
@@ -219,7 +218,8 @@ namespace inria_wbc {
 
         void TalosPosTracking::remove_contact(const std::string& contact_name)
         {
-            assert(tsid_->removeRigidContact(contact_name));
+            bool res = tsid_->removeRigidContact(contact_name);
+            assert(res);
         }
 
         void TalosPosTracking::add_contact(const std::string& contact_name)
@@ -250,14 +250,14 @@ namespace inria_wbc {
         {
             cost = -10000;
             auto it = se3_tasks_.find(task_name);
-            
+
             if (it != se3_tasks_.end())
                 cost = (se3_tasks_[task_name]->getConstraint().matrix() * ddq_ - se3_tasks_[task_name]->getConstraint().vector()).norm();
             else if (task_name == "com")
                 cost = (com_task_->getConstraint().matrix() * ddq_ - com_task_->getConstraint().vector()).norm();
             else if (task_name == "posture")
                 cost = (posture_task_->getConstraint().matrix() * ddq_ - posture_task_->getConstraint().vector()).norm();
-            else 
+            else
                 return false;
             return true;
         }
