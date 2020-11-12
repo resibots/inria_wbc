@@ -243,7 +243,8 @@ namespace inria_wbc {
 
         void TalosPosTracking::remove_task(const std::string& task_name, double transition_duration)
         {
-            assert(tsid_->removeTask(task_name, transition_duration));
+            bool res = tsid_->removeTask(task_name, transition_duration);
+            assert(res);
         }
 
         bool TalosPosTracking::compute_task_cost(const std::string& task_name, double& cost)
