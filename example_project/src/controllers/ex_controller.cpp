@@ -30,8 +30,10 @@ namespace inria_wbc {
 
         ExController::ExController(const Params& params) : TalosPosTracking(params)
         {
-            // keep in mind that the constructor of TalosPosTracking already includes the call
-            // to the yaml parameters (parse_configuration_yaml) and the set_stack_configuration
+            if (!params.sot_config_path.empty())
+                parse_configuration_yaml(params.sot_config_path);
+
+            set_stack_configuration();
         }
 
         void ExController::set_default_opt_params(std::map<std::string, double>& p)
