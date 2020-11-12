@@ -34,7 +34,7 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
                             include/inria_wbc/utils/factory.hpp
-
+                            include/inria_wbc/exceptions.hpp
 )
 
 set(INRIA_WBC_SOURCES
