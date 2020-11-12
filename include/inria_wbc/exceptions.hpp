@@ -7,6 +7,13 @@
 // usage: throw IWBC_EXCEPTION("error:", 42)
 #define IWBC_EXCEPTION(...) inria_wbc::Exception(__FILE__, __LINE__, __VA_ARGS__)
 
+// usage: assert(x < 3, "we received x=", x)
+#define IWBC_ASSERT(expr, ...)                        \
+    {                                                 \
+        if (!(expr))                                  \
+            throw IWBC_EXCEPTION(#expr, __VA_ARGS__); \
+    }
+
 namespace inria_wbc {
     class Exception : public std::runtime_error {
     public:
