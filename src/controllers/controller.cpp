@@ -258,17 +258,21 @@ namespace inria_wbc {
             return task;
         }
 
-        std::shared_ptr<tasks::TaskJointPosture> Controller::make_posture_task(const std::string& name, double kp) const
+        std::shared_ptr<tasks::TaskJointPosture> Controller::make_posture_task(const std::string& name, double kp, const Vector& mask) const
         {
             assert(tsid_);
             assert(robot_);
             auto task = std::make_shared<tasks::TaskJointPosture>(name, *robot_);
             task->Kp(kp * Vector::Ones(robot_->nv() - 6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_post = Vector::Ones(robot_->nv() - 6);
-            // for(int i =0; i < 11; i++){
-            //   mask_post[i] = 0;
-            // }
+            Vector mask_post(robot_->nv() - 6);
+            if (mask.size() == 0) {
+                mask_post = Vector::Ones(robot_->nv() - 6);
+            }
+            else {
+                assert(mask.size() == mask_post.size());
+                mask_post = mask;
+            }
             task->setMask(mask_post);
             task->setReference(to_sample(q_tsid_.tail(robot_->na())));
             return task;

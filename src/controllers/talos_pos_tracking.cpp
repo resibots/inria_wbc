@@ -84,6 +84,10 @@ namespace inria_wbc {
                     if (params_.opt_params.find(x.first) == params_.opt_params.end())
                         if (!utils::parse(params_.opt_params[x.first], x.first, config, "CONTROLLER", verbose_))
                             params_.opt_params[x.first] = p[x.first];
+
+                utils::parse(ref_config_, "ref_config", config, "CONTROLLER", verbose_);
+                std::cout << ref_config_ << std::endl;
+
             }
         }
 
@@ -113,7 +117,7 @@ namespace inria_wbc {
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //q_tsid_ is of size 37 (pos+quat+nactuated)
-            q_tsid_ = robot_->model().referenceConfigurations["pal_start"];
+            q_tsid_ = robot_->model().referenceConfigurations[ref_config_];
             //q0_ is in "Dart format" for the floating base
             Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
             Eigen::AngleAxisd aaxis(quat);
@@ -215,7 +219,7 @@ namespace inria_wbc {
 
         void TalosPosTracking::remove_contact(const std::string& contact_name)
         {
-            tsid_->removeRigidContact(contact_name);
+            assert(tsid_->removeRigidContact(contact_name));
         }
 
         void TalosPosTracking::add_contact(const std::string& contact_name)
@@ -235,6 +239,27 @@ namespace inria_wbc {
             else {
                 std::cout << "unknown contact" << std::endl;
             }
+        }
+
+        void TalosPosTracking::remove_task(const std::string& task_name, double transition_duration)
+        {
+            assert(tsid_->removeTask(task_name, transition_duration));
+        }
+
+        bool TalosPosTracking::compute_task_cost(const std::string& task_name, double& cost)
+        {
+            cost = -10000;
+            auto it = se3_tasks_.find(task_name);
+            
+            if (it != se3_tasks_.end())
+                cost = (se3_tasks_[task_name]->getConstraint().matrix() * ddq_ - se3_tasks_[task_name]->getConstraint().vector()).norm();
+            else if (task_name == "com")
+                cost = (com_task_->getConstraint().matrix() * ddq_ - com_task_->getConstraint().vector()).norm();
+            else if (task_name == "posture")
+                cost = (posture_task_->getConstraint().matrix() * ddq_ - posture_task_->getConstraint().vector()).norm();
+            else 
+                return false;
+            return true;
         }
 
     } // namespace controllers

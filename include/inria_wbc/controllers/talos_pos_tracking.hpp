@@ -43,6 +43,10 @@ namespace inria_wbc {
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
 
+            void remove_task(const std::string& task_name, double transition_duration = 0.0);
+
+            bool compute_task_cost(const std::string& task_name, double& cost);
+
             virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
 
         protected:
@@ -52,6 +56,7 @@ namespace inria_wbc {
             std::shared_ptr<tsid::contacts::Contact6d> make_contact_task(const std::string& name, const std::string frame_name, double kp) const;
 
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
+            std::string ref_config_ = "pal_start";
 
             // contacts
             std::shared_ptr<tsid::contacts::Contact6d> contactRF_;
