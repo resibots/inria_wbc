@@ -1,5 +1,6 @@
 CONTROLLER:
   name: talos-pos-tracking
+  ref_config: pal_start
   w_com: 100.0
   w_floatingb: 100.0
   w_posture: 0.75
@@ -7,7 +8,7 @@ CONTROLLER:
   w_forceRef_hands: 1e-3
   w_waist: 20.0
   w_rh: 10.0
-  w_lh: 10.0
+  w_lh: 1000.0
   w_rf: 1.0
   w_lf: 1.0
   w_velocity: 1.0

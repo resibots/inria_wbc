@@ -1,5 +1,6 @@
 CONTROLLER:
   name: talos-pos-tracking
+  ref_config: pal_start
   w_com: 1.0
   w_floatingb: 0.0
   w_posture: 0.75
