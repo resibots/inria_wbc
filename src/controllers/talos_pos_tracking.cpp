@@ -64,30 +64,23 @@ namespace inria_wbc {
         void TalosPosTracking::parse_configuration_yaml(const std::string& sot_config_path)
         {
             std::ifstream yamlConfigFile(sot_config_path);
-            if (!yamlConfigFile.good()) {
-                if (verbose_) {
-                    std::cout << sot_config_path << " not found" << std::endl;
-                    std::cout << "Taking default stack of tasks weights" << std::endl;
-                }
-            }
-            else {
-                if (verbose_)
-                    std::cout << "Taking the stack of tasks parameters in " << sot_config_path << std::endl;
+            if (verbose_)
+                std::cout << "[controller] Taking the parameters in " << sot_config_path << std::endl;
 
-                // for the opt_params (task weight and gains) we keep the value if we have it
-                // if not found, we look at the YAML file
-                // if not found, we take the default value from the map (set_defautlt_opt_params)
-                opt_params_t p;
-                set_default_opt_params(p);
-                YAML::Node config = YAML::LoadFile(sot_config_path);
-                for (auto& x : p)
-                    if (params_.opt_params.find(x.first) == params_.opt_params.end())
-                        if (!utils::parse(params_.opt_params[x.first], x.first, config, "CONTROLLER", verbose_))
-                            params_.opt_params[x.first] = p[x.first];
+            // for the opt_params (task weight and gains) we keep the value if we have it
+            // if not found, we look at the YAML file
+            // if not found, we take the default value from the map (set_defautlt_opt_params)
+            opt_params_t p;
+            set_default_opt_params(p);
+            YAML::Node config = YAML::LoadFile(sot_config_path);
+            for (auto& x : p)
+                if (params_.opt_params.find(x.first) == params_.opt_params.end())
+                    if (!utils::parse(params_.opt_params[x.first], x.first, config, "CONTROLLER", verbose_))
+                        params_.opt_params[x.first] = p[x.first];
 
-                utils::parse(ref_config_, "ref_config", config, "CONTROLLER", verbose_);
-                std::cout << ref_config_ << std::endl;
-            }
+            utils::parse(ref_config_, "ref_config", config, "CONTROLLER", verbose_);
+            if (verbose_)
+                std::cout << "[controller] Taking the reference configuration from " << ref_config_ << std::endl;
         }
 
         std::shared_ptr<contacts::Contact6d> TalosPosTracking::make_contact_task(const std::string& name, const std::string frame_name, double kp) const
