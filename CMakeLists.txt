@@ -33,7 +33,7 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/behaviors/talos_move_arm.hpp
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
-                            include/inria_wbc/utils/torque_safety.hpp
+                            include/inria_wbc/safety/torque_safety.hpp
 )
 
 set(INRIA_WBC_SOURCES
@@ -41,7 +41,7 @@ set(INRIA_WBC_SOURCES
                             src/controllers/talos_pos_tracking.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
-                            src/utils/torque_safety.cpp
+                            src/safety/torque_safety.cpp
 )
 
 set(EXAMPLE_LIST
