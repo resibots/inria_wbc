@@ -14,42 +14,8 @@
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
 
-#include "inria_wbc/behaviors/behavior.hpp"
-
-Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos)
-{
-    Eigen::VectorXd q = robot->getPositions();
-    Eigen::VectorXd dq = robot->getVelocities();
-
-    float stiffness = 10000;
-    float damping = 100;
-    int ndofs = robot->getNumDofs();
-    Eigen::MatrixXd Kp = Eigen::MatrixXd::Identity(ndofs, ndofs);
-    Eigen::MatrixXd Kd = Eigen::MatrixXd::Identity(ndofs, ndofs);
-
-    for (std::size_t i = 0; i < robot->getNumDofs(); ++i) {
-        Kp(i, i) = stiffness;
-        Kd(i, i) = damping;
-    }
-    for (std::size_t i = 0; i < 6; ++i) {
-        Kp(i, i) = 0;
-        Kd(i, i) = 0;
-    }
-
-    Eigen::MatrixXd invM = (robot->getMassMatrix() + Kd * robot->getTimeStep()).inverse();
-    Eigen::VectorXd p = -Kp * (q + dq * robot->getTimeStep() - targetpos);
-    Eigen::VectorXd d = -Kd * dq;
-    Eigen::VectorXd qddot = invM * (-robot->getCoriolisAndGravityForces() + p + d + robot->getConstraintForces());
-    Eigen::VectorXd commands = p + d - Kd * qddot * robot->getTimeStep();
-    return commands;
-}
-
-Eigen::VectorXd compute_velocities(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos, double dt)
-{
-    Eigen::VectorXd q = robot->getPositions();
-    Eigen::VectorXd vel = (targetpos - q) / dt;
-    return vel;
-}
+#include <inria_wbc/behaviors/behavior.hpp>
+#include <inria_wbc/robot_dart/cmd.hpp>
 
 int main(int argc, char* argv[])
 {
@@ -216,9 +182,9 @@ int main(int argc, char* argv[])
             if (solution_found) {
                 auto t1_cmd = high_resolution_clock::now();
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = compute_velocities(robot->skeleton(), q, dt);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, dt);
                 else // torque
-                    cmd = compute_spd(robot->skeleton(), q);
+                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
