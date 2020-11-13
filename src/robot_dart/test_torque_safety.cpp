@@ -16,7 +16,7 @@
 #endif
 
 #include "inria_wbc/behaviors/factory.hpp"
-#include "inria_wbc/utils/torque_safety.hpp"
+#include "inria_wbc/safety/torque_safety.hpp"
 
 Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd &targetpos)
 {
@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
             5e-02, 5e-02,5e-02, 1e-01, 
             5e-02, 5e-02, 5e-02, 1e-01;
 
-    TorqueCollisionDetection torque_collision(torque_threshold, 5);
+    inria_wbc::safety::TorqueCollisionDetection torque_collision(torque_threshold, 5);
     torque_collision.set_max_consecutive_invalid(5);
     
     std::vector<int> tq_joints_idx;
@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
             if(vm["actuators"].as<std::string>() == "velocity" && it_cmd > 0)
             {
                 
-                if( !torque_collision.check(tsid_tau, tq_sensors, TorqueCollisionDetection::MedianFilter() ) )
+                if( !torque_collision.check(tsid_tau, tq_sensors, inria_wbc::safety::TorqueCollisionDetection::MedianFilter() ) )
                 {
                     /* std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
                     auto inv = torque_collision.get_invalid_ids();

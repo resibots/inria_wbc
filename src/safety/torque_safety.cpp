@@ -1,4 +1,4 @@
-#include "inria_wbc/utils/torque_safety.hpp"
+#include "inria_wbc/safety/torque_safety.hpp"
 
 #include <iostream>
 
