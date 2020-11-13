@@ -28,11 +28,6 @@ namespace inria_wbc {
             auto ref = current_trajectory_[time_];
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
 
-            if (print_cost_) {
-                double cost = controller_->cost("lh");
-                std::cout << "lh_cost : " << cost << std::endl;
-            }
-
             controller_->solve();
             time_++;
             if (time_ == current_trajectory_.size()) {

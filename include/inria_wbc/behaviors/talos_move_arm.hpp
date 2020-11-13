@@ -26,7 +26,6 @@ namespace inria_wbc {
             std::vector<pinocchio::SE3> current_trajectory_;
             float trajectory_duration_ = 3; //will be changed if specified in yaml
             float motion_size_ = 0.05; //will be changed if specified in yaml
-            bool print_cost_ = false;
         };
     } // namespace behaviors
 } // namespace inria_wbc

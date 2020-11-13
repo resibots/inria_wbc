@@ -250,6 +250,8 @@ int main(int argc, char* argv[])
                     (*x.second) << cmd.transpose() << std::endl;
                 else if (x.first == "com")
                     (*x.second) << robot->com().transpose() << std::endl;
+                else if (x.first.find("cost_") != std::string::npos)
+                    (*x.second) << controller->cost(x.first.substr(5)) << std::endl;
                 else
                     (*x.second) << robot->body_pose(x.first).translation() << "\t" << robot->body_pose(x.first).rotation() << std::endl;
             }
