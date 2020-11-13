@@ -118,7 +118,7 @@ namespace inria_wbc {
             return non_mimic_indexes;
         }
 
-        bool Controller::solve()
+        void Controller::solve()
         {
             //Compute the current data from the current position and solve to find next position
             assert(tsid_);
@@ -145,32 +145,30 @@ namespace inria_wbc {
                 dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
                 tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
                 ddq_ = a_tsid_;
-                return true;
             }
             else {
-                std::cerr << "Controller failed, can't solve problem " << std::endl;
-                std::cerr << "Status : " + toString(sol.status);
+                std::string error = "Controller failed, can't solve problem. ";
+                error += "Status : " + toString(sol.status);
                 switch (sol.status) {
                 case -1:
-                    std::cerr << " => Unknown";
+                    error += " => Unknown";
                     break;
                 case 1:
-                    std::cerr << " => Infeasible ";
+                    error += " => Infeasible ";
                     break;
                 case 2:
-                    std::cerr << " => Unbounded ";
+                    error += " => Unbounded ";
                     break;
                 case 3:
-                    std::cerr << " => Max iter reached ";
+                    error += " => Max iter reached ";
                     break;
                 case 4:
-                    std::cerr << " => Error ";
+                    error += " => Error ";
                     break;
                 default:
-                    std::cerr << " => Uknown status";
+                    error += " => Uknown status";
                 }
-                std::cerr << std::endl;
-                return false;
+                throw IWBC_EXCEPTION(error);
             }
         }
 

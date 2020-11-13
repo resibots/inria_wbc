@@ -99,7 +99,7 @@ namespace inria_wbc {
             assert(_com_trajs.size() == cycle_.size());
         }
 
-        bool WalkOnSpot::update()
+        void WalkOnSpot::update()
         {
             auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_);
             auto t1_traj = std::chrono::high_resolution_clock::now();
@@ -125,22 +125,16 @@ namespace inria_wbc {
             auto t2_traj = std::chrono::high_resolution_clock::now();
             double step_traj = std::chrono::duration_cast<std::chrono::microseconds>(t2_traj - t1_traj).count() / 1000.0;
 
-            if (controller_->solve()) {
-                time_++;
-                if (time_ == _com_trajs[_current_traj].size()) {
-                    time_ = 0;
-                    _current_traj = ++_current_traj % cycle_.size();
-                    // we skip the init_traj
-                    if (_current_traj == 0)
-                        _current_traj++;
-                    state_ = cycle_[_current_traj];
-                }
-                return true;
-            }
-            else {
-                return false;
+            controller_->solve();
+            time_++;
+            if (time_ == _com_trajs[_current_traj].size()) {
+                time_ = 0;
+                _current_traj = ++_current_traj % cycle_.size();
+                // we skip the init_traj
+                if (_current_traj == 0)
+                    _current_traj++;
+                state_ = cycle_[_current_traj];
             }
         }
-
     } // namespace behaviors
 } // namespace inria_wbc

@@ -210,32 +210,27 @@ int main(int argc, char* argv[])
             Eigen::VectorXd cmd;
             if (simu.schedule(simu.control_freq())) {
                 auto t1_solver = high_resolution_clock::now();
-                bool solution_found = behavior->update();
+                behavior->update();
                 auto q = controller->q(false);
                 auto t2_solver = high_resolution_clock::now();
                 time_step_solver = duration_cast<microseconds>(t2_solver - t1_solver).count();
 
-                if (solution_found) {
-                    auto t1_cmd = high_resolution_clock::now();
-                    if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                        cmd = compute_velocities(robot->skeleton(), q, dt);
-                    else // torque
-                        cmd = compute_spd(robot->skeleton(), q);
-                    auto t2_cmd = high_resolution_clock::now();
-                    time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
+                auto t1_cmd = high_resolution_clock::now();
+                if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
+                    cmd = compute_velocities(robot->skeleton(), q, dt);
+                else // torque
+                    cmd = compute_spd(robot->skeleton(), q);
+                auto t2_cmd = high_resolution_clock::now();
+                time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
-                    robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
-                    if (ghost) {
-                        Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
-                        translate_ghost(0) -= 1;
-                        ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
-                        ghost->set_positions(q.head(6) + translate_ghost, floating_base);
-                    }
+                robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+                if (ghost) {
+                    Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
+                    translate_ghost(0) -= 1;
+                    ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
+                    ghost->set_positions(q.head(6) + translate_ghost, floating_base);
                 }
-                else {
-                    std::cerr << "Solver failed! aborting" << std::endl;
-                    return -1;
-                }
+
                 ++it_cmd;
             }
             // step the simulation

@@ -23,7 +23,7 @@ namespace inria_wbc {
             current_trajectory_ = trajectories_[traj_selector_];
         }
 
-        bool TalosSquat::update()
+        void TalosSquat::update()
         {
             auto ref = current_trajectory_[time_];
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
@@ -32,18 +32,12 @@ namespace inria_wbc {
                 double cost = controller_->cost("com");
                 std::cout << "squat_cost : " << cost << std::endl;
             }
-
-            if (controller_->solve()) {
-                time_++;
-                if (time_ == current_trajectory_.size()) {
-                    time_ = 0;
-                    traj_selector_ = ++traj_selector_ % trajectories_.size();
-                    current_trajectory_ = trajectories_[traj_selector_];
-                }
-                return true;
-            }
-            else {
-                return false;
+            controller_->solve();
+            time_++;
+            if (time_ == current_trajectory_.size()) {
+                time_ = 0;
+                traj_selector_ = ++traj_selector_ % trajectories_.size();
+                current_trajectory_ = trajectories_[traj_selector_];
             }
         }
     } // namespace behaviors

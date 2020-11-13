@@ -63,7 +63,7 @@ namespace inria_wbc {
             Controller& operator=(const Controller& o) = delete;
             virtual ~Controller(){};
 
-            bool solve();
+            void solve();
 
             // Removes the universe and root (floating base) joint names
             std::vector<std::string> controllable_dofs(bool filter_mimics = true) const;

@@ -16,7 +16,7 @@ namespace inria_wbc {
             TalosSquat() = delete;
             TalosSquat(const TalosSquat& other) = delete;
 
-            bool update() override;
+            void update() override;
             virtual ~TalosSquat() {}
 
         private:
