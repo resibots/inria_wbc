@@ -200,11 +200,6 @@ namespace inria_wbc {
         void TalosPosTracking::update(const SensorData& sensor_data)
         {
             auto com_ref = com_task_->getReference().pos;
-            auto ref_torso = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(cst::torso_frame_name));
-
-            // we try to get close to the actual position as measured by the sensor
-            // we could use the tsid/pinocchio position here: better? worse?
-            //set_posture_ref(sensor_data.positions, "traj_posture");
 
             // estimate the CoP / ZMP
             bool cop_ok = _cop_estimator.update(com_ref.head(2),

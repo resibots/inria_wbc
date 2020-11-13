@@ -28,9 +28,6 @@ namespace inria_wbc {
             const Eigen::Vector2d& cop() const { return cop_filtered(); }
             const Eigen::Vector2d& cop_filtered() const { return _cop_filtered; }
             const Eigen::Vector2d& cop_raw() const { return _cop_raw; }
-            // derivatives of the error (cop - ref)
-            const Eigen::Vector2d& derror_filtered() const { return _derror_filtered; }
-            const Eigen::Vector2d& derror_raw() const { return _derror_raw; }
 
         protected:
             static constexpr float FMIN = 30;
@@ -39,20 +36,8 @@ namespace inria_wbc {
 
             Eigen::Vector2d _cop_raw; // last computed CoP
             Eigen::Vector2d _cop_filtered; // filtered CoP
-            Eigen::Vector2d _derror_raw; // last computed CoP
-            Eigen::Vector2d _derror_filtered; // filtered CoP
-            Eigen::Vector2d _prev_ref; // last computed CoP
-
             std::deque<Eigen::Vector2d> _cop_buffer; // previous values of cop
-            std::deque<Eigen::Vector2d> _cop_filtered_buffer; // previous filtered values
-            std::deque<Eigen::Vector2d> _derror_buffer; // previous derivatives
 
-            void _store(const Eigen::Vector2d& v, std::deque<Eigen::Vector2d>& buffer, size_t h_size)
-            {
-                buffer.push_back(v);
-                if (buffer.size() > h_size)
-                    buffer.pop_front();
-            }
             Eigen::Vector2d _compute_cop(
                 const Eigen::Vector3d& lf_pos, const Eigen::Vector3d& rf_pos,
                 const Eigen::Vector3d& lf_torque, const Eigen::Vector3d& lf_force,

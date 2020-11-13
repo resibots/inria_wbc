@@ -22,7 +22,7 @@ CONTROLLER:
   kp_lf: 30.0
   kp_torso: 30.0
 STABILIZER:
-  activated: false
+  activated: true
   filter_size: 5
   p_x: 0.05
   p_y: 0.05
@@ -30,7 +30,7 @@ STABILIZER:
   d_y: 0.01
 BEHAVIOR:
   name : talos-squat
-  trajectory_duration : 0.5
+  trajectory_duration : 3
   motion_size : 0.2
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
