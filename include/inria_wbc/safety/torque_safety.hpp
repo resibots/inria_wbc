@@ -42,8 +42,8 @@ public:
     } MedianFilter; 
 
 
-    TorqueCollisionDetection(std::vector<std::string> joints, double threshold=1.0, int buffer_len=1);
-    TorqueCollisionDetection(std::vector<std::string> joints, Eigen::VectorXd threshold, int buffer_len=1);
+    TorqueCollisionDetection(int nvar, double threshold=1.0, int buffer_len=1);
+    TorqueCollisionDetection(Eigen::VectorXd threshold, int buffer_len=1);
     ~TorqueCollisionDetection() = default;
 
     template <typename FilterFunctor = MeanFilter>

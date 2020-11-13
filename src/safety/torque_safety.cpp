@@ -6,8 +6,8 @@ namespace inria_wbc {
 namespace safety {
 
 
-TorqueCollisionDetection::TorqueCollisionDetection(std::vector<std::string> joints, double threshold, int buffer_len)
-:   _nvar(joints.size()),
+TorqueCollisionDetection::TorqueCollisionDetection(int nvar, double threshold, int buffer_len)
+:   _nvar(nvar),
     _step_count(0),
     _buffer_len(buffer_len),
     _buffer(_nvar, _buffer_len),
@@ -19,8 +19,8 @@ TorqueCollisionDetection::TorqueCollisionDetection(std::vector<std::string> join
 }
 
 
-TorqueCollisionDetection::TorqueCollisionDetection(std::vector<std::string> joints, Eigen::VectorXd threshold, int buffer_len)
-:   _nvar(joints.size()),
+TorqueCollisionDetection::TorqueCollisionDetection(Eigen::VectorXd threshold, int buffer_len)
+:   _nvar(threshold.size()),
     _step_count(0),
     _buffer_len(buffer_len),
     _buffer(_nvar, _buffer_len),

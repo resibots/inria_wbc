@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
             5e-02, 5e-02,5e-02, 1e-01, 
             5e-02, 5e-02, 5e-02, 1e-01;
 
-    TorqueCollisionDetection torque_collision(joints_with_tq, torque_threshold, 5);
+    TorqueCollisionDetection torque_collision(torque_threshold, 5);
     torque_collision.set_max_consecutive_invalid(5);
     
     std::vector<int> tq_joints_idx;
