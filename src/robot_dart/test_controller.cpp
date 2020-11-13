@@ -71,7 +71,8 @@ int main(int argc, char* argv[])
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("ghost,g", "display the ghost (Pinocchio model)")
         ("verbose,v", "verbose mode (controller)")
-        ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), "log the trajectory of a dart body [with urdf names] or timing or CoM, example: -l timing -l com -l lf")
+        ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
+            "log the trajectory of a dart body [with urdf names] or timing or CoM or cost, example: -l timing -l com -l lf -l cost_com -l cost_lf")
         ;
         // clang-format on
         po::variables_map vm;
