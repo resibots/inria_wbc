@@ -45,6 +45,11 @@ namespace inria_wbc {
         {
             return std::string(m) + _make_msg(Fargs...);
         }
+        template <typename... Targs>
+        std::string _make_msg(const std::string& s, Targs... Fargs) const
+        {
+            return s + _make_msg(Fargs...);
+        }
         std::string _make_msg() const
         {
             return std::string("");

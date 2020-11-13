@@ -3,7 +3,7 @@
 
 /*!
  * \file utils.hpp
- * \brief quaternion + parsing utils
+ * \brief parsing utils
  * \author Eloïse Dalin
  * \version 0.1
  */
@@ -11,22 +11,19 @@
 #include <cstdlib>
 #include <unordered_set>
 #include <yaml-cpp/yaml.h>
-// To convert quaternions to euler angles
-// source https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+#include <inria_wbc/exceptions.hpp>
+
 namespace inria_wbc {
     namespace utils {
         template <typename type>
         inline bool parse(type& parameter, std::string parameterName, YAML::Node& config, std::string prevName, bool verbose = true)
         {
             if (!config[prevName][parameterName]) {
-                if (verbose)
-                    std::cout << "No parameter " << parameterName << " found taking the default one" << std::endl;
-                return false;
+                throw IWBC_EXCEPTION("Parameter :", prevName, "/", parameterName, " not found in YAML file");
             }
             else {
                 parameter = config[prevName][parameterName].as<type>();
-                if (verbose)
-                    std::cout << "Parameter " << parameterName << " found" << std::endl;
                 return true;
             }
         }
