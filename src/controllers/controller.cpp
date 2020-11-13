@@ -118,7 +118,7 @@ namespace inria_wbc {
             return non_mimic_indexes;
         }
 
-        void Controller::solve()
+        void Controller::_solve()
         {
             //Compute the current data from the current position and solve to find next position
             assert(tsid_);

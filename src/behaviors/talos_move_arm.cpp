@@ -23,12 +23,12 @@ namespace inria_wbc {
             current_trajectory_ = trajectories_[traj_selector_];
         }
 
-        void TalosMoveArm::update()
+        void TalosMoveArm::update(const controllers::SensorData& sensor_data)
         {
             auto ref = current_trajectory_[time_];
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
 
-            controller_->solve();
+            controller_->update(sensor_data);
             time_++;
             if (time_ == current_trajectory_.size()) {
                 time_ = 0;

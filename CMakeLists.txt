@@ -36,6 +36,7 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/utils/factory.hpp
                             include/inria_wbc/exceptions.hpp
                             include/inria_wbc/robot_dart/cmd.hpp
+                            include/inria_wbc/estimators/cop.hpp
 
 )
 
@@ -45,6 +46,7 @@ set(INRIA_WBC_SOURCES
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
                             src/behaviors/talos_walk_on_spot.cpp
+                            src/estimators/cop.cpp
 )
 
 set(EXAMPLE_LIST 

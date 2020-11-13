@@ -16,10 +16,11 @@ std::pair<std::vector<Eigen::VectorXd>, std::vector<Eigen::VectorXd>> inline tes
     uint ncontrollable = controllable_dofs.size();
 
     std::vector<Eigen::VectorXd> cmds, cmds_filtered;
+    inria_wbc::controllers::SensorData sensors;
     for (int i = 0; i < 100; ++i) {
         std::cout << i << " ";
         std::cout.flush();
-        behavior->update();
+        behavior->update(sensors); // default values for sensors
         auto cmd = controller->q(false);
         cmds.push_back(cmd);
         cmds_filtered.push_back(controller->filter_cmd(cmd).tail(ncontrollable));

@@ -81,6 +81,22 @@ namespace inria_wbc {
             utils::parse(ref_config_, "ref_config", config, "CONTROLLER", verbose_);
             if (verbose_)
                 std::cout << "[controller] Taking the reference configuration from " << ref_config_ << std::endl;
+
+            // stabilizer
+            inria_wbc::utils::parse(_use_stabilizer, "activated", config, "STABILIZER");
+            inria_wbc::utils::parse(_stabilizer_p(0), "p_x", config, "STABILIZER");
+            inria_wbc::utils::parse(_stabilizer_p(1), "p_y", config, "STABILIZER");
+            inria_wbc::utils::parse(_stabilizer_d(0), "d_x", config, "STABILIZER");
+            inria_wbc::utils::parse(_stabilizer_d(1), "d_y", config, "STABILIZER");
+            int history = _cop_estimator.history_size();
+            inria_wbc::utils::parse(history, "filter_size", config, "STABILIZER");
+            _cop_estimator.set_history_size(history);
+
+            if (verbose_) {
+                std::cout << "Stabilizer:" << _use_stabilizer << std::endl;
+                std::cout << "P:" << _stabilizer_p.transpose() << std::endl;
+                std::cout << "D:" << _stabilizer_d.transpose() << std::endl;
+            }
         }
 
         std::shared_ptr<contacts::Contact6d> TalosPosTracking::make_contact_task(const std::string& name, const std::string frame_name, double kp) const
@@ -179,6 +195,49 @@ namespace inria_wbc {
             if (p.at("w_rf") > 0)
                 tsid_->addMotionTask(*rf_task, p.at("w_rf"), 1);
             se3_tasks_[rf_task->name()] = rf_task;
+        }
+
+        void TalosPosTracking::update(const SensorData& sensor_data)
+        {
+            auto com_ref = com_task_->getReference().pos;
+            auto ref_torso = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(cst::torso_frame_name));
+
+            // we try to get close to the actual position as measured by the sensor
+            // we could use the tsid/pinocchio position here: better? worse?
+            //set_posture_ref(sensor_data.positions, "traj_posture");
+
+            // estimate the CoP / ZMP
+            bool cop_ok = _cop_estimator.update(com_ref.head(2),
+                model_joint_pos("leg_left_6_joint").translation(),
+                model_joint_pos("leg_right_6_joint").translation(),
+                sensor_data.lf_torque, sensor_data.lf_force,
+                sensor_data.rf_torque, sensor_data.rf_force);
+            // modify the CoM reference (stabilizer) if the CoP is valid
+            if (_use_stabilizer && cop_ok && !isnan(_cop_estimator.cop_filtered()(0)) && !isnan(_cop_estimator.cop_filtered()(1))) {
+                // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
+                // CoM = CoP+zc/g \ddot{x}
+                // see Biped Walking Pattern Generation by using Preview Control of Zero-Moment Point
+                // see eq.24 of Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
+                // see eq. 21 of Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
+                Eigen::Vector2d a = tsid_->data().acom[0].head<2>();
+                Eigen::Vector3d com = tsid_->data().com[0];
+                Eigen::Vector2d ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
+                auto cop = _cop_estimator.cop_filtered();
+                Eigen::Vector2d cor = _stabilizer_p.array() * (ref.head(2) - _cop_estimator.cop_filtered()).array();
+
+                // [not classic] we correct by the velocity of the CoM instead of the CoP because we have an IMU for this
+                Eigen::Vector2d cor_v = _stabilizer_d.array() * sensor_data.velocity.head(2).array();
+                cor += cor_v;
+
+                Eigen::VectorXd ref_m = com_ref - Eigen::Vector3d(cor(0), cor(1), 0);
+                set_com_ref(ref_m);
+            }
+
+            // solve everything
+            _solve();
+
+            // set the CoM back (useful if the behavior does not the set the ref at each timestep)
+            set_com_ref(com_ref);
         }
 
         pinocchio::SE3 TalosPosTracking::get_se3_ref(const std::string& task_name)

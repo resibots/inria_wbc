@@ -44,6 +44,19 @@ namespace inria_wbc {
     } // namespace se3_mask
 
     namespace controllers {
+        struct SensorData {
+            // left foot
+            Eigen::Vector3d lf_torque;
+            Eigen::Vector3d lf_force;
+            // right foot
+            Eigen::Vector3d rf_torque;
+            Eigen::Vector3d rf_force;
+            // accelerometer
+            Eigen::VectorXd acceleration;
+            Eigen::VectorXd velocity;
+            // joint positions (excluding floating base)
+            Eigen::VectorXd positions;
+        };
         class Controller {
         public:
             using opt_params_t = std::map<std::string, double>;
@@ -63,14 +76,22 @@ namespace inria_wbc {
             Controller& operator=(const Controller& o) = delete;
             virtual ~Controller(){};
 
-            void solve();
+            virtual void update(const SensorData& sensor_data) { _solve(); };
 
             // Removes the universe and root (floating base) joint names
             std::vector<std::string> controllable_dofs(bool filter_mimics = true) const;
             // Order of the floating base in q_ according to dart naming convention
             std::vector<std::string> floating_base_dofs() const;
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
-            const tsid::math::Vector3& get_pinocchio_com() const { return robot_->com(tsid_->data()); }
+
+            virtual const Eigen::Vector2d& cop() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+            // this could call a CoM estimator
+            virtual const tsid::math::Vector3& com() const { return robot_->com(tsid_->data()); }
 
             const std::vector<int>& non_mimic_indexes() const { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmd) const { return utils::slice_vec(cmd, non_mimic_indexes_); }
@@ -88,7 +109,12 @@ namespace inria_wbc {
             std::vector<double> pinocchio_model_masses() const;
             const std::vector<double>& pinocchio_model_cumulated_masses() { return tsid_->data().mass; };
             const std::vector<std::string>& pinocchio_joint_names() const { return robot_->model().names; }
-
+            const pinocchio::SE3& model_joint_pos(const std::string& joint_name) const
+            {
+                assert(tsid_);
+                assert(robot_);
+                return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
+            }
             // parameters that can be optimized / tuned online
             // (e.g., weights of task, gains of the tasks, etc.)
             virtual const opt_params_t& opt_params() const
@@ -99,6 +125,7 @@ namespace inria_wbc {
             }
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task)
             {
+                assert(task);
                 return (task->getConstraint().matrix() * ddq_ - task->getConstraint().vector()).norm();
             }
             virtual std::shared_ptr<tsid::tasks::TaskBase> task(const std::string& task_name) = 0;
@@ -109,6 +136,7 @@ namespace inria_wbc {
 
         protected:
             void _reset();
+            void _solve();
 
             std::shared_ptr<tsid::tasks::TaskComEquality> make_com_task(const std::string& name, double kp) const;
             std::shared_ptr<tsid::tasks::TaskJointPosture> make_posture_task(const std::string& name, double kp, const tsid::math::Vector& mask = {}) const;

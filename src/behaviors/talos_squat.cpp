@@ -9,7 +9,7 @@ namespace inria_wbc {
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto com_init = std::static_pointer_cast<controllers::TalosPosTracking>(controller_)->get_pinocchio_com();
+            auto com_init = std::static_pointer_cast<controllers::TalosPosTracking>(controller_)->com();
 
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             utils::parse(trajectory_duration_, "trajectory_duration", config, "BEHAVIOR", controller_->params().verbose);
@@ -23,12 +23,12 @@ namespace inria_wbc {
             current_trajectory_ = trajectories_[traj_selector_];
         }
 
-        void TalosSquat::update()
+        void TalosSquat::update(const controllers::SensorData& sensor_data)
         {
             auto ref = current_trajectory_[time_];
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
 
-            controller_->solve();
+            controller_->update(sensor_data);
             time_++;
             if (time_ == current_trajectory_.size()) {
                 time_ = 0;

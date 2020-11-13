@@ -2,6 +2,7 @@
 #define IWBC_POS_TRACKING_HPP
 
 #include <inria_wbc/controllers/controller.hpp>
+#include <inria_wbc/estimators/cop.hpp>
 
 namespace inria_wbc {
     namespace controllers {
@@ -33,9 +34,14 @@ namespace inria_wbc {
             TalosPosTracking& operator=(const TalosPosTracking& o) const = delete;
             virtual ~TalosPosTracking(){};
 
-            std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return com_task_; }
+            virtual void update(const SensorData& sensor_data) override;
+            virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); }
+            virtual std::shared_ptr<tsid::tasks::TaskBase> task(const std::string& task_name) override;
+
+            std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return com_task_; } // TODO remove (there is a generic accessor)
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
 
+            // TODO maybe a generic set_ref here
             void set_com_ref(const tsid::math::Vector3& ref);
             void set_posture_ref(const tsid::math::Vector& ref);
             void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
@@ -47,13 +53,16 @@ namespace inria_wbc {
 
             virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
 
-            virtual std::shared_ptr<tsid::tasks::TaskBase> task(const std::string& task_name) override;
-
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
             virtual void set_stack_configuration();
             virtual void set_default_opt_params(std::map<std::string, double>& p);
             std::shared_ptr<tsid::contacts::Contact6d> make_contact_task(const std::string& name, const std::string frame_name, double kp) const;
+
+            estimators::Cop _cop_estimator;
+            bool _use_stabilizer = true;
+            Eigen::Vector2d _stabilizer_p = Eigen::Vector2d(0.005, 0.005);
+            Eigen::Vector2d _stabilizer_d = Eigen::Vector2d(0, 0);
 
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
             std::string ref_config_ = "pal_start";
