@@ -213,7 +213,7 @@ namespace inria_wbc {
                 sensor_data.lf_torque, sensor_data.lf_force,
                 sensor_data.rf_torque, sensor_data.rf_force);
             // modify the CoM reference (stabilizer) if the CoP is valid
-            if (_use_stabilizer && cop_ok && !isnan(_cop_estimator.cop_filtered()(0)) && !isnan(_cop_estimator.cop_filtered()(1))) {
+            if (_use_stabilizer && cop_ok && !std::isnan(_cop_estimator.cop_filtered()(0)) && !std::isnan(_cop_estimator.cop_filtered()(1))) {
                 // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
                 // CoM = CoP+zc/g \ddot{x}
                 // see Biped Walking Pattern Generation by using Preview Control of Zero-Moment Point
