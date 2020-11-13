@@ -184,7 +184,7 @@ namespace inria_wbc {
         pinocchio::SE3 TalosPosTracking::get_se3_ref(const std::string& task_name)
         {
             auto it = se3_tasks_.find(task_name);
-            assert(it != se3_tasks_.end());
+            IWBC_ASSERT(it != se3_tasks_.end(), " task ", task_name, " not found");
             pinocchio::SE3 se3;
             auto pos = it->second->getReference().pos;
             tsid::math::vectorToSE3(pos, se3);
@@ -194,7 +194,7 @@ namespace inria_wbc {
         void TalosPosTracking::set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name)
         {
             auto it = se3_tasks_.find(task_name);
-            assert(it != se3_tasks_.end());
+            IWBC_ASSERT(it != se3_tasks_.end(), " task ", task_name, " not found");
             auto sample = to_sample(ref);
             it->second->setReference(sample);
         }
@@ -212,7 +212,7 @@ namespace inria_wbc {
         void TalosPosTracking::remove_contact(const std::string& contact_name)
         {
             bool res = tsid_->removeRigidContact(contact_name);
-            assert(res);
+            IWBC_ASSERT(res, " contact ", contact_name, " not found");
         }
 
         void TalosPosTracking::add_contact(const std::string& contact_name)
@@ -230,30 +230,27 @@ namespace inria_wbc {
                 tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
             }
             else {
-                std::cout << "unknown contact" << std::endl;
+                throw IWBC_EXCEPTION("Cannot add an unknown contact:", contact_name);
             }
         }
 
         void TalosPosTracking::remove_task(const std::string& task_name, double transition_duration)
         {
             bool res = tsid_->removeTask(task_name, transition_duration);
-            assert(res);
+            IWBC_ASSERT(res, "Cannot remove an unknown task", task_name);
         }
 
-        bool TalosPosTracking::compute_task_cost(const std::string& task_name, double& cost)
+        std::shared_ptr<tsid::tasks::TaskBase> TalosPosTracking::task(const std::string& task_name)
         {
-            cost = -10000;
             auto it = se3_tasks_.find(task_name);
-
             if (it != se3_tasks_.end())
-                cost = (se3_tasks_[task_name]->getConstraint().matrix() * ddq_ - se3_tasks_[task_name]->getConstraint().vector()).norm();
+                return se3_tasks_[task_name];
             else if (task_name == "com")
-                cost = (com_task_->getConstraint().matrix() * ddq_ - com_task_->getConstraint().vector()).norm();
+                return com_task_;
             else if (task_name == "posture")
-                cost = (posture_task_->getConstraint().matrix() * ddq_ - posture_task_->getConstraint().vector()).norm();
+                return posture_task_;
             else
-                return false;
-            return true;
+                throw IWBC_EXCEPTION("Unknown task:", task_name);
         }
 
     } // namespace controllers

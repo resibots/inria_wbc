@@ -29,9 +29,8 @@ namespace inria_wbc {
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
 
             if (print_cost_) {
-                double cost = 0;
-                std::static_pointer_cast<controllers::TalosPosTracking>(controller_)->compute_task_cost("com", cost);
-                std::cout <<"squat_cost : " << cost << std::endl;
+                double cost = controller_->cost("com");
+                std::cout << "squat_cost : " << cost << std::endl;
             }
 
             if (controller_->solve()) {

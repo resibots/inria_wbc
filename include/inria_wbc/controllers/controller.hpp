@@ -29,20 +29,19 @@
 
 namespace inria_wbc {
 
-    namespace se3_mask
-    {
+    namespace se3_mask {
         using mask6 = Eigen::Array<double, 6, 1>;
 
         static const mask6 all = (mask6() << 1, 1, 1, 1, 1, 1).finished();
         static const mask6 xyz = (mask6() << 1, 1, 1, 0, 0, 0).finished();
         static const mask6 rpy = (mask6() << 0, 0, 0, 1, 1, 1).finished();
-        static const mask6 x   = (mask6() << 1, 0, 0, 0, 0, 0).finished();
-        static const mask6 y   = (mask6() << 0, 1, 0, 0, 0, 0).finished();
-        static const mask6 z   = (mask6() << 0, 0, 1, 0, 0, 0).finished();
-        static const mask6 roll  = (mask6() << 0, 0, 0, 1, 0, 0).finished();
+        static const mask6 x = (mask6() << 1, 0, 0, 0, 0, 0).finished();
+        static const mask6 y = (mask6() << 0, 1, 0, 0, 0, 0).finished();
+        static const mask6 z = (mask6() << 0, 0, 1, 0, 0, 0).finished();
+        static const mask6 roll = (mask6() << 0, 0, 0, 1, 0, 0).finished();
         static const mask6 pitch = (mask6() << 0, 0, 0, 0, 1, 0).finished();
-        static const mask6 yaw   = (mask6() << 0, 0, 0, 0, 0, 1).finished();
-    }
+        static const mask6 yaw = (mask6() << 0, 0, 0, 0, 0, 1).finished();
+    } // namespace se3_mask
 
     namespace controllers {
         class Controller {
@@ -94,10 +93,16 @@ namespace inria_wbc {
             // (e.g., weights of task, gains of the tasks, etc.)
             virtual const opt_params_t& opt_params() const
             {
-                assert(0 && "calling opt_params but no param to set in base controller");
+                IWBC_ERROR("calling opt_params but no param to set in base controller");
                 static opt_params_t x;
                 return x;
             }
+            double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task)
+            {
+                return (task->getConstraint().matrix() * ddq_ - task->getConstraint().vector()).norm();
+            }
+            virtual std::shared_ptr<tsid::tasks::TaskBase> task(const std::string& task_name) = 0;
+            double cost(const std::string& task_name) { return cost(task(task_name)); }
 
         private:
             std::vector<int> get_non_mimics_indexes() const;

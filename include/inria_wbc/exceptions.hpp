@@ -15,6 +15,10 @@
         if (!(IWBC_FIRST_ARG(__VA_ARGS__)))                                          \
             throw IWBC_EXCEPTION(IWBC_FIRST_ARG_STR(__VA_ARGS__), " ", __VA_ARGS__); \
     }
+#define IWBC_ERROR(...)                    \
+    {                                      \
+        throw IWBC_EXCEPTION(__VA_ARGS__); \
+    }
 
 namespace inria_wbc {
     class Exception : public std::runtime_error {

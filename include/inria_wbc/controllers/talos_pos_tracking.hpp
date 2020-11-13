@@ -45,9 +45,9 @@ namespace inria_wbc {
 
             void remove_task(const std::string& task_name, double transition_duration = 0.0);
 
-            bool compute_task_cost(const std::string& task_name, double& cost);
-
             virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
+
+            virtual std::shared_ptr<tsid::tasks::TaskBase> task(const std::string& task_name) override;
 
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);

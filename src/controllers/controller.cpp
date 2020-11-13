@@ -38,6 +38,7 @@
 #include <tsid/utils/stop-watch.hpp>
 
 #include "inria_wbc/controllers/controller.hpp"
+#include "inria_wbc/exceptions.hpp"
 
 using namespace tsid;
 using namespace tsid::trajectories;
@@ -101,7 +102,7 @@ namespace inria_wbc {
             if (!mimic_dof_names_.empty()) {
                 for (auto& m : mimic_dof_names_) {
                     auto it = std::find(tsid_joint_names_.begin(), tsid_joint_names_.end(), m);
-                    assert(it != tsid_joint_names_.end());
+                    IWBC_ASSERT(it != tsid_joint_names_.end(), " joint ", *it, " not found");
                     mimic_indexes.push_back(std::distance(tsid_joint_names_.begin(), it));
                 }
                 for (int i = 0; i < q_.size(); i++) {
@@ -126,7 +127,6 @@ namespace inria_wbc {
 
             const HQPData& HQPData = tsid_->computeProblemData(t_, q_tsid_, v_tsid_);
 
-            assert(solver_);
             const HQPOutput& sol = solver_->solve(HQPData);
 
             if (sol.status == HQP_STATUS_OPTIMAL) {
