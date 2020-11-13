@@ -91,7 +91,7 @@ namespace inria_wbc {
                     _com_trajs.push_back(trajectory_handler::compute_traj(com_lf, com_rf, dt_, traj_com_duration_));
                     break;
                 default:
-                    assert(0 && "unknown state");
+                    IWBC_ERROR("unknown state: ", c);
                 }
             }
             assert(_rf_trajs.size() == cycle_.size());

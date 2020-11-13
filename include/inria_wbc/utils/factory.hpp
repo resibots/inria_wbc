@@ -1,6 +1,8 @@
 #ifndef IWBC_UTILS_FACTORY_HPP
 #define IWBC_UTILS_FACTORY_HPP
 
+#include <inria_wbc/exceptions.hpp>
+
 namespace inria_wbc {
     namespace utils {
 
@@ -33,8 +35,7 @@ namespace inria_wbc {
                 if (it != _map.end())
                     return it->second(params);
                 else
-                    std::cerr << "Error :  " << name << " is not in the factory" << std::endl;
-                assert(0);
+                    throw IWBC_EXCEPTION(name, " is not in the factory");
                 return ptr_t();
             }
 

@@ -230,14 +230,14 @@ namespace inria_wbc {
                 tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
             }
             else {
-                throw IWBC_EXCEPTION("Cannot add an unknown contact:", contact_name);
+                throw IWBC_EXCEPTION("Cannot add an unknown contact: ", contact_name);
             }
         }
 
         void TalosPosTracking::remove_task(const std::string& task_name, double transition_duration)
         {
             bool res = tsid_->removeTask(task_name, transition_duration);
-            IWBC_ASSERT(res, "Cannot remove an unknown task", task_name);
+            IWBC_ASSERT(res, "Cannot remove an unknown task: ", task_name);
         }
 
         std::shared_ptr<tsid::tasks::TaskBase> TalosPosTracking::task(const std::string& task_name)
