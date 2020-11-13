@@ -35,6 +35,8 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/utils/utils.hpp
                             include/inria_wbc/utils/factory.hpp
                             include/inria_wbc/exceptions.hpp
+                            include/inria_wbc/robot_dart/cmd.hpp
+
 )
 
 set(INRIA_WBC_SOURCES
