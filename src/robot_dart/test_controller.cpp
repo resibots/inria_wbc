@@ -300,7 +300,10 @@ int main(int argc, char* argv[])
         }
     }
     catch (std::exception& e) {
-        std::cout << "Error (exception): " << e.what() << std::endl;
+        std::string red = "\x1B[31m";
+        std::string rst = "\x1B[0m";
+        std::string bold = "\x1B[1m";
+        std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
     }
     return 0;
 }
