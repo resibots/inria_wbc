@@ -1,5 +1,5 @@
-#ifndef IWBC_SQUAT_HPP
-#define IWBC_SQUAT_HPP
+#ifndef IWBC_MOVE_ARM_HPP
+#define IWBC_MOVE_ARM_HPP
 #include <chrono>
 #include <iostream>
 #include <signal.h>
@@ -10,22 +10,22 @@
 
 namespace inria_wbc {
     namespace behaviors {
-        class TalosSquat : public Behavior {
+        class ExBehavior : public Behavior {
         public:
-            TalosSquat(const controller_ptr_t& controller);
-            TalosSquat() = delete;
-            TalosSquat(const TalosSquat& other) = delete;
+            ExBehavior(const controller_ptr_t& controller);
+            ExBehavior() = delete;
+            ExBehavior(const ExBehavior&) = delete;
 
             void update(const controllers::SensorData& sensor_data) override;
-            virtual ~TalosSquat() {}
+            virtual ~ExBehavior() {}
 
         private:
             int time_ = 0;
             int traj_selector_ = 0;
-            std::vector<std::vector<Eigen::VectorXd>> trajectories_;
-            std::vector<Eigen::VectorXd> current_trajectory_;
+            std::vector<std::vector<pinocchio::SE3>> trajectories_;
+            std::vector<pinocchio::SE3> current_trajectory_;
             float trajectory_duration_ = 3; //will be changed if specified in yaml
-            float motion_size_ = 0.2; //will be changed if specified in yaml
+            float motion_size_ = 0.05; //will be changed if specified in yaml
         };
     } // namespace behaviors
 } // namespace inria_wbc

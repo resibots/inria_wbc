@@ -1,12 +1,11 @@
-#include "inria_wbc/behaviors/talos_move_arm.hpp"
+#include "inria_wbc/behaviors/ex_behavior.hpp"
 
 namespace inria_wbc {
     namespace behaviors {
-        static Register<TalosMoveArm> __talos_move_arm("talos-move-arm");
+        static Register<ExBehavior> __ex_behavior("ex-behavior");
 
-        TalosMoveArm::TalosMoveArm(const controller_ptr_t& controller) : Behavior(controller)
+        ExBehavior::ExBehavior(const controller_ptr_t& controller) : Behavior(controller)
         {
-
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
             auto lh_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("lh");
@@ -23,11 +22,10 @@ namespace inria_wbc {
             current_trajectory_ = trajectories_[traj_selector_];
         }
 
-        void TalosMoveArm::update(const controllers::SensorData& sensor_data)
+        void ExBehavior::update(const controllers::SensorData& sensor_data)
         {
             auto ref = current_trajectory_[time_];
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
-
             controller_->update(sensor_data);
             time_++;
             if (time_ == current_trajectory_.size()) {
@@ -36,5 +34,6 @@ namespace inria_wbc {
                 current_trajectory_ = trajectories_[traj_selector_];
             }
         }
+
     } // namespace behaviors
 } // namespace inria_wbc

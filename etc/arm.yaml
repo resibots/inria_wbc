@@ -1,4 +1,6 @@
-SOT:
+CONTROLLER:
+  name: talos-pos-tracking
+  ref_config: pal_start
   w_com: 100.0
   w_floatingb: 100.0
   w_posture: 0.75
@@ -6,9 +8,10 @@ SOT:
   w_forceRef_hands: 1e-3
   w_waist: 20.0
   w_rh: 10.0
-  w_lh: 10.0
+  w_lh: 1000.0
   w_rf: 1.0
   w_lf: 1.0
+  w_torso: 2500.0
   w_velocity: 1.0
   kp_contact: 30.0
   kp_com: 3000.0
@@ -19,10 +22,18 @@ SOT:
   kp_lh: 300.0
   kp_rf: 30.0
   kp_lf: 30.0
+  kp_torso: 30.0
+STABILIZER:
+  activated: true
+  filter_size: 5
+  p_x: 0.07
+  p_y: 0.07
+  d_x: 0.01
+  d_y: 0.01
 BEHAVIOR:
   name : talos-move-arm
-  trajectory_duration : 6
-  motion_size : 0.05
+  trajectory_duration : 1
+  motion_size : 0.25
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf

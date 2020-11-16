@@ -1,37 +1,42 @@
 CONTROLLER:
   name: talos-pos-tracking
   ref_config: pal_start
-  w_com: 100000.0
-  w_floatingb: 1000.0
-  w_posture: 10.0
+  w_com: 1.0
+  w_floatingb: 0.0
+  w_posture: 0.75
   w_forceRef_feet: 1e-3
   w_forceRef_hands: 1e-3
-  w_rh: 100.0
-  w_lh: 100.0
-  w_rf: 1.0
-  w_lf: 1.0
-  w_torso: 2500.0
-  w_velocity: 1.0
+  w_rh: 1.0
+  w_lh: 1.0
+  w_rf: 1000.0
+  w_lf: 1000.0
+  w_velocity: 10000.0
+  w_torso: 500.0
   kp_contact: 30.0
   kp_com: 3000.0
-  kp_floatingb: 3000.0
-  kp_posture: 50.0
+  kp_floatingb: 0.0
+  kp_posture: 30.0
+  kp_waist: 3000.0
   kp_rh: 30.0
   kp_lh: 30.0
-  kp_rf: 30.0
-  kp_lf: 30.0
+  kp_rf: 3000.0
+  kp_lf: 3000.0
   kp_torso: 30.0
 STABILIZER:
   activated: true
   filter_size: 5
-  p_x: 0.05
-  p_y: 0.05
-  d_x: 0.01
-  d_y: 0.01
+  p_x: 0.08
+  p_y: 0.08
+  d_x: 0.02
+  d_y: 0.02
 BEHAVIOR:
-  name : talos-squat
-  trajectory_duration : 3
-  motion_size : 0.2
+  name : walk-on-spot
+  traj_com_duration : 1.5
+  traj_foot_duration : 1.5
+  step_height : 0.3
+  stop_duration : 0.7
+  step_height : 0.45
+  stop_height : 0.015
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
