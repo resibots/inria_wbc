@@ -215,6 +215,11 @@ namespace inria_wbc {
             return filter_mimics ? remove_intersection(all_dofs, mimic_dof_names_) : all_dofs;
         }
 
+        Eigen::VectorXd Controller::tau(bool filter_mimics) const
+        {
+            return filter_mimics ? slice_vec(tau_, non_mimic_indexes_) : tau_;
+        }
+
         Eigen::VectorXd Controller::ddq(bool filter_mimics) const
         {
             return filter_mimics ? slice_vec(ddq_, non_mimic_indexes_) : ddq_;
