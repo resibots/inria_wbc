@@ -22,21 +22,16 @@ namespace inria_wbc {
             current_trajectory_ = trajectories_[traj_selector_];
         }
 
-        bool ExBehavior::update()
+        void ExBehavior::update(const controllers::SensorData& sensor_data)
         {
             auto ref = current_trajectory_[time_];
             std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
-            if (controller_->solve()) {
-                time_++;
-                if (time_ == current_trajectory_.size()) {
-                    time_ = 0;
-                    traj_selector_ = ++traj_selector_ % trajectories_.size();
-                    current_trajectory_ = trajectories_[traj_selector_];
-                }
-                return true;
-            }
-            else {
-                return false;
+            controller_->update(sensor_data);
+            time_++;
+            if (time_ == current_trajectory_.size()) {
+                time_ = 0;
+                traj_selector_ = ++traj_selector_ % trajectories_.size();
+                current_trajectory_ = trajectories_[traj_selector_];
             }
         }
 

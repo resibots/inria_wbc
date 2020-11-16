@@ -16,7 +16,7 @@ namespace inria_wbc {
             ExBehavior() = delete;
             ExBehavior(const ExBehavior&) = delete;
 
-            bool update() override;
+            void update(const controllers::SensorData& sensor_data) override;
             virtual ~ExBehavior() {}
 
         private:

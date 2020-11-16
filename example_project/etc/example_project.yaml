@@ -1,5 +1,6 @@
 CONTROLLER:
   name: ex-controller
+  ref_config: pal_start
   w_com: 100.0
   w_floatingb: 100.0
   w_posture: 0.75
@@ -10,6 +11,7 @@ CONTROLLER:
   w_lh: 10.0
   w_rf: 1.0
   w_lf: 1.0
+  w_torso: 2500.0
   w_velocity: 1.0
   kp_contact: 30.0
   kp_com: 3000.0
@@ -20,6 +22,14 @@ CONTROLLER:
   kp_lh: 300.0
   kp_rf: 30.0
   kp_lf: 30.0
+  kp_torso: 30.0
+STABILIZER:
+  activated: true
+  filter_size: 5
+  p_x: 0.07
+  p_y: 0.07
+  d_x: 0.01
+  d_y: 0.01
 BEHAVIOR:
   name : ex-behavior
   trajectory_duration : 6
