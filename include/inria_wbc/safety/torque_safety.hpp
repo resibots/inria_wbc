@@ -41,7 +41,7 @@ public:
         } 
     } MedianFilter; 
 
-
+    TorqueCollisionDetection() = default;
     TorqueCollisionDetection(int nvar, double threshold=1.0, int buffer_len=1);
     TorqueCollisionDetection(Eigen::VectorXd threshold, int buffer_len=1);
     ~TorqueCollisionDetection() = default;
