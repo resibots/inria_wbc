@@ -245,13 +245,14 @@ namespace inria_wbc {
             return masses;
         }
 
-        std::shared_ptr<tasks::TaskComEquality> Controller::make_com_task(const std::string& name, double kp) const
+        std::shared_ptr<tasks::TaskComEquality> Controller::make_com_task(const std::string& name, double kp, const Vector& mask) const
         {
             assert(tsid_);
             assert(robot_);
             auto task = std::make_shared<tasks::TaskComEquality>(name, *robot_);
             task->Kp(kp * Vector::Ones(3));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
+            task->setMask(mask);
             task->setReference(to_sample(robot_->com(tsid_->data())));
             return task;
         }
