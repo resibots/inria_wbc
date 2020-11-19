@@ -21,8 +21,6 @@ namespace inria_wbc {
                 }
             };
 
-            ~Factory() { _map.clear(); }
-
             static Factory& instance()
             {
                 static Factory instance;
@@ -30,7 +28,8 @@ namespace inria_wbc {
             }
             using ptr_t = std::shared_ptr<T>;
             using creator_t = std::function<ptr_t(const Types&... args)>;
-            void register_creator(const std::string& name, creator_t pfn_creator)
+            
+            void register_creator(const std::string& name, const creator_t& pfn_creator)
             {
                 if (_map.find(name) == _map.end())
                     _map[name] = pfn_creator;
