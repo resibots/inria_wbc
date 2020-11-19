@@ -8,9 +8,19 @@ namespace inria_wbc {
 
         // a generic factory class, to be specialized for your own class
         // first is the objects to create (abstract class), second is the parameter types for the constructor
-        template <typename T,  class... Types>
+        template <typename T, class... Types>
         class Factory {
         public:
+            template <typename B>
+            struct AutoRegister {
+                AutoRegister(const std::string& name)
+                {
+                    instance().register_creator(name, [](const Types&... args) {
+                        return std::make_shared<B>(args...);
+                    });
+                }
+            };
+
             ~Factory() { _map.clear(); }
 
             static Factory& instance()
@@ -20,7 +30,6 @@ namespace inria_wbc {
             }
             using ptr_t = std::shared_ptr<T>;
             using creator_t = std::function<ptr_t(const Types&... args)>;
-
             void register_creator(const std::string& name, creator_t pfn_creator)
             {
                 if (_map.find(name) == _map.end())
@@ -51,17 +60,7 @@ namespace inria_wbc {
             Factory& operator=(const Factory&) { return *this; }
             std::unordered_map<std::string, creator_t> _map;
         };
-
-        template <typename B, typename T, class... Types>
-        struct AutoRegister {
-            AutoRegister(const std::string& name)
-            {
-                Factory<B, Types...>::instance().register_creator(name, [](const Types&... args) {
-                    return std::make_shared<T>(args...);
-                });
-            }
-        };
-    } // namespace utils
+    }; // namespace utils
 } // namespace inria_wbc
 
 #endif

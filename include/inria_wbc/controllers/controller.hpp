@@ -201,9 +201,7 @@ namespace inria_wbc {
 
         using Factory = utils::Factory<Controller, Controller::Params>;
         template <typename T>
-        struct Register : public utils::AutoRegister<Controller, T, Controller::Params> {
-            Register(const std::string& name) : utils::AutoRegister<Controller, T, Controller::Params>(name) {}
-        };
+        using Register = Factory::AutoRegister<T>;
     } // namespace controllers
 } // namespace inria_wbc
 #endif

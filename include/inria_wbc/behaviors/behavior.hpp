@@ -20,10 +20,7 @@ namespace inria_wbc {
         };
         using Factory = utils::Factory<Behavior, Behavior::controller_ptr_t>;
         template <typename T>
-        struct Register : public utils::AutoRegister<Behavior, T, Behavior::controller_ptr_t> {
-            Register(const std::string& name) : utils::AutoRegister<Behavior, T, Behavior::controller_ptr_t>(name) {}
-        };
-
+        using Register = Factory::AutoRegister<T>;
     } // namespace behaviors
 } // namespace inria_wbc
 #endif
