@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     ("conf,c", po::value<std::string>()->default_value("../etc/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
     ("fast,f", "fast (simplified) Talos [default: false]")
     ("big_window,b", "use a big window (nicer but slower) [default:true]")
-    ("actuators,a", po::value<std::string>()->default_value("torque"), "actuator model torque/velocity/servo (always for position control) [default:torque]")
+    ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:torque]")
     ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
     ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
     ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
@@ -104,8 +104,8 @@ int main(int argc, char *argv[])
     robot->set_position_enforced(vm["enforce_position"].as<bool>());
     robot->set_actuator_types(vm["actuators"].as<std::string>());
 
-    robot->set_friction_coeffs(0.0);
-    robot->set_damping_coeffs(0.0);
+    //robot->set_friction_coeffs(0.0);
+    //robot->set_damping_coeffs(0.0);
     
     //robot->set_actuator_types("velocity");
 
@@ -187,16 +187,16 @@ int main(int argc, char *argv[])
         "arm_right_1_joint", "arm_right_2_joint","arm_right_3_joint", "arm_right_4_joint"}; // id 17 left_arm_4
 
     Eigen::VectorXd torque_threshold(joints_with_tq.size());
-    torque_threshold << 3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
+/*     torque_threshold << 3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
                 3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
                 4.8e-04, 1.6e-01, 
                 4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03, 
-                4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03;
+                4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03; */
 
     torque_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
             3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
             5e-02, 2e-01, 
-            5e-02, 5e-02,5e-02, 1e-01, 
+            5e-02, 5e-02, 5e-02, 1e-01, 
             5e-02, 5e-02, 5e-02, 1e-01;
 
     inria_wbc::safety::TorqueCollisionDetection torque_collision(torque_threshold, 5);
@@ -213,12 +213,28 @@ int main(int argc, char *argv[])
     std::vector<int> tq_joints_idx;
     std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
 
+    auto filtered_dof_names = robot->dof_names(true, true, true); // filter out mimic, passive and locked dofs
     for(const auto& joint : joints_with_tq)
     {
-        tq_joints_idx.push_back(robot->dof_index(joint));
-        torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000));
+        auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
+        tq_joints_idx.push_back(std::distance(filtered_dof_names.begin(), it));
+        torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000)); 
+        std::cerr << "Add joint " << joint << " with index " << std::distance(filtered_dof_names.begin(), it) << std::endl;
     }
 
+    std::cerr << "\nDOF NAMES\n";
+    for(const auto& i : robot->dof_names())
+        std::cerr << i << std::endl;
+
+    std::cerr << "\nFILTERED DOF NAMES\n";
+    for(const auto& i : robot->dof_names(true, true, true))
+        std::cerr << i << std::endl;
+
+    std::cerr << "\nJOINT NAMES\n";
+    for(const auto& i : robot->joint_names())
+        std::cerr << i << std::endl;
+    std::cerr << std::endl;
+    
     // reading from sensors
     Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(joints_with_tq.size());
     // expected torque from tsid
@@ -276,19 +292,25 @@ int main(int argc, char *argv[])
 
 
             // safety check on torque sensors (check prevous command with actual sensor measurement)
-            if(vm["actuators"].as<std::string>() == "velocity" && it_cmd > 0)
+            if(vm["actuators"].as<std::string>() == "servo" && it_cmd > 0)
             {
                 
                 if( !torque_collision.check(tsid_tau, tq_sensors, inria_wbc::safety::TorqueCollisionDetection::MedianFilter() ) )
                 {
-                    /* std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
+                    std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
                     auto inv = torque_collision.get_invalid_ids();
                     
-                    std::cerr <<"invalid dofs: [";
+/*                     std::cerr <<"invalid dofs: [";
                     for(auto v : inv) std::cerr << v <<" ";
                     std::cerr <<"] with discrepancy [";
                     for(auto v : inv) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
                     std::cerr << "]\n"; */
+
+                    //std::cerr <<"{18, 19, 20, 21} discrepancy: ";
+                    //for(auto v : {18, 19, 20, 21}) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
+                    //std::cerr <<"\n{14, 15, 16, 17} discrepancy: ";
+                    //for(auto v : {14, 15, 16, 17}) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
+                    //std::cerr << "\n";
 
                     external_detected = true;
                 }
