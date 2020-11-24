@@ -132,10 +132,11 @@ int main(int argc, char* argv[])
         inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
             "../etc/franka_configurations.srdf",
             sot_config_path,
-            "panda_joint1",
+            false, //added temporarely
+            "",
             dt,
             verbose,
-            robot->mimic_dof_names()}; //??????????????????????
+            robot->mimic_dof_names()};
 
         std::string behavior_name, controller_name;
         YAML::Node config = YAML::LoadFile(sot_config_path);
@@ -145,6 +146,7 @@ int main(int argc, char* argv[])
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
         assert(behavior);
+        //hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;

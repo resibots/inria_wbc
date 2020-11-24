@@ -7,6 +7,9 @@
 namespace inria_wbc {
     namespace controllers {
         namespace cst {
+
+            static constexpr char endEffector_joint_name[] = "panda_hand_joint"; //ee joint
+
             // contact configuration
             static constexpr double lxp = 0.1; // foot length in positive x direction
             static constexpr double lxn = 0.11; // foot length in negative x direction
@@ -36,7 +39,7 @@ namespace inria_wbc {
 
             virtual void update(const SensorData& sensor_data) override;
 
-            //???? HERE
+            //~~???? HERE
             virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); } //??
             virtual std::shared_ptr<tsid::tasks::TaskBase> task(const std::string& task_name) override;
 

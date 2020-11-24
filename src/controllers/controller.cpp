@@ -57,13 +57,20 @@ namespace inria_wbc {
             params_ = params;
             verbose_ = params_.verbose;
             pinocchio::Model robot_model;
-            if (!params.floating_base_joint_name.empty()) {
-                fb_joint_name_ = params.floating_base_joint_name; //floating base joint already in urdf
-                pinocchio::urdf::buildModel(params.urdf_path, robot_model, verbose_);
+            if (params.has_floating_base ) {
+
+              if (!params.floating_base_joint_name.empty()) {
+                  fb_joint_name_ = params.floating_base_joint_name; //floating base joint already in urdf
+                  pinocchio::urdf::buildModel(params.urdf_path, robot_model, verbose_);
+              }
+              else {
+                  pinocchio::urdf::buildModel(params.urdf_path, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
+                  fb_joint_name_ = "root_joint";
+              }
             }
-            else {
-                pinocchio::urdf::buildModel(params.urdf_path, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
-                fb_joint_name_ = "root_joint";
+            else{
+              pinocchio::urdf::buildModel(params.urdf_path, robot_model, verbose_);
+              fb_joint_name_ = ""; //~~ not sure if I can remove it yet
             }
             robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, verbose_); //the srdf contains initial joint positions
@@ -79,7 +86,7 @@ namespace inria_wbc {
             t_ = 0.0;
 
             uint nactuated = robot_->na();
-            uint ndofs = robot_->nv(); // na + 6 (floating base)
+            uint ndofs = robot_->nv(); // na + 6 (floating base) //~~??? not always the case now
 
             v_tsid_ = Vector::Zero(ndofs);
             a_tsid_ = Vector::Zero(ndofs);
@@ -176,7 +183,14 @@ namespace inria_wbc {
         std::vector<std::string> Controller::controllable_dofs(bool filter_mimics) const
         {
             auto na = robot_->model().names;
-            auto tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
+            std::vector<std::string> tsid_controllables;
+            if ( params.has_floating_base){
+              tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
+            }
+            else{
+              tsid_controllables = std::vector<std::string>(robot_->model().names.begin(), robot_->model().names.end()); //?????????????????????????????????????????????????!! I don't know about this +2, maybe it will be correct to have +1 instead, ask !
+            }
+
             if (filter_mimics)
                 return remove_intersection(tsid_controllables, mimic_dof_names_);
             else
@@ -186,22 +200,29 @@ namespace inria_wbc {
         // Order of the floating base in q_ according to dart naming convention
         std::vector<std::string> Controller::floating_base_dofs() const
         {
+
             std::vector<std::string> floating_base_dofs;
-            if (fb_joint_name_ == "root_joint") {
-                floating_base_dofs = {"rootJoint_pos_x",
-                    "rootJoint_pos_y",
-                    "rootJoint_pos_z",
-                    "rootJoint_rot_x",
-                    "rootJoint_rot_y",
-                    "rootJoint_rot_z"};
+            if ( params.has_floating_base){
+
+                if (fb_joint_name_ == "root_joint") {
+                    floating_base_dofs = {"rootJoint_pos_x",
+                        "rootJoint_pos_y",
+                        "rootJoint_pos_z",
+                        "rootJoint_rot_x",
+                        "rootJoint_rot_y",
+                        "rootJoint_rot_z"};
+                }
+                else {
+                    floating_base_dofs = {fb_joint_name_ + "_pos_x",
+                        fb_joint_name_ + "_pos_y",
+                        fb_joint_name_ + "_pos_z",
+                        fb_joint_name_ + "_rot_x",
+                        fb_joint_name_ + "_rot_y",
+                        fb_joint_name_ + "_rot_z"};
+                }
             }
             else {
-                floating_base_dofs = {fb_joint_name_ + "_pos_x",
-                    fb_joint_name_ + "_pos_y",
-                    fb_joint_name_ + "_pos_z",
-                    fb_joint_name_ + "_rot_x",
-                    fb_joint_name_ + "_rot_y",
-                    fb_joint_name_ + "_rot_z"};
+                floating_base_dofs = {}; 
             }
 
             return floating_base_dofs;
@@ -337,9 +358,12 @@ namespace inria_wbc {
             parse(verbose, "verbose", config, "PARAMS", verbose);
             parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
 
+            bool dummy_value_has_floating_base = true; //~~ decide if should be here
+
             Controller::Params params = {urdf_path,
                 srdf_path,
                 sot_config_path,
+                dummy_value_has_floating_base,
                 floating_base_joint_name,
                 dt,
                 verbose,

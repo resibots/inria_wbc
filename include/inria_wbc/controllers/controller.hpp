@@ -71,6 +71,7 @@ namespace inria_wbc {
                 std::string urdf_path;
                 std::string srdf_path;
                 std::string sot_config_path;
+                bool has_floating_base; //~~added temporarly
                 std::string floating_base_joint_name;
                 float dt;
                 bool verbose;
