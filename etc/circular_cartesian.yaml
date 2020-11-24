@@ -4,7 +4,7 @@
 
 CONTROLLER:
   name: franka-cartesian-pos-tracking
-  ref_config: pal_start
+  ref_config: start
   w_com: 1.0
   w_floatingb: 0.0
   w_posture: 0.75
@@ -45,19 +45,9 @@ PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf //???
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf //???
   sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/squat.yaml //???
-  floating_base_joint_name: ""
+  floating_base_joint_name: "panda_joint1" ??????????????????? remove
   dt: 0.001
   verbose: false
-  mimic_dof_names : ["gripper_left_inner_double_joint",
-                     "gripper_left_fingertip_1_joint",
-                     "gripper_left_fingertip_2_joint",
-                     "gripper_left_inner_single_joint",
-                     "gripper_left_fingertip_3_joint",
-                     "gripper_left_motor_single_joint",
-                     "gripper_right_inner_double_joint",
-                     "gripper_right_fingertip_1_joint",
-                     "gripper_right_fingertip_2_joint",
-                     "gripper_right_inner_single_joint",
-                     "gripper_right_fingertip_3_joint",
-                     "gripper_right_motor_single_joint"]  //????????????????????
+
+  mimic_dof_names : []
 

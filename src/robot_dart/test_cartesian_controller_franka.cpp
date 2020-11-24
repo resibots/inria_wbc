@@ -130,9 +130,9 @@ int main(int argc, char* argv[])
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
         inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
-            "../etc/talos_configurations.srdf", //??????????????????????
+            "../etc/franka_configurations.srdf",
             sot_config_path,
-            "",
+            "panda_joint1",
             dt,
             verbose,
             robot->mimic_dof_names()}; //??????????????????????
