@@ -28,9 +28,11 @@ list(APPEND DEPENDENCIES_INCS
 set(INRIA_WBC_HEADERS
                             include/inria_wbc/controllers/controller.hpp
                             include/inria_wbc/controllers/talos_pos_tracking.hpp
+                            include/inria_wbc/controllers/franka_cartesian_pos_tracking.hpp
                             include/inria_wbc/behaviors/talos_squat.hpp
                             include/inria_wbc/behaviors/talos_move_arm.hpp
                             include/inria_wbc/behaviors/talos_walk_on_spot.hpp
+                            include/inria_wbc/behaviors/franka_circular_cartesian.hpp
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
                             include/inria_wbc/utils/factory.hpp
@@ -43,9 +45,11 @@ set(INRIA_WBC_HEADERS
 set(INRIA_WBC_SOURCES
                             src/controllers/controller.cpp
                             src/controllers/talos_pos_tracking.cpp
+                            src/controllers/franka-cartesian-pos-tracking.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
                             src/behaviors/talos_walk_on_spot.cpp
+                            src/behaviors/franka_circular_cartesian.cpp
                             src/estimators/cop.cpp
 )
 
@@ -53,6 +57,7 @@ set(EXAMPLE_LIST
                 src/robot_dart/evaluate_cop.cpp
                 src/robot_dart/test_controller.cpp
                 src/robot_dart/test_masses.cpp
+                src/robot_dart/test_cartesian_controller_franka.cpp
 )
 
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")

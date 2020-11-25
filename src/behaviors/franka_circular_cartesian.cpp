@@ -10,7 +10,7 @@ namespace inria_wbc {
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             dt_ = controller_->dt();
 
-            time_ = 0; //??????
+            time_ = 0; //~~ ??????
 
             _generate_trajectories();
         }
@@ -20,7 +20,7 @@ namespace inria_wbc {
         
 
         void CircCartTraj::update(const controllers::SensorData& sensor_data)
-        {//to do
+        {//~~ to do
 
         }
 

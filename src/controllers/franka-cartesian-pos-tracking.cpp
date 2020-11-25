@@ -43,7 +43,6 @@ namespace inria_wbc {
             p["kp_ee"] = 30.0; 
         }
 
-        //~~???? HERE
         void TalosPosTracking::parse_configuration_yaml(const std::string& sot_config_path)
         {
             std::ifstream yamlConfigFile(sot_config_path);
@@ -65,21 +64,6 @@ namespace inria_wbc {
             if (verbose_)
                 std::cout << "[controller] Taking the reference configuration from " << ref_config_ << std::endl;
 
-            // stabilizer
-            inria_wbc::utils::parse(_use_stabilizer, "activated", config, "STABILIZER");
-            inria_wbc::utils::parse(_stabilizer_p(0), "p_x", config, "STABILIZER");
-            inria_wbc::utils::parse(_stabilizer_p(1), "p_y", config, "STABILIZER");
-            inria_wbc::utils::parse(_stabilizer_d(0), "d_x", config, "STABILIZER");
-            inria_wbc::utils::parse(_stabilizer_d(1), "d_y", config, "STABILIZER");
-            int history = _cop_estimator.history_size();
-            inria_wbc::utils::parse(history, "filter_size", config, "STABILIZER");
-            _cop_estimator.set_history_size(history);
-
-            if (verbose_) {
-                std::cout << "Stabilizer:" << _use_stabilizer << std::endl;
-                std::cout << "P:" << _stabilizer_p.transpose() << std::endl;
-                std::cout << "D:" << _stabilizer_d.transpose() << std::endl;
-            }
         }
 
         void TalosPosTracking::set_stack_configuration()
@@ -113,51 +97,24 @@ namespace inria_wbc {
             cartesian_ee = make_se3_joint_task(
                 "end_effector",
                 cst::endEffector_joint_name,
-                p.at("kp_ee"), //~~  change that kp
+                p.at("kp_ee"), 
                 se3_mask::all);
-            if (p.at("w_ee") > 0) //~~  change that w
-                tsid_->addMotionTask(*cartesian_ee, p.at("w_torso"), 1);
+            if (p.at("w_ee") > 0) 
+                tsid_->addMotionTask(*cartesian_ee, p.at("w_ee"), 1);
             se3_tasks_[cartesian_ee->name()] = cartesian_ee;
 
         }
 
-        void TalosPosTracking::update(const SensorData& sensor_data)
+        void FrankaCartPosTracking::update(const SensorData& sensor_data)
         {
-            auto com_ref = com_task_->getReference().pos;
-              pinocchio::SE3 x = pinocchio::vectorToSE3( //~~ ag find that in the pinocchio sources to fond out how to build a SE3 type
-
-            // estimate the CoP / ZMP
-            bool cop_ok = _cop_estimator.update(com_ref.head(2),
-                model_joint_pos("leg_left_6_joint").translation(),
-                model_joint_pos("leg_right_6_joint").translation(),
-                sensor_data.lf_torque, sensor_data.lf_force,
-                sensor_data.rf_torque, sensor_data.rf_force);
-            // modify the CoM reference (stabilizer) if the CoP is valid
-            if (_use_stabilizer && cop_ok && !std::isnan(_cop_estimator.cop_filtered()(0)) && !std::isnan(_cop_estimator.cop_filtered()(1))) {
-                // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
-                // CoM = CoP+zc/g \ddot{x}
-                // see Biped Walking Pattern Generation by using Preview Control of Zero-Moment Point
-                // see eq.24 of Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
-                // see eq. 21 of Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
-                Eigen::Vector2d a = tsid_->data().acom[0].head<2>();
-                Eigen::Vector3d com = tsid_->data().com[0];
-                Eigen::Vector2d ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
-                auto cop = _cop_estimator.cop_filtered();
-                Eigen::Vector2d cor = _stabilizer_p.array() * (ref.head(2) - _cop_estimator.cop_filtered()).array();
-
-                // [not classic] we correct by the velocity of the CoM instead of the CoP because we have an IMU for this
-                Eigen::Vector2d cor_v = _stabilizer_d.array() * sensor_data.velocity.head(2).array();
-                cor += cor_v;
-
-                Eigen::VectorXd ref_m = com_ref - Eigen::Vector3d(cor(0), cor(1), 0);
-                set_com_ref(ref_m);
-            }
-
-            // solve everything
+            Eigen::Vector3d ref_xyz;
+            ref_xyz << 0.5,0.7,0.1;
+            pinocchio::SE3 ref_ee;
+            ref_ee.translation( ref_xyz );
+            ref_ee.rotation(Eigen::Matrix<double,3,3>::Identity()); 
+            set_se3_ref( ref_ee, "end_effector");
+    
             _solve();
-
-            // set the CoM back (useful if the behavior does not the set the ref at each timestep)
-            set_com_ref(com_ref);
         }
 
         pinocchio::SE3 FrankaCartPosTracking::get_se3_ref(const std::string& task_name)
@@ -176,16 +133,6 @@ namespace inria_wbc {
             IWBC_ASSERT(it != se3_tasks_.end(), " task ", task_name, " not found");
             auto sample = to_sample(ref);
             it->second->setReference(sample);
-        }
-
-        void FrankaCartPosTracking::set_com_ref(const Vector3& ref)
-        {
-            com_task_->setReference(to_sample(ref));
-        }
-
-        void FrankaCartPosTracking::set_posture_ref(const tsid::math::Vector& ref)
-        {
-            posture_task_->setReference(to_sample(ref));
         }
 
         void FrankaCartPosTracking::remove_task(const std::string& task_name, double transition_duration)
