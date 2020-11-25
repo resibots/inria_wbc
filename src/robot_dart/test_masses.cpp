@@ -82,6 +82,7 @@ int main(int argc, char* argv[])
     inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
         "../etc/talos_configurations.srdf",
         sot_config_path,
+	true,
         "",
         dt,
         false,
