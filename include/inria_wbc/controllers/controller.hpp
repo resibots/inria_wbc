@@ -52,31 +52,7 @@ namespace inria_wbc {
 
     namespace controllers {
 
-        struct SensorDataStruct {
-            typedef std::shared_ptr<SensorDataStruct> Ptr;
-
-            ~SensorDataStruct() { std::cerr << "calling SensorDataStruct destructor"; };
-        };
-
-        struct SensorData
-        {
-            SensorDataStruct::Ptr data_struct_ptr;
-
-            template <class DerivedSensorDataStruct, class... Args>
-            static SensorData create(Args... args)
-            {
-                static_assert(std::is_base_of<SensorDataStruct, DerivedSensorDataStruct>::value, "T should inherit from B");
-                return SensorData { .data_struct_ptr = std::make_shared<DerivedSensorDataStruct>(args...) };
-            }
-
-            template <class DerivedSensorDataStruct>
-            std::shared_ptr<DerivedSensorDataStruct> as() const
-            {
-                static_assert(std::is_base_of<SensorDataStruct, DerivedSensorDataStruct>::value, "T should inherit from B");
-                return std::static_pointer_cast<DerivedSensorDataStruct>(this->data_struct_ptr);
-            }
-
-        };
+        typedef std::map<std::string, Eigen::MatrixXd> SensorData;
 
         class Controller {
         public:

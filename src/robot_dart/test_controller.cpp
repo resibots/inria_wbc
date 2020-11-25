@@ -186,16 +186,18 @@ int main(int argc, char* argv[])
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
             // update the sensors
-
-            auto sensor_data = inria_wbc::controllers::SensorData::create<inria_wbc::controllers::TalosSensorData>(
-                    ft_sensor_left->torque(),
-                    ft_sensor_left->force(),
-                    ft_sensor_right->torque(),
-                    ft_sensor_right->force(),
-                    imu->linear_acceleration(),
-                    robot->com_velocity().tail<3>(),
-                    robot->skeleton()->getPositions().tail(ncontrollable)
-                );
+            inria_wbc::controllers::SensorData sensor_data;
+            // left foot
+            sensor_data["lf_torque"] = ft_sensor_left->torque();
+            sensor_data["lf_force"] = ft_sensor_left->force(); 
+            // right foot
+            sensor_data["rf_torque"] = ft_sensor_right->torque();
+            sensor_data["rf_force"] = ft_sensor_right->force();
+            // accelerometer
+            sensor_data["acceleration"] = imu->linear_acceleration();
+            sensor_data["velocity"] = robot->com_velocity().tail<3>();
+            // joint positions (excluding floating base)
+            sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
 
             // step the command
             Eigen::VectorXd cmd;
