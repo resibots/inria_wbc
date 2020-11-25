@@ -16,10 +16,12 @@ namespace inria_wbc {
         public:
             CircCartTraj(const controller_ptr_t& controller);
             CircCartTraj() = delete;
-            CircCartTraj(const WalkOnSpot& otehr) = default;
+            CircCartTraj(const CircCartTraj& other) = default;
             void update(const controllers::SensorData& sensor_data) override;
 
         private:
+            float dt_;
+ 
             void _generate_trajectories();
         };
     } // namespace behaviors

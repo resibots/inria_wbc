@@ -15,7 +15,7 @@ namespace inria_wbc {
         class FrankaCartPosTracking: public Controller {
         public:
             FrankaCartPosTracking(const Params& params);
-            FrankaCartPosTracking(const TalosPosTracking& other) = delete;
+            FrankaCartPosTracking(const FrankaCartPosTracking& other) = delete;
             FrankaCartPosTracking& operator=(const FrankaCartPosTracking& o) const = delete;
             virtual ~FrankaCartPosTracking(){};
 
@@ -40,6 +40,7 @@ namespace inria_wbc {
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
             std::string ref_config_ = "start";
 
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> cartesian_ee_;
             // SE tasks (trajectories of joints/frames)
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskSE3Equality>> se3_tasks_;
 

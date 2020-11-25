@@ -10,7 +10,6 @@ namespace inria_wbc {
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             dt_ = controller_->dt();
 
-            time_ = 0; //~~ ??????
 
             _generate_trajectories();
         }

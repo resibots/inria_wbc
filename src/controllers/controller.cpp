@@ -184,7 +184,7 @@ namespace inria_wbc {
         {
             auto na = robot_->model().names;
             std::vector<std::string> tsid_controllables;
-            if ( params.has_floating_base){
+            if ( params_.has_floating_base){
               tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
             }
             else{
@@ -202,7 +202,7 @@ namespace inria_wbc {
         {
 
             std::vector<std::string> floating_base_dofs;
-            if ( params.has_floating_base){
+            if ( params_.has_floating_base){
 
                 if (fb_joint_name_ == "root_joint") {
                     floating_base_dofs = {"rootJoint_pos_x",

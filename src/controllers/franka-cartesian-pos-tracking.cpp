@@ -43,7 +43,7 @@ namespace inria_wbc {
             p["kp_ee"] = 30.0; 
         }
 
-        void TalosPosTracking::parse_configuration_yaml(const std::string& sot_config_path)
+        void FrankaCartPosTracking::parse_configuration_yaml(const std::string& sot_config_path)
         {
             std::ifstream yamlConfigFile(sot_config_path);
             if (verbose_)
@@ -66,7 +66,7 @@ namespace inria_wbc {
 
         }
 
-        void TalosPosTracking::set_stack_configuration()
+        void FrankaCartPosTracking::set_stack_configuration()
         {
 
             const opt_params_t& p = params_.opt_params;
@@ -75,8 +75,8 @@ namespace inria_wbc {
                     std::cout << x.first << " => " << params_.opt_params[x.first] << std::endl;
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
-            q_tsid = robot_->model().referenceConfigurations[ref_config_];
-            q0_=q_tsid;
+            q_tsid_ = robot_->model().referenceConfigurations[ref_config_];
+            q0_=q_tsid_;
 
             ////////////////////Create the inverse-dynamics formulation///////////////////
             tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
@@ -94,14 +94,14 @@ namespace inria_wbc {
             assert(robot_);
             ////////////////////Compute Tasks, Bounds and Contacts ///////////////////////
             
-            cartesian_ee = make_se3_joint_task(
+            cartesian_ee_ = make_se3_joint_task(
                 "end_effector",
                 cst::endEffector_joint_name,
                 p.at("kp_ee"), 
                 se3_mask::all);
             if (p.at("w_ee") > 0) 
-                tsid_->addMotionTask(*cartesian_ee, p.at("w_ee"), 1);
-            se3_tasks_[cartesian_ee->name()] = cartesian_ee;
+                tsid_->addMotionTask(*cartesian_ee_, p.at("w_ee"), 1);
+            se3_tasks_[cartesian_ee_->name()] = cartesian_ee_;
 
         }
 
