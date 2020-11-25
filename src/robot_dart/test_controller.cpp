@@ -19,7 +19,6 @@
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
-#include "inria_wbc/controllers/talos_pos_tracking.hpp"
 
 int main(int argc, char* argv[])
 {
