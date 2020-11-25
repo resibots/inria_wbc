@@ -19,6 +19,7 @@
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "inria_wbc/controllers/talos_pos_tracking.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -186,14 +187,15 @@ int main(int argc, char* argv[])
 
             // update the sensors
 
-            inria_wbc::controllers::SensorData sensor_data = {
-                ft_sensor_left->torque(),
-                ft_sensor_left->force(),
-                ft_sensor_right->torque(),
-                ft_sensor_right->force(),
-                imu->linear_acceleration(),
-                robot->com_velocity().tail<3>(),
-                robot->skeleton()->getPositions().tail(ncontrollable)};
+            auto sensor_data = inria_wbc::controllers::SensorData::create<inria_wbc::controllers::TalosSensorData>(
+                    ft_sensor_left->torque(),
+                    ft_sensor_left->force(),
+                    ft_sensor_right->torque(),
+                    ft_sensor_right->force(),
+                    imu->linear_acceleration(),
+                    robot->com_velocity().tail<3>(),
+                    robot->skeleton()->getPositions().tail(ncontrollable)
+                );
 
             // step the command
             Eigen::VectorXd cmd;

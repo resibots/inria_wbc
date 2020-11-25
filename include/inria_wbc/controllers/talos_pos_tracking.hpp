@@ -27,6 +27,21 @@ namespace inria_wbc {
             static constexpr char torso_frame_name[] = "torso_2_link"; // left foot joint name
         }; // namespace cst
 
+        struct TalosSensorData : public SensorDataStruct
+        {
+            // left foot
+            Eigen::Vector3d lf_torque;
+            Eigen::Vector3d lf_force;
+            // right foot
+            Eigen::Vector3d rf_torque;
+            Eigen::Vector3d rf_force;
+            // accelerometer
+            Eigen::VectorXd acceleration;
+            Eigen::VectorXd velocity;
+            // joint positions (excluding floating base)
+            Eigen::VectorXd positions;
+        };
+
         class TalosPosTracking : public Controller {
         public:
             TalosPosTracking(const Params& params);

@@ -199,14 +199,16 @@ namespace inria_wbc {
 
         void TalosPosTracking::update(const SensorData& sensor_data)
         {
+            auto talos_sensor_data = sensor_data.as<TalosSensorData>();
+
             auto com_ref = com_task_->getReference().pos;
 
             // estimate the CoP / ZMP
             bool cop_ok = _cop_estimator.update(com_ref.head(2),
                 model_joint_pos("leg_left_6_joint").translation(),
                 model_joint_pos("leg_right_6_joint").translation(),
-                sensor_data.lf_torque, sensor_data.lf_force,
-                sensor_data.rf_torque, sensor_data.rf_force);
+                talos_sensor_data->lf_torque, talos_sensor_data->lf_force,
+                talos_sensor_data->rf_torque, talos_sensor_data->rf_force);
             // modify the CoM reference (stabilizer) if the CoP is valid
             if (_use_stabilizer && cop_ok && !std::isnan(_cop_estimator.cop_filtered()(0)) && !std::isnan(_cop_estimator.cop_filtered()(1))) {
                 // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
@@ -221,7 +223,7 @@ namespace inria_wbc {
                 Eigen::Vector2d cor = _stabilizer_p.array() * (ref.head(2) - _cop_estimator.cop_filtered()).array();
 
                 // [not classic] we correct by the velocity of the CoM instead of the CoP because we have an IMU for this
-                Eigen::Vector2d cor_v = _stabilizer_d.array() * sensor_data.velocity.head(2).array();
+                Eigen::Vector2d cor_v = _stabilizer_d.array() * talos_sensor_data->velocity.head(2).array();
                 cor += cor_v;
 
                 Eigen::VectorXd ref_m = com_ref - Eigen::Vector3d(cor(0), cor(1), 0);
