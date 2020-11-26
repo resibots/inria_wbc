@@ -42,7 +42,6 @@ namespace inria_wbc {
         {
             YAML::Node config = YAML::LoadFile(sot_config_path);
             _use_stabilizer = config["CONTROLLER"]["stabilizer"]["activated"].as<bool>();
-            std::cout<<"1 ok"<<std::endl;
             _stabilizer_p = Eigen::Vector2d(config["CONTROLLER"]["stabilizer"]["p"].as<std::vector<double>>().data());
             _stabilizer_d = Eigen::Vector2d(config["CONTROLLER"]["stabilizer"]["d"].as<std::vector<double>>().data());
             auto history = config["CONTROLLER"]["stabilizer"]["filter_size"].as<int>();
