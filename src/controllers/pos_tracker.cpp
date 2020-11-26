@@ -37,18 +37,17 @@ namespace inria_wbc {
                 throw IWBC_EXCEPTION("empty configuration path! (we expect a YAML file)");
 
             if (verbose_)
-                std::cout << "loading YAML file:" << params.sot_config_path << std::endl;
-            ;
-
-            YAML::Node config = YAML::LoadFile(params.sot_config_path)["CONTROLLER"];
+                std::cout << "loading main YAML file:" << params.sot_config_path << std::endl;
 
             // all the file paths are relative to the main config file
+            auto path = boost::filesystem::path(params.sot_config_path).parent_path();
+
+            YAML::Node config = YAML::LoadFile(params.sot_config_path)["CONTROLLER"];
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
             auto srdf_file = config["configurations"].as<std::string>();
             auto ref_config = config["ref_config"].as<std::string>();
-            auto path = boost::filesystem::path(params.sot_config_path).parent_path();
             auto p_srdf = path / boost::filesystem::path(srdf_file);
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
 
