@@ -7,12 +7,12 @@
 namespace inria_wbc {
     namespace controllers {
 
-        class TalosPosTracking : public PosTracker {
+        class TalosPosTracker : public PosTracker {
         public:
-            TalosPosTracking(const Params& params);
-            TalosPosTracking(const TalosPosTracking& other) = delete;
-            TalosPosTracking& operator=(const TalosPosTracking& o) const = delete;
-            virtual ~TalosPosTracking(){};
+            TalosPosTracker(const Params& params);
+            TalosPosTracker(const TalosPosTracker& other) = delete;
+            TalosPosTracker& operator=(const TalosPosTracker& o) const = delete;
+            virtual ~TalosPosTracker(){};
 
             virtual void update(const SensorData& sensor_data) override;
             virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); }

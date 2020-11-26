@@ -1,5 +1,5 @@
 CONTROLLER:
-  name: talos-pos-tracking
+  name: talos-pos-tracker
   configurations: talos_configurations.srdf 
   ref_config: pal_start
   tasks: tasks_talos.yaml

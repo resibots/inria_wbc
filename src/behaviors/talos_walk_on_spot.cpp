@@ -32,7 +32,8 @@ namespace inria_wbc {
                 States::LIFT_DOWN_RF,
                 States::MOVE_COM_RIGHT};
 
-            auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_);
+            auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+            assert(controller);
             auto translate_up = [](const pinocchio::SE3& p, double v) {
                 auto p2 = p;
                 p2.translation()(2) += v;
@@ -111,7 +112,7 @@ namespace inria_wbc {
 
         void WalkOnSpot::update(const controllers::SensorData& sensor_data)
         {
-            auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_);
+            auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
 
             // add and remove contacts
             if (time_ == 0 && state_ == States::LIFT_UP_LF)

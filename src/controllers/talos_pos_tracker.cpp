@@ -21,7 +21,7 @@
 
 #include <boost/filesystem.hpp>
 
-#include "inria_wbc/controllers/talos_pos_tracking.hpp"
+#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/controllers/tasks.hpp"
 
 using namespace tsid;
@@ -29,16 +29,16 @@ using namespace tsid::math;
 
 namespace inria_wbc {
     namespace controllers {
-        static Register<TalosPosTracking> __talos_pos_tracking("talos-pos-tracking");
+        static Register<TalosPosTracker> __talos_pos_tracking("talos-pos-tracker");
 
-        TalosPosTracking::TalosPosTracking(const Params& params) : PosTracker(params)
+        TalosPosTracker::TalosPosTracker(const Params& params) : PosTracker(params)
         {
             parse_configuration_yaml(params.sot_config_path);
             if (verbose_)
                 std::cout << "Talos pos tracker initialized" << std::endl;
         }
 
-        void TalosPosTracking::parse_configuration_yaml(const std::string& sot_config_path)
+        void TalosPosTracker::parse_configuration_yaml(const std::string& sot_config_path)
         {
             YAML::Node config = YAML::LoadFile(sot_config_path);
             _use_stabilizer = config["CONTROLLER"]["stabilizer"]["activated"].as<bool>();
@@ -54,7 +54,7 @@ namespace inria_wbc {
             }
         }
 
-        void TalosPosTracking::update(const SensorData& sensor_data)
+        void TalosPosTracker::update(const SensorData& sensor_data)
         {
             auto com_ref = com_task()->getReference().pos;
 

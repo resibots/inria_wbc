@@ -26,7 +26,7 @@ namespace inria_wbc {
         void TalosSquat::update(const controllers::SensorData& sensor_data)
         {
             auto ref = current_trajectory_[time_];
-            std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_com_ref(ref);
+            std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(ref);
 
             controller_->update(sensor_data);
             time_++;
