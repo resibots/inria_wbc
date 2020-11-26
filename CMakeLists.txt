@@ -42,6 +42,7 @@ set(INRIA_WBC_HEADERS
 
 set(INRIA_WBC_SOURCES
                             src/controllers/controller.cpp
+                            src/controllers/tasks.cpp
                             src/controllers/talos_pos_tracking.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp

@@ -20,6 +20,10 @@
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 
+static const std::string red = "\x1B[31m";
+static const std::string rst = "\x1B[0m";
+static const std::string bold = "\x1B[1m";
+
 int main(int argc, char* argv[])
 {
     try {
@@ -299,10 +303,13 @@ int main(int argc, char* argv[])
             }
         }
     }
-    catch (std::exception& e) {
-        std::string red = "\x1B[31m";
-        std::string rst = "\x1B[0m";
-        std::string bold = "\x1B[1m";
+    catch (YAML::RepresentationException& e) {
+        std::cout << red << bold << "YAML Parse error (missing key in YAML file): " << rst << e.what() << std::endl;
+    }
+    catch (YAML::ParserException& e) {
+        std::cout << red << bold << "YAML Parse error: " << rst << e.what() << std::endl;
+    }
+    catch (std::exception& e) {        
         std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
     }
     return 0;

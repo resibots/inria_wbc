@@ -131,13 +131,12 @@ namespace inria_wbc {
                 static opt_params_t x;
                 return x;
             }
-            double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task)
+            double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
             {
                 assert(task);
                 return (task->getConstraint().matrix() * ddq_ - task->getConstraint().vector()).norm();
             }
-            virtual std::shared_ptr<tsid::tasks::TaskBase> task(const std::string& task_name) = 0;
-            double cost(const std::string& task_name) { return cost(task(task_name)); }
+            virtual double cost(const std::string& task_name) const = 0;
 
         private:
             std::vector<int> get_non_mimics_indexes() const;

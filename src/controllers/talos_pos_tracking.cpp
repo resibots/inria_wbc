@@ -1,16 +1,16 @@
+#include <Eigen/Core>
+#include <iomanip>
+#include <map>
+#include <memory>
+#include <utility>
+#include <vector>
+
 /* Pinocchio !!!! NEED TO BE INCLUDED BEFORE BOOST*/
 #include <pinocchio/algorithm/joint-configuration.hpp> // integrate
 #include <pinocchio/algorithm/kinematics.hpp>
 #include <pinocchio/multibody/model.hpp>
 #include <pinocchio/parsers/srdf.hpp>
 #include <pinocchio/parsers/urdf.hpp>
-
-#include "Eigen/Core"
-#include "map"
-#include "vector"
-#include <iomanip>
-#include <memory>
-#include <utility>
 
 #include <tsid/solvers/solver-HQP-base.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
@@ -19,7 +19,10 @@
 #include <tsid/utils/statistics.hpp>
 #include <tsid/utils/stop-watch.hpp>
 
+#include <boost/filesystem.hpp>
+
 #include "inria_wbc/controllers/talos_pos_tracking.hpp"
+#include "inria_wbc/controllers/tasks.hpp"
 
 using namespace tsid;
 using namespace tsid::math;
@@ -30,8 +33,41 @@ namespace inria_wbc {
 
         TalosPosTracking::TalosPosTracking(const Params& params) : Controller(params)
         {
-            if (!params.sot_config_path.empty())
-                parse_configuration_yaml(params.sot_config_path);
+            if (params.sot_config_path.empty())
+                throw IWBC_EXCEPTION("empty configuration path! (we expect a YAML file)");
+
+            YAML::Node config = YAML::LoadFile(params.sot_config_path);
+            utils::parse(ref_config_, "ref_config", config, "CONTROLLER", verbose_);
+
+            ////////////////////Gather Initial Pose //////////////////////////////////////
+            //q_tsid_ is of size 37 (pos+quat+nactuated)
+            q_tsid_ = robot_->model().referenceConfigurations[ref_config_];
+            //q0_ is in "Dart format" for the floating base
+            Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
+            Eigen::AngleAxisd aaxis(quat);
+            q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
+
+            ////////////////////Create the inverse-dynamics formulation///////////////////
+            tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
+
+            ////////////////////Create an HQP solver /////////////////////////////////////
+            using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
+            solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+            solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
+
+            ////////////////////Compute Problem Data at init /////////////////////////////
+            const uint nv = robot_->nv();
+            tsid_->computeProblemData(dt_, q_tsid_, Vector::Zero(nv));
+
+            assert(tsid_);
+            assert(robot_);
+
+            auto task_file = config["CONTROLLER"]["tasks"].as<std::string>();
+            auto p = boost::filesystem::path(params.sot_config_path).parent_path()
+                / boost::filesystem::path(task_file);
+
+            parse_tasks(p.string());
+            parse_configuration_yaml(params.sot_config_path);
 
             set_stack_configuration();
         }
@@ -61,6 +97,25 @@ namespace inria_wbc {
             p["kp_torso"] = 30.0; //# proportional gain of the torso task
         }
 
+        void TalosPosTracking::parse_tasks(const std::string& path)
+        {
+            std::cout << "parsing:" << path << std::endl;
+            YAML::Node task_list = YAML::LoadFile(path);
+            for (auto it = task_list.begin(); it != task_list.end(); ++it) {
+                auto name = it->first.as<std::string>();
+                auto type = it->second["type"].as<std::string>();
+                if (type == "contact") {
+                    // the task is added to tsid by make_contact
+                    auto task = tasks::make_contact_task(robot_, tsid_, name, it->second);
+                    contacts_[name] = task;
+                }
+                else {
+                    // the task is added automatically to TSID by the factory
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second);
+                    tasks_[name] = task;
+                }
+            }
+        }
         void TalosPosTracking::parse_configuration_yaml(const std::string& sot_config_path)
         {
             std::ifstream yamlConfigFile(sot_config_path);
@@ -78,7 +133,6 @@ namespace inria_wbc {
                     if (!utils::parse(params_.opt_params[x.first], x.first, config, "CONTROLLER", verbose_))
                         params_.opt_params[x.first] = p[x.first];
 
-            utils::parse(ref_config_, "ref_config", config, "CONTROLLER", verbose_);
             if (verbose_)
                 std::cout << "[controller] Taking the reference configuration from " << ref_config_ << std::endl;
 
@@ -123,83 +177,61 @@ namespace inria_wbc {
                 for (auto& x : p)
                     std::cout << x.first << " => " << params_.opt_params[x.first] << std::endl;
 
-            ////////////////////Gather Initial Pose //////////////////////////////////////
-            //q_tsid_ is of size 37 (pos+quat+nactuated)
-            q_tsid_ = robot_->model().referenceConfigurations[ref_config_];
-            //q0_ is in "Dart format" for the floating base
-            Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
-            Eigen::AngleAxisd aaxis(quat);
-            q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
-
-            ////////////////////Create the inverse-dynamics formulation///////////////////
-            tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
-
-            ////////////////////Create an HQP solver /////////////////////////////////////
-            using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
-            solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
-            solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
-
-            ////////////////////Compute Problem Data at init /////////////////////////////
-            const uint nv = robot_->nv();
-            tsid_->computeProblemData(dt_, q_tsid_, Vector::Zero(nv));
-
-            assert(tsid_);
-            assert(robot_);
             ////////////////////Compute Tasks, Bounds and Contacts ///////////////////////
-            contactRF_ = make_contact_task("contact_rfoot", cst::rf_joint_name, p.at("kp_contact"));
-            if (p.at("w_forceRef_feet") > 0)
-                tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
+            // contactRF_ = make_contact_task("contact_rfoot", cst::rf_joint_name, p.at("kp_contact"));
+            // if (p.at("w_forceRef_feet") > 0)
+            //     tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
 
-            contactLF_ = make_contact_task("contact_lfoot", cst::lf_joint_name, p.at("kp_contact"));
-            if (p.at("w_forceRef_feet") > 0)
-                tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
+            // contactLF_ = make_contact_task("contact_lfoot", cst::lf_joint_name, p.at("kp_contact"));
+            // if (p.at("w_forceRef_feet") > 0)
+            //     tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
 
-            com_task_ = make_com_task("com", p.at("kp_com"));
-            if (p.at("w_com") > 0)
-                tsid_->addMotionTask(*com_task_, p.at("w_com"), 1);
+            // com_task_ = make_com_task("com", p.at("kp_com"));
+            // if (p.at("w_com") > 0)
+            //     tsid_->addMotionTask(*com_task_, p.at("w_com"), 1);
 
-            posture_task_ = make_posture_task("posture", p.at("kp_posture"));
-            if (p.at("w_posture") > 0)
-                tsid_->addMotionTask(*posture_task_, p.at("w_posture"), 1);
+            // posture_task_ = make_posture_task("posture", p.at("kp_posture"));
+            // if (p.at("w_posture") > 0)
+            //     tsid_->addMotionTask(*posture_task_, p.at("w_posture"), 1);
 
-            bounds_task_ = make_bound_task("task-posVelAcc-bounds");
-            if (p.at("w_velocity") > 0)
-                tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0);
+            // bounds_task_ = make_bound_task("task-posVelAcc-bounds");
+            // if (p.at("w_velocity") > 0)
+            //     tsid_->addMotionTask(*bounds_task_, p.at("w_velocity"), 0);
 
-            auto vert_torso_task = make_se3_frame_task("torso", cst::torso_frame_name, p.at("kp_torso"), se3_mask::roll + se3_mask::pitch);
-            if (p.at("w_torso") > 0)
-                tsid_->addMotionTask(*vert_torso_task, p.at("w_torso"), 1);
-            se3_tasks_[vert_torso_task->name()] = vert_torso_task;
+            // auto vert_torso_task = make_se3_frame_task("torso", cst::torso_frame_name, p.at("kp_torso"), se3_mask::roll + se3_mask::pitch);
+            // if (p.at("w_torso") > 0)
+            //     tsid_->addMotionTask(*vert_torso_task, p.at("w_torso"), 1);
+            // se3_tasks_[vert_torso_task->name()] = vert_torso_task;
 
-            auto floatingb_task = make_se3_joint_task("floatingb", fb_joint_name_, p.at("kp_floatingb"), inria_wbc::se3_mask::rpy);
-            if (p.at("w_floatingb") > 0)
-                tsid_->addMotionTask(*floatingb_task, p.at("w_floatingb"), 1);
-            se3_tasks_[floatingb_task->name()] = floatingb_task;
+            // auto floatingb_task = make_se3_joint_task("floatingb", fb_joint_name_, p.at("kp_floatingb"), inria_wbc::se3_mask::rpy);
+            // if (p.at("w_floatingb") > 0)
+            //     tsid_->addMotionTask(*floatingb_task, p.at("w_floatingb"), 1);
+            // se3_tasks_[floatingb_task->name()] = floatingb_task;
 
-            auto lh_task = make_se3_joint_task("lh", cst::lh_joint_name, p.at("kp_lh"), inria_wbc::se3_mask::xyz);
-            if (p.at("w_lh") > 0)
-                tsid_->addMotionTask(*lh_task, p.at("w_lh"), 1);
-            se3_tasks_[lh_task->name()] = lh_task;
+            // auto lh_task = make_se3_joint_task("lh", cst::lh_joint_name, p.at("kp_lh"), inria_wbc::se3_mask::xyz);
+            // if (p.at("w_lh") > 0)
+            //     tsid_->addMotionTask(*lh_task, p.at("w_lh"), 1);
+            // se3_tasks_[lh_task->name()] = lh_task;
 
-            auto rh_task = make_se3_joint_task("rh", cst::rh_joint_name, p.at("kp_rh"), inria_wbc::se3_mask::xyz);
-            if (p.at("w_rh") > 0)
-                tsid_->addMotionTask(*rh_task, p.at("w_rh"), 1);
-            se3_tasks_[rh_task->name()] = rh_task;
+            // auto rh_task = make_se3_joint_task("rh", cst::rh_joint_name, p.at("kp_rh"), inria_wbc::se3_mask::xyz);
+            // if (p.at("w_rh") > 0)
+            //     tsid_->addMotionTask(*rh_task, p.at("w_rh"), 1);
+            // se3_tasks_[rh_task->name()] = rh_task;
 
-            auto lf_task = make_se3_joint_task("lf", cst::lf_joint_name, p.at("kp_lf"), inria_wbc::se3_mask::all);
-            if (p.at("w_lf") > 0)
-                tsid_->addMotionTask(*lf_task, p.at("w_lf"), 1);
-            se3_tasks_[lf_task->name()] = lf_task;
+            // auto lf_task = make_se3_joint_task("lf", cst::lf_joint_name, p.at("kp_lf"), inria_wbc::se3_mask::all);
+            // if (p.at("w_lf") > 0)
+            //     tsid_->addMotionTask(*lf_task, p.at("w_lf"), 1);
+            // se3_tasks_[lf_task->name()] = lf_task;
 
-            auto rf_task = make_se3_joint_task("rf", cst::rf_joint_name, p.at("kp_rf"), inria_wbc::se3_mask::all);
-            if (p.at("w_rf") > 0)
-                tsid_->addMotionTask(*rf_task, p.at("w_rf"), 1);
-            se3_tasks_[rf_task->name()] = rf_task;
+            // auto rf_task = make_se3_joint_task("rf", cst::rf_joint_name, p.at("kp_rf"), inria_wbc::se3_mask::all);
+            // if (p.at("w_rf") > 0)
+            //     tsid_->addMotionTask(*rf_task, p.at("w_rf"), 1);
+            // se3_tasks_[rf_task->name()] = rf_task;
         }
 
         void TalosPosTracking::update(const SensorData& sensor_data)
         {
-            auto com_ref = com_task_->getReference().pos;
+            auto com_ref = com_task()->getReference().pos;
 
             // estimate the CoP / ZMP
             bool cop_ok = _cop_estimator.update(com_ref.head(2),
@@ -237,31 +269,20 @@ namespace inria_wbc {
 
         pinocchio::SE3 TalosPosTracking::get_se3_ref(const std::string& task_name)
         {
-            auto it = se3_tasks_.find(task_name);
-            IWBC_ASSERT(it != se3_tasks_.end(), " task ", task_name, " not found");
+            auto task = se3_task(task_name);
             pinocchio::SE3 se3;
-            auto pos = it->second->getReference().pos;
+            auto pos = task->getReference().pos;
             tsid::math::vectorToSE3(pos, se3);
             return se3;
         }
 
         void TalosPosTracking::set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name)
         {
-            auto it = se3_tasks_.find(task_name);
-            IWBC_ASSERT(it != se3_tasks_.end(), " task ", task_name, " not found");
+            auto task = se3_task(task_name);
             auto sample = to_sample(ref);
-            it->second->setReference(sample);
+            task->setReference(sample);
         }
 
-        void TalosPosTracking::set_com_ref(const Vector3& ref)
-        {
-            com_task_->setReference(to_sample(ref));
-        }
-
-        void TalosPosTracking::set_posture_ref(const tsid::math::Vector& ref)
-        {
-            posture_task_->setReference(to_sample(ref));
-        }
 
         void TalosPosTracking::remove_contact(const std::string& contact_name)
         {
@@ -271,40 +292,29 @@ namespace inria_wbc {
 
         void TalosPosTracking::add_contact(const std::string& contact_name)
         {
-            const opt_params_t& p = params_.opt_params;
-            const pinocchio::Data& data = tsid_->data();
-            if (contact_name == "contact_rfoot") {
-                auto contact_rf_ref = robot_->position(data, robot_->model().getJointId(cst::rf_joint_name));
-                contactRF_->setReference(contact_rf_ref);
-                tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
-            }
-            else if (contact_name == "contact_lfoot") {
-                auto contact_lf_ref = robot_->position(data, robot_->model().getJointId(cst::lf_joint_name));
-                contactLF_->setReference(contact_lf_ref);
-                tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
-            }
-            else {
-                throw IWBC_EXCEPTION("Cannot add an unknown contact: ", contact_name);
-            }
+            auto c = contact(contact_name);
+            tsid_->addRigidContact(*c, tasks::cst::w_force_feet);
+            // const opt_params_t& p = params_.opt_params;
+            // const pinocchio::Data& data = tsid_->data();
+            // if (contact_name == "contact_rfoot") {
+            //     auto contact_rf_ref = robot_->position(data, robot_->model().getJointId(cst::rf_joint_name));
+            //     contactRF_->setReference(contact_rf_ref);
+            //     tsid_->addRigidContact(*contactRF_, p.at("w_forceRef_feet"));
+            // }
+            // else if (contact_name == "contact_lfoot") {
+            //     auto contact_lf_ref = robot_->position(data, robot_->model().getJointId(cst::lf_joint_name));
+            //     contactLF_->setReference(contact_lf_ref);
+            //     tsid_->addRigidContact(*contactLF_, p.at("w_forceRef_feet"));
+            // }
+            // else {
+            //     throw IWBC_EXCEPTION("Cannot add an unknown contact: ", contact_name);
+            // }
         }
 
         void TalosPosTracking::remove_task(const std::string& task_name, double transition_duration)
         {
             bool res = tsid_->removeTask(task_name, transition_duration);
             IWBC_ASSERT(res, "Cannot remove an unknown task: ", task_name);
-        }
-
-        std::shared_ptr<tsid::tasks::TaskBase> TalosPosTracking::task(const std::string& task_name)
-        {
-            auto it = se3_tasks_.find(task_name);
-            if (it != se3_tasks_.end())
-                return se3_tasks_[task_name];
-            else if (task_name == "com")
-                return com_task_;
-            else if (task_name == "posture")
-                return posture_task_;
-            else
-                throw IWBC_EXCEPTION("Unknown task:", task_name);
         }
 
     } // namespace controllers

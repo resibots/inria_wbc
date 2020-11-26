@@ -1,6 +1,8 @@
 CONTROLLER:
   name: talos-pos-tracking
+  #todo add the SRDF here
   ref_config: pal_start
+  tasks: tasks_talos.yaml
   w_com: 100.0
   w_floatingb: 100.0
   w_posture: 0.75
