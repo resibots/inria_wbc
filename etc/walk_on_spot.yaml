@@ -3,13 +3,11 @@ CONTROLLER:
   configurations: talos_configurations.srdf 
   ref_config: pal_start
   tasks: tasks_talos.yaml
-STABILIZER:
-  activated: true
-  filter_size: 5
-  p_x: 0.08
-  p_y: 0.08
-  d_x: 0.02
-  d_y: 0.02
+  stabilizer:
+    activated: true
+    filter_size: 5
+    p: [0.08, 0.08]
+    d: [0.02, 0.02]
 BEHAVIOR:
   name : walk-on-spot
   traj_com_duration : 1.5

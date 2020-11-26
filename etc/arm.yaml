@@ -4,13 +4,11 @@ CONTROLLER:
   ref_config: pal_start
   tasks: tasks_talos.yaml
   # no URDF here because this is set by the main
-STABILIZER:
-  activated: true
-  filter_size: 5
-  p_x: 0.07
-  p_y: 0.07
-  d_x: 0.01
-  d_y: 0.01
+  stabilizer:
+    activated: true
+    filter_size: 5
+    p: [0.07, 0.07]
+    d: [0.01, 0.01]
 BEHAVIOR:
   name : talos-move-arm
   trajectory_duration : 1

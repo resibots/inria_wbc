@@ -32,28 +32,20 @@ namespace inria_wbc {
         static Register<TalosPosTracking> __talos_pos_tracking("talos-pos-tracking");
 
         TalosPosTracking::TalosPosTracking(const Params& params) : PosTracker(params)
-        {           
+        {
             parse_configuration_yaml(params.sot_config_path);
-              if (verbose_)
-                std::cout << "Talos pos tracker initialized" << std::endl;;
+            if (verbose_)
+                std::cout << "Talos pos tracker initialized" << std::endl;
         }
 
-        
         void TalosPosTracking::parse_configuration_yaml(const std::string& sot_config_path)
         {
             YAML::Node config = YAML::LoadFile(sot_config_path);
-            
-            if (verbose_)
-                std::cout << "[controller] Taking the reference configuration from " << ref_config_ << std::endl;
-
-            // stabilizer
-            inria_wbc::utils::parse(_use_stabilizer, "activated", config, "STABILIZER");
-            inria_wbc::utils::parse(_stabilizer_p(0), "p_x", config, "STABILIZER");
-            inria_wbc::utils::parse(_stabilizer_p(1), "p_y", config, "STABILIZER");
-            inria_wbc::utils::parse(_stabilizer_d(0), "d_x", config, "STABILIZER");
-            inria_wbc::utils::parse(_stabilizer_d(1), "d_y", config, "STABILIZER");
-            int history = _cop_estimator.history_size();
-            inria_wbc::utils::parse(history, "filter_size", config, "STABILIZER");
+            _use_stabilizer = config["CONTROLLER"]["stabilizer"]["activated"].as<bool>();
+            std::cout<<"1 ok"<<std::endl;
+            _stabilizer_p = Eigen::Vector2d(config["CONTROLLER"]["stabilizer"]["p"].as<std::vector<double>>().data());
+            _stabilizer_d = Eigen::Vector2d(config["CONTROLLER"]["stabilizer"]["d"].as<std::vector<double>>().data());
+            auto history = config["CONTROLLER"]["stabilizer"]["filter_size"].as<int>();
             _cop_estimator.set_history_size(history);
 
             if (verbose_) {
@@ -62,7 +54,6 @@ namespace inria_wbc {
                 std::cout << "D:" << _stabilizer_d.transpose() << std::endl;
             }
         }
-
 
         void TalosPosTracking::update(const SensorData& sensor_data)
         {
@@ -101,7 +92,6 @@ namespace inria_wbc {
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
             set_com_ref(com_ref);
         }
-
 
     } // namespace controllers
 } // namespace inria_wbc
