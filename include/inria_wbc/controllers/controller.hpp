@@ -31,19 +31,9 @@ namespace inria_wbc {
 
    
     namespace controllers {
-        struct SensorData {
-            // left foot
-            Eigen::Vector3d lf_torque;
-            Eigen::Vector3d lf_force;
-            // right foot
-            Eigen::Vector3d rf_torque;
-            Eigen::Vector3d rf_force;
-            // accelerometer
-            Eigen::VectorXd acceleration;
-            Eigen::VectorXd velocity;
-            // joint positions (excluding floating base)
-            Eigen::VectorXd positions;
-        };
+
+        typedef std::map<std::string, Eigen::MatrixXd> SensorData;
+
         class Controller {
         public:
             using opt_params_t = std::map<std::string, double>;
