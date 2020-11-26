@@ -43,7 +43,7 @@ namespace inria_wbc {
             YAML::Node config = YAML::LoadFile(params.sot_config_path)["CONTROLLER"];
 
             // all the file paths are relative to the main config file
-            
+
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
             auto srdf_file = config["configurations"].as<std::string>();
@@ -79,8 +79,7 @@ namespace inria_wbc {
             parse_tasks(p.string());
 
             if (verbose_)
-                std::cout << "position tracker initializer" << std::endl;
-            ;
+                std::cout << "position tracker initializer" << std::endl;        
         }
 
         void PosTracker::parse_tasks(const std::string& path)
@@ -133,6 +132,8 @@ namespace inria_wbc {
 
         void PosTracker::add_contact(const std::string& contact_name)
         {
+            if (verbose_)
+                std::cout << "adding contact:" << contact_name << std::endl;
             auto c = contact(contact_name);
             tsid_->addRigidContact(*c, tasks::cst::w_force_feet);
         }
