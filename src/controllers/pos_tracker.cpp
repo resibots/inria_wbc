@@ -40,14 +40,16 @@ namespace inria_wbc {
                 std::cout << "loading YAML file:" << params.sot_config_path << std::endl;
             ;
 
-            YAML::Node config = YAML::LoadFile(params.sot_config_path);
+            YAML::Node config = YAML::LoadFile(params.sot_config_path)["CONTROLLER"];
 
+            // all the file paths are relative to the main config file
+            
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
-            auto srdf_file = config["CONTROLLER"]["configurations"].as<std::string>();
-            auto ref_config = config["CONTROLLER"]["ref_config"].as<std::string>();
-            auto p_srdf = boost::filesystem::path(params.sot_config_path).parent_path()
-                / boost::filesystem::path(srdf_file);
+            auto srdf_file = config["configurations"].as<std::string>();
+            auto ref_config = config["ref_config"].as<std::string>();
+            auto path = boost::filesystem::path(params.sot_config_path).parent_path();
+            auto p_srdf = path / boost::filesystem::path(srdf_file);
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
 
             //q_tsid_ is of size 37 (pos+quat+nactuated)
@@ -72,10 +74,8 @@ namespace inria_wbc {
             assert(tsid_);
             assert(robot_);
 
-            auto task_file = config["CONTROLLER"]["tasks"].as<std::string>();
-            auto p = boost::filesystem::path(params.sot_config_path).parent_path()
-                / boost::filesystem::path(task_file);
-
+            auto task_file = config["tasks"].as<std::string>();
+            auto p = path / boost::filesystem::path(task_file);
             parse_tasks(p.string());
 
             if (verbose_)
