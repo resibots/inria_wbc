@@ -11,9 +11,9 @@ namespace inria_wbc {
             traj_selector_ = 0;
             auto com_init = std::static_pointer_cast<controllers::PosTracker>(controller_)->com();
 
-            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            utils::parse(trajectory_duration_, "trajectory_duration", config, "BEHAVIOR", controller_->params().verbose);
-            utils::parse(motion_size_, "motion_size", config, "BEHAVIOR", controller_->params().verbose);
+            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
+            trajectory_duration_ = config["trajectory_duration"].as<float>();
+            motion_size_ = config["motion_size"].as<float>();
 
             auto com_final = com_init;
             com_final(2) -= motion_size_;

@@ -40,11 +40,11 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_configuration_yaml(const std::string& sot_config_path)
         {
-            YAML::Node config = YAML::LoadFile(sot_config_path);
-            _use_stabilizer = config["CONTROLLER"]["stabilizer"]["activated"].as<bool>();
-            _stabilizer_p = Eigen::Vector2d(config["CONTROLLER"]["stabilizer"]["p"].as<std::vector<double>>().data());
-            _stabilizer_d = Eigen::Vector2d(config["CONTROLLER"]["stabilizer"]["d"].as<std::vector<double>>().data());
-            auto history = config["CONTROLLER"]["stabilizer"]["filter_size"].as<int>();
+            YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"];
+            _use_stabilizer = c["activated"].as<bool>();
+            _stabilizer_p = Eigen::Vector2d(c["p"].as<std::vector<double>>().data());
+            _stabilizer_d = Eigen::Vector2d(c["d"].as<std::vector<double>>().data());
+            auto history = c["filter_size"].as<int>();
             _cop_estimator.set_history_size(history);
 
             if (verbose_) {

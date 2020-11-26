@@ -7,12 +7,12 @@ namespace inria_wbc {
 
         WalkOnSpot::WalkOnSpot(const controller_ptr_t& controller) : Behavior(controller)
         {
-            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            inria_wbc::utils::parse(traj_foot_duration_, "traj_foot_duration", config, "BEHAVIOR");
-            inria_wbc::utils::parse(traj_com_duration_, "traj_com_duration", config, "BEHAVIOR");
-            inria_wbc::utils::parse(step_height_, "step_height", config, "BEHAVIOR");
-            inria_wbc::utils::parse(stop_duration_, "stop_duration", config, "BEHAVIOR");
-            inria_wbc::utils::parse(stop_height_, "stop_height", config, "BEHAVIOR");
+            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
+            traj_com_duration_ = config["traj_com_duration"].as<float>();
+            traj_foot_duration_ = config["traj_foot_duration"].as<float>();
+            step_height_ = config["step_height"].as<float>();
+            stop_duration_ = config["stop_duration"].as<float>();
+            stop_height_ = config["stop_height"].as<float>();
 
             dt_ = controller_->dt();
 
