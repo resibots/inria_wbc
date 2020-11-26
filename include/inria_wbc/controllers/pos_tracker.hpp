@@ -45,8 +45,10 @@ namespace inria_wbc {
             // therefore you can re-add it later by using its name
             void remove_task(const std::string& task_name, double transition_duration = 0.0);
 
-            virtual const opt_params_t& opt_params() const override { return params_.opt_params; }
-
+            // for external optimizers: we exclude the bound task for safety
+            size_t num_task_weights() const;
+            void update_task_weights(const std::vector<double>& new_weights);
+           
         protected:
             virtual void parse_tasks(const std::string&);
 

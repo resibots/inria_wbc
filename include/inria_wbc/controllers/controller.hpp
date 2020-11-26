@@ -36,7 +36,6 @@ namespace inria_wbc {
 
         class Controller {
         public:
-            using opt_params_t = std::map<std::string, double>;
             struct Params {
                 std::string urdf_path;
                 std::string sot_config_path;
@@ -44,7 +43,6 @@ namespace inria_wbc {
                 bool verbose;
                 std::vector<std::string> mimic_dof_names;
                 std::string floating_base_joint_name = "";
-                opt_params_t opt_params; // parameters that can be optimized
             };
 
             Controller(const Params& params);
@@ -92,14 +90,7 @@ namespace inria_wbc {
                 assert(robot_);
                 return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             }
-            // parameters that can be optimized / tuned online
-            // (e.g., weights of task, gains of the tasks, etc.)
-            virtual const opt_params_t& opt_params() const
-            {
-                IWBC_ERROR("calling opt_params but no param to set in base controller");
-                static opt_params_t x;
-                return x;
-            }
+            
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
             {
                 assert(task);

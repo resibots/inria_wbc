@@ -68,6 +68,7 @@ namespace inria_wbc {
                 model_joint_pos("leg_right_6_joint").translation(),
                 sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
                 sensor_data.at("rf_torque"), sensor_data.at("rf_force"));
+
             // modify the CoM reference (stabilizer) if the CoP is valid
             if (_use_stabilizer && cop_ok && !std::isnan(_cop_estimator.cop_filtered()(0)) && !std::isnan(_cop_estimator.cop_filtered()(1))) {
                 // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)

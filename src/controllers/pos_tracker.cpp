@@ -78,7 +78,7 @@ namespace inria_wbc {
             parse_tasks(p.string());
 
             if (verbose_)
-                std::cout << "position tracker initializer" << std::endl;        
+                std::cout << "position tracker initializer" << std::endl;
         }
 
         void PosTracker::parse_tasks(const std::string& path)
@@ -146,5 +146,25 @@ namespace inria_wbc {
             IWBC_ASSERT(res, "Cannot remove an unknown task: ", task_name);
         }
 
+        size_t PosTracker::num_task_weights() const
+        {
+            // we count all the tasks with a priority >= 1 (since it does not matter for 0)
+            size_t k = 0;
+            for (auto& x : tsid_->m_taskMotions)
+                if (x->priority > 0)
+                    ++k;
+            return k;
+        }
+        void PosTracker::update_task_weights(const std::vector<double>& new_weights)
+        {
+            int i = 0;
+            for (auto& x : tsid_->m_taskMotions) {
+                if (x->priority > 0) {
+                    IWBC_ASSERT(i < new_weights.size(), i, " vs ", new_weights.size());
+                    tsid_->updateTaskWeight(x->task.name(), new_weights[i]);
+                    ++i;
+                }
+            }
+        }
     } // namespace controllers
 } // namespace inria_wbc
