@@ -62,7 +62,7 @@ namespace inria_wbc {
             if (!joint && !body)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
             pinocchio::SE3 ref;
-            std::cout << "joint:" << joint << " frame:" << body << " tracked:" << tracked << std::endl;
+
             if (joint)
                 ref = robot->position(tsid->data(), robot->model().getJointId(tracked));
             else

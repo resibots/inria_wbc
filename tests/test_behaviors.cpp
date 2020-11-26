@@ -21,8 +21,12 @@ BOOST_AUTO_TEST_CASE(running)
     for (auto& sot_config_path : behaviors) {
         std::cout << "configuration:" << sot_config_path << std::endl;
 
-        inria_wbc::controllers::Controller::Params params = {robot->model_filename(), "../etc/talos_configurations.srdf", sot_config_path, "",
-            0.001, false, robot->mimic_dof_names()};
+        inria_wbc::controllers::Controller::Params params = {
+            robot->model_filename(),
+            sot_config_path,
+            0.001,
+            false,
+            robot->mimic_dof_names()};
 
         std::string behavior_name, controller_name;
         YAML::Node config = YAML::LoadFile(sot_config_path);
@@ -47,13 +51,14 @@ BOOST_AUTO_TEST_CASE(set_opt_params)
     std::cout << "robot:" << robot->model_filename() << std::endl;
 
     for (auto& sot_config_path : behaviors) {
-        std::cout << "configuration:" << sot_config_path << std::endl;
 
         inria_wbc::controllers::Controller::opt_params_t opt_p;
-        opt_p["w_lh"] = 0.0;
-        inria_wbc::controllers::Controller::Params params = {robot->model_filename(), "../etc/talos_configurations.srdf", sot_config_path, "",
-            0.001, false, robot->mimic_dof_names(),
-            opt_p};
+        inria_wbc::controllers::Controller::Params params = {
+            robot->model_filename(),
+            sot_config_path,
+            0.001,
+            false,
+            robot->mimic_dof_names()};
 
         std::string behavior_name, controller_name;
         YAML::Node config = YAML::LoadFile(sot_config_path);

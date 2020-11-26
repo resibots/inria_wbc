@@ -69,12 +69,11 @@ namespace inria_wbc {
             using opt_params_t = std::map<std::string, double>;
             struct Params {
                 std::string urdf_path;
-                std::string srdf_path;
                 std::string sot_config_path;
-                std::string floating_base_joint_name;
                 float dt;
                 bool verbose;
                 std::vector<std::string> mimic_dof_names;
+                std::string floating_base_joint_name = "";
                 opt_params_t opt_params; // parameters that can be optimized
             };
 

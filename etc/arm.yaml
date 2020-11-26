@@ -1,8 +1,9 @@
 CONTROLLER:
   name: talos-pos-tracking
-  #todo add the SRDF here
+  configurations: talos_configurations.srdf 
   ref_config: pal_start
   tasks: tasks_talos.yaml
+  # no URDF here because this is set by the main
 STABILIZER:
   activated: true
   filter_size: 5

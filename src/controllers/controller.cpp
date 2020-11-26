@@ -66,7 +66,6 @@ namespace inria_wbc {
                 fb_joint_name_ = "root_joint";
             }
             robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
-            pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, verbose_); //the srdf contains initial joint positions
 
             _reset();
         }
@@ -330,7 +329,6 @@ namespace inria_wbc {
             bool verbose = false;
             std::vector<std::string> mimic_dof_names = {};
             parse(urdf_path, "urdf_path", config, "PARAMS", verbose);
-            parse(srdf_path, "srdf_path", config, "PARAMS", verbose);
             parse(sot_config_path, "sot_config_path", config, "PARAMS", verbose);
             parse(floating_base_joint_name, "floating_base_joint_name", config, "PARAMS", verbose);
             parse(dt, "dt", config, "PARAMS", verbose);
@@ -338,12 +336,12 @@ namespace inria_wbc {
             parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
 
             Controller::Params params = {urdf_path,
-                srdf_path,
                 sot_config_path,
-                floating_base_joint_name,
                 dt,
                 verbose,
-                mimic_dof_names};
+                mimic_dof_names,
+                floating_base_joint_name,
+                };
 
             return params;
         }

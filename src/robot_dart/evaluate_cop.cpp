@@ -88,11 +88,9 @@ int main(int argc, char* argv[])
     simu.add_checkerboard_floor();
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
-
-    inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
-        "../etc/talos_configurations.srdf",
+    inria_wbc::controllers::Controller::Params params = {
+        robot->model_filename(),
         sot_config_path,
-        "",
         dt,
         false,
         robot->mimic_dof_names()};

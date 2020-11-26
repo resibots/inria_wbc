@@ -131,20 +131,19 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
-        inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
-            "../etc/talos_configurations.srdf",
+        inria_wbc::controllers::Controller::Params params = { 
+            robot->model_filename(),
             sot_config_path,
-            "",
             dt,
             verbose,
             robot->mimic_dof_names()};
 
-        std::string behavior_name, controller_name;
         YAML::Node config = YAML::LoadFile(sot_config_path);
-        inria_wbc::utils::parse(behavior_name, "name", config, "BEHAVIOR", verbose);
-        inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", verbose);
 
+        auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+
+        auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
         assert(behavior);
 
