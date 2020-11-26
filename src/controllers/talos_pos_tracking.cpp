@@ -74,27 +74,27 @@ namespace inria_wbc {
 
         void TalosPosTracking::set_default_opt_params(std::map<std::string, double>& p)
         {
-            p["w_com"] = 10.0; //# weight of center of mass task
-            p["w_posture"] = 0.75; //# weight of joint posture task
-            p["w_forceRef_feet"] = 1e-3; //# weight of force regularization task
-            p["w_forceRef_hands"] = 1e-3; //# weight of force regularization task
-            p["w_floatingb"] = 20.0; //# weight of floatingb task
-            p["w_velocity"] = 1.0; //# weight of velocity bounds
-            p["w_rh"] = 10.0; //# weight of right hand  task
-            p["w_lh"] = 10.0; //# weight of left hand  task
-            p["w_rf"] = 1.0; //# weight of right foot  task
-            p["w_lf"] = 1.0; //# weight of left foot  task
-            p["w_torso"] = 1000.0; //# weight of torso task
+            // p["w_com"] = 10.0; //# weight of center of mass task
+            // p["w_posture"] = 0.75; //# weight of joint posture task
+            // p["w_forceRef_feet"] = 1e-3; //# weight of force regularization task
+            // p["w_forceRef_hands"] = 1e-3; //# weight of force regularization task
+            // p["w_floatingb"] = 20.0; //# weight of floatingb task
+            // p["w_velocity"] = 1.0; //# weight of velocity bounds
+            // p["w_rh"] = 10.0; //# weight of right hand  task
+            // p["w_lh"] = 10.0; //# weight of left hand  task
+            // p["w_rf"] = 1.0; //# weight of right foot  task
+            // p["w_lf"] = 1.0; //# weight of left foot  task
+            // p["w_torso"] = 1000.0; //# weight of torso task
 
-            p["kp_contact"] = 30.0; //# proportional gain of contact constraint
-            p["kp_com"] = 3000.0; //# proportional gain of center of mass task
-            p["kp_posture"] = 30.0; //# proportional gain of joint posture task
-            p["kp_floatingb"] = 3000.0; //# proportional gain of floatingb task
-            p["kp_rh"] = 300.0; //# proportional gain of right hand task
-            p["kp_lh"] = 300.0; //# proportional gain of left hand task
-            p["kp_rf"] = 30.0; //# proportional gain of right foot task
-            p["kp_lf"] = 30.0; //# proportional gain of left foot task
-            p["kp_torso"] = 30.0; //# proportional gain of the torso task
+            // p["kp_contact"] = 30.0; //# proportional gain of contact constraint
+            // p["kp_com"] = 3000.0; //# proportional gain of center of mass task
+            // p["kp_posture"] = 30.0; //# proportional gain of joint posture task
+            // p["kp_floatingb"] = 3000.0; //# proportional gain of floatingb task
+            // p["kp_rh"] = 300.0; //# proportional gain of right hand task
+            // p["kp_lh"] = 300.0; //# proportional gain of left hand task
+            // p["kp_rf"] = 30.0; //# proportional gain of right foot task
+            // p["kp_lf"] = 30.0; //# proportional gain of left foot task
+            // p["kp_torso"] = 30.0; //# proportional gain of the torso task
         }
 
         void TalosPosTracking::parse_tasks(const std::string& path)
@@ -286,6 +286,8 @@ namespace inria_wbc {
 
         void TalosPosTracking::remove_contact(const std::string& contact_name)
         {
+            std::cout<<"removing contact:"<<contact_name<<std::endl;
+            IWBC_ASSERT(contacts_.find(contact_name) != contacts_.end(), "Trying to remove an contact:", contact_name);
             bool res = tsid_->removeRigidContact(contact_name);
             IWBC_ASSERT(res, " contact ", contact_name, " not found");
         }
@@ -313,6 +315,7 @@ namespace inria_wbc {
 
         void TalosPosTracking::remove_task(const std::string& task_name, double transition_duration)
         {
+            IWBC_ASSERT(tasks_.find(task_name) != tasks_.end(), "Trying to remove an unknown task:",task_name);
             bool res = tsid_->removeTask(task_name, transition_duration);
             IWBC_ASSERT(res, "Cannot remove an unknown task: ", task_name);
         }

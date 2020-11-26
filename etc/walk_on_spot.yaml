@@ -1,27 +1,7 @@
 CONTROLLER:
   name: talos-pos-tracking
   ref_config: pal_start
-  w_com: 1.0
-  w_floatingb: 0.0
-  w_posture: 0.75
-  w_forceRef_feet: 1e-3
-  w_forceRef_hands: 1e-3
-  w_rh: 1.0
-  w_lh: 1.0
-  w_rf: 1000.0
-  w_lf: 1000.0
-  w_velocity: 10000.0
-  w_torso: 500.0
-  kp_contact: 30.0
-  kp_com: 3000.0
-  kp_floatingb: 0.0
-  kp_posture: 30.0
-  kp_waist: 3000.0
-  kp_rh: 30.0
-  kp_lh: 30.0
-  kp_rf: 3000.0
-  kp_lf: 3000.0
-  kp_torso: 30.0
+  tasks: tasks_talos.yaml
 STABILIZER:
   activated: true
   filter_size: 5

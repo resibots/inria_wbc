@@ -3,28 +3,6 @@ CONTROLLER:
   #todo add the SRDF here
   ref_config: pal_start
   tasks: tasks_talos.yaml
-  w_com: 100.0
-  w_floatingb: 100.0
-  w_posture: 0.75
-  w_forceRef_feet: 1e-3
-  w_forceRef_hands: 1e-3
-  w_waist: 20.0
-  w_rh: 10.0
-  w_lh: 1000.0
-  w_rf: 1.0
-  w_lf: 1.0
-  w_torso: 2500.0
-  w_velocity: 1.0
-  kp_contact: 30.0
-  kp_com: 3000.0
-  kp_floatingb: 3000.0
-  kp_posture: 30.0
-  kp_waist: 3000.0
-  kp_rh: 300.0 
-  kp_lh: 300.0
-  kp_rf: 30.0
-  kp_lf: 30.0
-  kp_torso: 30.0
 STABILIZER:
   activated: true
   filter_size: 5
