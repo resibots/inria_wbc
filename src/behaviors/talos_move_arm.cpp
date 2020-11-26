@@ -9,7 +9,7 @@ namespace inria_wbc {
 
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto lh_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("lh");
+            auto lh_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref("lh");
 
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             inria_wbc::utils::parse(trajectory_duration_, "trajectory_duration", config, "BEHAVIOR", controller_->params().verbose);
@@ -26,7 +26,7 @@ namespace inria_wbc {
         void TalosMoveArm::update(const controllers::SensorData& sensor_data)
         {
             auto ref = current_trajectory_[time_];
-            std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
+            std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(ref, "lh");
 
             controller_->update(sensor_data);
             time_++;

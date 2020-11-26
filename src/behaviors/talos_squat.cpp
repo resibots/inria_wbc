@@ -9,7 +9,7 @@ namespace inria_wbc {
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto com_init = std::static_pointer_cast<controllers::TalosPosTracking>(controller_)->com();
+            auto com_init = std::static_pointer_cast<controllers::PosTracker>(controller_)->com();
 
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
             utils::parse(trajectory_duration_, "trajectory_duration", config, "BEHAVIOR", controller_->params().verbose);
