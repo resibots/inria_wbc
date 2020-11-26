@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
         }
     }
     catch (YAML::RepresentationException& e) {
-        std::cout << red << bold << "YAML Parse error (missing key in YAML file): " << rst << e.what() << std::endl;
+        std::cout << red << bold << "YAML Parse error (missing key in YAML file?): " << rst << e.what() << std::endl;
     }
     catch (YAML::ParserException& e) {
         std::cout << red << bold << "YAML Parse error: " << rst << e.what() << std::endl;
