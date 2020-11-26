@@ -32,7 +32,7 @@ namespace inria_wbc {
    
     namespace controllers {
 
-        typedef std::map<std::string, Eigen::MatrixXd> SensorData;
+        using SensorData = std::unordered_map<std::string, Eigen::MatrixXd>;
 
         class Controller {
         public:

@@ -58,6 +58,10 @@ namespace inria_wbc {
         {
             auto com_ref = com_task()->getReference().pos;
 
+            IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
+            IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the need RF torque");
+            IWBC_ASSERT(sensor_data.find("velocity") != sensor_data.end(), "the stabilizer needs the need velocity");
+
             // estimate the CoP / ZMP
             bool cop_ok = _cop_estimator.update(com_ref.head(2),
                 model_joint_pos("leg_left_6_joint").translation(),

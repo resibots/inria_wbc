@@ -14,8 +14,6 @@ namespace inria_wbc {
             PosTracker& operator=(const PosTracker& o) const = delete;
             virtual ~PosTracker(){};
 
-            virtual void update(const SensorData& sensor_data) override;
-
             template <typename T>
             std::shared_ptr<T> task(const std::string& str) const
             {

@@ -106,11 +106,6 @@ namespace inria_wbc {
             }
         }
 
-        void PosTracker::update(const SensorData& sensor_data)
-        {
-            _solve();
-        }
-
         pinocchio::SE3 PosTracker::get_se3_ref(const std::string& task_name)
         {
             auto task = se3_task(task_name);
