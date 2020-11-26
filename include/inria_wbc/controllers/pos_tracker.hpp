@@ -57,8 +57,6 @@ namespace inria_wbc {
 
         
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
-            std::string ref_config_ = "pal_start";
-
        
         };
 

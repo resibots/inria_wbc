@@ -52,7 +52,7 @@ namespace inria_wbc {
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
 
             //q_tsid_ is of size 37 (pos+quat+nactuated)
-            q_tsid_ = robot_->model().referenceConfigurations[ref_config_];
+            q_tsid_ = robot_->model().referenceConfigurations[ref_config];
             //q0_ is in "Dart format" for the floating base
             Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
             Eigen::AngleAxisd aaxis(quat);
