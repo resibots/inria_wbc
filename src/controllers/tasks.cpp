@@ -6,6 +6,7 @@
 #include <tsid/tasks/task-se3-equality.hpp>
 
 #include "inria_wbc/controllers/tasks.hpp"
+#include "tsid/tasks/task-self-collision.hpp"
 
 using namespace tsid;
 using namespace tsid::math;
@@ -227,6 +228,39 @@ namespace inria_wbc {
 
             return contact_task;
         }
+
+        ////// Self-collision (warning: add the task to TSID!) //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_self_collision(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node)
+        {
+
+            // retrieve parameters from YAML
+            double kp = node["kp"].as<double>();
+            auto tracked = node["tracked"].as<std::string>();
+            auto weight = node["weight"].as<double>();
+            auto p0 = Eigen::Vector3d(node["p0"].as<std::vector<double>>().data());
+            auto coef = node["coef"].as<double>();
+            auto r0 = node["r0"].as<double>();
+            
+
+            // create the task
+            assert(tsid);
+            assert(robot);
+            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked);
+            task->Kp(kp);
+            task->Kd(2.0 * sqrt(task->Kp()));
+            task->setP0(p0);
+            task->setr0(r0);
+            task->setCoef(coef);
+
+            // add the task to TSID (side effect, be careful)
+            tsid->addMotionTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskSelfCollision> __register_self_collision("self-collision", make_self_collision);
 
     } // namespace tasks
 } // namespace inria_wbc

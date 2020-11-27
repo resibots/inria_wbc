@@ -68,3 +68,11 @@ contact_rfoot:
     fmax: 1500.0
     mu: 0.3
     normal: [0, 0, 1]
+self_collision:
+    type: self-collision
+    tracked: gripper_left_joint
+    weight: 100.0
+    kp: 30.0
+    p0: [0, 0, 1]
+    coef: 1
+    r0: 0.75

@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
-        inria_wbc::controllers::Controller::Params params = { 
+        inria_wbc::controllers::Controller::Params params = {
             robot->model_filename(),
             sot_config_path,
             dt,
@@ -182,6 +182,14 @@ int main(int argc, char* argv[])
             ghost->skeleton()->setPosition(5, 1.1);
             simu.add_robot(ghost);
         }
+
+        // self-collision shapes
+        Eigen::Vector6d cp = (Eigen::Vector6d() << 0, 0, 0, 0, 0, 1).finished();
+        std::cout << "cp:" << cp.transpose() << std::endl;
+        double r0 = 0.75;
+        auto collision = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0, r0, r0), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "test");
+        simu.add_visual_robot(collision);
+    
         // the main loop
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
@@ -191,7 +199,7 @@ int main(int argc, char* argv[])
             inria_wbc::controllers::SensorData sensor_data;
             // left foot
             sensor_data["lf_torque"] = ft_sensor_left->torque();
-            sensor_data["lf_force"] = ft_sensor_left->force(); 
+            sensor_data["lf_force"] = ft_sensor_left->force();
             // right foot
             sensor_data["rf_torque"] = ft_sensor_right->torque();
             sensor_data["rf_force"] = ft_sensor_right->force();
@@ -311,7 +319,7 @@ int main(int argc, char* argv[])
     catch (YAML::ParserException& e) {
         std::cout << red << bold << "YAML Parse error: " << rst << e.what() << std::endl;
     }
-    catch (std::exception& e) {        
+    catch (std::exception& e) {
         std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
     }
     return 0;
