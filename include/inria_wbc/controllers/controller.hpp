@@ -64,6 +64,7 @@ namespace inria_wbc {
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
+           
             // this could call a CoM estimator
             virtual const tsid::math::Vector3& com() const { return robot_->com(tsid_->data()); }
 

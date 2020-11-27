@@ -17,8 +17,10 @@
 #endif
 
 #include "inria_wbc/behaviors/behavior.hpp"
+#include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "tsid/tasks/task-self-collision.hpp"
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -184,12 +186,16 @@ int main(int argc, char* argv[])
         }
 
         // self-collision shapes
-        Eigen::Vector6d cp = (Eigen::Vector6d() << 0, 0, 0, 0, 0, 1).finished();
-        std::cout << "cp:" << cp.transpose() << std::endl;
-        double r0 = 0.75;
-        auto collision = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0, r0, r0), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "test");
-        simu.add_visual_robot(collision);
-    
+        std::vector<std::shared_ptr<robot_dart::Robot>> self_collision_spheres;
+        auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+        auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>("self_collision");
+        for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+            Eigen::Vector6d cp = Eigen::Vector6d::Zero();
+            cp.tail(3) = task_self_collision->avoided_frames_positions()[i];
+            double r0 = task_self_collision->avoided_frames_r0s()[i];
+            self_collision_spheres.push_back(robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0, r0, r0), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i)));
+            simu.add_visual_robot(self_collision_spheres.back());
+        }
         // the main loop
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
@@ -235,6 +241,15 @@ int main(int argc, char* argv[])
                 }
 
                 ++it_cmd;
+            }
+
+            if (simu.schedule(simu.graphics_freq())) {
+                for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+                    auto cp = self_collision_spheres[i]->base_pose();                    
+                    cp.translation() = task_self_collision->avoided_frames_positions()[i];
+                    cp.translation()[0] -= 1; // move to the ghost
+                    self_collision_spheres[i]->set_base_pose(cp);
+                }
             }
 
             // push the robot

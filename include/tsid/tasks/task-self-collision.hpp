@@ -17,6 +17,7 @@
 
 #ifndef __invdyn_task_self_collision_hpp__
 #define __invdyn_task_self_collision_hpp__
+#include <unordered_map>
 
 #include "tsid/math/constraint-equality.hpp"
 #include "tsid/math/fwd.hpp"
@@ -41,9 +42,11 @@ namespace tsid {
 
             TaskSelfCollision(const std::string& name,
                 RobotWrapper& robot,
-                const std::string& frameName);
-            virtual TaskSelfCollision() {}
-            
+                const std::string& frameName,
+                const std::unordered_map<std::string, double>& frames,
+                double coef);
+            virtual ~TaskSelfCollision() {}
+
             int dim() const;
 
             const ConstraintBase& compute(const double t,
@@ -53,39 +56,44 @@ namespace tsid {
 
             const ConstraintBase& getConstraint() const;
 
-            void setP0(const Vector3& p0);
-            const Vector3& getP0() const;
             void setCoef(const double coef);
             const double getCoef() const;
-            void setr0(const double r0);
-            const double getr0() const;
 
             double Kp() const { return m_Kp; }
             double Kd() const { return m_Kd; }
 
-            void Kp(const double Kp);
-            void Kd(const double Kp);
+            void Kp(const double kp) { m_Kp = kp; }
+            void Kd(const double kd) { m_Kd = kd; }
             Index frame_id() const;
 
-            void compute_C(const Vector3& x);
-            void compute_grad_C(const Vector3& x);
-            void compute_Hessian_C(const Vector3& x);
+            const std::vector<Vector3>& avoided_frames_positions() const { return m_avoided_frames_positions; }
+            const std::vector<double>& avoided_frames_r0s() const { return m_avoided_frames_r0s; }
 
         protected:
-            std::string m_frame_name;
-            Index m_frame_id;
+            void compute_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
+            void compute_grad_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
+            void compute_Hessian_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
+
+            std::string m_tracked_frame_name; // name of the body that we track
+            Index m_tracked_frame_id; // id of the body that we track (from the model)
+            std::unordered_map<std::string, double> m_avoided_frames_names; // names of the bodies to avoid and radius
+            std::vector<Index> m_avoided_frames_ids; // id of the bodies to avoid
+            std::vector<double> m_avoided_frames_r0s; // radius for each avoided frame
 
             double m_Kp;
             double m_Kd;
-            Vector3 m_drift;
+
             Eigen::Matrix<double, 1, 1> m_C;
             Vector3 m_grad_C;
             Eigen::Matrix<double, 3, 3> m_Hessian_C;
-            Matrix6x m_J;
-            Vector3 m_p0;
-            double m_r0;
+
             double m_coef;
             ConstraintEquality m_constraint;
+
+            Vector3 m_drift;
+            Matrix6x m_J; // jacobian of the tracked frame
+
+            std::vector<Vector3> m_avoided_frames_positions;
         };
 
     } // namespace tasks

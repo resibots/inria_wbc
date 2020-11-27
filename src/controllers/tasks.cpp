@@ -240,21 +240,19 @@ namespace inria_wbc {
             double kp = node["kp"].as<double>();
             auto tracked = node["tracked"].as<std::string>();
             auto weight = node["weight"].as<double>();
-            auto p0 = Eigen::Vector3d(node["p0"].as<std::vector<double>>().data());
             auto coef = node["coef"].as<double>();
-            auto r0 = node["r0"].as<double>();
-            
+
+            std::unordered_map<std::string, double> avoided;
+            for (const auto& a : node["avoided"])
+                avoided[a.first.as<std::string>()] = a.second.as<double>();
 
             // create the task
             assert(tsid);
             assert(robot);
-            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked);
+            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, coef);
             task->Kp(kp);
             task->Kd(2.0 * sqrt(task->Kp()));
-            task->setP0(p0);
-            task->setr0(r0);
-            task->setCoef(coef);
-
+            
             // add the task to TSID (side effect, be careful)
             tsid->addMotionTask(*task, weight, 1);
 

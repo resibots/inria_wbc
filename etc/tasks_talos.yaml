@@ -71,8 +71,12 @@ contact_rfoot:
 self_collision:
     type: self-collision
     tracked: gripper_left_joint
+    avoided: 
+        gripper_right_joint: 0.1
+        torso_2_joint: 0.3
+        base_link: 0.3
+        leg_right_1_joint: 0.3      
+        leg_left_1_joint: 0.3
     weight: 100.0
     kp: 30.0
-    p0: [0, 0, 1]
     coef: 1
-    r0: 0.75

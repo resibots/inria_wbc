@@ -28,16 +28,28 @@ namespace tsid {
 
         TaskSelfCollision::TaskSelfCollision(const std::string& name,
             RobotWrapper& robot,
-            const std::string& frameName) : TaskMotion(name, robot),
-                                            m_frame_name(frameName),
-                                            m_constraint(name, 1, robot.nv())
+            const std::string& tracked_frame_name,
+            const std::unordered_map<std::string, double>& avoided_frames_names,
+            double coef)
+            : TaskMotion(name, robot),
+              m_tracked_frame_name(tracked_frame_name),
+              m_avoided_frames_names(avoided_frames_names),
+              m_coef(coef),
+              m_constraint(name, 1, robot.nv()),
+              m_avoided_frames_positions(avoided_frames_names.size())
         {
-            assert(m_robot.model().existFrame(frameName));
-            m_frame_id = m_robot.model().getFrameId(frameName);
+            assert(m_robot.model().existFrame(m_tracked_frame_name));
+            m_tracked_frame_id = m_robot.model().getFrameId(m_tracked_frame_name);
             m_Kp = 0.;
             m_Kd = 0.;
             m_grad_C.setZero(3);
             m_J.setZero(6, robot.nv());
+
+            for (const auto& it : m_avoided_frames_names) {
+                assert(m_robot.model().existFrame(it.first));
+                m_avoided_frames_ids.push_back(m_robot.model().getFrameId(it.first));
+                m_avoided_frames_r0s.push_back(it.second);
+            }
         }
 
         int TaskSelfCollision::dim() const
@@ -52,18 +64,9 @@ namespace tsid {
 
         Index TaskSelfCollision::frame_id() const
         {
-            return m_frame_id;
+            return m_tracked_frame_id;
         }
 
-        void TaskSelfCollision::setP0(const Vector3& p0)
-        {
-            m_p0 = p0;
-        }
-
-        const Vector3& TaskSelfCollision::getP0() const
-        {
-            return m_p0;
-        }
 
         void TaskSelfCollision::setCoef(const double coef)
         {
@@ -75,78 +78,48 @@ namespace tsid {
             return m_coef;
         }
 
-        void TaskSelfCollision::setr0(const double r0)
+        void TaskSelfCollision::compute_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
         {
-            m_r0 = r0;
-        }
-
-        const double TaskSelfCollision::getr0() const
-        {
-            return m_r0;
-        }
-        /*
-     void TaskSelfCollision::compute_C(Vector3 pos){
-      Vector3 diff = pos-m_p0;
-      double square_norm = diff.dot(diff);
-      assert(square_norm > 0.);
-      m_C(0,0) = m_coef/square_norm;
-    } 
-
-    void TaskSelfCollision::compute_grad_C(Vector3 pos){
-      Vector3 diff = pos-m_p0;
-      double square_norm = diff.dot(diff);
-      assert(square_norm > 0.);
-
-      m_grad_C = -2*m_coef/(square_norm*square_norm) * diff;
-    }
- 
-    void TaskSelfCollision::compute_Hessian_C(Vector3 pos){
-      Vector3 diff = pos-m_p0;
-      double square_norm = diff.dot(diff);
-      assert(square_norm > 0.);
-      m_Hessian_C = 8*m_coef/(square_norm*square_norm*square_norm) * diff * diff.transpose() - 2 / (square_norm*square_norm) * (Eigen::Matrix<double, 3, 3>::Identity());
-    } 
-    */
-
-        void TaskSelfCollision::compute_C(const Vector3& pos)
-        {
-            Vector3 diff = pos - m_p0;
-            double square_norm = diff.dot(diff);
-            double norm = sqrt(square_norm);
-            if (norm > m_r0) {
-                m_C(0, 0) = 0;
-            }
-            else {
-                assert(square_norm > 0.);
-                m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / m_r0) * (1 / norm - 1 / m_r0);
+            m_C(0, 0) = 0;
+            for (size_t i = 0; i < frames_positions.size(); ++i) {
+                Vector3 diff = pos - frames_positions[i];
+                double square_norm = diff.dot(diff);
+                double norm = sqrt(square_norm);
+                double r0 = m_avoided_frames_r0s[i];
+                if (norm <= r0) {
+                    assert(square_norm > 0.);
+                    m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / r0) * (1 / norm - 1 / r0);
+                }
             }
         }
 
-        void TaskSelfCollision::compute_grad_C(const Vector3& pos)
+        void TaskSelfCollision::compute_grad_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
         {
-            Vector3 diff = pos - m_p0;
-            double square_norm = diff.dot(diff);
-            double norm = sqrt(square_norm);
-            if (norm > m_r0) {
-                m_grad_C = Vector3::Zero();
-            }
-            else {
-                assert(square_norm > 0.);
-                m_grad_C = -m_coef * (1 / (square_norm * square_norm) - 1 / (m_r0 * square_norm * norm)) * diff;
+            m_grad_C = Vector3::Zero();
+            for (size_t i = 0; i < frames_positions.size(); ++i) {
+                Vector3 diff = pos - frames_positions[i];
+                ;
+                double square_norm = diff.dot(diff);
+                double norm = sqrt(square_norm);
+                double r0 = m_avoided_frames_r0s[i];
+                if (norm <= r0) {
+                    assert(square_norm > 0.);
+                    m_grad_C += -m_coef * (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * diff;
+                }
             }
         }
 
-        void TaskSelfCollision::compute_Hessian_C(const Vector3& pos)
+        void TaskSelfCollision::compute_Hessian_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
         {
-            Vector3 diff = pos - m_p0;
-            double square_norm = diff.dot(diff);
-            double norm = sqrt(square_norm);
-            if (norm > m_r0) {
-                m_Hessian_C = Eigen::Matrix<double, 3, 3>::Zero();
-            }
-            else {
-                assert(square_norm > 0.);
-                m_Hessian_C = m_coef * ((4 / (square_norm * square_norm * square_norm) - 3 / (m_r0 * square_norm * square_norm * norm)) * diff * diff.transpose() - (1 / (square_norm * square_norm) - 1 / (m_r0 * square_norm * norm)) * (Eigen::Matrix<double, 3, 3>::Identity()));
+            m_Hessian_C = Eigen::MatrixXd::Zero(3,3);
+            for (size_t i = 0; i < frames_positions.size(); ++i) {
+                Vector3 diff = pos - frames_positions[i];            
+                double square_norm = diff.dot(diff);
+                double norm = sqrt(square_norm);
+                double r0 = m_avoided_frames_r0s[i];
+                if (norm <= r0) {
+                    m_Hessian_C += m_coef * ((4 / (square_norm * square_norm * square_norm) - 3 / (r0 * square_norm * square_norm * norm)) * diff * diff.transpose() - (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * (Eigen::Matrix<double, 3, 3>::Identity()));
+                }
             }
         }
 
@@ -159,23 +132,31 @@ namespace tsid {
             SE3 oMi;
             Motion v_frame;
             Motion a_frame;
-            m_robot.framePosition(data, m_frame_id, oMi);
-            m_robot.frameVelocity(data, m_frame_id, v_frame);
-            m_robot.frameClassicAcceleration(data, m_frame_id, a_frame);
+            m_robot.framePosition(data, m_tracked_frame_id, oMi);
+            m_robot.frameVelocity(data, m_tracked_frame_id, v_frame);
+            m_robot.frameClassicAcceleration(data, m_tracked_frame_id, a_frame);
             auto pos = oMi.translation();
             m_drift = a_frame.linear();
 
+            //// Get the position of the other frames
+            for (size_t i = 0; i < m_avoided_frames_ids.size(); ++i) {
+                m_robot.framePosition(data, m_avoided_frames_ids[i], oMi);
+                m_avoided_frames_positions[i] = oMi.translation();
+            }
+
             //// Get Frame Position jacobian (TODO: Local Jacobian VS World Jacobian)
-            m_robot.frameJacobianLocal(data, m_frame_id, m_J);
+            m_robot.frameJacobianLocal(data, m_tracked_frame_id, m_J);
             // get the pos jacobian (3 x nactuated)
             auto J = m_J.block(0, 0, 3, m_robot.nv());
 
+            // TODO : here we assume all the other frames are fixed ?
+
             //// Compute C(pos)
-            compute_C(pos);
+            compute_C(pos, m_avoided_frames_positions);
             //// Compute gradient of C(pos)
-            compute_grad_C(pos);
+            compute_grad_C(pos, m_avoided_frames_positions);
             //// Compute Hessian of C(pos)
-            compute_Hessian_C(pos);
+            compute_Hessian_C(pos, m_avoided_frames_positions);
 
 #ifdef LOG_REACHING_LOW
             std::cout << "p0: " << m_p0 << std::endl;
