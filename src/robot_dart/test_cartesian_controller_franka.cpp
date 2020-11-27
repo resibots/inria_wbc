@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
         inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
             "../etc/franka_configurations.srdf",
             sot_config_path,
-            false, //added temporarely
+            false, //~~added temporarely
             "",
             dt,
             verbose,
@@ -146,11 +146,8 @@ int main(int argc, char* argv[])
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
         assert(behavior);
-        //hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 
         auto all_dofs = controller->all_dofs();
-        auto floating_base = all_dofs;
-        floating_base.resize(6);
 
         auto controllable_dofs = controller->controllable_dofs();
         robot->set_positions(controller->q0(), all_dofs);
@@ -163,26 +160,12 @@ int main(int argc, char* argv[])
                 ofs << c << std::endl;
         }
 
-        // add sensors to the robot
-        auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
-        auto ft_sensor_right = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint");
-        robot_dart::sensor::IMUConfig imu_config;
-        imu_config.body = robot->body_node("imu_link"); // choose which body the sensor is attached to
-        imu_config.frequency = 1000; // update rate of the sensor
-        auto imu = simu.add_sensor<robot_dart::sensor::IMU>(imu_config);
-
         //////////////////// START SIMULATION //////////////////////////////////////
         simu.set_control_freq(1000); // 1000 Hz
         double time_simu = 0, time_cmd = 0, time_solver = 0;
         int it_simu = 0, it_cmd = 0;
 
-        std::shared_ptr<robot_dart::Robot> ghost;
-        if (vm.count("ghost")) {
-            ghost = robot->clone_ghost();
-            ghost->skeleton()->setPosition(4, -1.57);
-            ghost->skeleton()->setPosition(5, 1.1);
-            simu.add_robot(ghost);
-        }
+        
         // the main loop
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
@@ -191,12 +174,12 @@ int main(int argc, char* argv[])
             // update the sensors
 
             inria_wbc::controllers::SensorData sensor_data = {
-                ft_sensor_left->torque(),
-                ft_sensor_left->force(),
-                ft_sensor_right->torque(),
-                ft_sensor_right->force(),
-                imu->linear_acceleration(),
-                robot->com_velocity().tail<3>(),
+		Eigen::Vector3d::Zero(),
+		Eigen::Vector3d::Zero(),
+		Eigen::Vector3d::Zero(),
+		Eigen::Vector3d::Zero(),
+		Eigen::Vector3d::Zero(),
+		Eigen::Vector3d::Zero(),
                 robot->skeleton()->getPositions().tail(ncontrollable)};
 
             // step the command
@@ -212,33 +195,13 @@ int main(int argc, char* argv[])
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, dt);
                 else // torque
+//~~ error because we are passing a q of dim 9 and the robot skeleton has 15 dof (talos has 50). But why 15 ?
                     cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
-                if (ghost) {
-                    Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
-                    translate_ghost(0) -= 1;
-                    ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
-                    ghost->set_positions(q.head(6) + translate_ghost, floating_base);
-                }
-
                 ++it_cmd;
-            }
-
-            // push the robot
-            bool push = false;
-            if (vm.count("push")) {
-                auto pv = vm["push"].as<std::vector<float>>();
-                for (auto& p : pv) {
-                    if (simu.scheduler().current_time() > p && simu.scheduler().current_time() < p + 0.5) {
-                        robot->set_external_force("base_link", Eigen::Vector3d(-150, 0, 0));
-                        push = true;
-                    }
-                    if (simu.scheduler().current_time() > p + 0.25)
-                        robot->clear_external_forces();
-                }
             }
 
             // step the simulation
@@ -256,17 +219,6 @@ int main(int argc, char* argv[])
                     (*x.second) << time_step_solver / 1000.0 << "\t" << time_step_cmd / 1000.0 << "\t" << time_step_simu / 1000.0 << std::endl;
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
-                else if (x.first == "com") // the real com
-                    (*x.second) << robot->com().transpose() << std::endl;
-                else if (x.first == "controller_com") // the com according to controller
-                    (*x.second) << controller->com().transpose() << std::endl;
-                else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << std::endl;
-                else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
-                    (*x.second) << controller->cost(x.first.substr(5)) << std::endl;
-                else if (x.first == "ft")
-                    (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
-                                << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }
@@ -289,8 +241,6 @@ int main(int argc, char* argv[])
                 oss << "[Sim: " << t_sim << " ms]" << std::endl;
                 oss << "[Solver: " << t_solver << " ms]" << std::endl;
                 oss << "[Cmd: " << t_cmd << " ms]" << std::endl;
-                if (push)
-                    oss << "pushing..." << std::endl;
 #ifdef GRAPHIC
                 if (!vm.count("mp4"))
                     simu.set_text_panel(oss.str());

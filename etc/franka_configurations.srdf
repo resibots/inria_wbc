@@ -9,8 +9,6 @@
         <joint name="panda_joint5" value="0."/>
         <joint name="panda_joint6" value="0."/>
         <joint name="panda_joint7" value="0."/>
-        <joint name="panda_joint8" value="0."/>
-        <joint name="panda_hand_joint" value="0."/>
         <joint name="panda_finger_joint1" value="0."/>
         <joint name="panda_finger_joint2" value="0."/>
         

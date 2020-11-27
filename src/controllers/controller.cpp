@@ -188,7 +188,7 @@ namespace inria_wbc {
               tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
             }
             else{
-              tsid_controllables = std::vector<std::string>(robot_->model().names.begin(), robot_->model().names.end()); //?????????????????????????????????????????????????!! I don't know about this +2, maybe it will be correct to have +1 instead, ask !
+              tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 1, robot_->model().names.end());
             }
 
             if (filter_mimics)
