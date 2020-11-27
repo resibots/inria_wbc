@@ -29,7 +29,6 @@
 
 namespace inria_wbc {
 
-   
     namespace controllers {
 
         using SensorData = std::unordered_map<std::string, Eigen::MatrixXd>;
@@ -43,6 +42,20 @@ namespace inria_wbc {
                 bool verbose;
                 std::vector<std::string> mimic_dof_names;
                 std::string floating_base_joint_name = "";
+
+                void print() const
+                {
+                    std::cout << "****** params ******\n"
+                              << "urdf_path :\t" << urdf_path << "\n"
+                              << "sot_config_path :\t" << sot_config_path << "\n"
+                              << "dt :\t" << dt << "\n"
+                              << "verbose :\t" << verbose << "\n"
+                              << "mimic_dof_names :\t{ ";
+                    for (auto& m : mimic_dof_names) {
+                        std::cout << m << " ";
+                    }
+                    std::cout << " }\nfloating_base_joint_name :\t" << floating_base_joint_name << std::endl;
+                }
             };
 
             Controller(const Params& params);
@@ -50,7 +63,7 @@ namespace inria_wbc {
             Controller& operator=(const Controller& o) = delete;
             virtual ~Controller(){};
 
-            virtual void update(const SensorData& sensor_data) { _solve(); };
+            virtual void update(const SensorData& sensor_data = {}) { _solve(); };
 
             // Removes the universe and root (floating base) joint names
             std::vector<std::string> controllable_dofs(bool filter_mimics = true) const;
@@ -90,7 +103,6 @@ namespace inria_wbc {
                 assert(robot_);
                 return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             }
-            
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
             {
                 assert(task);

@@ -17,7 +17,7 @@ namespace inria_wbc {
             WalkOnSpot(const controller_ptr_t& controller);
             WalkOnSpot() = delete;
             WalkOnSpot(const WalkOnSpot& otehr) = default;
-            void update(const controllers::SensorData& sensor_data) override;
+            void update(const controllers::SensorData& sensor_data = {}) override;
 
         private:
             void _generate_trajectories();

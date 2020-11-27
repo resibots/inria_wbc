@@ -14,7 +14,7 @@ namespace inria_wbc {
             TalosPosTracker& operator=(const TalosPosTracker& o) const = delete;
             virtual ~TalosPosTracker(){};
 
-            virtual void update(const SensorData& sensor_data) override;
+            virtual void update(const SensorData& sensor_data = {}) override;
             virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); }
 
         protected:

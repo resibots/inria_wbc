@@ -33,8 +33,9 @@ namespace inria_wbc {
 
         PosTracker::PosTracker(const Params& params) : Controller(params)
         {
-            if (params.sot_config_path.empty())
+            if (params.sot_config_path.empty()) {
                 throw IWBC_EXCEPTION("empty configuration path! (we expect a YAML file)");
+            }
 
             if (verbose_)
                 std::cout << "loading main YAML file:" << params.sot_config_path << std::endl;
