@@ -92,10 +92,14 @@ namespace tsid {
 
             Vector3 m_drift;
             Matrix6x m_J; // jacobian of the tracked frame
+            std::vector<Matrix6x> m_Js; // jacobian of the other frames
 
             std::vector<Vector3> m_avoided_frames_positions;
 
             bool m_collision;
+
+            Eigen::MatrixXd m_A;
+            Eigen::VectorXd m_B;
         };
 
     } // namespace tasks

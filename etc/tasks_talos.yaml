@@ -1,12 +1,12 @@
 lh:
     type: se3
-    tracked: gripper_left_joint
+    tracked: gripper_left_base_link
     weight: 10.0
     kp: 30.0
     mask: 111000 # xyz
 rh:
     type: se3
-    tracked: gripper_right_joint
+    tracked: gripper_right_base_link
     weight: 10.0
     kp: 30.0
     mask: 111000
@@ -70,15 +70,29 @@ contact_rfoot:
     normal: [0, 0, 1]
 self_collision:
     type: self-collision
-    tracked: gripper_left_joint
+    tracked: gripper_right_base_link
     avoided: 
-        gripper_right_joint: 0.1
-        torso_2_joint: 0.3
-        base_link: 0.3
-        leg_right_1_joint: 0.3      
-        leg_left_1_joint: 0.3
-        leg_left_4_joint: 0.3
-        leg_right_4_joint: 0.3
-    weight: 100.0
+        gripper_left_base_link: 0.3
+        # torso_2_joint: 0.3
+        # base_link: 0.3
+        # leg_right_1_joint: 0.3      
+        # leg_left_1_joint: 0.3
+        # leg_left_4_joint: 0.3
+        # leg_right_4_joint: 0.3
+    weight: 10.0
     kp: 30.0
-    coef: 0.25
+    coef: 1
+# self_collision-rh:
+#     type: self-collision
+#     tracked: gripper_right_joint
+#     avoided: 
+#         gripper_left_joint: 0.3
+#         torso_2_joint: 0.3
+#         base_link: 0.3
+#         leg_right_1_joint: 0.3      
+#         leg_left_1_joint: 0.3
+#         leg_left_4_joint: 0.3
+#         leg_right_4_joint: 0.3
+#     weight: 1000.0
+#     kp: 30.0
+#     coef: 1.5

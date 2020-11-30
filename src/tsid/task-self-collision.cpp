@@ -36,7 +36,9 @@ namespace tsid {
               m_avoided_frames_names(avoided_frames_names),
               m_coef(coef),
               m_constraint(name, 1, robot.nv()),
+              m_Js(avoided_frames_names.size()),
               m_avoided_frames_positions(avoided_frames_names.size())
+
         {
             assert(m_robot.model().existFrame(m_tracked_frame_name));
             m_tracked_frame_id = m_robot.model().getFrameId(m_tracked_frame_name);
@@ -44,6 +46,8 @@ namespace tsid {
             m_Kd = 0.;
             m_grad_C.setZero(3);
             m_J.setZero(6, robot.nv());
+            for (size_t i = 0; i < m_Js.size(); ++i)
+                m_Js[i].setZero(6, robot.nv());
 
             for (const auto& it : m_avoided_frames_names) {
                 assert(m_robot.model().existFrame(it.first));
@@ -66,7 +70,6 @@ namespace tsid {
         {
             return m_tracked_frame_id;
         }
-
 
         void TaskSelfCollision::setCoef(const double coef)
         {
@@ -92,7 +95,7 @@ namespace tsid {
                     m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / r0) * (1 / norm - 1 / r0);
                     coll = true;
                 }
-            }          
+            }
             return coll;
         }
 
@@ -114,9 +117,9 @@ namespace tsid {
 
         void TaskSelfCollision::compute_Hessian_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
         {
-            m_Hessian_C = Eigen::MatrixXd::Zero(3,3);
+            m_Hessian_C = Eigen::MatrixXd::Zero(3, 3);
             for (size_t i = 0; i < frames_positions.size(); ++i) {
-                Vector3 diff = pos - frames_positions[i];            
+                Vector3 diff = pos - frames_positions[i];
                 double square_norm = diff.dot(diff);
                 double norm = sqrt(square_norm);
                 double r0 = m_avoided_frames_r0s[i];
@@ -140,52 +143,49 @@ namespace tsid {
             m_robot.frameClassicAcceleration(data, m_tracked_frame_id, a_frame);
             auto pos = oMi.translation();
             m_drift = a_frame.linear();
+            // Jacobian of the tracked frame (m_J)
+            m_robot.frameJacobianLocal(data, m_tracked_frame_id, m_J);
+            auto J1 = m_J.block(0, 0, 3, m_robot.nv());
 
-            //// Get the position of the other frames
+            m_A = Eigen::MatrixXd::Zero(1, m_robot.nv());
+            m_B = Eigen::MatrixXd::Zero(1, 1);
+
+            m_collision = false;
             for (size_t i = 0; i < m_avoided_frames_ids.size(); ++i) {
+                // pos & Jacobian
                 m_robot.framePosition(data, m_avoided_frames_ids[i], oMi);
                 m_avoided_frames_positions[i] = oMi.translation();
+
+                // distance with tracked frame
+                Vector3 diff = pos - m_avoided_frames_positions[i];
+                double square_norm = diff.dot(diff);
+                double norm = sqrt(square_norm);
+                double r0 = m_avoided_frames_r0s[i];
+
+                // if in the influence zone
+                if (norm <= r0) {
+                    m_collision = true;
+                    //
+                    m_robot.frameJacobianLocal(data, m_avoided_frames_ids[i], m_Js[i]);
+                    auto J = J1 - m_Js[i].block(0, 0, 3, m_robot.nv());
+                    // drift
+                    m_robot.frameClassicAcceleration(data, m_avoided_frames_ids[i], a_frame);
+                    auto drift = m_drift - a_frame.linear();
+                    // C
+                    m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / r0) * (1 / norm - 1 / r0);
+                    // gradient
+                    m_grad_C = -m_coef * (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * diff;
+                    // hessian
+                    m_Hessian_C = m_coef * ((4 / (square_norm * square_norm * square_norm) - 3 / (r0 * square_norm * square_norm * norm)) * diff * diff.transpose() - (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * (Eigen::Matrix<double, 3, 3>::Identity()));
+                    // A
+                    m_A += m_grad_C.transpose() * J;
+                    // B (note: m_drift = dJ(q)*dq)
+                    m_B += -((m_Hessian_C * J * v).transpose() * J * v + m_grad_C.transpose() * (drift + m_Kd * J * v) + m_Kp * m_C);
+                }
             }
 
-            //// Get Frame Position jacobian (TODO: Local Jacobian VS World Jacobian)
-            m_robot.frameJacobianLocal(data, m_tracked_frame_id, m_J);
-            // get the pos jacobian (3 x nactuated)
-            auto J = m_J.block(0, 0, 3, m_robot.nv());
-
-            // TODO : here we assume all the other frames are fixed ?
-
-            //// Compute C(pos)
-            m_collision = compute_C(pos, m_avoided_frames_positions);
-
-            //// Compute gradient of C(pos)
-            compute_grad_C(pos, m_avoided_frames_positions);
-            //// Compute Hessian of C(pos)
-            compute_Hessian_C(pos, m_avoided_frames_positions);
-
-#ifdef LOG_REACHING_LOW
-            std::cout << "p0: " << m_p0 << std::endl;
-            std::cout << "r0: " << m_r0 << std::endl;
-            std::cout << "pos: " << pos << std::endl;
-
-            std::cout << "vel: " << v_frame.linear() << std::endl;
-            std::cout << "acc: " << a_frame.linear() << std::endl;
-            std::cout << "dx=J*dq: " << J * v << std::endl;
-            std::cout << "dq: " << v.transpose() << std::endl;
-            std::cout << "J: " << J << std::endl;
-            std::cout << "drift" << m_drift << std::endl;
-
-            std::cout << "C: " << m_C << std::endl;
-            std::cout << "grad_C: " << m_grad_C << std::endl;
-            std::cout << "Hessian C: " << m_Hessian_C << std::endl;
-
-            std::cout << "A: " << m_grad_C.transpose() * J << std::endl;
-            std::cout << "b: " << (-((m_Hessian_C * J * v).transpose() * J * v + m_grad_C.transpose() * (m_drift + m_Kd * J * v) + m_Kp * m_C)) << std::endl;
-#endif
-
-            // Set A
-            m_constraint.setMatrix(m_grad_C.transpose() * J);
-            // Set b (note: m_drift = dJ(q)*dq)
-            m_constraint.setVector(-((m_Hessian_C * J * v).transpose() * J * v + m_grad_C.transpose() * (m_drift + m_Kd * J * v) + m_Kp * m_C));
+            m_constraint.setMatrix(m_A);
+            m_constraint.setVector(m_B);
             return m_constraint;
         }
 
