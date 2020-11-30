@@ -31,6 +31,7 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/controllers/talos_pos_tracker.hpp
                             include/inria_wbc/behaviors/talos_squat.hpp
                             include/inria_wbc/behaviors/talos_move_arm.hpp
+                            include/inria_wbc/behaviors/talos_clapping.hpp
                             include/inria_wbc/behaviors/talos_walk_on_spot.hpp
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
@@ -51,6 +52,7 @@ set(INRIA_WBC_SOURCES
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
                             src/behaviors/talos_walk_on_spot.cpp
+                            src/behaviors/talos_clapping.cpp                            
                             src/estimators/cop.cpp
                             src/tsid/task-self-collision.cpp
 

@@ -68,9 +68,9 @@ namespace tsid {
 
             const std::vector<Vector3>& avoided_frames_positions() const { return m_avoided_frames_positions; }
             const std::vector<double>& avoided_frames_r0s() const { return m_avoided_frames_r0s; }
-
+            bool collision() const { return m_collision; }
         protected:
-            void compute_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
+            bool compute_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
             void compute_grad_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
             void compute_Hessian_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
 
@@ -94,6 +94,8 @@ namespace tsid {
             Matrix6x m_J; // jacobian of the tracked frame
 
             std::vector<Vector3> m_avoided_frames_positions;
+
+            bool m_collision;
         };
 
     } // namespace tasks

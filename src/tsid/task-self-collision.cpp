@@ -78,8 +78,9 @@ namespace tsid {
             return m_coef;
         }
 
-        void TaskSelfCollision::compute_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
+        bool TaskSelfCollision::compute_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
         {
+            bool coll = false;
             m_C(0, 0) = 0;
             for (size_t i = 0; i < frames_positions.size(); ++i) {
                 Vector3 diff = pos - frames_positions[i];
@@ -89,8 +90,10 @@ namespace tsid {
                 if (norm <= r0) {
                     assert(square_norm > 0.);
                     m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / r0) * (1 / norm - 1 / r0);
+                    coll = true;
                 }
-            }
+            }          
+            return coll;
         }
 
         void TaskSelfCollision::compute_grad_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
@@ -152,7 +155,8 @@ namespace tsid {
             // TODO : here we assume all the other frames are fixed ?
 
             //// Compute C(pos)
-            compute_C(pos, m_avoided_frames_positions);
+            m_collision = compute_C(pos, m_avoided_frames_positions);
+
             //// Compute gradient of C(pos)
             compute_grad_C(pos, m_avoided_frames_positions);
             //// Compute Hessian of C(pos)
