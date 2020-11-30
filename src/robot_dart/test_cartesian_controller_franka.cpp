@@ -20,6 +20,7 @@
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 
+
 int main(int argc, char* argv[])
 {
     try {
@@ -100,8 +101,10 @@ int main(int argc, char* argv[])
         std::string urdf = "franka/franka.urdf";
 
         auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
+        robot->fix_to_world();
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
         robot->set_actuator_types(vm["actuators"].as<std::string>());
+
 
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
         robot_dart::RobotDARTSimu simu(dt);
@@ -195,7 +198,6 @@ int main(int argc, char* argv[])
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, dt);
                 else // torque
-//~~ error because we are passing a q of dim 9 and the robot skeleton has 15 dof (talos has 50). But why 15 ?
                     cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
