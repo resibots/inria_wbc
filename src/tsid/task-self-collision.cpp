@@ -155,13 +155,12 @@ namespace tsid {
                 // pos & Jacobian
                 m_robot.framePosition(data, m_avoided_frames_ids[i], oMi);
                 m_avoided_frames_positions[i] = oMi.translation();
-
+              
                 // distance with tracked frame
                 Vector3 diff = pos - m_avoided_frames_positions[i];
                 double square_norm = diff.dot(diff);
                 double norm = sqrt(square_norm);
                 double r0 = m_avoided_frames_r0s[i];
-
                 // if in the influence zone
                 if (norm <= r0) {
                     m_collision = true;
@@ -170,7 +169,7 @@ namespace tsid {
                     auto J = J1 - m_Js[i].block(0, 0, 3, m_robot.nv());
                     // drift
                     m_robot.frameClassicAcceleration(data, m_avoided_frames_ids[i], a_frame);
-                    auto drift = m_drift - a_frame.linear();
+                    auto drift = m_drift- a_frame.linear();
                     // C
                     m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / r0) * (1 / norm - 1 / r0);
                     // gradient

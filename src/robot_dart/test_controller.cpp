@@ -331,8 +331,8 @@ int main(int argc, char* argv[])
                 if (push)
                     oss << "pushing..." << std::endl;
 #ifdef GRAPHIC
-                if (!vm.count("mp4"))
-                    simu.set_text_panel(oss.str());
+                // if (!vm.count("mp4"))
+                //     simu.set_text_panel(oss.str());
 #endif
                 it_simu = 0;
                 it_cmd = 0;
