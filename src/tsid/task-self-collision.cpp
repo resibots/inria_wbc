@@ -16,9 +16,10 @@
 //
 
 //#define DEBUG_POS_AVOIDANCE
+#include <cmath>
 
-#include "tsid/tasks/task-self-collision.hpp"
 #include "tsid/robots/robot-wrapper.hpp"
+#include "tsid/tasks/task-self-collision.hpp"
 
 namespace tsid {
     namespace tasks {
@@ -134,17 +135,18 @@ namespace tsid {
             ConstRefVector v,
             Data& data)
         {
-            //// Get pos (position of the frame)
+            // pos & Jacobian of the tracked frame
             SE3 oMi;
             Motion v_frame;
             Motion a_frame;
             m_robot.framePosition(data, m_tracked_frame_id, oMi);
-            m_robot.frameVelocity(data, m_tracked_frame_id, v_frame);
+            //a_frame = m_robot.frameAccelerationWorldOriented(data, m_tracked_frame_id);
             m_robot.frameClassicAcceleration(data, m_tracked_frame_id, a_frame);
             auto pos = oMi.translation();
             m_drift = a_frame.linear();
-            // Jacobian of the tracked frame (m_J)
-            m_robot.frameJacobianLocal(data, m_tracked_frame_id, m_J);
+            m_robot.frameJacobianWorld(data, m_tracked_frame_id, m_J);
+            //m_robot.frameJacobianLocal(data, m_tracked_frame_id, m_J);
+
             auto J1 = m_J.block(0, 0, 3, m_robot.nv());
 
             m_A = Eigen::MatrixXd::Zero(1, m_robot.nv());
@@ -155,27 +157,39 @@ namespace tsid {
                 // pos & Jacobian
                 m_robot.framePosition(data, m_avoided_frames_ids[i], oMi);
                 m_avoided_frames_positions[i] = oMi.translation();
-              
+
                 // distance with tracked frame
-                Vector3 diff = pos - m_avoided_frames_positions[i];
+                const Vector3& pos2 = m_avoided_frames_positions[i];
+                Vector3 diff = pos - pos2;
                 double square_norm = diff.dot(diff);
                 double norm = sqrt(square_norm);
                 double r0 = m_avoided_frames_r0s[i];
+
                 // if in the influence zone
                 if (norm <= r0) {
                     m_collision = true;
-                    //
-                    m_robot.frameJacobianLocal(data, m_avoided_frames_ids[i], m_Js[i]);
+                    m_robot.frameJacobianWorld(data, m_avoided_frames_ids[i], m_Js[i]);
+                    //a_frame = m_robot.frameAccelerationWorldOriented(data, m_avoided_frames_ids[i]);
+                    m_robot.frameClassicAcceleration(data, m_avoided_frames_ids[i], a_frame); // TODO dJ.dq in world frame
                     auto J = J1 - m_Js[i].block(0, 0, 3, m_robot.nv());
-                    // drift
-                    m_robot.frameClassicAcceleration(data, m_avoided_frames_ids[i], a_frame);
-                    auto drift = m_drift- a_frame.linear();
-                    // C
+                    Eigen::Vector3d drift = m_drift - a_frame.linear();
+
+                    // C (Tim)
                     m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / r0) * (1 / norm - 1 / r0);
-                    // gradient
                     m_grad_C = -m_coef * (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * diff;
-                    // hessian
                     m_Hessian_C = m_coef * ((4 / (square_norm * square_norm * square_norm) - 3 / (r0 * square_norm * square_norm * norm)) * diff * diff.transpose() - (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * (Eigen::Matrix<double, 3, 3>::Identity()));
+
+                    double a = r0;
+                    double p = m_coef;
+                    m_C(0, 0) = exp(-pow(norm / a, p));
+                    m_grad_C = (-p * pow(norm, (p - 2)) / pow(a, p)) * exp(-pow((norm / a), p)) * (diff);
+                    m_Hessian_C.Zero(3, 3);
+                    for (size_t k = 0; k < 3; ++k)
+                        for (size_t k2 = 0; k2 < 3; ++k2) {
+                            m_Hessian_C(k, k2) = (pos[k] - pos2[k]) * (pos[k2] - pos2[k2]) * ((-p * (p - 2) * pow(norm, (p - 4)) / pow(a, p)) + (pow(p, 2) * pow(norm, (2 * p - 4)) / pow(a, (2 * p))) * exp(-pow((norm / a), p)));
+                            if (k == k2)
+                                m_Hessian_C(k, k2) += (-p * pow(norm, (p - 2)) / pow(a, p)) * exp(-pow((norm / a), p));
+                        }
                     // A
                     m_A += m_grad_C.transpose() * J;
                     // B (note: m_drift = dJ(q)*dq)
