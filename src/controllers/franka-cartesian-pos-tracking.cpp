@@ -108,7 +108,7 @@ namespace inria_wbc {
         void FrankaCartPosTracking::update(const SensorData& sensor_data)
         {
             Eigen::Vector3d ref_xyz;
-            ref_xyz << 0.5,0.7,0.1;
+            ref_xyz << 2.8,2.8,2.8;
             pinocchio::SE3 ref_ee;
             ref_ee.translation( ref_xyz );
             ref_ee.rotation(Eigen::Matrix<double,3,3>::Identity()); 

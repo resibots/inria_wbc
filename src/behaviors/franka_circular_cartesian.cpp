@@ -20,7 +20,7 @@ namespace inria_wbc {
 
         void CircCartTraj::update(const controllers::SensorData& sensor_data)
         {//~~ to do
-
+            controller_->update(sensor_data);
         }
 
     } // namespace behaviors

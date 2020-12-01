@@ -67,14 +67,14 @@ namespace inria_wbc {
                   pinocchio::urdf::buildModel(params.urdf_path, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
                   fb_joint_name_ = "root_joint";
               }
+              robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
             }
             else{
-              pinocchio::urdf::buildModel(params.urdf_path, robot_model, verbose_);
               fb_joint_name_ = ""; //~~ not sure if I can remove it yet
+              const std::vector<std::string> dummy_vec;
+              robot_ = std::make_shared<RobotWrapper>(params.urdf_path, dummy_vec ,verbose_);
             }
-            robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, verbose_); //the srdf contains initial joint positions
-
             _reset();
         }
 
@@ -146,11 +146,21 @@ namespace inria_wbc {
                 q_tsid_ = pinocchio::integrate(robot_->model(), q_tsid_, dt_ * v_tsid_);
                 t_ += dt_;
 
-                Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
-                Eigen::AngleAxisd aaxis(quat);
-                q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
+
+                if ( params_.has_floating_base){
+                  Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
+                  Eigen::AngleAxisd aaxis(quat);
+                  //q_tsid_ of size 37 (pos+quat+nactuated)
+                  q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); 
+                  //the size of tau is actually 30 (nactuated)
+                  tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_;
+                }
+                else{
+                  q_ << q_tsid_; 
+                  tau_ << tau_tsid_;
+                }
+
                 dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
-                tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
                 ddq_ = a_tsid_;
             }
             else {
