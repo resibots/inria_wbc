@@ -73,8 +73,8 @@ self_collision:
     tracked: gripper_left_joint
    # tracked: arm_left_7_joint
     avoided: 
-        arm_right_7_joint: 0.3
-        gripper_right_joint: 0.3
+        arm_right_7_joint: 0.25
+        gripper_right_joint: 0.25
         torso_2_joint: 0.3
         base_link: 0.3
         leg_right_1_joint: 0.3      
@@ -82,15 +82,15 @@ self_collision:
         leg_left_4_joint: 0.3
         leg_right_4_joint: 0.3
     weight: 1000
-    kp: 20000.0
+    kp: 30000.0
     coef: 4
 self_collision-right:
     type: self-collision
     tracked: gripper_right_joint
  #   tracked: arm_right_7_joint
     avoided: 
-        gripper_left_joint: 0.3
-        arm_left_7_joint: 0.3
+        gripper_left_joint: 0.25
+        arm_left_7_joint: 0.25
         torso_2_joint: 0.3
         base_link: 0.3
         leg_right_1_joint: 0.3      
@@ -98,5 +98,5 @@ self_collision-right:
         leg_left_4_joint: 0.3
         leg_right_4_joint: 0.3
     weight: 1000
-    kp: 20000.0
+    kp: 30000.0
     coef: 4

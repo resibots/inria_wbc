@@ -168,6 +168,13 @@ namespace tsid {
                 // if in the influence zone
                 if (norm <= r0) {
                     m_collision = true;
+                }
+                double a = r0;
+                double p = m_coef;
+                double c = exp(-pow(norm / a, p));
+
+                if (c > 0.05) {
+
                     m_robot.frameJacobianWorld(data, m_avoided_frames_ids[i], m_Js[i]);
                     //a_frame = m_robot.frameAccelerationWorldOriented(data, m_avoided_frames_ids[i]);
                     m_robot.frameClassicAcceleration(data, m_avoided_frames_ids[i], a_frame); // TODO dJ.dq in world frame
@@ -179,8 +186,7 @@ namespace tsid {
                     m_grad_C = -m_coef * (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * diff;
                     m_Hessian_C = m_coef * ((4 / (square_norm * square_norm * square_norm) - 3 / (r0 * square_norm * square_norm * norm)) * diff * diff.transpose() - (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * (Eigen::Matrix<double, 3, 3>::Identity()));
 
-                    double a = r0;
-                    double p = m_coef;
+                    
                     m_C(0, 0) = exp(-pow(norm / a, p));
                     m_grad_C = (-p * pow(norm, (p - 2)) / pow(a, p)) * exp(-pow((norm / a), p)) * (diff);
                     m_Hessian_C.Zero(3, 3);
@@ -190,6 +196,7 @@ namespace tsid {
                             if (k == k2)
                                 m_Hessian_C(k, k2) += (-p * pow(norm, (p - 2)) / pow(a, p)) * exp(-pow((norm / a), p));
                         }
+                    drift.setZero();
                     // A
                     m_A += m_grad_C.transpose() * J;
                     // B (note: m_drift = dJ(q)*dq)
