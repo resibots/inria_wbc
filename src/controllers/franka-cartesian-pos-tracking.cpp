@@ -94,27 +94,45 @@ namespace inria_wbc {
             assert(robot_);
             ////////////////////Compute Tasks, Bounds and Contacts ///////////////////////
             
-            cartesian_ee_ = make_se3_joint_task(
-                "end_effector",
-                cst::endEffector_joint_name,
-                p.at("kp_ee"), 
-                se3_mask::all);
-            if (p.at("w_ee") > 0) 
-                tsid_->addMotionTask(*cartesian_ee_, p.at("w_ee"), 1);
-            se3_tasks_[cartesian_ee_->name()] = cartesian_ee_;
+            //cartesian_ee_ = make_se3_joint_task(
+            //    "end_effector",
+            //    cst::endEffector_joint_name,
+            //    p.at("kp_ee"), 
+            //    se3_mask::all);
+            //if (p.at("w_ee") > 0) 
+            //    tsid_->addMotionTask(*cartesian_ee_, p.at("w_ee"), 1);
+            //se3_tasks_[cartesian_ee_->name()] = cartesian_ee_;
+            
+            posture_task_ = make_posture_task("posture", p.at("kp_ee"));
+            if (p.at("w_ee") > 0)
+                tsid_->addMotionTask(*posture_task_, p.at("w_ee"), 1);
 
         }
 
         void FrankaCartPosTracking::update(const SensorData& sensor_data)
         {
-            Eigen::Vector3d ref_xyz;
-            ref_xyz << 2.8,2.8,2.8;
-            pinocchio::SE3 ref_ee;
-            ref_ee.translation( ref_xyz );
-            ref_ee.rotation(Eigen::Matrix<double,3,3>::Identity()); 
-            set_se3_ref( ref_ee, "end_effector");
+            //Eigen::Vector3d ref_xyz;
+            //ref_xyz << 2.8,2.8,2.8;
+            //pinocchio::SE3 ref_ee;
+            //ref_ee.translation( ref_xyz );
+            //ref_ee.rotation(Eigen::Matrix<double,3,3>::Identity()); 
+            //set_se3_ref( ref_ee, "end_effector");
+
+            //~~ DEBUG BEGIN: gives expected numbers
+            //pinocchio::SE3 ref_given  = get_se3_ref( "end_effector");
+            //ref_given.disp_impl(std::cout);
+            //~~ DEBUG END
     
+            Eigen::VectorXd ref_posture(9);
+            ref_posture << 0., M_PI / 4., 0., -M_PI / 4, 0., M_PI / 2., 0., 0., 0.;
+            set_posture_ref( ref_posture);
+
             _solve();
+        }
+
+        void FrankaCartPosTracking::set_posture_ref(const tsid::math::Vector& ref)
+        {
+            posture_task_->setReference(to_sample(ref));
         }
 
         pinocchio::SE3 FrankaCartPosTracking::get_se3_ref(const std::string& task_name)

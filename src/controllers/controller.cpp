@@ -293,11 +293,12 @@ namespace inria_wbc {
             assert(tsid_);
             assert(robot_);
             auto task = std::make_shared<tasks::TaskJointPosture>(name, *robot_);
-            task->Kp(kp * Vector::Ones(robot_->nv() - 6));
+            const int ndofs_fbase = params_.has_floating_base ? 6 : 0;
+            task->Kp(kp * Vector::Ones(robot_->nv() - ndofs_fbase));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_post(robot_->nv() - 6);
+            Vector mask_post(robot_->nv() - ndofs_fbase);
             if (mask.size() == 0) {
-                mask_post = Vector::Ones(robot_->nv() - 6);
+                mask_post = Vector::Ones(robot_->nv() - ndofs_fbase);
             }
             else {
                 assert(mask.size() == mask_post.size());
