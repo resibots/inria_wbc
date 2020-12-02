@@ -112,13 +112,13 @@ namespace tsid {
                 double r = m_avoided_frames_r0s[i];
 
                 // if in the influence zone
-                if (norm <= r) {
+                if (norm <= r + m_radius) {
                     m_collision = true;
                 }
-                double a = (r + m_radius) * 0.5;
+                double eps = 1e-9;// we consider that we influence if above eps
                 double p = m_p;
+                double a = (r + m_radius) * pow(-log(eps),-1.0 / p);//about 0.5;
                 static const Eigen::Matrix3d I = Eigen::Matrix3d::Identity(3, 3);
-
                 //if (norm < r + m_radius) // why do we need this??
                 {
                    // std::cout << "activated for:" << m_tracked_frame_name << " norm:" << norm << " r:" << r << " radius:" << m_radius << std::endl;
