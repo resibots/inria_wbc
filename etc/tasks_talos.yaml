@@ -35,7 +35,7 @@ com:
     mask: 111
 posture:
     type: posture
-    weight: 0.75
+    weight: 1.75
     kp: 10.0
     ref: pal_start
 bounds:
@@ -82,7 +82,7 @@ self_collision:
         leg_left_4_joint: 0.2
         leg_right_4_joint: 0.2
     weight: 50
-    kp: 1000.0
+    kp: 500.0
     p: 4
 self_collision-right:
     type: self-collision
@@ -98,7 +98,7 @@ self_collision-right:
         leg_left_4_joint: 0.2
         leg_right_4_joint: 0.2
     weight: 50
-    kp: 100.0
+    kp: 500.0
     p: 4
 self_collision-arm-right:
     type: self-collision
