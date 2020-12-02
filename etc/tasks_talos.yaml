@@ -3,13 +3,13 @@ lh:
     tracked: gripper_left_joint
     weight: 10.0
     kp: 30.0
-    mask: 111000 # xyz
+    mask: 111111 # xyz
 rh:
     type: se3
     tracked: gripper_right_joint
     weight: 10.0
     kp: 30.0
-    mask: 111000
+    mask: 111111
 torso:
     type: se3
     tracked: torso_2_link
@@ -35,8 +35,8 @@ com:
     mask: 111
 posture:
     type: posture
-    weight: 0.75
-    kp: 30.0
+    weight: 0.1
+    kp: 10.0
     ref: pal_start
 bounds:
     type: bounds
@@ -71,32 +71,52 @@ contact_rfoot:
 self_collision:
     type: self-collision
     tracked: gripper_left_joint
-   # tracked: arm_left_7_joint
+    radius: 0.15
     avoided: 
-        arm_right_7_joint: 0.25
-        gripper_right_joint: 0.25
+        gripper_right_joint: 0.15
+        arm_right_5_joint: 0.1
         torso_2_joint: 0.3
-        base_link: 0.3
-        leg_right_1_joint: 0.3      
-        leg_left_1_joint: 0.3
-        leg_left_4_joint: 0.3
-        leg_right_4_joint: 0.3
-    weight: 1000
-    kp: 30000.0
-    coef: 4
+        base_link: 0.2
+        leg_right_1_joint: 0.2
+        leg_left_1_joint: 0.2
+        leg_left_4_joint: 0.2
+        leg_right_4_joint: 0.2
+    weight: 50
+    kp: 5000.0
+    p: 4
 self_collision-right:
     type: self-collision
     tracked: gripper_right_joint
- #   tracked: arm_right_7_joint
+    radius: 0.15
     avoided: 
-        gripper_left_joint: 0.25
-        arm_left_7_joint: 0.25
+        #gripper_left_joint: 0.15
+        arm_left_5_joint: 0.1
         torso_2_joint: 0.3
-        base_link: 0.3
-        leg_right_1_joint: 0.3      
-        leg_left_1_joint: 0.3
-        leg_left_4_joint: 0.3
-        leg_right_4_joint: 0.3
-    weight: 1000
-    kp: 30000.0
-    coef: 4
+        base_link: 0.2
+        leg_right_1_joint: 0.2      
+        leg_left_1_joint: 0.2
+        leg_left_4_joint: 0.2
+        leg_right_4_joint: 0.2
+    weight: 50
+    kp: 5000.0
+    p: 4
+self_collision-arm-right:
+    type: self-collision
+    tracked: arm_right_4_joint
+    radius: 0.15
+    avoided: 
+        torso_2_joint: 0.15
+        base_link: 0.15
+    weight: 1
+    kp: 10.0
+    p: 4
+self_collision-arm-left:
+    type: self-collision
+    tracked: arm_left_4_joint
+    radius: 0.15
+    avoided: 
+        torso_2_joint: 0.15
+        base_link: 0.15
+    weight: 1
+    kp: 10.0
+    p: 4

@@ -31,11 +31,13 @@ namespace tsid {
             RobotWrapper& robot,
             const std::string& tracked_frame_name,
             const std::unordered_map<std::string, double>& avoided_frames_names,
-            double coef)
+            double radius,
+            double p)
             : TaskMotion(name, robot),
               m_tracked_frame_name(tracked_frame_name),
               m_avoided_frames_names(avoided_frames_names),
-              m_coef(coef),
+              m_radius(radius),
+              m_p(p),
               m_constraint(name, 1, robot.nv()),
               m_Js(avoided_frames_names.size()),
               m_avoided_frames_positions(avoided_frames_names.size())
@@ -72,66 +74,8 @@ namespace tsid {
             return m_tracked_frame_id;
         }
 
-        void TaskSelfCollision::setCoef(const double coef)
-        {
-            m_coef = coef;
-        }
-
-        const double TaskSelfCollision::getCoef() const
-        {
-            return m_coef;
-        }
-
-        bool TaskSelfCollision::compute_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
-        {
-            bool coll = false;
-            m_C(0, 0) = 0;
-            for (size_t i = 0; i < frames_positions.size(); ++i) {
-                Vector3 diff = pos - frames_positions[i];
-                double square_norm = diff.dot(diff);
-                double norm = sqrt(square_norm);
-                double r0 = m_avoided_frames_r0s[i];
-                if (norm <= r0) {
-                    assert(square_norm > 0.);
-                    m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / r0) * (1 / norm - 1 / r0);
-                    coll = true;
-                }
-            }
-            return coll;
-        }
-
-        void TaskSelfCollision::compute_grad_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
-        {
-            m_grad_C = Vector3::Zero();
-            for (size_t i = 0; i < frames_positions.size(); ++i) {
-                Vector3 diff = pos - frames_positions[i];
-                ;
-                double square_norm = diff.dot(diff);
-                double norm = sqrt(square_norm);
-                double r0 = m_avoided_frames_r0s[i];
-                if (norm <= r0) {
-                    assert(square_norm > 0.);
-                    m_grad_C += -m_coef * (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * diff;
-                }
-            }
-        }
-
-        void TaskSelfCollision::compute_Hessian_C(const Vector3& pos, const std::vector<Vector3>& frames_positions)
-        {
-            m_Hessian_C = Eigen::MatrixXd::Zero(3, 3);
-            for (size_t i = 0; i < frames_positions.size(); ++i) {
-                Vector3 diff = pos - frames_positions[i];
-                double square_norm = diff.dot(diff);
-                double norm = sqrt(square_norm);
-                double r0 = m_avoided_frames_r0s[i];
-                if (norm <= r0) {
-                    m_Hessian_C += m_coef * ((4 / (square_norm * square_norm * square_norm) - 3 / (r0 * square_norm * square_norm * norm)) * diff * diff.transpose() - (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * (Eigen::Matrix<double, 3, 3>::Identity()));
-                }
-            }
-        }
-
         const ConstraintBase& TaskSelfCollision::compute(const double,
-            ConstRefVector,
+            ConstRefVector q,
             ConstRefVector v,
             Data& data)
         {
@@ -142,6 +86,8 @@ namespace tsid {
             m_robot.framePosition(data, m_tracked_frame_id, oMi);
             //a_frame = m_robot.frameAccelerationWorldOriented(data, m_tracked_frame_id);
             m_robot.frameClassicAcceleration(data, m_tracked_frame_id, a_frame);
+            //a_frame = data.a[m_tracked_frame_id];
+
             auto pos = oMi.translation();
             m_drift = a_frame.linear();
             m_robot.frameJacobianWorld(data, m_tracked_frame_id, m_J);
@@ -163,45 +109,36 @@ namespace tsid {
                 Vector3 diff = pos - pos2;
                 double square_norm = diff.dot(diff);
                 double norm = sqrt(square_norm);
-                double r0 = m_avoided_frames_r0s[i];
+                double r = m_avoided_frames_r0s[i];
 
                 // if in the influence zone
-                if (norm <= r0) {
+                if (norm <= r) {
                     m_collision = true;
                 }
-                double a = r0;
-                double p = m_coef;
+                double a = (r + m_radius) * 2./3;
+                double p = m_p;
                 double c = exp(-pow(norm / a, p));
+                auto I = Eigen::MatrixXd::Identity(3, 3);
 
-                if (c > 0.05) {
-
+                if (norm < r + m_radius) // why do we need this??
+                {
+                    std::cout << "activated for:" << m_tracked_frame_name << " norm:" << norm << " r:" << r << " radius:" << m_radius << std::endl;
                     m_robot.frameJacobianWorld(data, m_avoided_frames_ids[i], m_Js[i]);
                     //a_frame = m_robot.frameAccelerationWorldOriented(data, m_avoided_frames_ids[i]);
                     m_robot.frameClassicAcceleration(data, m_avoided_frames_ids[i], a_frame); // TODO dJ.dq in world frame
+                    //a_frame = data.a[m_avoided_frames_ids[i]];
                     auto J = J1 - m_Js[i].block(0, 0, 3, m_robot.nv());
                     Eigen::Vector3d drift = m_drift - a_frame.linear();
 
-                    // C (Tim)
-                    m_C(0, 0) = 0.5 * m_coef * (1 / norm - 1 / r0) * (1 / norm - 1 / r0);
-                    m_grad_C = -m_coef * (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * diff;
-                    m_Hessian_C = m_coef * ((4 / (square_norm * square_norm * square_norm) - 3 / (r0 * square_norm * square_norm * norm)) * diff * diff.transpose() - (1 / (square_norm * square_norm) - 1 / (r0 * square_norm * norm)) * (Eigen::Matrix<double, 3, 3>::Identity()));
+                    m_C(0, 0) = exp(-pow(norm / a, p)) - exp(-pow((r + m_radius) / a, p));
+                    m_grad_C = -(p / pow(a, p) * pow(norm, p - 2)) * exp(-pow(norm / a, p)) * diff;
+                    m_Hessian_C = exp(-pow(norm / a, p)) * ((p * p / pow(a, 2 * p) * pow(norm, 2 * p - 4) - p * (p - 2) / pow(a, p) * pow(norm, p - 4)) * diff * diff.transpose() - (p / pow(a, p) * pow(norm, p - 2)) * I);
 
-                    
-                    m_C(0, 0) = exp(-pow(norm / a, p));
-                    m_grad_C = (-p * pow(norm, (p - 2)) / pow(a, p)) * exp(-pow((norm / a), p)) * (diff);
-                    m_Hessian_C.Zero(3, 3);
-                    for (size_t k = 0; k < 3; ++k)
-                        for (size_t k2 = 0; k2 < 3; ++k2) {
-                            m_Hessian_C(k, k2) = (pos[k] - pos2[k]) * (pos[k2] - pos2[k2]) * ((-p * (p - 2) * pow(norm, (p - 4)) / pow(a, p)) + (pow(p, 2) * pow(norm, (2 * p - 4)) / pow(a, (2 * p))) * exp(-pow((norm / a), p)));
-                            if (k == k2)
-                                m_Hessian_C(k, k2) += (-p * pow(norm, (p - 2)) / pow(a, p)) * exp(-pow((norm / a), p));
-                        }
-                    drift.setZero();
                     // A
                     m_A += m_grad_C.transpose() * J;
                     // B (note: m_drift = dJ(q)*dq)
                     m_B += -((m_Hessian_C * J * v).transpose() * J * v + m_grad_C.transpose() * (drift + m_Kd * J * v) + m_Kp * m_C);
-                }
+                } // else 0 for everything
             }
 
             m_constraint.setMatrix(m_A);

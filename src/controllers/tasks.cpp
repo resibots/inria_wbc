@@ -240,7 +240,8 @@ namespace inria_wbc {
             double kp = node["kp"].as<double>();
             auto tracked = node["tracked"].as<std::string>();
             auto weight = node["weight"].as<double>();
-            auto coef = node["coef"].as<double>();
+            auto p = node["p"].as<double>();
+            auto radius = node["radius"].as<double>();
 
             std::unordered_map<std::string, double> avoided;
             for (const auto& a : node["avoided"])
@@ -249,7 +250,7 @@ namespace inria_wbc {
             // create the task
             assert(tsid);
             assert(robot);
-            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, coef);
+            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, p);
             task->Kp(kp);
             task->Kd(2.0 * sqrt(task->Kp()));
             

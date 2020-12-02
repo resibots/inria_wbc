@@ -134,7 +134,7 @@ namespace inria_wbc {
                 tau_tsid_ = tau;
                 a_tsid_ = dv;
                 v_tsid_ += dt_ * dv;
-
+                
                 q_tsid_ = pinocchio::integrate(robot_->model(), q_tsid_, dt_ * v_tsid_);
                 t_ += dt_;
 

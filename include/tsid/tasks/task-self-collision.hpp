@@ -44,7 +44,8 @@ namespace tsid {
                 RobotWrapper& robot,
                 const std::string& frameName,
                 const std::unordered_map<std::string, double>& frames,
-                double coef);
+                double radius,
+                double p);
             virtual ~TaskSelfCollision() {}
 
             int dim() const;
@@ -56,9 +57,6 @@ namespace tsid {
 
             const ConstraintBase& getConstraint() const;
 
-            void setCoef(const double coef);
-            const double getCoef() const;
-
             double Kp() const { return m_Kp; }
             double Kd() const { return m_Kd; }
 
@@ -69,6 +67,7 @@ namespace tsid {
             const std::vector<Vector3>& avoided_frames_positions() const { return m_avoided_frames_positions; }
             const std::vector<double>& avoided_frames_r0s() const { return m_avoided_frames_r0s; }
             bool collision() const { return m_collision; }
+            double radius() const { return m_radius; }
         protected:
             bool compute_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
             void compute_grad_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
@@ -87,7 +86,8 @@ namespace tsid {
             Vector3 m_grad_C;
             Eigen::Matrix<double, 3, 3> m_Hessian_C;
 
-            double m_coef;
+            double m_p;
+            double m_radius;
             ConstraintEquality m_constraint;
 
             Vector3 m_drift;
