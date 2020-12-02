@@ -35,7 +35,7 @@ com:
     mask: 111
 posture:
     type: posture
-    weight: 0.1
+    weight: 0.75
     kp: 10.0
     ref: pal_start
 bounds:
@@ -71,43 +71,43 @@ contact_rfoot:
 self_collision:
     type: self-collision
     tracked: gripper_left_joint
-    radius: 0.15
+    radius: 0.2
     avoided: 
-        gripper_right_joint: 0.15
+        gripper_right_joint: 0.2
         arm_right_5_joint: 0.1
-        torso_2_joint: 0.3
-        base_link: 0.2
+#        torso_2_joint: 0.4
+#        base_link: 0.2
         leg_right_1_joint: 0.2
         leg_left_1_joint: 0.2
         leg_left_4_joint: 0.2
         leg_right_4_joint: 0.2
     weight: 50
-    kp: 5000.0
+    kp: 1000.0
     p: 4
 self_collision-right:
     type: self-collision
     tracked: gripper_right_joint
-    radius: 0.15
+    radius: 0.2
     avoided: 
         #gripper_left_joint: 0.15
         arm_left_5_joint: 0.1
-        torso_2_joint: 0.3
-        base_link: 0.2
+#        torso_2_joint: 0.4
+#        base_link: 0.2
         leg_right_1_joint: 0.2      
         leg_left_1_joint: 0.2
         leg_left_4_joint: 0.2
         leg_right_4_joint: 0.2
     weight: 50
-    kp: 5000.0
+    kp: 100.0
     p: 4
 self_collision-arm-right:
     type: self-collision
     tracked: arm_right_4_joint
     radius: 0.15
     avoided: 
-        torso_2_joint: 0.15
+        torso_2_joint: 0.4
         base_link: 0.15
-    weight: 1
+    weight: 10
     kp: 10.0
     p: 4
 self_collision-arm-left:
@@ -115,8 +115,8 @@ self_collision-arm-left:
     tracked: arm_left_4_joint
     radius: 0.15
     avoided: 
-        torso_2_joint: 0.15
+        torso_2_joint: 0.4
         base_link: 0.15
-    weight: 1
+    weight: 10
     kp: 10.0
     p: 4

@@ -115,10 +115,9 @@ namespace tsid {
                 if (norm <= r) {
                     m_collision = true;
                 }
-                double a = (r + m_radius) * 2./3;
+                double a = (r + m_radius) * 0.5;
                 double p = m_p;
-                double c = exp(-pow(norm / a, p));
-                auto I = Eigen::MatrixXd::Identity(3, 3);
+                static const Eigen::Matrix3d I = Eigen::Matrix3d::Identity(3, 3);
 
                 if (norm < r + m_radius) // why do we need this??
                 {
