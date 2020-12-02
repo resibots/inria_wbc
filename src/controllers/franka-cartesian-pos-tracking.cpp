@@ -127,6 +127,12 @@ namespace inria_wbc {
             ref_posture << 0., M_PI / 4., 0., -M_PI / 4, 0., M_PI / 2., 0., 0., 0.;
             set_posture_ref( ref_posture);
 
+
+
+            pinocchio::SE3 ee_pose = robot_->position(tsid_->data(), robot_->model().getJointId(cst::endEffector_joint_name));
+            Eigen::Vector3d ee_xyz =  ee_pose.rotation() * ee_pose.translation();
+
+            std::cout<<"____________________________________"<< cst::endEffector_joint_name<<" position :"<< ee_xyz<< std::endl;
             _solve();
         }
 
