@@ -8,7 +8,7 @@ namespace inria_wbc {
     namespace controllers {
         namespace cst {
 
-            static constexpr char endEffector_joint_name[] = "panda_hand_joint"; //ee joint
+            static constexpr char endEffector_joint_name[] ="panda_joint7"; //ee joint
 
         }; // namespace cst
 

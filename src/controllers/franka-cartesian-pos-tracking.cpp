@@ -34,7 +34,7 @@ namespace inria_wbc {
             if (!params.sot_config_path.empty())
                 parse_configuration_yaml(params.sot_config_path);
 
-            set_stack_configuration(); //~~????
+            set_stack_configuration();
         }
 
         void FrankaCartPosTracking::set_default_opt_params(std::map<std::string, double>& p)
@@ -94,45 +94,66 @@ namespace inria_wbc {
             assert(robot_);
             ////////////////////Compute Tasks, Bounds and Contacts ///////////////////////
             
-            //cartesian_ee_ = make_se3_joint_task(
-            //    "end_effector",
-            //    cst::endEffector_joint_name,
-            //    p.at("kp_ee"), 
-            //    se3_mask::all);
-            //if (p.at("w_ee") > 0) 
-            //    tsid_->addMotionTask(*cartesian_ee_, p.at("w_ee"), 1);
-            //se3_tasks_[cartesian_ee_->name()] = cartesian_ee_;
-            
-            posture_task_ = make_posture_task("posture", p.at("kp_ee"));
-            if (p.at("w_ee") > 0)
-                tsid_->addMotionTask(*posture_task_, p.at("w_ee"), 1);
+            cartesian_ee_ = make_se3_joint_task(
+                "end_effector",
+                cst::endEffector_joint_name,
+                p.at("kp_ee"), 
+                se3_mask::all);
+            if (p.at("w_ee") > 0) 
+                tsid_->addMotionTask(*cartesian_ee_, p.at("w_ee"), 1);
+            se3_tasks_[cartesian_ee_->name()] = cartesian_ee_;
+
+
+                 
+            //posture_task_ = make_posture_task("posture", p.at("kp_ee"));
+            //if (p.at("w_ee") > 0)
+            //    tsid_->addMotionTask(*posture_task_, p.at("w_ee"), 1);
 
         }
 
         void FrankaCartPosTracking::update(const SensorData& sensor_data)
         {
-            //Eigen::Vector3d ref_xyz;
-            //ref_xyz << 2.8,2.8,2.8;
-            //pinocchio::SE3 ref_ee;
-            //ref_ee.translation( ref_xyz );
-            //ref_ee.rotation(Eigen::Matrix<double,3,3>::Identity()); 
-            //set_se3_ref( ref_ee, "end_effector");
+            Eigen::Vector3d ref_xyz;
+            ref_xyz << 0.6,0.0,0.6;
+            pinocchio::SE3 ref_ee;
+            ref_ee.translation( ref_xyz );
+            Eigen::Matrix3d rot_ee;
+            const double phi =  -M_PI/6;
+            const double theta =  M_PI/6+ M_PI/2;
+            const double psi =  0.;
+
+            Eigen::Matrix3d R_x;
+            R_x << 1., 0., 0.,
+                   0., cos(phi), -sin(phi),
+                   0., sin(phi), cos(phi);
+            Eigen::Matrix3d R_y;
+            R_y << cos(theta), 0., sin(theta),
+                   0., 1., 0.,
+                   -sin(theta), 0., cos(theta);
+            Eigen::Matrix3d R_z;
+            R_z << cos(psi), -sin(psi), 0.,
+                   sin(psi), cos(psi), 0.,
+                   0., 0., 1.;
+            rot_ee = R_z * R_y * R_x;
+            ref_ee.rotation(rot_ee); 
+            set_se3_ref( ref_ee, "end_effector");
 
             //~~ DEBUG BEGIN: gives expected numbers
             //pinocchio::SE3 ref_given  = get_se3_ref( "end_effector");
             //ref_given.disp_impl(std::cout);
             //~~ DEBUG END
     
-            Eigen::VectorXd ref_posture(9);
-            ref_posture << 0., M_PI / 4., 0., -M_PI / 4, 0., M_PI / 2., 0., 0., 0.;
-            set_posture_ref( ref_posture);
+            //Eigen::VectorXd ref_posture(9);
+            //ref_posture << 0., M_PI / 4., 0., -M_PI / 4, 0., M_PI / 2., 0., 0., 0.;
+            //set_posture_ref( ref_posture);
 
 
+            if (robot_->model().existJointName(cst::endEffector_joint_name) ){
+              pinocchio::SE3 ee_pose = robot_->position(tsid_->data(), robot_->model().getJointId(cst::endEffector_joint_name));
+              std::cout<<"____________________________________"<< cst::endEffector_joint_name<<" pose:"<< ee_pose<< std::endl;
+            }
 
-            pinocchio::SE3 ee_pose = robot_->position(tsid_->data(), robot_->model().getJointId(cst::endEffector_joint_name));
-            Eigen::Vector3d ee_xyz =  ee_pose.rotation() * ee_pose.translation();
 
-            std::cout<<"____________________________________"<< cst::endEffector_joint_name<<" position :"<< ee_xyz<< std::endl;
             _solve();
         }
 
