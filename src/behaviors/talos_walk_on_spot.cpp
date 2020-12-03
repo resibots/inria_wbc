@@ -7,12 +7,12 @@ namespace inria_wbc {
 
         WalkOnSpot::WalkOnSpot(const controller_ptr_t& controller) : Behavior(controller)
         {
-            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            inria_wbc::utils::parse(traj_foot_duration_, "traj_foot_duration", config, "BEHAVIOR");
-            inria_wbc::utils::parse(traj_com_duration_, "traj_com_duration", config, "BEHAVIOR");
-            inria_wbc::utils::parse(step_height_, "step_height", config, "BEHAVIOR");
-            inria_wbc::utils::parse(stop_duration_, "stop_duration", config, "BEHAVIOR");
-            inria_wbc::utils::parse(stop_height_, "stop_height", config, "BEHAVIOR");
+            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
+            traj_com_duration_ = config["traj_com_duration"].as<float>();
+            traj_foot_duration_ = config["traj_foot_duration"].as<float>();
+            step_height_ = config["step_height"].as<float>();
+            stop_duration_ = config["stop_duration"].as<float>();
+            stop_height_ = config["stop_height"].as<float>();
 
             dt_ = controller_->dt();
 
@@ -32,7 +32,8 @@ namespace inria_wbc {
                 States::LIFT_DOWN_RF,
                 States::MOVE_COM_RIGHT};
 
-            auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_);
+            auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+            assert(controller);
             auto translate_up = [](const pinocchio::SE3& p, double v) {
                 auto p2 = p;
                 p2.translation()(2) += v;
@@ -111,7 +112,7 @@ namespace inria_wbc {
 
         void WalkOnSpot::update(const controllers::SensorData& sensor_data)
         {
-            auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_);
+            auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
 
             // add and remove contacts
             if (time_ == 0 && state_ == States::LIFT_UP_LF)

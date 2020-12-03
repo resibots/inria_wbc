@@ -29,46 +29,20 @@
 
 namespace inria_wbc {
 
-    namespace se3_mask {
-        using mask6 = Eigen::Array<double, 6, 1>;
-
-        static const mask6 all = (mask6() << 1, 1, 1, 1, 1, 1).finished();
-        static const mask6 xyz = (mask6() << 1, 1, 1, 0, 0, 0).finished();
-        static const mask6 rpy = (mask6() << 0, 0, 0, 1, 1, 1).finished();
-        static const mask6 x = (mask6() << 1, 0, 0, 0, 0, 0).finished();
-        static const mask6 y = (mask6() << 0, 1, 0, 0, 0, 0).finished();
-        static const mask6 z = (mask6() << 0, 0, 1, 0, 0, 0).finished();
-        static const mask6 roll = (mask6() << 0, 0, 0, 1, 0, 0).finished();
-        static const mask6 pitch = (mask6() << 0, 0, 0, 0, 1, 0).finished();
-        static const mask6 yaw = (mask6() << 0, 0, 0, 0, 0, 1).finished();
-    } // namespace se3_mask
-
+   
     namespace controllers {
-        struct SensorData {
-            // left foot
-            Eigen::Vector3d lf_torque;
-            Eigen::Vector3d lf_force;
-            // right foot
-            Eigen::Vector3d rf_torque;
-            Eigen::Vector3d rf_force;
-            // accelerometer
-            Eigen::VectorXd acceleration;
-            Eigen::VectorXd velocity;
-            // joint positions (excluding floating base)
-            Eigen::VectorXd positions;
-        };
+
+        using SensorData = std::unordered_map<std::string, Eigen::MatrixXd>;
+
         class Controller {
         public:
-            using opt_params_t = std::map<std::string, double>;
             struct Params {
                 std::string urdf_path;
-                std::string srdf_path;
                 std::string sot_config_path;
-                std::string floating_base_joint_name;
                 float dt;
                 bool verbose;
                 std::vector<std::string> mimic_dof_names;
-                opt_params_t opt_params; // parameters that can be optimized
+                std::string floating_base_joint_name = "";
             };
 
             Controller(const Params& params);
@@ -90,6 +64,7 @@ namespace inria_wbc {
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
+           
             // this could call a CoM estimator
             virtual const tsid::math::Vector3& com() const { return robot_->com(tsid_->data()); }
 
@@ -117,21 +92,13 @@ namespace inria_wbc {
                 assert(robot_);
                 return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             }
-            // parameters that can be optimized / tuned online
-            // (e.g., weights of task, gains of the tasks, etc.)
-            virtual const opt_params_t& opt_params() const
-            {
-                IWBC_ERROR("calling opt_params but no param to set in base controller");
-                static opt_params_t x;
-                return x;
-            }
-            double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task)
+            
+            double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
             {
                 assert(task);
                 return (task->getConstraint().matrix() * ddq_ - task->getConstraint().vector()).norm();
             }
-            virtual std::shared_ptr<tsid::tasks::TaskBase> task(const std::string& task_name) = 0;
-            double cost(const std::string& task_name) { return cost(task(task_name)); }
+            virtual double cost(const std::string& task_name) const = 0;
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
@@ -139,12 +106,6 @@ namespace inria_wbc {
         protected:
             void _reset();
             void _solve();
-
-            std::shared_ptr<tsid::tasks::TaskComEquality> make_com_task(const std::string& name, double kp) const;
-            std::shared_ptr<tsid::tasks::TaskJointPosture> make_posture_task(const std::string& name, double kp, const tsid::math::Vector& mask = {}) const;
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_se3_frame_task(const std::string& name, const std::string& frame_name, double kp, const se3_mask::mask6& mask = se3_mask::all) const;
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> make_se3_joint_task(const std::string& name, const std::string& joint_name, double kp, const se3_mask::mask6& mask = se3_mask::all) const;
-            std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> make_bound_task(const std::string& name) const;
 
             Params params_;
             bool verbose_;
@@ -195,9 +156,7 @@ namespace inria_wbc {
 
         using Factory = utils::Factory<Controller, Controller::Params>;
         template <typename T>
-        struct Register : public utils::AutoRegister<Controller, T, Controller::Params> {
-            Register(const std::string& name) : utils::AutoRegister<Controller, T, Controller::Params>(name) {}
-        };
+        using Register = Factory::AutoRegister<T>;
     } // namespace controllers
 } // namespace inria_wbc
 #endif

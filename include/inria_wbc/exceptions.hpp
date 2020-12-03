@@ -8,12 +8,14 @@
 #define IWBC_EXCEPTION(...) inria_wbc::Exception(__FILE__, __LINE__, __VA_ARGS__)
 #define IWBC_FIRST_ARG(N, ...) N
 #define IWBC_FIRST_ARG_STR(N, ...) #N
+#define IWBC_NEXT_ARG_SUB(ignore, ...) __VA_ARGS__
+#define IWBC_NEXT_ARG(...) IWBC_NEXT_ARG_SUB(__VA_ARGS__)
 
 // usage: assert(x < 3, "we received x=", x)
 #define IWBC_ASSERT(...)                                                             \
     {                                                                                \
         if (!(IWBC_FIRST_ARG(__VA_ARGS__)))                                          \
-            throw IWBC_EXCEPTION(IWBC_FIRST_ARG_STR(__VA_ARGS__), " ", __VA_ARGS__); \
+            throw IWBC_EXCEPTION(IWBC_FIRST_ARG_STR(__VA_ARGS__), " ", IWBC_NEXT_ARG(__VA_ARGS__)); \
     }
 #define IWBC_ERROR(...)                    \
     {                                      \

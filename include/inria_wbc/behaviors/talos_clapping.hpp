@@ -10,20 +10,21 @@
 
 namespace inria_wbc {
     namespace behaviors {
-        class TalosMoveArm : public Behavior {
+        class TalosClapping : public Behavior {
         public:
-            TalosMoveArm(const controller_ptr_t& controller);
-            TalosMoveArm() = delete;
-            TalosMoveArm(const TalosMoveArm&) = delete;
+            TalosClapping(const controller_ptr_t& controller);
+            TalosClapping() = delete;
+            TalosClapping(const TalosClapping&) = delete;
 
             void update(const controllers::SensorData& sensor_data) override;
-            virtual ~TalosMoveArm() {}
+            virtual ~TalosClapping() {}
 
         private:
+            std::vector<std::vector<pinocchio::SE3>> lh_trajs_;
+            std::vector<std::vector<pinocchio::SE3>> rh_trajs_;
+            int current_traj_ = 0;
             int time_ = 0;
-            int traj_selector_ = 0;
-            std::vector<std::vector<pinocchio::SE3>> trajectories_;
-            std::vector<pinocchio::SE3> current_trajectory_;
+
             float trajectory_duration_ = 3; //will be changed if specified in yaml
             float motion_size_ = 0.05; //will be changed if specified in yaml
         };

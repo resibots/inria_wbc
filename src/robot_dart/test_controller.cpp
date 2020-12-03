@@ -6,6 +6,8 @@
 #include <iostream>
 #include <signal.h>
 
+#include <dart/dynamics/BodyNode.hpp>
+
 #include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
@@ -17,8 +19,14 @@
 #endif
 
 #include "inria_wbc/behaviors/behavior.hpp"
+#include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "tsid/tasks/task-self-collision.hpp"
+
+static const std::string red = "\x1B[31m";
+static const std::string rst = "\x1B[0m";
+static const std::string bold = "\x1B[1m";
 
 int main(int argc, char* argv[])
 {
@@ -127,20 +135,19 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
-        inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
-            "../etc/talos_configurations.srdf",
+        inria_wbc::controllers::Controller::Params params = {
+            robot->model_filename(),
             sot_config_path,
-            "",
             dt,
             verbose,
             robot->mimic_dof_names()};
 
-        std::string behavior_name, controller_name;
         YAML::Node config = YAML::LoadFile(sot_config_path);
-        inria_wbc::utils::parse(behavior_name, "name", config, "BEHAVIOR", verbose);
-        inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", verbose);
 
+        auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+
+        auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
         assert(behavior);
 
@@ -179,21 +186,38 @@ int main(int argc, char* argv[])
             ghost->skeleton()->setPosition(5, 1.1);
             simu.add_robot(ghost);
         }
+
+        // self-collision shapes
+        std::vector<std::shared_ptr<robot_dart::Robot>> self_collision_spheres;
+        auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+        auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>("self_collision");
+        for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+            Eigen::Vector6d cp = Eigen::Vector6d::Zero();
+            cp.tail(3) = task_self_collision->avoided_frames_positions()[i];
+            double r0 = task_self_collision->avoided_frames_r0s()[i];
+            auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0, r0, r0), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
+            sphere->set_color_mode("aspect");
+            self_collision_spheres.push_back(sphere);
+            simu.add_visual_robot(self_collision_spheres.back());
+        }
         // the main loop
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
             // update the sensors
-
-            inria_wbc::controllers::SensorData sensor_data = {
-                ft_sensor_left->torque(),
-                ft_sensor_left->force(),
-                ft_sensor_right->torque(),
-                ft_sensor_right->force(),
-                imu->linear_acceleration(),
-                robot->com_velocity().tail<3>(),
-                robot->skeleton()->getPositions().tail(ncontrollable)};
+            inria_wbc::controllers::SensorData sensor_data;
+            // left foot
+            sensor_data["lf_torque"] = ft_sensor_left->torque();
+            sensor_data["lf_force"] = ft_sensor_left->force();
+            // right foot
+            sensor_data["rf_torque"] = ft_sensor_right->torque();
+            sensor_data["rf_force"] = ft_sensor_right->force();
+            // accelerometer
+            sensor_data["acceleration"] = imu->linear_acceleration();
+            sensor_data["velocity"] = robot->com_velocity().tail<3>();
+            // joint positions (excluding floating base)
+            sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
 
             // step the command
             Eigen::VectorXd cmd;
@@ -221,6 +245,25 @@ int main(int argc, char* argv[])
                 }
 
                 ++it_cmd;
+            }
+
+            if (simu.schedule(simu.graphics_freq())) {
+                for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+                    auto cp = self_collision_spheres[i]->base_pose();
+                    cp.translation() = task_self_collision->avoided_frames_positions()[i];
+                    cp.translation()[0] -= 1; // move to the ghost
+                    self_collision_spheres[i]->set_base_pose(cp);
+                    auto bd = self_collision_spheres[i]->skeleton()->getBodyNodes()[0];
+                    auto visual = bd->getShapeNodesWith<dart::dynamics::VisualAspect>()[0];
+                    bool c = task_self_collision->collision();
+                    if (c) {
+                        std::cout<<"collision"<<std::endl;
+                        visual->getVisualAspect()->setRGBA(dart::Color::Red(1.0));
+                    }
+                    else {
+                        visual->getVisualAspect()->setRGBA(dart::Color::Green(1.0));
+                    }
+                }
             }
 
             // push the robot
@@ -288,8 +331,8 @@ int main(int argc, char* argv[])
                 if (push)
                     oss << "pushing..." << std::endl;
 #ifdef GRAPHIC
-                if (!vm.count("mp4"))
-                    simu.set_text_panel(oss.str());
+                // if (!vm.count("mp4"))
+                //     simu.set_text_panel(oss.str());
 #endif
                 it_simu = 0;
                 it_cmd = 0;
@@ -299,10 +342,13 @@ int main(int argc, char* argv[])
             }
         }
     }
+    catch (YAML::RepresentationException& e) {
+        std::cout << red << bold << "YAML Parse error (missing key in YAML file?): " << rst << e.what() << std::endl;
+    }
+    catch (YAML::ParserException& e) {
+        std::cout << red << bold << "YAML Parse error: " << rst << e.what() << std::endl;
+    }
     catch (std::exception& e) {
-        std::string red = "\x1B[31m";
-        std::string rst = "\x1B[0m";
-        std::string bold = "\x1B[1m";
         std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
     }
     return 0;

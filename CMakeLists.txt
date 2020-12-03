@@ -27,9 +27,11 @@ list(APPEND DEPENDENCIES_INCS
 
 set(INRIA_WBC_HEADERS
                             include/inria_wbc/controllers/controller.hpp
-                            include/inria_wbc/controllers/talos_pos_tracking.hpp
+                            include/inria_wbc/controllers/pos_tracker.hpp
+                            include/inria_wbc/controllers/talos_pos_tracker.hpp
                             include/inria_wbc/behaviors/talos_squat.hpp
                             include/inria_wbc/behaviors/talos_move_arm.hpp
+                            include/inria_wbc/behaviors/talos_clapping.hpp
                             include/inria_wbc/behaviors/talos_walk_on_spot.hpp
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
@@ -38,16 +40,24 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/exceptions.hpp
                             include/inria_wbc/robot_dart/cmd.hpp
                             include/inria_wbc/estimators/cop.hpp
+                            include/tsid/tasks/task-self-collision.hpp
+
+
 )
 
 set(INRIA_WBC_SOURCES
                             src/controllers/controller.cpp
-                            src/controllers/talos_pos_tracking.cpp
+                            src/controllers/pos_tracker.cpp
+                            src/controllers/tasks.cpp
+                            src/controllers/talos_pos_tracker.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
                             src/safety/torque_safety.cpp
                             src/behaviors/talos_walk_on_spot.cpp
+                            src/behaviors/talos_clapping.cpp                            
                             src/estimators/cop.cpp
+                            src/tsid/task-self-collision.cpp
+
 )
 
 set(EXAMPLE_LIST

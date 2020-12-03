@@ -3,19 +3,16 @@ CONTROLLER:
   configurations: talos_configurations.srdf 
   ref_config: pal_start
   tasks: tasks_talos.yaml
+  # no URDF here because this is set by the main
   stabilizer:
     activated: true
     filter_size: 5
-    p: [0.08, 0.08]
-    d: [0.02, 0.02]
+    p: [0.07, 0.07]
+    d: [0.01, 0.01]
 BEHAVIOR:
-  name : walk-on-spot
-  traj_com_duration : 1.5
-  traj_foot_duration : 1.5
-  step_height : 0.3
-  stop_duration : 0.7
-  step_height : 0.45
-  stop_height : 0.015
+  name : talos-clapping
+  trajectory_duration : 2.0
+  motion_size : 0.7
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
