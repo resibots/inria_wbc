@@ -16,6 +16,7 @@ namespace inria_wbc {
 
             virtual void update(const SensorData& sensor_data) override;
             virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); }
+            const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
 
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
