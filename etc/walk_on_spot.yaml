@@ -1,34 +1,13 @@
 CONTROLLER:
-  name: talos-pos-tracking
+  name: talos-pos-tracker
+  configurations: talos_configurations.srdf 
   ref_config: pal_start
-  w_com: 1.0
-  w_floatingb: 0.0
-  w_posture: 0.75
-  w_forceRef_feet: 1e-3
-  w_forceRef_hands: 1e-3
-  w_rh: 1.0
-  w_lh: 1.0
-  w_rf: 1000.0
-  w_lf: 1000.0
-  w_velocity: 10000.0
-  w_torso: 500.0
-  kp_contact: 30.0
-  kp_com: 3000.0
-  kp_floatingb: 0.0
-  kp_posture: 30.0
-  kp_waist: 3000.0
-  kp_rh: 30.0
-  kp_lh: 30.0
-  kp_rf: 3000.0
-  kp_lf: 3000.0
-  kp_torso: 30.0
-STABILIZER:
-  activated: true
-  filter_size: 5
-  p_x: 0.08
-  p_y: 0.08
-  d_x: 0.02
-  d_y: 0.02
+  tasks: tasks_talos.yaml
+  stabilizer:
+    activated: true
+    filter_size: 5
+    p: [0.08, 0.08]
+    d: [0.02, 0.02]
 BEHAVIOR:
   name : walk-on-spot
   traj_com_duration : 1.5
@@ -40,7 +19,7 @@ BEHAVIOR:
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
-  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/squat.yaml
+  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/walk_on_spot.yaml
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false

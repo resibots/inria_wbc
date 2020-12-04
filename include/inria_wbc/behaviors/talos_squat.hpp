@@ -5,7 +5,7 @@
 #include <signal.h>
 
 #include <inria_wbc/behaviors/behavior.hpp>
-#include <inria_wbc/controllers/talos_pos_tracking.hpp>
+#include <inria_wbc/controllers/pos_tracker.hpp>
 #include <inria_wbc/utils/trajectory_handler.hpp>
 
 namespace inria_wbc {
@@ -16,7 +16,7 @@ namespace inria_wbc {
             TalosSquat() = delete;
             TalosSquat(const TalosSquat& other) = delete;
 
-            void update(const controllers::SensorData& sensor_data) override;
+            void update(const controllers::SensorData& sensor_data = {}) override;
             virtual ~TalosSquat() {}
 
         private:

@@ -66,7 +66,9 @@ namespace inria_wbc {
                 fb_joint_name_ = "root_joint";
             }
             robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
-            pinocchio::srdf::loadReferenceConfigurations(robot_->model(), params.srdf_path, verbose_); //the srdf contains initial joint positions
+
+            if (verbose_)
+                params_.print();
 
             _reset();
         }
@@ -102,7 +104,7 @@ namespace inria_wbc {
             if (!mimic_dof_names_.empty()) {
                 for (auto& m : mimic_dof_names_) {
                     auto it = std::find(tsid_joint_names_.begin(), tsid_joint_names_.end(), m);
-                    IWBC_ASSERT(it != tsid_joint_names_.end(), " joint ", *it, " not found");
+                    IWBC_ASSERT(it != tsid_joint_names_.end(), " joint ", m, " not found");
                     mimic_indexes.push_back(std::distance(tsid_joint_names_.begin(), it));
                 }
                 for (int i = 0; i < q_.size(); i++) {
@@ -245,105 +247,29 @@ namespace inria_wbc {
             return masses;
         }
 
-        std::shared_ptr<tasks::TaskComEquality> Controller::make_com_task(const std::string& name, double kp, const Vector& mask) const
-        {
-            assert(tsid_);
-            assert(robot_);
-            auto task = std::make_shared<tasks::TaskComEquality>(name, *robot_);
-            task->Kp(kp * Vector::Ones(3));
-            task->Kd(2.0 * task->Kp().cwiseSqrt());
-            task->setMask(mask);
-            task->setReference(to_sample(robot_->com(tsid_->data())));
-            return task;
-        }
-
-        std::shared_ptr<tasks::TaskJointPosture> Controller::make_posture_task(const std::string& name, double kp, const Vector& mask) const
-        {
-            assert(tsid_);
-            assert(robot_);
-            auto task = std::make_shared<tasks::TaskJointPosture>(name, *robot_);
-            task->Kp(kp * Vector::Ones(robot_->nv() - 6));
-            task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_post(robot_->nv() - 6);
-            if (mask.size() == 0) {
-                mask_post = Vector::Ones(robot_->nv() - 6);
-            }
-            else {
-                assert(mask.size() == mask_post.size());
-                mask_post = mask;
-            }
-            task->setMask(mask_post);
-            task->setReference(to_sample(q_tsid_.tail(robot_->na())));
-            return task;
-        }
-
-        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_se3_frame_task(const std::string& name, const std::string& frame_name, double kp, const se3_mask::mask6& mask) const
-        {
-            assert(tsid_);
-            assert(robot_);
-            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, frame_name);
-            task->Kp(kp * Vector::Ones(6));
-            task->Kd(2.0 * task->Kp().cwiseSqrt());
-            task->setMask(mask);
-            auto ref = robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
-            auto sample = to_sample(ref);
-            task->setReference(sample);
-            return task;
-        }
-
-        std::shared_ptr<tasks::TaskSE3Equality> Controller::make_se3_joint_task(const std::string& name, const std::string& joint_name, double kp, const se3_mask::mask6& mask) const
-        {
-            assert(tsid_);
-            assert(robot_);
-            auto task = std::make_shared<tasks::TaskSE3Equality>(name, *robot_, joint_name);
-            task->Kp(kp * Vector::Ones(6));
-            task->Kd(2.0 * task->Kp().cwiseSqrt());
-            task->setMask(mask.matrix());
-            auto ref = robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
-            auto sample = to_sample(ref);
-            task->setReference(sample);
-            return task;
-        }
-
-        std::shared_ptr<tasks::TaskJointPosVelAccBounds> Controller::make_bound_task(const std::string& name) const
-        {
-            assert(tsid_);
-            assert(robot_);
-            auto task = std::make_shared<tasks::TaskJointPosVelAccBounds>(name, *robot_, dt_, verbose_);
-            auto dq_max = robot_->model().velocityLimit.tail(robot_->na());
-            auto ddq_max = dq_max / dt_;
-            task->setVelocityBounds(dq_max);
-            task->setAccelerationBounds(ddq_max);
-            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
-            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
-            task->setPositionBounds(q_lb, q_ub);
-            return task;
-        }
-
         inria_wbc::controllers::Controller::Params parse_params(YAML::Node config)
         {
             std::string urdf_path = "";
-            std::string srdf_path = "";
             std::string sot_config_path = "";
             std::string floating_base_joint_name = "";
             float dt = 0.001;
             bool verbose = false;
             std::vector<std::string> mimic_dof_names = {};
             parse(urdf_path, "urdf_path", config, "PARAMS", verbose);
-            parse(srdf_path, "srdf_path", config, "PARAMS", verbose);
             parse(sot_config_path, "sot_config_path", config, "PARAMS", verbose);
             parse(floating_base_joint_name, "floating_base_joint_name", config, "PARAMS", verbose);
             parse(dt, "dt", config, "PARAMS", verbose);
             parse(verbose, "verbose", config, "PARAMS", verbose);
             parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
 
-            Controller::Params params = {urdf_path,
-                srdf_path,
+            Controller::Params params = {
+                urdf_path,
                 sot_config_path,
-                floating_base_joint_name,
                 dt,
                 verbose,
-                mimic_dof_names};
+                mimic_dof_names,
+                floating_base_joint_name,
+            };
 
             return params;
         }
