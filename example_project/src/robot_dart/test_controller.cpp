@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
         // clang-format off
         desc.add_options()
         ("help,h", "produce help message")
-        ("conf,c", po::value<std::string>()->default_value("../etc/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
+        ("conf,c", po::value<std::string>()->default_value("../etc/@project_name@.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
         ("fast,f", "fast (simplified) Talos [default: false]")
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("actuators,a", po::value<std::string>()->default_value("torque"), "actuator model torque/velocity/servo (always for position control) [default:torque]")

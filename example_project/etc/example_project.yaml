@@ -1,25 +1,21 @@
 CONTROLLER:
-  name: talos-pos-tracker
+  name: ex-controller
   configurations: talos_configurations.srdf 
   ref_config: pal_start
-  tasks: tasks_talos.yaml
+  tasks: tasks_example.yaml
+  # no URDF here because this is set by the main
   stabilizer:
     activated: true
     filter_size: 5
-    p: [0.08, 0.08]
-    d: [0.02, 0.02]
+    p: [0.07, 0.07]
+    d: [0.01, 0.01]
 BEHAVIOR:
-  name : walk-on-spot
-  traj_com_duration : 1.5
-  traj_foot_duration : 1.5
-  step_height : 0.3
-  stop_duration : 0.7
-  step_height : 0.45
-  stop_height : 0.015
+  name : ex-behavior
+  trajectory_duration : 1
+  motion_size : 0.25
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
-  srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
-  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/walk_on_spot.yaml
+  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/ex-behavior.yaml
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false

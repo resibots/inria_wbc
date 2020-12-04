@@ -4,8 +4,9 @@
 #include <iostream>
 #include <signal.h>
 
-#include <inria_wbc/behaviors/factory.hpp>
-#include <inria_wbc/controllers/talos_pos_tracking.hpp>
+#include <inria_wbc/behaviors/behavior.hpp>
+#include <inria_wbc/controllers/talos_pos_tracker.hpp>
+#include <inria_wbc/estimators/cop.hpp>
 #include <inria_wbc/utils/trajectory_handler.hpp>
 
 namespace inria_wbc {
@@ -13,10 +14,10 @@ namespace inria_wbc {
 
         class WalkOnSpot : public Behavior {
         public:
-            WalkOnSpot(const inria_wbc::controllers::TalosBaseController::Params& params);
+            WalkOnSpot(const controller_ptr_t& controller);
             WalkOnSpot() = delete;
             WalkOnSpot(const WalkOnSpot& otehr) = default;
-            bool update() override;
+            void update(const controllers::SensorData& sensor_data = {}) override;
 
         private:
             void _generate_trajectories();
@@ -32,7 +33,11 @@ namespace inria_wbc {
             std::vector<std::vector<pinocchio::SE3>> _rf_trajs;
             float traj_com_duration_ = 3; //will be changed if specified in yaml
             float traj_foot_duration_ = 3; //will be changed if specified in yaml
+            float stop_duration_ = 2;
             float step_height_ = 0.1;
+            float stop_height_ = 0.01;
+
+            estimators::Cop _cop_estimator;
 
             // State machine stats for walking on the spot cycle
             int state_ = -1;

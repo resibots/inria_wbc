@@ -1,5 +1,5 @@
-#ifndef IWBC_MOVE_ARM_HPP
-#define IWBC_MOVE_ARM_HPP
+#ifndef IWBC_EX_BEHAVIOR_HPP
+#define IWBC_EX_BEHAVIOR_HPP
 #include <chrono>
 #include <iostream>
 #include <signal.h>
@@ -10,14 +10,14 @@
 
 namespace inria_wbc {
     namespace behaviors {
-        class TalosMoveArm : public Behavior {
+        class ExBehavior : public Behavior {
         public:
-            TalosMoveArm(const controller_ptr_t& controller);
-            TalosMoveArm() = delete;
-            TalosMoveArm(const TalosMoveArm&) = delete;
+            ExBehavior(const controller_ptr_t& controller);
+            ExBehavior() = delete;
+            ExBehavior(const ExBehavior&) = delete;
 
-            void update(const controllers::SensorData& sensor_data = {}) override;
-            virtual ~TalosMoveArm() {}
+            void update(const controllers::SensorData& sensor_data) override;
+            virtual ~ExBehavior() {}
 
         private:
             int time_ = 0;

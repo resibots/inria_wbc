@@ -11,7 +11,7 @@
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
 
-#include "inria_wbc/behaviors/factory.hpp"
+#include "inria_wbc/behaviors/behavior.hpp"
 
 void evaluate_cop(const Eigen::Vector6d& lf_torque_force, const Eigen::Vector6d& rf_torque_force)
 {
@@ -88,23 +88,21 @@ int main(int argc, char* argv[])
     simu.add_checkerboard_floor();
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
-
-    inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
-        "../etc/talos_configurations.srdf",
+    inria_wbc::controllers::Controller::Params params = {
+        robot->model_filename(),
         sot_config_path,
-        "",
         dt,
         false,
         robot->mimic_dof_names()};
 
-    std::string behavior_name;
+    std::string behavior_name, controller_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
-    // params = inria_wbc::controllers::parse_params(config);
+    inria_wbc::utils::parse(behavior_name, "name", config, "BEHAVIOR", false);
+    inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", false);
 
-    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
+    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
 
-    auto controller = behavior->controller();
     auto all_dofs = controller->all_dofs();
     auto controllable_dofs = controller->controllable_dofs();
     robot->set_positions(controller->q0(), all_dofs);

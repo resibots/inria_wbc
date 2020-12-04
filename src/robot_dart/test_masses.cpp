@@ -11,7 +11,7 @@
 #include <robot_dart/gui/magnum/graphics.hpp>
 #endif
 
-#include "inria_wbc/behaviors/factory.hpp"
+#include "inria_wbc/behaviors/behavior.hpp"
 
 Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, Eigen::VectorXd targetpos)
 {
@@ -78,21 +78,18 @@ int main(int argc, char* argv[])
     simu.add_checkerboard_floor();
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
-
-    inria_wbc::controllers::TalosBaseController::Params params = {robot->model_filename(),
-        "../etc/talos_configurations.srdf",
+    inria_wbc::controllers::Controller::Params params = {
+        robot->model_filename(),
         sot_config_path,
-        "",
         dt,
         false,
         robot->mimic_dof_names()};
 
-    std::string behavior_name;
+    std::string controller_name;
     YAML::Node config = YAML::LoadFile(sot_config_path);
-    inria_wbc::utils::parse(behavior_name, "name", config, false, "BEHAVIOR");
+    inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", true);
 
-    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, params);
-    auto controller = behavior->controller();
+    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
 
     auto masses = controller->pinocchio_model_masses();
     std::vector<std::string> joint_names = controller->pinocchio_joint_names();

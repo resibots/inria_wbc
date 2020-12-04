@@ -1,27 +1,16 @@
-SOT:
-  w_com: 1000.0
-  w_floatingb: 1000.0
-  w_posture: 10.0
-  w_forceRef_feet: 1e-3
-  w_forceRef_hands: 1e-3
-  w_rh: 100.0
-  w_lh: 100.0
-  w_rf: 1.0
-  w_lf: 1.0
-  w_torso: 2500.0
-  w_velocity: 1.0
-  kp_contact: 30.0
-  kp_com: 3000.0
-  kp_floatingb: 3000.0
-  kp_posture: 50.0
-  kp_rh: 30.0
-  kp_lh: 30.0
-  kp_rf: 30.0
-  kp_lf: 30.0
-  kp_torso: 30.0
+CONTROLLER:
+  name: talos-pos-tracker
+  configurations: talos_configurations.srdf 
+  ref_config: pal_start
+  tasks: tasks_talos.yaml
+  stabilizer:
+    activated: true
+    filter_size: 5
+    p: [0.05, 0.05]
+    d: [0.01, 0.01]
 BEHAVIOR:
   name : talos-squat
-  trajectory_duration : 5
+  trajectory_duration : 3
   motion_size : 0.2
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf

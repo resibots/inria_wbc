@@ -1,32 +1,31 @@
-#include "inria_wbc/behaviors/talos_squat.hpp"
+#include "inria_wbc/behaviors/ex_behavior.hpp"
 
 namespace inria_wbc {
     namespace behaviors {
+        static Register<ExBehavior> __ex_behavior("ex-behavior");
 
-        static Register<TalosSquat> __talos_squat("talos-squat");
-
-        TalosSquat::TalosSquat(const controller_ptr_t& controller) : Behavior(controller)
+        ExBehavior::ExBehavior(const controller_ptr_t& controller) : Behavior(controller)
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto com_init = std::static_pointer_cast<controllers::PosTracker>(controller_)->com();
+            auto lh_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref("lh");
 
             YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
             trajectory_duration_ = config["trajectory_duration"].as<float>();
             motion_size_ = config["motion_size"].as<float>();
 
-            auto com_final = com_init;
-            com_final(2) -= motion_size_;
+            auto lh_final = lh_init;
+            lh_final.translation()(2) += motion_size_;
 
-            trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_final, controller_->dt(), trajectory_duration_));
-            trajectories_.push_back(trajectory_handler::compute_traj(com_final, com_init, controller_->dt(), trajectory_duration_));
+            trajectories_.push_back(trajectory_handler::compute_traj(lh_init, lh_final, controller_->dt(), trajectory_duration_));
+            trajectories_.push_back(trajectory_handler::compute_traj(lh_final, lh_init, controller_->dt(), trajectory_duration_));
             current_trajectory_ = trajectories_[traj_selector_];
         }
 
-        void TalosSquat::update(const controllers::SensorData& sensor_data)
+        void ExBehavior::update(const controllers::SensorData& sensor_data)
         {
             auto ref = current_trajectory_[time_];
-            std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(ref);
+            std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(ref, "lh");
 
             controller_->update(sensor_data);
             time_++;
@@ -36,5 +35,6 @@ namespace inria_wbc {
                 current_trajectory_ = trajectories_[traj_selector_];
             }
         }
+
     } // namespace behaviors
 } // namespace inria_wbc
