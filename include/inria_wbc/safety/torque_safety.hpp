@@ -1,7 +1,6 @@
 #ifndef TORQUE_SAFETY_HPP
 #define TORQUE_SAFETY_HPP
 
-
 #include <vector>
 #include <Eigen/Dense>
 
@@ -52,9 +51,12 @@ public:
 
     void set_max_consecutive_invalid(unsigned int counter);
 
+    void set_offset(const Eigen::VectorXd& offset);
+    Eigen::VectorXd get_offset() const;
+    void reset_offset();
+
     void set_threshold(double threshold);
     void set_threshold(const Eigen::VectorXd& threshold);
-
     Eigen::VectorXd get_threshold() const;
 
     Eigen::VectorXd get_discrepancy() const;
@@ -67,7 +69,6 @@ public:
 protected:
 
     void _compute_validity(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);
-
     void _compute_validity_over_steps();
 
 
@@ -78,18 +79,19 @@ private:
     int _buffer_len;
 
     Eigen::MatrixXd _buffer;
+    Eigen::VectorXd _offset;
     Eigen::VectorXd _threshold;
     Eigen::VectorXd _discrepancy;
     Eigen::VectorXd _filtered_sensors;
     ArrayXb _validity;
+
+    bool _add_offset = false;
 
     u_int32_t _invalid_threshold;
     Eigen::MatrixXi _previous_signs;
     Eigen::VectorXi _invalid_steps_threshold;
 
 };
-
-
 
 template <typename FilterFunctor>
 bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors, FilterFunctor filter)
@@ -108,6 +110,9 @@ bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen:
         _buffer.rightCols<1>() = sensors;
         _filtered_sensors = filter(_buffer);
     }
+
+    if(_add_offset)
+        _filtered_sensors = _filtered_sensors + _offset;
 
     _compute_validity(target, _filtered_sensors);
 

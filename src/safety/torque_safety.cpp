@@ -1,4 +1,5 @@
 #include "inria_wbc/safety/torque_safety.hpp"
+#include "inria_wbc/exceptions.hpp"
 
 #include <iostream>
 
@@ -36,7 +37,10 @@ bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen:
 {
     ++_step_count;
 
-    _compute_validity(target, sensors);
+    if(_add_offset)
+        _compute_validity(target, sensors);
+    else
+        _compute_validity(target, sensors + _offset);
     
     if(_invalid_threshold > 0)
         _compute_validity_over_steps();
@@ -55,6 +59,25 @@ void TorqueCollisionDetection::set_threshold(const Eigen::VectorXd& threshold)
 {
     assert("Wrong size for the threshold vector." && _nvar == threshold.size());
     _threshold = threshold;
+}
+
+void TorqueCollisionDetection::set_offset(const Eigen::VectorXd& offset)
+{
+    //IWBC_ASSERT(offset.size() == _nvar, "Offset dimensionality error");
+    _offset = offset;
+    _add_offset = true;
+}
+
+
+Eigen::VectorXd TorqueCollisionDetection::get_offset() const
+{
+    return _offset;
+}
+
+void TorqueCollisionDetection::reset_offset()
+{
+    _offset.setZero();
+    _add_offset = false;
 }
 
 
