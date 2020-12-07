@@ -38,9 +38,9 @@ bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen:
     ++_step_count;
 
     if(_add_offset)
-        _compute_validity(target, sensors);
-    else
         _compute_validity(target, sensors + _offset);
+    else
+        _compute_validity(target, sensors);
     
     if(_invalid_threshold > 0)
         _compute_validity_over_steps();
