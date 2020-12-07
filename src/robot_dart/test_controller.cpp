@@ -28,6 +28,7 @@ static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
 static const std::string bold = "\x1B[1m";
 
+
 int main(int argc, char* argv[])
 {
     try {
@@ -255,13 +256,14 @@ int main(int argc, char* argv[])
                     self_collision_spheres[i]->set_base_pose(cp);
                     auto bd = self_collision_spheres[i]->skeleton()->getBodyNodes()[0];
                     auto visual = bd->getShapeNodesWith<dart::dynamics::VisualAspect>()[0];
-                    bool c = task_self_collision->collision();
+                    visual->getShape()->setDataVariance(dart::dynamics::Shape::DYNAMIC_COLOR);
+                    bool c = task_self_collision->collision(i);
                     if (c) {
-                        std::cout<<"collision"<<std::endl;
                         visual->getVisualAspect()->setRGBA(dart::Color::Red(1.0));
                     }
                     else {
                         visual->getVisualAspect()->setRGBA(dart::Color::Green(1.0));
+
                     }
                 }
             }
