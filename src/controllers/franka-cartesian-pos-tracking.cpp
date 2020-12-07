@@ -41,6 +41,9 @@ namespace inria_wbc {
         {
             p["w_ee"] = 1000.0;
             p["kp_ee"] = 30.0; 
+            p["w_posture"] = 1.75;
+            p["kp_posture"] = 10.0; 
+      
         }
 
         void FrankaCartPosTracking::parse_configuration_yaml(const std::string& sot_config_path)
@@ -105,9 +108,9 @@ namespace inria_wbc {
 
 
                  
-            //posture_task_ = make_posture_task("posture", p.at("kp_ee"));
-            //if (p.at("w_ee") > 0)
-            //    tsid_->addMotionTask(*posture_task_, p.at("w_ee"), 1);
+            posture_task_ = make_posture_task("posture", p.at("kp_posture"));
+            if (p.at("w_posture") > 0)
+                tsid_->addMotionTask(*posture_task_, p.at("w_posture"), 1);
 
         }
 
@@ -146,7 +149,8 @@ namespace inria_wbc {
             //Eigen::VectorXd ref_posture(9);
             //ref_posture << 0., M_PI / 4., 0., -M_PI / 4, 0., M_PI / 2., 0., 0., 0.;
             //set_posture_ref( ref_posture);
-
+            
+            set_posture_ref( robot_->model().referenceConfigurations[ref_config_]) ;
 
             if (robot_->model().existJointName(cst::endEffector_joint_name) ){
               pinocchio::SE3 ee_pose = robot_->position(tsid_->data(), robot_->model().getJointId(cst::endEffector_joint_name));

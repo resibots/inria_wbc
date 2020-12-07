@@ -4,6 +4,8 @@ CONTROLLER:
   ref_config: start
   w_ee: 1000.0
   kp_ee: 30.0 
+  w_posture: 1.75
+  kp_posture: 10.0
 BEHAVIOR:
   name : circular-cartesian-trajectory
 PARAMS:
