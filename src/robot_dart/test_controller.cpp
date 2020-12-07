@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
             Eigen::Vector6d cp = Eigen::Vector6d::Zero();
             cp.tail(3) = task_self_collision->avoided_frames_positions()[i];
             double r0 = task_self_collision->avoided_frames_r0s()[i];
-            auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0, r0, r0), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
+            auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0*2, r0*2, r0*2), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
             sphere->set_color_mode("aspect");
             self_collision_spheres.push_back(sphere);
             simu.add_visual_robot(self_collision_spheres.back());

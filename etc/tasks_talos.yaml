@@ -71,11 +71,11 @@ contact_rfoot:
 self_collision:
     type: self-collision
     tracked: gripper_left_joint
-    radius: 0.2
+    radius: 0.1
     avoided: 
-        gripper_right_joint: 0.2
+        gripper_right_joint: 0.1
         # arm_right_5_joint: 0.1
-        virtual_left_leg3: 0.5
+        virtual_left_leg3: 0.25
 #        torso_2_joint: 0.4
 #        base_link: 0.2
         # leg_right_1_joint: 0.2
