@@ -16,7 +16,7 @@ namespace inria_wbc {
             TalosMoveArm() = delete;
             TalosMoveArm(const TalosMoveArm&) = delete;
 
-            void update(const controllers::SensorData& sensor_data) override;
+            void update(const controllers::SensorData& sensor_data = {}) override;
             virtual ~TalosMoveArm() {}
 
         private:

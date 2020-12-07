@@ -16,7 +16,7 @@ namespace inria_wbc {
             TalosSquat() = delete;
             TalosSquat(const TalosSquat& other) = delete;
 
-            void update(const controllers::SensorData& sensor_data) override;
+            void update(const controllers::SensorData& sensor_data = {}) override;
             virtual ~TalosSquat() {}
 
         private:

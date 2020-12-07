@@ -8,11 +8,11 @@ namespace inria_wbc {
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto lh_init = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->get_se3_ref("lh");
+            auto lh_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref("lh");
 
-            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path);
-            inria_wbc::utils::parse(trajectory_duration_, "trajectory_duration", config, "BEHAVIOR", controller_->params().verbose);
-            inria_wbc::utils::parse(motion_size_, "motion_size", config, "BEHAVIOR", controller_->params().verbose);
+            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
+            trajectory_duration_ = config["trajectory_duration"].as<float>();
+            motion_size_ = config["motion_size"].as<float>();
 
             auto lh_final = lh_init;
             lh_final.translation()(2) += motion_size_;
@@ -25,7 +25,8 @@ namespace inria_wbc {
         void ExBehavior::update(const controllers::SensorData& sensor_data)
         {
             auto ref = current_trajectory_[time_];
-            std::static_pointer_cast<inria_wbc::controllers::TalosPosTracking>(controller_)->set_se3_ref(ref, "lh");
+            std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(ref, "lh");
+
             controller_->update(sensor_data);
             time_++;
             if (time_ == current_trajectory_.size()) {

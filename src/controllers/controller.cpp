@@ -67,6 +67,9 @@ namespace inria_wbc {
             }
             robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
 
+            if (verbose_)
+                params_.print();
+
             _reset();
         }
 
@@ -101,7 +104,7 @@ namespace inria_wbc {
             if (!mimic_dof_names_.empty()) {
                 for (auto& m : mimic_dof_names_) {
                     auto it = std::find(tsid_joint_names_.begin(), tsid_joint_names_.end(), m);
-                    IWBC_ASSERT(it != tsid_joint_names_.end(), " joint ", *it, " not found");
+                    IWBC_ASSERT(it != tsid_joint_names_.end(), " joint ", m, " not found");
                     mimic_indexes.push_back(std::distance(tsid_joint_names_.begin(), it));
                 }
                 for (int i = 0; i < q_.size(); i++) {
@@ -247,7 +250,6 @@ namespace inria_wbc {
         inria_wbc::controllers::Controller::Params parse_params(YAML::Node config)
         {
             std::string urdf_path = "";
-            std::string srdf_path = "";
             std::string sot_config_path = "";
             std::string floating_base_joint_name = "";
             float dt = 0.001;
@@ -260,13 +262,14 @@ namespace inria_wbc {
             parse(verbose, "verbose", config, "PARAMS", verbose);
             parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
 
-            Controller::Params params = {urdf_path,
+            Controller::Params params = {
+                urdf_path,
                 sot_config_path,
                 dt,
                 verbose,
                 mimic_dof_names,
                 floating_base_joint_name,
-                };
+            };
 
             return params;
         }
