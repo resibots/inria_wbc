@@ -38,7 +38,16 @@ public:
             }
             return res;
         } 
-    } MedianFilter; 
+    } MedianFilter;
+
+    typedef struct { 
+        Eigen::VectorXd operator()(const Eigen::MatrixXd& x) 
+        { 
+            Eigen::VectorXd average = x.rowwise().mean();
+            return average;
+        } 
+    } MovingAverageFilter; 
+
 
     TorqueCollisionDetection() = default;
     TorqueCollisionDetection(int nvar, double threshold=1.0, int buffer_len=1);

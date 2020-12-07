@@ -70,31 +70,31 @@ int main(int argc, char *argv[])
 
     if (vm.count("help"))
     {
-        std::cout << desc << std::endl;
+        std::clog << desc << std::endl;
         return 0;
     }
 
     bool verbose = (vm.count("verbose") != 0);
 
     // clang-format off
-    std::cout<< "------ CONFIGURATION ------" << std::endl;
+    std::clog<< "------ CONFIGURATION ------" << std::endl;
     for (const auto& kv : vm){
-        std::cout << kv.first << " ";
-        try { std::cout << kv.second.as<std::string>();
+        std::clog << kv.first << " ";
+        try { std::clog << kv.second.as<std::string>();
         } catch(...) {/* do nothing */ }
-        try { std::cout << kv.second.as<bool>();
+        try { std::clog << kv.second.as<bool>();
         } catch(...) {/* do nothing */ }
-        try { std::cout << kv.second.as<int>();
+        try { std::clog << kv.second.as<int>();
         } catch(...) {/* do nothing */ }
-        std::cout<< std::endl;
+        std::clog<< std::endl;
     }
-    std::cout << "--------------------------" << std::endl;
+    std::clog << "--------------------------" << std::endl;
     // clang-format on
 
 
     // dt of the simulation and the controller
     float dt = 0.001;
-    std::cout << "dt:" << dt << std::endl;
+    std::clog << "dt:" << dt << std::endl;
 
     //////////////////// INIT DART ROBOT //////////////////////////////////////
     std::srand(std::time(NULL));
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 
     ///////////////// TORQUE COLLISION SAFETY CHECK ////////////////////////////
     for(auto a : robot->body_names())
-        std::cout << a << std::endl;
+        std::clog << a << std::endl;
     robot->set_draw_axis("arm_left_2_link");
     robot->set_draw_axis("arm_left_4_link");
     robot->set_draw_axis("arm_right_4_link");
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
             5e-02, 5e-02, 5e-02, 1e-01, 
             5e-02, 5e-02, 5e-02, 1e-01;
 
-    inria_wbc::safety::TorqueCollisionDetection torque_collision(torque_threshold, 5);
+    inria_wbc::safety::TorqueCollisionDetection torque_collision(torque_threshold, 10);
     torque_collision.set_max_consecutive_invalid(5);
 
     // add sensors to the robot
@@ -298,7 +298,7 @@ int main(int argc, char *argv[])
             if(vm["actuators"].as<std::string>() == "servo" && it_cmd > 0)
             {
                 
-                if( !torque_collision.check(tsid_tau, tq_sensors, inria_wbc::safety::TorqueCollisionDetection::MedianFilter() ) )
+                if( !torque_collision.check(tsid_tau, tq_sensors, inria_wbc::safety::TorqueCollisionDetection::MovingAverageFilter() ) )
                 {
                     std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
                     auto inv = torque_collision.get_invalid_ids();
