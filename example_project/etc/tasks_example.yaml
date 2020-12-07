@@ -1,0 +1,70 @@
+lh:
+    type: se3
+    tracked: gripper_left_joint
+    weight: 10.0
+    kp: 30.0
+    mask: 111000 # xyz
+rh:
+    type: se3
+    tracked: gripper_right_joint
+    weight: 10.0
+    kp: 30.0
+    mask: 111000
+torso:
+    type: se3
+    tracked: torso_2_link
+    weight: 10.0
+    kp: 30.0
+    mask: 000110
+lf:
+    type: se3
+    tracked: leg_left_6_joint
+    weight: 1000.0
+    kp: 30.0
+    mask: 111111
+rf:
+    type: se3
+    tracked: leg_right_6_joint
+    weight: 1000.0
+    kp: 30.0     
+    mask: 111111
+com:
+    type: com
+    weight: 1000.0
+    kp: 30.0
+    mask: 111
+posture:
+    type: posture
+    weight: 0.75
+    kp: 30.0
+    ref: pal_start
+bounds:
+    type: bounds
+    weight: 10000
+    dt: 0.001
+contact_lfoot:
+    type: contact
+    joint: leg_left_6_joint
+    kp: 30.0
+    lxp: 0.1   # foot length in positive x direction
+    lxn: 0.11  # foot length in negative x direction
+    lyp: 0.069 # foot length in positive y direction
+    lyn: 0.069 # foot length in negative y direction
+    lz: 0.107  # foot sole height with respect to ankle joint
+    fmin: 5.0
+    fmax: 1500.0
+    mu: 0.3
+    normal: [0, 0, 1]
+contact_rfoot:
+    type: contact
+    joint: leg_right_6_joint
+    kp: 30.0
+    lxp: 0.1   # foot length in positive x direction
+    lxn: 0.11  # foot length in negative x direction
+    lyp: 0.069 # foot length in positive y direction
+    lyn: 0.069 # foot length in negative y direction
+    lz: 0.107  # foot sole height with respect to ankle joint
+    fmin: 5.0
+    fmax: 1500.0
+    mu: 0.3
+    normal: [0, 0, 1]

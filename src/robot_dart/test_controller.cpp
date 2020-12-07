@@ -20,6 +20,10 @@
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 
+static const std::string red = "\x1B[31m";
+static const std::string rst = "\x1B[0m";
+static const std::string bold = "\x1B[1m";
+
 int main(int argc, char* argv[])
 {
     try {
@@ -127,21 +131,20 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
-        inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
-            "../etc/talos_configurations.srdf",
+        inria_wbc::controllers::Controller::Params params = { 
+            robot->model_filename(),
             sot_config_path,
-            true, //added temporarely
-            "",
+            true, //~~added temporarely
             dt,
             verbose,
             robot->mimic_dof_names()};
 
-        std::string behavior_name, controller_name;
         YAML::Node config = YAML::LoadFile(sot_config_path);
-        inria_wbc::utils::parse(behavior_name, "name", config, "BEHAVIOR", verbose);
-        inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", verbose);
 
+        auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+
+        auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
         assert(behavior);
 
@@ -186,15 +189,18 @@ int main(int argc, char* argv[])
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
             // update the sensors
-
-            inria_wbc::controllers::SensorData sensor_data = {
-                ft_sensor_left->torque(),
-                ft_sensor_left->force(),
-                ft_sensor_right->torque(),
-                ft_sensor_right->force(),
-                imu->linear_acceleration(),
-                robot->com_velocity().tail<3>(),
-                robot->skeleton()->getPositions().tail(ncontrollable)};
+            inria_wbc::controllers::SensorData sensor_data;
+            // left foot
+            sensor_data["lf_torque"] = ft_sensor_left->torque();
+            sensor_data["lf_force"] = ft_sensor_left->force(); 
+            // right foot
+            sensor_data["rf_torque"] = ft_sensor_right->torque();
+            sensor_data["rf_force"] = ft_sensor_right->force();
+            // accelerometer
+            sensor_data["acceleration"] = imu->linear_acceleration();
+            sensor_data["velocity"] = robot->com_velocity().tail<3>();
+            // joint positions (excluding floating base)
+            sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
 
             // step the command
             Eigen::VectorXd cmd;
@@ -300,10 +306,13 @@ int main(int argc, char* argv[])
             }
         }
     }
-    catch (std::exception& e) {
-        std::string red = "\x1B[31m";
-        std::string rst = "\x1B[0m";
-        std::string bold = "\x1B[1m";
+    catch (YAML::RepresentationException& e) {
+        std::cout << red << bold << "YAML Parse error (missing key in YAML file?): " << rst << e.what() << std::endl;
+    }
+    catch (YAML::ParserException& e) {
+        std::cout << red << bold << "YAML Parse error: " << rst << e.what() << std::endl;
+    }
+    catch (std::exception& e) {        
         std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
     }
     return 0;

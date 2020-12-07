@@ -5,7 +5,7 @@
 #include <signal.h>
 
 #include <inria_wbc/behaviors/behavior.hpp>
-#include <inria_wbc/controllers/talos_pos_tracking.hpp>
+#include <inria_wbc/controllers/talos_pos_tracker.hpp>
 #include <inria_wbc/estimators/cop.hpp>
 #include <inria_wbc/utils/trajectory_handler.hpp>
 
@@ -17,7 +17,7 @@ namespace inria_wbc {
             WalkOnSpot(const controller_ptr_t& controller);
             WalkOnSpot() = delete;
             WalkOnSpot(const WalkOnSpot& otehr) = default;
-            void update(const controllers::SensorData& sensor_data) override;
+            void update(const controllers::SensorData& sensor_data = {}) override;
 
         private:
             void _generate_trajectories();
