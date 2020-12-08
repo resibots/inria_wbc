@@ -12,10 +12,16 @@ CONTROLLER:
   frames:  # virtual frames
     v_leg_right_3:
       ref: "leg_right_3_joint"
-      pos: [0, 0.0, -0.2]
+      pos: [0.0, -0.1, -0.2]
     v_leg_left_3:
       ref: "leg_left_3_joint"
-      pos: [0, 0.0, -0.2]
+      pos: [0, 0.1, -0.2]
+    v_base_link_left:
+      ref: "base_link"
+      pos: [0.0, -0.1, 0]
+    v_base_link_right:
+      ref: "base_link"
+      pos: [0, 0.1, 0]
 BEHAVIOR:
   name : talos-clapping
   trajectory_duration : 2.0

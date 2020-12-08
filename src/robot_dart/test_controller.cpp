@@ -28,7 +28,6 @@ static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
 static const std::string bold = "\x1B[1m";
 
-
 int main(int argc, char* argv[])
 {
     try {
@@ -47,6 +46,7 @@ int main(int argc, char* argv[])
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("ghost,g", "display the ghost (Pinocchio model)")
+        ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("verbose,v", "verbose mode (controller)")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
@@ -190,16 +190,18 @@ int main(int argc, char* argv[])
 
         // self-collision shapes
         std::vector<std::shared_ptr<robot_dart::Robot>> self_collision_spheres;
-        auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
-        auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>("self_collision");
-        for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
-            Eigen::Vector6d cp = Eigen::Vector6d::Zero();
-            cp.tail(3) = task_self_collision->avoided_frames_positions()[i];
-            double r0 = task_self_collision->avoided_frames_r0s()[i];
-            auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0*2, r0*2, r0*2), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
-            sphere->set_color_mode("aspect");
-            self_collision_spheres.push_back(sphere);
-            simu.add_visual_robot(self_collision_spheres.back());
+        if (vm.count("collisions")) {
+            auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+            auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
+            for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+                Eigen::Vector6d cp = Eigen::Vector6d::Zero();
+                cp.tail(3) = task_self_collision->avoided_frames_positions()[i];
+                double r0 = task_self_collision->avoided_frames_r0s()[i];
+                auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0 * 2, r0 * 2, r0 * 2), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
+                sphere->set_color_mode("aspect");
+                self_collision_spheres.push_back(sphere);
+                simu.add_visual_robot(self_collision_spheres.back());
+            }
         }
         // the main loop
         using namespace std::chrono;
@@ -248,7 +250,9 @@ int main(int argc, char* argv[])
                 ++it_cmd;
             }
 
-            if (simu.schedule(simu.graphics_freq())) {
+            if (simu.schedule(simu.graphics_freq()) && vm.count("collisions")) {
+                auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+                auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
                 for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
                     auto cp = self_collision_spheres[i]->base_pose();
                     cp.translation() = task_self_collision->avoided_frames_positions()[i];
@@ -263,7 +267,6 @@ int main(int argc, char* argv[])
                     }
                     else {
                         visual->getVisualAspect()->setRGBA(dart::Color::Green(1.0));
-
                     }
                 }
             }
@@ -333,8 +336,8 @@ int main(int argc, char* argv[])
                 if (push)
                     oss << "pushing..." << std::endl;
 #ifdef GRAPHIC
-                // if (!vm.count("mp4"))
-                //     simu.set_text_panel(oss.str());
+                    // if (!vm.count("mp4"))
+                    //     simu.set_text_panel(oss.str());
 #endif
                 it_simu = 0;
                 it_cmd = 0;
