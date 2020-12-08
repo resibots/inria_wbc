@@ -4,6 +4,9 @@
 #include <inria_wbc/controllers/controller.hpp>
 #include <inria_wbc/estimators/cop.hpp>
 
+// forward declaration
+namespace YAML { class Node; }
+
 namespace inria_wbc {
     namespace controllers {
       
@@ -51,7 +54,7 @@ namespace inria_wbc {
            
         protected:
             virtual void parse_tasks(const std::string&);
-
+            virtual void parse_frames(const YAML::Node&);
             // the list of all the tasks
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>> tasks_;
             // contacts are not tasks in tsid

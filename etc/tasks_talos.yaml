@@ -75,7 +75,7 @@ self_collision:
     avoided: 
         gripper_right_joint: 0.1
         # arm_right_5_joint: 0.1
-        virtual_left_leg3: 0.25
+        v_leg_right_3: 0.15
 #        torso_2_joint: 0.4
 #        base_link: 0.2
         # leg_right_1_joint: 0.2
