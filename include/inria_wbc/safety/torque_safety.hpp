@@ -4,6 +4,8 @@
 #include <vector>
 #include <Eigen/Dense>
 
+#include "inria_wbc/estimators/filtering.hpp"
+
 
 namespace inria_wbc {
 namespace safety {

@@ -40,6 +40,7 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/exceptions.hpp
                             include/inria_wbc/robot_dart/cmd.hpp
                             include/inria_wbc/estimators/cop.hpp
+                            include/inria_wbc/estimators/filtering.hpp
                             include/tsid/tasks/task-self-collision.hpp
 
 
