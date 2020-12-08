@@ -2,6 +2,7 @@ CONTROLLER:
   name: talos-pos-tracker
   configurations: talos_configurations.srdf 
   ref_config: pal_start
+  frames: frames_talos.yaml
   tasks: tasks_talos.yaml
   # no URDF here because this is set by the main
   stabilizer:
@@ -9,19 +10,6 @@ CONTROLLER:
     filter_size: 5
     p: [0.07, 0.07]
     d: [0.01, 0.01]
-  frames:  # virtual frames
-    v_leg_right_3:
-      ref: "leg_right_3_joint"
-      pos: [0.0, -0.1, -0.2]
-    v_leg_left_3:
-      ref: "leg_left_3_joint"
-      pos: [0, 0.1, -0.2]
-    v_base_link_left:
-      ref: "base_link"
-      pos: [0.0, -0.1, 0]
-    v_base_link_right:
-      ref: "base_link"
-      pos: [0, 0.1, 0]
 BEHAVIOR:
   name : talos-clapping
   trajectory_duration : 2.0

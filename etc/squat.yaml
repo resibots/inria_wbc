@@ -2,19 +2,13 @@ CONTROLLER:
   name: talos-pos-tracker
   configurations: talos_configurations.srdf 
   ref_config: pal_start
+  frames: frames_talos.yaml
   tasks: tasks_talos.yaml
   stabilizer:
     activated: true
     filter_size: 5
     p: [0.05, 0.05]
     d: [0.01, 0.01]
-  frames:  # virtual frames
-    v_leg_right_3:
-      ref: "leg_right_3_joint"
-      pos: [0, 0.0, -0.2]
-    v_leg_left_3:
-      ref: "leg_left_3_joint"
-      pos: [0, 0.0, -0.2]
 BEHAVIOR:
   name : talos-squat
   trajectory_duration : 3

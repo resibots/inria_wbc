@@ -3,18 +3,12 @@ CONTROLLER:
   configurations: talos_configurations.srdf 
   ref_config: pal_start
   tasks: tasks_talos.yaml
+  frames: frames_talos.yaml
   stabilizer:
     activated: true
     filter_size: 5
     p: [0.08, 0.08]
     d: [0.02, 0.02]
-  frames:  # virtual frames
-    v_leg_right_3:
-      ref: "leg_right_3_joint"
-      pos: [0, 0, -0.2]
-    v_leg_left_3:
-      ref: "leg_left_3_joint"
-      pos: [0, 0, -0.2]
 BEHAVIOR:
   name : walk-on-spot
   traj_com_duration : 1.5

@@ -9,13 +9,7 @@ CONTROLLER:
     filter_size: 5
     p: [0.07, 0.07]
     d: [0.01, 0.01]
-  frames:  # virtual frames
-    v_leg_right_3:
-      ref: "leg_right_3_joint"
-      pos: [0, 0.0, -0.2]
-    v_leg_left_3:
-      ref: "leg_left_3_joint"
-      pos: [0, 0.0, -0.2]
+  frames: frames_talos.yaml
 BEHAVIOR:
   name : talos-move-arm
   trajectory_duration : 1

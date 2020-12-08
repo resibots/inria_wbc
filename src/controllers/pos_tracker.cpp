@@ -44,8 +44,12 @@ namespace inria_wbc {
             auto path = boost::filesystem::path(params.sot_config_path).parent_path();
 
             YAML::Node config = YAML::LoadFile(params.sot_config_path)["CONTROLLER"];
-            if (config["frames"])
-                parse_frames(config["frames"]);
+
+            // create additional frames if needed (optional)
+            if (config["frames"]) {
+                auto p_frames = path / boost::filesystem::path(config["frames"].as<std::string>());
+                parse_frames(p_frames.string());
+            }
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
@@ -107,8 +111,11 @@ namespace inria_wbc {
             }
         }
 
-        void PosTracker::parse_frames(const YAML::Node& node)
+        void PosTracker::parse_frames(const std::string& path)
         {
+            if (verbose_)
+                std::cout<< "Parsing virtual frame file:"<<path<<std::endl;
+            YAML::Node node = YAML::LoadFile(path);
             for (auto it = node.begin(); it != node.end(); ++it) {
                 auto name = it->first.as<std::string>();
                 auto ref = it->second["ref"].as<std::string>();
