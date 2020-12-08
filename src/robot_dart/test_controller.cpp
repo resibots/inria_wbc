@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
         int it_simu = 0, it_cmd = 0;
 
         std::shared_ptr<robot_dart::Robot> ghost;
-        if (vm.count("ghost")) {
+        if (vm.count("ghost") || vm.count("collisions")) {
             ghost = robot->clone_ghost();
             ghost->skeleton()->setPosition(4, -1.57);
             ghost->skeleton()->setPosition(5, 1.1);
