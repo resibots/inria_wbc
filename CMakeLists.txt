@@ -27,7 +27,7 @@ list(APPEND DEPENDENCIES_INCS
 
 set(INRIA_WBC_HEADERS
                             include/inria_wbc/controllers/controller.hpp
-                            include/inria_wbc/controllers/franka_cartesian_pos_tracking.hpp
+                            include/inria_wbc/controllers/franka_pos_tracker.hpp
                             include/inria_wbc/controllers/pos_tracker.hpp
                             include/inria_wbc/controllers/talos_pos_tracker.hpp
                             include/inria_wbc/behaviors/talos_squat.hpp
@@ -45,7 +45,7 @@ set(INRIA_WBC_HEADERS
 
 set(INRIA_WBC_SOURCES
                             src/controllers/controller.cpp
-                            src/controllers/franka-cartesian-pos-tracking.cpp
+                            src/controllers/franka_pos_tracker.cpp
                             src/controllers/pos_tracker.cpp
                             src/controllers/tasks.cpp
                             src/controllers/talos_pos_tracker.cpp

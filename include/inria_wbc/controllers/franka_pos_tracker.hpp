@@ -9,7 +9,7 @@ namespace inria_wbc {
       
         class FrankaPosTracker : public Controller {
         public:
-            FrankaPosTracker(const FrankaParams& params);
+            FrankaPosTracker(const Params& params);
             FrankaPosTracker(const FrankaPosTracker& other) = delete;
             FrankaPosTracker& operator=(const FrankaPosTracker& o) const = delete;
             virtual ~FrankaPosTracker(){};
@@ -24,14 +24,19 @@ namespace inria_wbc {
                 IWBC_ASSERT(t->name() == it->first, "Task name error (tsid)[", t->name(), "] vs [", it->first, "]");
                 return t;
             }
-            
-            std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
 
+
+            void set_task_ref(const tsid::math::Vector& ref, const std::string& task_name);
+            void set_task_ref(const pinocchio::SE3& ref, const std::string& task_name);
+            void get_task_ref(const std::string& task_name, tsid::math::Vector& vec);
+            void get_task_ref(const std::string& task_name, pinocchio::SE3& se3);
+     
+
+            //~~ maybe unused
             double cost(const std::string& task_name) const override { return Controller::cost(task<tsid::tasks::TaskBase>(task_name)); }
 
-            pinocchio::SE3 get_se3_ref(const std::string& task_name);
-            void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
-
+            //~~ maybe unused
+            std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
 
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
             // therefore you can re-add it later by using its name
@@ -45,6 +50,8 @@ namespace inria_wbc {
             virtual void update(const SensorData& sensor_data = {}) override;
 
         protected:
+            std::string m_ref_config;
+
             virtual void parse_tasks(const std::string&);
 
             // the list of all the tasks

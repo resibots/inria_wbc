@@ -132,11 +132,10 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
-        inria_wbc::controllers::Controller::Params params = {robot->model_filename(),
-            "../etc/franka_configurations.srdf",
+        inria_wbc::controllers::Controller::Params params = {
+            robot->model_filename(),
             sot_config_path,
             false, //~~added temporarely
-            "",
             dt,
             verbose,
             robot->mimic_dof_names()};
@@ -174,16 +173,20 @@ int main(int argc, char* argv[])
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
-            // update the sensors
+            // update the sensors //~~ no sensors added thus all zeros
+            inria_wbc::controllers::SensorData sensor_data;
+            // left foot
+            sensor_data["lf_torque"] = Eigen::Vector3d::Zero();
+            sensor_data["lf_force"] = Eigen::Vector3d::Zero();
+            // right foot
+            sensor_data["rf_torque"] = Eigen::Vector3d::Zero();
+            sensor_data["rf_force"] = Eigen::Vector3d::Zero();
+            // accelerometer
+            sensor_data["acceleration"] = Eigen::Vector3d::Zero();
+            sensor_data["velocity"] = Eigen::Vector3d::Zero();
+            // joint positions (excluding floating base)
+            sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
 
-            inria_wbc::controllers::SensorData sensor_data = {
-		Eigen::Vector3d::Zero(),
-		Eigen::Vector3d::Zero(),
-		Eigen::Vector3d::Zero(),
-		Eigen::Vector3d::Zero(),
-		Eigen::Vector3d::Zero(),
-		Eigen::Vector3d::Zero(),
-                robot->skeleton()->getPositions().tail(ncontrollable)};
 
             // step the command
             Eigen::VectorXd cmd;

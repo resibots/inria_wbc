@@ -29,7 +29,7 @@ using namespace tsid::math;
 
 namespace inria_wbc {
     namespace controllers {
-        static Register<FrankaPosTracker> __franka_pos_tracker("pos-tracker");
+        static Register<FrankaPosTracker> __franka_pos_tracker("franka-pos-tracker");
 
         FrankaPosTracker::FrankaPosTracker(const Params& params) : Controller(params)
         {
@@ -48,12 +48,12 @@ namespace inria_wbc {
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
             auto srdf_file = config["configurations"].as<std::string>();
-            auto ref_config = config["ref_config"].as<std::string>();
+            m_ref_config = config["ref_config"].as<std::string>();
             auto p_srdf = path / boost::filesystem::path(srdf_file);
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
-            q_tsid_ = robot_->model().referenceConfigurations[ref_config_];
+            q_tsid_ = robot_->model().referenceConfigurations[m_ref_config];
             q0_=q_tsid_;
 
 
@@ -106,7 +106,8 @@ namespace inria_wbc {
                    0., 0., 1.;
             rot_ee = R_z * R_y * R_x;
             ref_ee.rotation(rot_ee); 
-            set_se3_ref( ref_ee, "end_effector");
+
+            set_task_ref( ref_ee, "ee");
 
             //~~ DEBUG BEGIN: gives expected numbers
             //pinocchio::SE3 ref_given  = get_se3_ref( "end_effector");
@@ -118,7 +119,7 @@ namespace inria_wbc {
             //set_posture_ref( ref_posture);
             
             //~~ here, find out how to get the posture task form the tasks container, check the headers of this class ::se3_task(
-            set_posture_ref( robot_->model().referenceConfigurations[ref_config_]) ;
+            set_task_ref( robot_->model().referenceConfigurations[m_ref_config], "posture") ;
 
             _solve();
 
@@ -143,22 +144,33 @@ namespace inria_wbc {
             }
         }
 
-        pinocchio::SE3 FrankaPosTracker::get_se3_ref(const std::string& task_name)
+        void FrankaPosTracker::set_task_ref(const tsid::math::Vector& ref, const std::string& task_name)
         {
-            auto task = se3_task(task_name);
-            pinocchio::SE3 se3;
-            auto pos = task->getReference().pos;
-            tsid::math::vectorToSE3(pos, se3);
-            return se3;
-        }
-
-        void FrankaPosTracker::set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name)
-        {
-            auto task = se3_task(task_name);
+            auto curr_task = task<tsid::tasks::TaskJointPosture>( task_name );
             auto sample = to_sample(ref);
-            task->setReference(sample);
+            curr_task->setReference(sample);
         }
 
+        void FrankaPosTracker::set_task_ref(const pinocchio::SE3& ref, const std::string& task_name)
+        {
+            auto curr_task = task<tsid::tasks::TaskSE3Equality>( task_name );
+            auto sample = to_sample(ref);
+            curr_task->setReference(sample);
+        }
+
+        void FrankaPosTracker::get_task_ref(const std::string& task_name, tsid::math::Vector& vec)
+        {
+            auto curr_task = task<tsid::tasks::TaskJointPosture>( task_name );
+            vec  = curr_task->getReference().pos;
+            //vec  = curr_task->getReference(); //~~ i don't know the task API
+        }
+
+        void FrankaPosTracker::get_task_ref(const std::string& task_name, pinocchio::SE3& se3)
+        {
+            auto curr_task = task<tsid::tasks::TaskSE3Equality>( task_name );
+            auto pos = curr_task->getReference().pos;
+            tsid::math::vectorToSE3(pos, se3);
+        }
         void FrankaPosTracker::remove_task(const std::string& task_name, double transition_duration)
         {
             if (verbose_)
