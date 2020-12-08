@@ -18,11 +18,19 @@ namespace inria_wbc {
             CircCartTraj() = delete;
             CircCartTraj(const CircCartTraj& other) = default;
             void update(const controllers::SensorData& sensor_data) override;
+            pinocchio::SE3 func_traj( const float t);
 
         private:
+            int traj_index_;
             float dt_;
- 
-            void _generate_trajectories();
+            float pitch_angle_;
+            float radius_;
+            float traj_cycle_duration_;
+            Eigen::Vector3d xyz_offset_;
+            std::vector<pinocchio::SE3> trajectory_;
+            int num_traj_steps_;
+
+            
         };
     } // namespace behaviors
 } // namespace inria_wbc

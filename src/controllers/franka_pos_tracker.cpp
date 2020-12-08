@@ -83,44 +83,6 @@ namespace inria_wbc {
         void FrankaPosTracker::update(const SensorData& sensor_data)
         {
 
-            Eigen::Vector3d ref_xyz;
-            ref_xyz << 0.6,0.0,0.6;
-            pinocchio::SE3 ref_ee;
-            ref_ee.translation( ref_xyz );
-            Eigen::Matrix3d rot_ee;
-            const double phi =  -M_PI/6;
-            const double theta =  M_PI/6+ M_PI/2;
-            const double psi =  0.;
-
-            Eigen::Matrix3d R_x;
-            R_x << 1., 0., 0.,
-                   0., cos(phi), -sin(phi),
-                   0., sin(phi), cos(phi);
-            Eigen::Matrix3d R_y;
-            R_y << cos(theta), 0., sin(theta),
-                   0., 1., 0.,
-                   -sin(theta), 0., cos(theta);
-            Eigen::Matrix3d R_z;
-            R_z << cos(psi), -sin(psi), 0.,
-                   sin(psi), cos(psi), 0.,
-                   0., 0., 1.;
-            rot_ee = R_z * R_y * R_x;
-            ref_ee.rotation(rot_ee); 
-
-            set_task_ref( ref_ee, "ee");
-
-            //~~ DEBUG BEGIN: gives expected numbers
-            //pinocchio::SE3 ref_given  = get_se3_ref( "end_effector");
-            //ref_given.disp_impl(std::cout);
-            //~~ DEBUG END
-    
-            //Eigen::VectorXd ref_posture(9);
-            //ref_posture << 0., M_PI / 4., 0., -M_PI / 4, 0., M_PI / 2., 0., 0., 0.;
-            //set_posture_ref( ref_posture);
-            
-            //~~ here, find out how to get the posture task form the tasks container, check the headers of this class ::se3_task(
-            set_task_ref( robot_->model().referenceConfigurations[m_ref_config], "posture") ;
-
             _solve();
 
         }

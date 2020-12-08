@@ -5,6 +5,12 @@ CONTROLLER:
   tasks: tasks_franka.yaml
 BEHAVIOR:
   name : circular-cartesian-trajectory
+  pitch_angle: 0.7
+  radius: 0.2
+  x_0: 0.4 
+  y_0: 0.0
+  z_0: 0.5
+  traj_cycle_duration: 5.0
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/franka.urdf 
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/franka_configurations.srdf 
@@ -12,6 +18,4 @@ PARAMS:
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false
-
   mimic_dof_names : []
-
