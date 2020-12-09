@@ -204,8 +204,6 @@ int main(int argc, char *argv[])
 
     inria_wbc::estimators::Filter::Ptr ma_filter = std::make_shared<inria_wbc::estimators::MovingAverageFilter>(joints_with_tq.size(), 10);
     torque_collision.set_filter(ma_filter);
-    //inria_wbc::estimators::Filter::Ptr mm_filter = std::make_shared<inria_wbc::estimators::MovingAverageFilter>(joints_with_tq.size(), 10);
-    //torque_collision.set_filter(mm_filter);
 
     // add sensors to the robot
     auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
@@ -303,8 +301,7 @@ int main(int argc, char *argv[])
             // safety check on torque sensors (check prevous command with actual sensor measurement)
             if(vm["actuators"].as<std::string>() == "servo" && it_cmd > 0)
             {
-                
-                if( !torque_collision.check(tsid_tau, tq_sensors, inria_wbc::safety::TorqueCollisionDetection::MovingAverageFilter() ) )
+                if( !torque_collision.check(tsid_tau, tq_sensors) )
                 {
                     std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
                     auto inv = torque_collision.get_invalid_ids();

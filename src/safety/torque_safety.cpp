@@ -10,8 +10,6 @@ namespace safety {
 TorqueCollisionDetection::TorqueCollisionDetection(int nvar, double threshold, int buffer_len)
 :   _nvar(nvar),
     _step_count(0),
-    _buffer_len(buffer_len),
-    _buffer(_nvar, _buffer_len),
     _threshold(Eigen::VectorXd::Constant(_nvar, threshold)),
     _discrepancy(_nvar),
     _filtered_sensors(_nvar)
@@ -23,8 +21,6 @@ TorqueCollisionDetection::TorqueCollisionDetection(int nvar, double threshold, i
 TorqueCollisionDetection::TorqueCollisionDetection(Eigen::VectorXd threshold, int buffer_len)
 :   _nvar(threshold.size()),
     _step_count(0),
-    _buffer_len(buffer_len),
-    _buffer(_nvar, _buffer_len),
     _threshold(threshold),
     _discrepancy(_nvar),
     _filtered_sensors(_nvar)
@@ -36,17 +32,20 @@ TorqueCollisionDetection::TorqueCollisionDetection(Eigen::VectorXd threshold, in
 bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors)
 {
     ++_step_count;
+    
+    _filtered_sensors = _filter_ptr ? _filter_ptr->filter(sensors) : sensors;
 
     if(_add_offset)
-        _compute_validity(target, sensors + _offset);
-    else
-        _compute_validity(target, sensors);
-    
+        _filtered_sensors = _filtered_sensors + _offset;
+
+    _compute_validity(target, _filtered_sensors);
+
     if(_invalid_threshold > 0)
         _compute_validity_over_steps();
 
     return _validity.all();
 }
+
 
 
 void TorqueCollisionDetection::set_threshold(double threshold)

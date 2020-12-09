@@ -58,8 +58,6 @@ public:
     TorqueCollisionDetection(Eigen::VectorXd threshold, int buffer_len=1);
     ~TorqueCollisionDetection() = default;
 
-    template <typename FilterFunctor = MeanFilter>
-    bool check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors, FilterFunctor filter);
     bool check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);
 
     void set_max_consecutive_invalid(unsigned int counter);
@@ -93,9 +91,7 @@ private:
 
     int _nvar;
     int _step_count;
-    int _buffer_len;
 
-    Eigen::MatrixXd _buffer;
     Eigen::VectorXd _offset;
     Eigen::VectorXd _threshold;
     Eigen::VectorXd _discrepancy;
@@ -111,40 +107,6 @@ private:
     estimators::Filter::Ptr _filter_ptr;
 
 };
-
-template <typename FilterFunctor>
-bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors, FilterFunctor filter)
-{
-    //_step_count++;
-
-    // keep an ordered buffer for denoising and get denoised sensor value
-    if(_step_count < _buffer_len)
-    {
-        _buffer.col(_step_count++) = sensors;
-        _filtered_sensors = filter(_buffer.leftCols(_step_count));
-    }
-    else
-    {
-        _buffer.leftCols(_buffer_len-1) = _buffer.rightCols(_buffer_len-1).eval();
-        _buffer.rightCols<1>() = sensors;
-        _filtered_sensors = filter(_buffer);
-    }
-
-    {
-        auto filter2 = _filter_ptr->filter(sensors);
-        IWBC_ASSERT(filter2 == _filtered_sensors, "Filter class return different filtered values from functor");
-    }
-
-    if(_add_offset)
-        _filtered_sensors = _filtered_sensors + _offset;
-
-    _compute_validity(target, _filtered_sensors);
-
-    if(_invalid_threshold > 0)
-        _compute_validity_over_steps();
-
-    return _validity.all();
-}
 
 
 } // namespace safety
