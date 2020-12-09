@@ -70,7 +70,7 @@ namespace inria_wbc {
               robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
             }
             else{
-              fb_joint_name_ = ""; //~~ not sure if I can remove it yet
+              fb_joint_name_ = "";
               const std::vector<std::string> dummy_vec;
               robot_ = std::make_shared<RobotWrapper>(params.urdf_path, dummy_vec ,verbose_); //this overloaded constructor allows to to not have a f_base
             }
@@ -89,7 +89,7 @@ namespace inria_wbc {
             t_ = 0.0;
 
             uint nactuated = robot_->na();
-            uint ndofs = robot_->nv(); // na + 6 (floating base) //~~??? not always the case now
+            uint ndofs = robot_->nv(); // na + 6 (floating base), if not f_base only na
 
             v_tsid_ = Vector::Zero(ndofs);
             a_tsid_ = Vector::Zero(ndofs);
@@ -294,7 +294,7 @@ namespace inria_wbc {
             parse(verbose, "verbose", config, "PARAMS", verbose);
             parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
 
-            bool dummy_value_has_floating_base = true; //~~ decide if should be here
+            bool dummy_value_has_floating_base = true; //~~ decide if it should be here
 
             Controller::Params params = {
                 urdf_path,

@@ -15,12 +15,13 @@ namespace inria_wbc {
               config["x_0"].as<float>(),
               config["y_0"].as<float>(),
               config["z_0"].as<float>();
-            traj_cycle_duration_ = config["traj_cycle_duration:"].as<float>();
+
+            traj_cycle_duration_ = config["traj_cycle_duration"].as<float>();
             dt_ = controller_->dt();
             num_traj_steps_ = round( traj_cycle_duration_/ dt_);
             trajectory_.reserve(num_traj_steps_);
 
-            for( int i =0; i < num_traj_steps_; ++i){
+            for( int i =0; i < num_traj_steps_; ++i){ 
               float t = (float)i/(float)num_traj_steps_;
 
               pinocchio::SE3 ref_ee = func_traj( t );
@@ -44,8 +45,8 @@ namespace inria_wbc {
 
             Eigen::Matrix3d rot_ee;
             const double phi =  0.;
-            const double theta = pitch_angle_;
-            const double psi =  beta + M_PI/2.; //~~ see if the offset is pi/2 or pi
+            const double theta = pitch_angle_ + M_PI/2.;
+            const double psi =  beta + M_PI;
 
             Eigen::Matrix3d R_x;
             R_x << 1., 0., 0.,
@@ -76,16 +77,6 @@ namespace inria_wbc {
             controller_->update(sensor_data);
 
             ++traj_index_;
-
-            //set_task_ref( ref_ee, "ee");
-            //pinocchio::SE3 ref_given  = get_se3_ref( "end_effector");
-            //ref_given.disp_impl(std::cout);
-            //Eigen::VectorXd ref_posture(9);
-            //ref_posture << 0., M_PI / 4., 0., -M_PI / 4, 0., M_PI / 2., 0., 0., 0.;
-            //set_posture_ref( ref_posture);
-            //controller->set_task_ref(robot_->model().referenceConfigurations[m_ref_config],"posture");
-
         }
-
     } // namespace behaviors
 } // namespace inria_wbc

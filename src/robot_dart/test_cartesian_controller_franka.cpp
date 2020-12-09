@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
-            // update the sensors //~~ no sensors added thus all zeros
+            // update the sensors
             inria_wbc::controllers::SensorData sensor_data;
             // left foot
             sensor_data["lf_torque"] = Eigen::Vector3d::Zero();

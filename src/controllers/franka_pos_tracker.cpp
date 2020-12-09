@@ -124,7 +124,6 @@ namespace inria_wbc {
         {
             auto curr_task = task<tsid::tasks::TaskJointPosture>( task_name );
             vec  = curr_task->getReference().pos;
-            //vec  = curr_task->getReference(); //~~ i don't know the task API
         }
 
         void FrankaPosTracker::get_task_ref(const std::string& task_name, pinocchio::SE3& se3)

@@ -32,10 +32,7 @@ namespace inria_wbc {
             void get_task_ref(const std::string& task_name, pinocchio::SE3& se3);
      
 
-            //~~ maybe unused
             double cost(const std::string& task_name) const override { return Controller::cost(task<tsid::tasks::TaskBase>(task_name)); }
-
-            //~~ maybe unused
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
 
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
