@@ -19,40 +19,6 @@ public:
 
     typedef Eigen::Array<bool,-1,-1> ArrayXb;
 
-    typedef struct { 
-        Eigen::VectorXd operator()(const Eigen::MatrixXd& x) { return x.rowwise().mean(); } 
-    } MeanFilter; 
-
-    typedef struct { 
-        Eigen::VectorXd operator()(const Eigen::MatrixXd& x) 
-        { 
-            int c = x.cols(), r = x.rows();
-
-            Eigen::VectorXd res(r);
-            for(int i=0; i<r; ++i)
-            {
-                Eigen::VectorXd v = x.row(i).eval();
-                double* v_ptr = v.data();
-                std::sort(v_ptr, v_ptr+c);
-                
-                if(c % 2 == 0)
-                    res(i) = (v(c/2) + v(c/2-1)) / 2;
-                else
-                    res(i) = v(c/2);
-            }
-            return res;
-        } 
-    } MedianFilter;
-
-    typedef struct { 
-        Eigen::VectorXd operator()(const Eigen::MatrixXd& x) 
-        {
-            Eigen::VectorXd average = x.rowwise().mean();
-            return average;
-        } 
-    } MovingAverageFilter; 
-
-
     TorqueCollisionDetection() = default;
     TorqueCollisionDetection(int nvar, double threshold=1.0, int buffer_len=1);
     TorqueCollisionDetection(Eigen::VectorXd threshold, int buffer_len=1);
