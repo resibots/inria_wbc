@@ -1,9 +1,11 @@
 #ifndef TORQUE_SAFETY_HPP
 #define TORQUE_SAFETY_HPP
 
+#include <iostream>
 #include <vector>
 #include <Eigen/Dense>
 
+#include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/estimators/filtering.hpp"
 
 
@@ -44,7 +46,7 @@ public:
 
     typedef struct { 
         Eigen::VectorXd operator()(const Eigen::MatrixXd& x) 
-        { 
+        {
             Eigen::VectorXd average = x.rowwise().mean();
             return average;
         } 
@@ -65,6 +67,10 @@ public:
     void set_offset(const Eigen::VectorXd& offset);
     Eigen::VectorXd get_offset() const;
     void reset_offset();
+
+    void set_filter(estimators::Filter::Ptr filter_ptr);
+    estimators::Filter::Ptr get_filter();
+    void remove_filter();
 
     void set_threshold(double threshold);
     void set_threshold(const Eigen::VectorXd& threshold);
@@ -102,12 +108,14 @@ private:
     Eigen::MatrixXi _previous_signs;
     Eigen::VectorXi _invalid_steps_threshold;
 
+    estimators::Filter::Ptr _filter_ptr;
+
 };
 
 template <typename FilterFunctor>
 bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors, FilterFunctor filter)
 {
-    _step_count++;
+    //_step_count++;
 
     // keep an ordered buffer for denoising and get denoised sensor value
     if(_step_count < _buffer_len)
@@ -120,6 +128,11 @@ bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen:
         _buffer.leftCols(_buffer_len-1) = _buffer.rightCols(_buffer_len-1).eval();
         _buffer.rightCols<1>() = sensors;
         _filtered_sensors = filter(_buffer);
+    }
+
+    {
+        auto filter2 = _filter_ptr->filter(sensors);
+        IWBC_ASSERT(filter2 == _filtered_sensors, "Filter class return different filtered values from functor");
     }
 
     if(_add_offset)

@@ -80,6 +80,21 @@ void TorqueCollisionDetection::reset_offset()
     _add_offset = false;
 }
 
+void TorqueCollisionDetection::set_filter(estimators::Filter::Ptr filter_ptr)
+{
+    _filter_ptr = filter_ptr;
+}
+
+estimators::Filter::Ptr TorqueCollisionDetection::get_filter()
+{
+    return _filter_ptr;
+}
+
+void TorqueCollisionDetection::remove_filter()
+{
+    _filter_ptr = nullptr;
+}
+
 
 Eigen::VectorXd TorqueCollisionDetection::get_discrepancy() const
 {

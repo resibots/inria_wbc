@@ -21,6 +21,7 @@
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/safety/torque_safety.hpp"
+#include "inria_wbc/estimators/filtering.hpp"
 
 
 volatile sig_atomic_t stop;
@@ -200,6 +201,11 @@ int main(int argc, char *argv[])
 
     inria_wbc::safety::TorqueCollisionDetection torque_collision(torque_threshold, 10);
     torque_collision.set_max_consecutive_invalid(5);
+
+    inria_wbc::estimators::Filter::Ptr ma_filter = std::make_shared<inria_wbc::estimators::MovingAverageFilter>(joints_with_tq.size(), 10);
+    torque_collision.set_filter(ma_filter);
+    //inria_wbc::estimators::Filter::Ptr mm_filter = std::make_shared<inria_wbc::estimators::MovingAverageFilter>(joints_with_tq.size(), 10);
+    //torque_collision.set_filter(mm_filter);
 
     // add sensors to the robot
     auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
