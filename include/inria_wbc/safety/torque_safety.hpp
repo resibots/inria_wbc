@@ -20,8 +20,8 @@ public:
     typedef Eigen::Array<bool,-1,-1> ArrayXb;
 
     TorqueCollisionDetection() = default;
-    TorqueCollisionDetection(int nvar, double threshold=1.0, int buffer_len=1);
-    TorqueCollisionDetection(Eigen::VectorXd threshold, int buffer_len=1);
+    TorqueCollisionDetection(int nvar, double threshold=1.0);
+    TorqueCollisionDetection(Eigen::VectorXd threshold);
     ~TorqueCollisionDetection() = default;
 
     bool check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);
@@ -30,7 +30,7 @@ public:
 
     void set_offset(const Eigen::VectorXd& offset);
     Eigen::VectorXd get_offset() const;
-    void reset_offset();
+    void remove_offset();
 
     void set_filter(estimators::Filter::Ptr filter_ptr);
     estimators::Filter::Ptr get_filter();
@@ -42,16 +42,16 @@ public:
 
     Eigen::VectorXd get_discrepancy() const;
 
+    Eigen::VectorXi get_validity() const;
+
     Eigen::VectorXd get_filtered_sensors() const;
 
     std::vector<int> get_invalid_ids() const;
-
 
 protected:
 
     void _compute_validity(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);
     void _compute_validity_over_steps();
-
 
 private:
 

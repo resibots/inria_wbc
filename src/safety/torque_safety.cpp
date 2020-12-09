@@ -7,7 +7,7 @@ namespace inria_wbc {
 namespace safety {
 
 
-TorqueCollisionDetection::TorqueCollisionDetection(int nvar, double threshold, int buffer_len)
+TorqueCollisionDetection::TorqueCollisionDetection(int nvar, double threshold)
 :   _nvar(nvar),
     _step_count(0),
     _threshold(Eigen::VectorXd::Constant(_nvar, threshold)),
@@ -18,7 +18,7 @@ TorqueCollisionDetection::TorqueCollisionDetection(int nvar, double threshold, i
 }
 
 
-TorqueCollisionDetection::TorqueCollisionDetection(Eigen::VectorXd threshold, int buffer_len)
+TorqueCollisionDetection::TorqueCollisionDetection(Eigen::VectorXd threshold)
 :   _nvar(threshold.size()),
     _step_count(0),
     _threshold(threshold),
@@ -32,7 +32,7 @@ TorqueCollisionDetection::TorqueCollisionDetection(Eigen::VectorXd threshold, in
 bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors)
 {
     ++_step_count;
-    
+
     _filtered_sensors = _filter_ptr ? _filter_ptr->filter(sensors) : sensors;
 
     if(_add_offset)
@@ -73,7 +73,7 @@ Eigen::VectorXd TorqueCollisionDetection::get_offset() const
     return _offset;
 }
 
-void TorqueCollisionDetection::reset_offset()
+void TorqueCollisionDetection::remove_offset()
 {
     _offset.setZero();
     _add_offset = false;
@@ -98,6 +98,11 @@ void TorqueCollisionDetection::remove_filter()
 Eigen::VectorXd TorqueCollisionDetection::get_discrepancy() const
 {
     return _discrepancy;
+}
+
+Eigen::VectorXi TorqueCollisionDetection::get_validity() const
+{
+    return _validity.matrix().cast<int>();;
 }
 
 

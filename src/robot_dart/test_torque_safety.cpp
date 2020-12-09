@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
             5e-02, 5e-02, 5e-02, 1e-01, 
             5e-02, 5e-02, 5e-02, 1e-01;
 
-    inria_wbc::safety::TorqueCollisionDetection torque_collision(torque_threshold, 10);
+    inria_wbc::safety::TorqueCollisionDetection torque_collision(torque_threshold);
     torque_collision.set_max_consecutive_invalid(5);
 
     inria_wbc::estimators::Filter::Ptr ma_filter = std::make_shared<inria_wbc::estimators::MovingAverageFilter>(joints_with_tq.size(), 10);

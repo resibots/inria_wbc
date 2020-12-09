@@ -29,8 +29,8 @@ public:
     // virtual void set_num_var(int nvar) { _nvar = nvar; reset(); }
     // virtual void set_window_size(int wsize) { _wsize = wsize; reset();  }
 
-    int get_num_var() { return _nvar; }
-    int get_window_size() { return _wsize; }
+    int get_num_var() const { return _nvar; }
+    int get_window_size() const { return _wsize; }
 
     Eigen::VectorXd filter(const Eigen::VectorXd& sample)
     {
