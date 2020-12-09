@@ -20,7 +20,7 @@ public:
     Filter() = default;
     
     Filter(int nvar, int wsize)
-    : _c(0), _nvar(nvar), _wsize(wsize)   
+    : _cnt(0), _nvar(nvar), _wsize(wsize)   
     {
         reset();
     }
@@ -36,10 +36,10 @@ public:
     {
         IWBC_ASSERT(sample.size() == _nvar, "Size of sample differs from filter get_num_var()!");
 
-        if(_c < _wsize)
+        if(_cnt < _wsize)
         {
-            _buffer.col(_c++) = sample;
-            _filter_impl(_buffer.leftCols(_c));
+            _buffer.col(_cnt++) = sample;
+            _filter_impl(_buffer.leftCols(_cnt));
         }
         else
         {
@@ -56,7 +56,7 @@ public:
 protected:
 
     // use buffer to compute the _filtered value
-    virtual void _filter_impl(const Eigen::VectorXd& window) = 0;
+    virtual void _filter_impl(const Eigen::MatrixXd& window) = 0;
 
     virtual void reset()
     {
@@ -66,10 +66,10 @@ protected:
         _filtered.resize(_nvar);
         _filtered.setZero();
 
-        _c = 0;
+        _cnt = 0;
     }
 
-    int _c;
+    int _cnt;
     int _nvar;
     int _wsize;
     Eigen::MatrixXd _buffer;
@@ -85,7 +85,7 @@ public:
     MedianFilter() = default;
     MedianFilter(int nvar, int wsize) : Filter(nvar, wsize) { }
 
-    void _filter_impl(const Eigen::VectorXd& window) override
+    void _filter_impl(const Eigen::MatrixXd& window) override
     {
         int c = window.cols(), r = window.rows();
 
@@ -115,9 +115,9 @@ public:
     MovingAverageFilter() = default;
     MovingAverageFilter(int nvar, int wsize) : Filter(nvar, wsize) { }
 
-    void _filter_impl(const Eigen::VectorXd& window) override
+    void _filter_impl(const Eigen::MatrixXd& window) override
     {
-        _filtered = _buffer.rowwise().mean();
+        _filtered = window.rowwise().mean();
     }
 };
 
@@ -147,7 +147,7 @@ public:
 
 protected:
 
-    void _filter_impl(const Eigen::VectorXd& window) override
+    void _filter_impl(const Eigen::MatrixXd& window) override
     {
         _filtered = window.rightCols(1);
 
