@@ -13,7 +13,7 @@ CONTROLLER:
 BEHAVIOR:
   name : talos-clapping
   trajectory_duration : 1.0
-  motion_size : 0.8
+  motion_size : 1.1
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf

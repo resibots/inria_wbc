@@ -22,6 +22,7 @@
 #include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
 static const std::string red = "\x1B[31m";
@@ -47,6 +48,7 @@ int main(int argc, char* argv[])
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("ghost,g", "display the ghost (Pinocchio model)")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
+        ("check_self_collisions", "check the self collisions (print if a collision)")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("verbose,v", "verbose mode (controller)")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
@@ -203,6 +205,10 @@ int main(int argc, char* argv[])
                 simu.add_visual_robot(self_collision_spheres.back());
             }
         }
+
+        // create the collision detector (useful only if --check_self_collisions)
+        inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
+
         // the main loop
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
@@ -222,6 +228,14 @@ int main(int argc, char* argv[])
             // joint positions (excluding floating base)
             sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
 
+            if (vm.count("check_self_collisions")) {
+                IWBC_ASSERT(!vm.count("fast"), "=> check_self_collisions is not compatible with --fast!");
+                auto collision_list = collision_detector.collide();
+                if (!collision_list.empty())
+                    std::cout << " ------ Collisions ------ " << std::endl;
+                for (auto& s : collision_list)
+                    std::cout <<  s << std::endl;
+            }
             // step the command
             Eigen::VectorXd cmd;
             if (simu.schedule(simu.control_freq())) {
@@ -335,9 +349,9 @@ int main(int argc, char* argv[])
                 oss << "[Cmd: " << t_cmd << " ms]" << std::endl;
                 if (push)
                     oss << "pushing..." << std::endl;
-#ifdef GRAPHIC
-                    // if (!vm.count("mp4"))
-                    //     simu.set_text_panel(oss.str());
+#ifdef GRAPHIC // to avoid the warning
+                    if (!vm.count("mp4"))
+                        simu.set_text_panel(oss.str());
 #endif
                 it_simu = 0;
                 it_cmd = 0;
