@@ -134,7 +134,6 @@ int main(int argc, char* argv[])
         inria_wbc::controllers::Controller::Params params = { 
             robot->model_filename(),
             sot_config_path,
-            true, //~~added temporarely
             dt,
             verbose,
             robot->mimic_dof_names()};

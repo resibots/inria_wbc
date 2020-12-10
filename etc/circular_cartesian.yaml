@@ -15,8 +15,10 @@ PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/franka.urdf 
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/franka_configurations.srdf 
   sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/circular_cartesian.yaml
+  has_floating_base: false
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false
   mimic_dof_names : []
+
 

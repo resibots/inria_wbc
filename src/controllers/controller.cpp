@@ -57,7 +57,11 @@ namespace inria_wbc {
             params_ = params;
             verbose_ = params_.verbose;
             pinocchio::Model robot_model;
-            if (params.has_floating_base ) {
+
+            YAML::Node c= YAML::LoadFile(params_.sot_config_path);
+            has_floating_base_ = c["PARAMS"]["has_floating_base"].as<bool>();
+        
+            if (has_floating_base_) {
 
               if (!params.floating_base_joint_name.empty()) {
                   fb_joint_name_ = params.floating_base_joint_name; //floating base joint already in urdf
@@ -150,7 +154,7 @@ namespace inria_wbc {
                 t_ += dt_;
 
 
-                if ( params_.has_floating_base){
+                if ( has_floating_base_){
                   Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                   Eigen::AngleAxisd aaxis(quat);
                   //q_tsid_ of size 37 (pos+quat+nactuated)
@@ -197,7 +201,7 @@ namespace inria_wbc {
         {
             auto na = robot_->model().names;
             std::vector<std::string> tsid_controllables;
-            if ( params_.has_floating_base){
+            if ( has_floating_base_){
               tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
             }
             else{
@@ -215,7 +219,7 @@ namespace inria_wbc {
         {
 
             std::vector<std::string> floating_base_dofs;
-            if ( params_.has_floating_base){
+            if ( has_floating_base_){
 
                 if (fb_joint_name_ == "root_joint") {
                     floating_base_dofs = {"rootJoint_pos_x",
@@ -294,12 +298,10 @@ namespace inria_wbc {
             parse(verbose, "verbose", config, "PARAMS", verbose);
             parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
 
-            bool dummy_value_has_floating_base = true; //~~ decide if it should be here
 
             Controller::Params params = {
                 urdf_path,
                 sot_config_path,
-                dummy_value_has_floating_base,
                 dt,
                 verbose,
                 mimic_dof_names,

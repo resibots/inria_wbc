@@ -52,7 +52,7 @@ namespace inria_wbc {
             auto p_srdf = path / boost::filesystem::path(srdf_file);
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
          
-            if ( params_.has_floating_base){
+            if ( has_floating_base_){
 
               //q_tsid_ is of size 37 (pos+quat+nactuated)
               q_tsid_ = robot_->model().referenceConfigurations[ref_config];

@@ -24,7 +24,6 @@ BOOST_AUTO_TEST_CASE(running)
         inria_wbc::controllers::Controller::Params params = {
             robot->model_filename(),
             sot_config_path,
-            true,
             0.001,
             false,
             robot->mimic_dof_names()};

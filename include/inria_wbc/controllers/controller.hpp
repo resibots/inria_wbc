@@ -38,7 +38,6 @@ namespace inria_wbc {
             struct Params {
                 std::string urdf_path;
                 std::string sot_config_path;
-                bool has_floating_base; //~~added temporarly
                 float dt;
                 bool verbose;
                 std::vector<std::string> mimic_dof_names;
@@ -122,6 +121,7 @@ namespace inria_wbc {
             bool verbose_;
             double t_;
             double dt_;
+            bool has_floating_base_;
 
             std::string fb_joint_name_; //name of the floating base joint
             std::vector<std::string> mimic_dof_names_;
