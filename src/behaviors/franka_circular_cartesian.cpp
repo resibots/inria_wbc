@@ -73,7 +73,7 @@ namespace inria_wbc {
               traj_index_ = 0;
             }
 
-            std::static_pointer_cast<inria_wbc::controllers::FrankaPosTracker>(controller_)->set_task_ref(trajectory_[traj_index_],"ee");
+            std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(trajectory_[traj_index_],"ee");
             controller_->update(sensor_data);
 
             ++traj_index_;
