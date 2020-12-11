@@ -48,6 +48,8 @@ public:
 
     std::vector<int> get_invalid_ids() const;
 
+    void reset();
+
 protected:
 
     void _compute_validity(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors);

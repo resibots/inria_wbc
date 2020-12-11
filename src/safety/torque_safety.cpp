@@ -29,6 +29,16 @@ TorqueCollisionDetection::TorqueCollisionDetection(Eigen::VectorXd threshold)
 }
 
 
+void TorqueCollisionDetection::reset()
+{
+    _step_count = 0;
+    _previous_signs.setZero();
+
+    if(_filter_ptr)
+        _filter_ptr->reset();
+}
+
+
 bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors)
 {
     ++_step_count;

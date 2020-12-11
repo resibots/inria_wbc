@@ -53,11 +53,7 @@ public:
         return _filtered;
     };
 
-protected:
-
-    // use buffer to compute the _filtered value
-    virtual void _filter_impl(const Eigen::MatrixXd& window) = 0;
-
+    
     virtual void reset()
     {
         _buffer.resize(_nvar, _wsize);
@@ -68,6 +64,11 @@ protected:
 
         _cnt = 0;
     }
+
+protected:
+
+    // use buffer to compute the _filtered value
+    virtual void _filter_impl(const Eigen::MatrixXd& window) = 0;
 
     int _cnt;
     int _nvar;
