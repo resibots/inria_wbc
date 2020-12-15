@@ -1,5 +1,5 @@
-#ifndef TORQUE_SAFETY_HPP
-#define TORQUE_SAFETY_HPP
+#ifndef IWBC_SAFETY_TORQUE_COLLISION_DETECTION_HPP
+#define IWBC_SAFETY_TORQUE_COLLISION_DETECTION_HPP
 
 #include <iostream>
 #include <vector>
@@ -80,4 +80,4 @@ private:
 } // namespace safety
 } // namespace inria_wbc
 
-#endif
+#endif // IWBC_SAFETY_TORQUE_COLLISION_DETECTION_HPP

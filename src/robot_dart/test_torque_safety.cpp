@@ -20,7 +20,7 @@
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
-#include "inria_wbc/safety/torque_safety.hpp"
+#include "inria_wbc/safety/torque_collision_detection.hpp"
 #include "inria_wbc/estimators/filtering.hpp"
 
 
@@ -167,16 +167,6 @@ int main(int argc, char *argv[])
 
 
     ///////////////// TORQUE COLLISION SAFETY CHECK ////////////////////////////
-    for(auto a : robot->body_names())
-        std::clog << a << std::endl;
-    robot->set_draw_axis("arm_left_2_link");
-    robot->set_draw_axis("arm_left_4_link");
-    robot->set_draw_axis("arm_right_4_link");
-    robot->set_draw_axis("arm_right_4_link");
-    robot->set_draw_axis("torso_2_link");
-    robot->set_draw_axis("leg_left_3_link");
-    robot->set_draw_axis("leg_right_4_link");
-    robot->set_draw_axis("head_2_link");
     
     // add joint torque sensor to the simulation
     std::vector<std::string> joints_with_tq = 
@@ -187,12 +177,6 @@ int main(int argc, char *argv[])
         "arm_right_1_joint", "arm_right_2_joint","arm_right_3_joint", "arm_right_4_joint"}; // id 17 left_arm_4
 
     Eigen::VectorXd torque_threshold(joints_with_tq.size());
-/*     torque_threshold << 3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
-                3.5e+00, 3.9e+01, 2.9e+01, 4.4e+01, 5.7e+01, 2.4e+01, 
-                4.8e-04, 1.6e-01, 
-                4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03, 
-                4.5e-02, 2.6e-02, 6.1e-03, 9.0e-03; */
-
     torque_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
             3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
             5e-02, 2e-01, 
@@ -305,19 +289,6 @@ int main(int argc, char *argv[])
                 {
                     std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
                     auto inv = torque_collision.get_invalid_ids();
-                    
-/*                     std::cerr <<"invalid dofs: [";
-                    for(auto v : inv) std::cerr << v <<" ";
-                    std::cerr <<"] with discrepancy [";
-                    for(auto v : inv) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
-                    std::cerr << "]\n"; */
-
-                    //std::cerr <<"{18, 19, 20, 21} discrepancy: ";
-                    //for(auto v : {18, 19, 20, 21}) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
-                    //std::cerr <<"\n{14, 15, 16, 17} discrepancy: ";
-                    //for(auto v : {14, 15, 16, 17}) std::cerr << torque_collision.get_discrepancy()(v) <<" ";
-                    //std::cerr << "\n";
-
                     external_detected = true;
                 }
                 else
@@ -326,8 +297,7 @@ int main(int argc, char *argv[])
                 }
 
                 Eigen::VectorXd output_data(tsid_tau.size() + tq_sensors.size());
-                output_data << tsid_tau, torque_collision.get_filtered_sensors(); //tq_sensors;
-                std::cout << output_data.transpose().format(fmt) << std::endl;
+                output_data << tsid_tau, torque_collision.get_filtered_sensors();
             }
 
             {
@@ -347,19 +317,12 @@ int main(int argc, char *argv[])
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, dt);
                 else // torque
                     cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q);
-                
-                //if(external_detected)
-                //    cmd.setZero();
 
                 auto cmd_filtered = controller->filter_cmd(cmd).tail(ncontrollable);
                 robot->set_commands(cmd_filtered, controllable_dofs);
 
                 // update the expected torque from tsid solution
                 tsid_tau = vector_select(controller->tau(), tq_joints_idx);
-
-                //if(external_detected)
-                //    tsid_tau = vector_select(robot->gravity_forces(), tq_joints_idx);
-
             }
             else
             {

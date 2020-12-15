@@ -35,7 +35,7 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/behaviors/talos_walk_on_spot.hpp
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
-                            include/inria_wbc/safety/torque_safety.hpp
+                            include/inria_wbc/safety/torque_collision_detection.hpp
                             include/inria_wbc/utils/factory.hpp
                             include/inria_wbc/exceptions.hpp
                             include/inria_wbc/robot_dart/cmd.hpp
@@ -53,7 +53,7 @@ set(INRIA_WBC_SOURCES
                             src/controllers/talos_pos_tracker.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
-                            src/safety/torque_safety.cpp
+                            src/safety/torque_collision_detection.cpp
                             src/behaviors/talos_walk_on_spot.cpp
                             src/behaviors/talos_clapping.cpp                            
                             src/estimators/cop.cpp
