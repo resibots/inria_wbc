@@ -19,7 +19,7 @@ BEHAVIOR:
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
-  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/squat.yaml
+  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/walk_on_spot.yaml
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false
