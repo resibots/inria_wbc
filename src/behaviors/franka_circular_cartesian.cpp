@@ -37,16 +37,16 @@ namespace inria_wbc {
 
             Eigen::Vector3d ref_xyz;
             ref_xyz << 
-              cos(beta) * radius_,
+              0.0,
               sin(beta) * radius_,
-              0.0;
+              cos(beta) * radius_;
 
             ref_ee.translation( ref_xyz + xyz_offset_);
 
             Eigen::Matrix3d rot_ee;
-            const double phi =  0.;
+            const double phi =  M_PI;
             const double theta = pitch_angle_ + M_PI/2.;
-            const double psi =  beta + M_PI;
+            const double psi =  0.;
 
             Eigen::Matrix3d R_x;
             R_x << 1., 0., 0.,
