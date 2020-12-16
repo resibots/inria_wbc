@@ -66,7 +66,7 @@ namespace tsid {
 
             const std::vector<Vector3>& avoided_frames_positions() const { return m_avoided_frames_positions; }
             const std::vector<double>& avoided_frames_r0s() const { return m_avoided_frames_r0s; }
-            bool collision() const { return m_collision; }
+            bool collision(int i) const { return m_collisions[i]; }
             double radius() const { return m_radius; }
         protected:
             bool compute_C(const Vector3& x, const std::vector<Vector3>& frames_positions);
@@ -96,7 +96,7 @@ namespace tsid {
 
             std::vector<Vector3> m_avoided_frames_positions;
 
-            bool m_collision;
+            std::vector<bool> m_collisions;
 
             Eigen::MatrixXd m_A;
             Eigen::VectorXd m_B;

@@ -3,6 +3,7 @@ CONTROLLER:
   configurations: talos_configurations.srdf 
   ref_config: pal_start
   tasks: tasks_talos.yaml
+  frames: frames_talos.yaml
   stabilizer:
     activated: true
     filter_size: 5

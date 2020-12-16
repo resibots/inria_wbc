@@ -57,6 +57,7 @@ namespace tsid {
                 m_avoided_frames_ids.push_back(m_robot.model().getFrameId(it.first));
                 m_avoided_frames_r0s.push_back(it.second);
             }
+            m_collisions.resize(m_avoided_frames_ids.size());
         }
 
         int TaskSelfCollision::dim() const
@@ -97,8 +98,8 @@ namespace tsid {
 
             m_A = Eigen::MatrixXd::Zero(1, m_robot.nv());
             m_B = Eigen::MatrixXd::Zero(1, 1);
+            std::fill(m_collisions.begin(), m_collisions.end(), false);
 
-            m_collision = false;
             for (size_t i = 0; i < m_avoided_frames_ids.size(); ++i) {
                 // pos & Jacobian
                 m_robot.framePosition(data, m_avoided_frames_ids[i], oMi);
@@ -111,17 +112,19 @@ namespace tsid {
                 double norm = sqrt(square_norm);
                 double r = m_avoided_frames_r0s[i];
 
-                // if in the influence zone
-                if (norm <= r) {
-                    m_collision = true;
-                }
-                double a = (r + m_radius) * 0.5;
+                
+                double eps = 1e-9; // we consider that we influence if above eps
                 double p = m_p;
-                static const Eigen::Matrix3d I = Eigen::Matrix3d::Identity(3, 3);
+                double a = (r + m_radius);// * pow(-log(eps), -1.0 / p); //about 0.5;
 
+                // if in the influence zone
+                if (norm <= a) {
+                    m_collisions[i] = true;
+                }
+                static const Eigen::Matrix3d I = Eigen::Matrix3d::Identity(3, 3);
                 //if (norm < r + m_radius) // why do we need this??
                 {
-                   // std::cout << "activated for:" << m_tracked_frame_name << " norm:" << norm << " r:" << r << " radius:" << m_radius << std::endl;
+                    // std::cout << "activated for:" << m_tracked_frame_name << " norm:" << norm << " r:" << r << " radius:" << m_radius << std::endl;
                     m_robot.frameJacobianWorld(data, m_avoided_frames_ids[i], m_Js[i]);
                     //a_frame = m_robot.frameAccelerationWorldOriented(data, m_avoided_frames_ids[i]);
                     m_robot.frameClassicAcceleration(data, m_avoided_frames_ids[i], a_frame); // TODO dJ.dq in world frame
@@ -129,7 +132,7 @@ namespace tsid {
                     auto J = J1 - m_Js[i].block(0, 0, 3, m_robot.nv());
                     Eigen::Vector3d drift = m_drift - a_frame.linear();
 
-                    m_C(0, 0) = exp(-pow(norm / a, p));// - exp(-pow((r + m_radius) / a, p));
+                    m_C(0, 0) = exp(-pow(norm / a, p));
                     m_grad_C = -(p / pow(a, p) * pow(norm, p - 2)) * exp(-pow(norm / a, p)) * diff;
                     m_Hessian_C = exp(-pow(norm / a, p)) * ((p * p / pow(a, 2 * p) * pow(norm, 2 * p - 4) - p * (p - 2) / pow(a, p) * pow(norm, p - 4)) * diff * diff.transpose() - (p / pow(a, p) * pow(norm, p - 2)) * I);
 

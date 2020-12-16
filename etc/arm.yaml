@@ -9,6 +9,7 @@ CONTROLLER:
     filter_size: 5
     p: [0.07, 0.07]
     d: [0.01, 0.01]
+  frames: frames_talos.yaml
 BEHAVIOR:
   name : talos-move-arm
   trajectory_duration : 1
