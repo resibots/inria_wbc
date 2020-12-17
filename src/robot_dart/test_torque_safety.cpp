@@ -18,6 +18,7 @@
 #endif
 
 #include "inria_wbc/behaviors/behavior.hpp"
+#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/safety/torque_collision_detection.hpp"
@@ -29,17 +30,6 @@ void stopsig(int signum)
 {
     stop = 1;
 }
-
-
-Eigen::VectorXd vector_select(const Eigen::VectorXd& vec, const std::vector<int>& ids)
-{
-    int ct = 0;
-    Eigen::VectorXd new_vec(ids.size());
-    for(int value : ids)
-        new_vec(ct++) = vec(value);
-    return new_vec;
-}
-
 
 
 int main(int argc, char *argv[])
@@ -164,31 +154,6 @@ int main(int argc, char *argv[])
     
     uint ncontrollable = controllable_dofs.size();
 
-
-
-    ///////////////// TORQUE COLLISION SAFETY CHECK ////////////////////////////
-    
-    // add joint torque sensor to the simulation
-    std::vector<std::string> joints_with_tq = 
-        {"leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint", 
-        "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
-        "torso_1_joint", "torso_2_joint", 
-        "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
-        "arm_right_1_joint", "arm_right_2_joint","arm_right_3_joint", "arm_right_4_joint"}; // id 17 left_arm_4
-
-    Eigen::VectorXd torque_threshold(joints_with_tq.size());
-    torque_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
-            3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
-            5e-02, 2e-01, 
-            5e-02, 5e-02, 5e-02, 1e-01, 
-            5e-02, 5e-02, 5e-02, 1e-01;
-
-    inria_wbc::safety::TorqueCollisionDetection torque_collision(torque_threshold);
-    torque_collision.set_max_consecutive_invalid(5);
-
-    inria_wbc::estimators::Filter::Ptr ma_filter = std::make_shared<inria_wbc::estimators::MovingAverageFilter>(joints_with_tq.size(), 10);
-    torque_collision.set_filter(ma_filter);
-
     // add sensors to the robot
     auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
     auto ft_sensor_right = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint");
@@ -197,48 +162,29 @@ int main(int argc, char *argv[])
     imu_config.frequency = 1000; // update rate of the sensor
     auto imu = simu.add_sensor<robot_dart::sensor::IMU>(imu_config);
     
-    std::vector<int> tq_joints_idx;
     std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
 
-    auto filtered_dof_names = robot->dof_names(true, true, true); // filter out mimic, passive and locked dofs
-    for(const auto& joint : joints_with_tq)
+    auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
+    for(const auto& joint : talos_tracker_controller->torque_sensor_joints())
     {
-        auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
-        tq_joints_idx.push_back(std::distance(filtered_dof_names.begin(), it));
         torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000)); 
-        std::cerr << "Add joint " << joint << " with index " << std::distance(filtered_dof_names.begin(), it) << std::endl;
+        std::cerr << "Add joint torque sensor:  " << joint << std::endl;
     }
-
-    std::cerr << "\nDOF NAMES\n";
-    for(const auto& i : robot->dof_names())
-        std::cerr << i << std::endl;
-
-    std::cerr << "\nFILTERED DOF NAMES\n";
-    for(const auto& i : robot->dof_names(true, true, true))
-        std::cerr << i << std::endl;
-
-    std::cerr << "\nJOINT NAMES\n";
-    for(const auto& i : robot->joint_names())
-        std::cerr << i << std::endl;
-    std::cerr << std::endl;
     
     // reading from sensors
-    Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(joints_with_tq.size());
-    // expected torque from tsid
-    Eigen::VectorXd tsid_tau = Eigen::VectorXd::Zero(joints_with_tq.size());
-
+    Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
 
     // set of external forxes applied during simulation
     typedef std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d> ExternalForce; // body 
     std::map<int, ExternalForce> external_forces;
-    external_forces[2]  = std::make_tuple("arm_left_2_link",  Eigen::Vector3d {+0.0, 5.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
-    external_forces[4]  = std::make_tuple("arm_right_2_link", Eigen::Vector3d {+0.0, 3.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
-    external_forces[6]  = std::make_tuple("torso_2_link",     Eigen::Vector3d {-5.0, 0.0, 0.0}, Eigen::Vector3d {0.0, 0.0, +0.25});
-    external_forces[9] =  std::make_tuple("arm_right_4_link", Eigen::Vector3d {+0.0, 1.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
-    external_forces[10] = std::make_tuple("arm_left_4_link",  Eigen::Vector3d {+0.0, 9.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
-    external_forces[12] = std::make_tuple("leg_right_4_link", Eigen::Vector3d {+0.0, 3.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.25});
-    external_forces[15] = std::make_tuple("leg_left_3_link",  Eigen::Vector3d {-4.0, 1.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.25});
-    external_forces[17] = std::make_tuple("head_2_link",      Eigen::Vector3d {-9.0, 1.0, 0.0}, Eigen::Vector3d {0.0, 0.0, +0.20});
+    external_forces[2]  = std::make_tuple("arm_left_2_link",  Eigen::Vector3d {+0.0, 45.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
+    external_forces[4]  = std::make_tuple("arm_right_2_link", Eigen::Vector3d {+0.0, 43.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
+    external_forces[6]  = std::make_tuple("torso_2_link",     Eigen::Vector3d {-45.0, 0.0, 0.0}, Eigen::Vector3d {0.0, 0.0, +0.25});
+    external_forces[9] =  std::make_tuple("arm_right_4_link", Eigen::Vector3d {+0.0, 31.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
+    external_forces[10] = std::make_tuple("arm_left_4_link",  Eigen::Vector3d {+0.0, 30.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.15});
+    external_forces[12] = std::make_tuple("leg_right_4_link", Eigen::Vector3d {+0.0, 53.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.25});
+    external_forces[15] = std::make_tuple("leg_left_3_link",  Eigen::Vector3d {-24.0, 1.0, 0.0}, Eigen::Vector3d {0.0, 0.0, -0.25});
+    external_forces[17] = std::make_tuple("head_2_link",      Eigen::Vector3d {-19.0, 51.0, 0.0}, Eigen::Vector3d {0.0, 0.0, +0.20});
 
 
     Eigen::IOFormat fmt(Eigen::StreamPrecision, Eigen::DontAlignCols, " ", "\n", "", "");
@@ -257,6 +203,9 @@ int main(int argc, char *argv[])
     using namespace std::chrono;
     while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done())
     {
+        // get actual torque from sensors
+        for(auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
+            tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
 
         // update the sensors
         inria_wbc::controllers::SensorData sensor_data;
@@ -271,34 +220,17 @@ int main(int argc, char *argv[])
         sensor_data["velocity"] = robot->com_velocity().tail<3>();
         // joint positions (excluding floating base)
         sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+        // joint torque sensors
+        sensor_data["joints_torque"] = tq_sensors;
 
         // step the command
         if (simu.schedule(simu.control_freq()))
         {
             auto t1 = high_resolution_clock::now();
 
-            // get actual torque from sensors
-            for(auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
-                tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
-
-
             // safety check on torque sensors (check prevous command with actual sensor measurement)
             if(vm["actuators"].as<std::string>() == "servo" && it_cmd > 0)
-            {
-                if( !torque_collision.check(tsid_tau, tq_sensors) )
-                {
-                    std::cerr << "torque discrepancy over threshold: " <<torque_collision.get_discrepancy().maxCoeff() << '\n';
-                    auto inv = torque_collision.get_invalid_ids();
-                    external_detected = true;
-                }
-                else
-                {
-                    external_detected = false;
-                }
-
-                Eigen::VectorXd output_data(tsid_tau.size() + tq_sensors.size());
-                output_data << tsid_tau, torque_collision.get_filtered_sensors();
-            }
+                external_detected = talos_tracker_controller->collision_detected();
 
             {
                 std::cerr << "Collision detection [";
@@ -320,9 +252,6 @@ int main(int argc, char *argv[])
 
                 auto cmd_filtered = controller->filter_cmd(cmd).tail(ncontrollable);
                 robot->set_commands(cmd_filtered, controllable_dofs);
-
-                // update the expected torque from tsid solution
-                tsid_tau = vector_select(controller->tau(), tq_joints_idx);
             }
             else
             {

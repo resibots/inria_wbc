@@ -9,6 +9,10 @@ CONTROLLER:
     filter_size: 5
     p: [0.05, 0.05]
     d: [0.01, 0.01]
+  collision_detection:
+    activated: true
+    filter_size: 30
+    max_invalid: 5
 BEHAVIOR:
   name : talos-squat
   trajectory_duration : 3
