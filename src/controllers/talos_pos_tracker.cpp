@@ -80,6 +80,14 @@ namespace inria_wbc {
                     1e+01, 1e+01, 1e+01, 1e+01, 
                     1e+01, 1e+01, 1e+01, 1e+01;
 
+                // update thresholds from file (if any)
+                if (c["thresholds"]) {
+                    auto path = boost::filesystem::path(sot_config_path).parent_path();
+                    auto p_thresh = path / boost::filesystem::path(c["thresholds"].as<std::string>());
+                    parse_collision_thresholds(p_thresh.string());
+                }
+
+
                 _torque_collision_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
 
                 _torque_collision_detection = safety::TorqueCollisionDetection(_torque_collision_threshold);
@@ -93,7 +101,23 @@ namespace inria_wbc {
                 std::cout << "D:" << _stabilizer_d.transpose() << std::endl;
 
                 std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
+                std::cout << "with thresholds" << std::endl;
+                for(size_t id = 0; id < _torque_collision_joints.size(); ++id)
+                    std::cout << _torque_collision_joints[id] << ": " << _torque_collision_threshold(id) << std::endl;
             }
+        }
+
+        void TalosPosTracker::parse_collision_thresholds(const std::string& config_path)
+        {
+            YAML::Node config =  YAML::LoadFile(config_path);
+            for(size_t jid = 0; jid < _torque_collision_joints.size(); ++jid)
+            {
+                std::string joint = _torque_collision_joints[jid];
+                if(config[joint])
+                    _torque_collision_threshold(jid) = config[joint].as<double>();
+            }
+
+            return;
         }
 
         void TalosPosTracker::update(const SensorData& sensor_data)

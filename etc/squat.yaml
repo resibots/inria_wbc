@@ -13,6 +13,7 @@ CONTROLLER:
     activated: true
     filter_size: 30
     max_invalid: 5
+    thresholds: collision_thresholds.yaml
 BEHAVIOR:
   name : talos-squat
   trajectory_duration : 3

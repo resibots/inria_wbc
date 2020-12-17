@@ -26,6 +26,8 @@ namespace inria_wbc {
 
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
+            void parse_collision_thresholds(const std::string& config_path);
+            
             estimators::Cop _cop_estimator;
             bool _use_stabilizer = true;
             Eigen::Vector2d _stabilizer_p = Eigen::Vector2d(0.005, 0.005);
