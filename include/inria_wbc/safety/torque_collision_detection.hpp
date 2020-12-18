@@ -44,6 +44,8 @@ public:
 
     Eigen::VectorXi get_validity() const;
 
+    Eigen::VectorXd get_targets() const { return _targets; };
+    Eigen::VectorXd get_sensors() const { return _sensors; };
     Eigen::VectorXd get_filtered_sensors() const;
 
     std::vector<int> get_invalid_ids() const;
@@ -63,6 +65,8 @@ private:
     Eigen::VectorXd _offset;
     Eigen::VectorXd _threshold;
     Eigen::VectorXd _discrepancy;
+    Eigen::VectorXd _targets;
+    Eigen::VectorXd _sensors;
     Eigen::VectorXd _filtered_sensors;
     ArrayXb _validity;
 

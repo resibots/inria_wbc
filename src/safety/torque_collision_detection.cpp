@@ -12,6 +12,8 @@ TorqueCollisionDetection::TorqueCollisionDetection(int nvar, double threshold)
     _step_count(0),
     _threshold(Eigen::VectorXd::Constant(_nvar, threshold)),
     _discrepancy(_nvar),
+    _targets(_nvar),
+    _sensors(_nvar),
     _filtered_sensors(_nvar)
 { 
     this->set_max_consecutive_invalid(0);
@@ -23,6 +25,8 @@ TorqueCollisionDetection::TorqueCollisionDetection(Eigen::VectorXd threshold)
     _step_count(0),
     _threshold(threshold),
     _discrepancy(_nvar),
+    _targets(_nvar),
+    _sensors(_nvar),
     _filtered_sensors(_nvar)
 { 
     this->set_max_consecutive_invalid(0);
@@ -42,6 +46,9 @@ void TorqueCollisionDetection::reset()
 bool TorqueCollisionDetection::check(const Eigen::VectorXd& target, const Eigen::VectorXd& sensors)
 {
     ++_step_count;
+
+    _targets = target;
+    _sensors = sensors;
 
     _filtered_sensors = _filter_ptr ? _filter_ptr->filter(sensors) : sensors;
 
