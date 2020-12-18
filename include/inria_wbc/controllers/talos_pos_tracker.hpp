@@ -21,6 +21,7 @@ namespace inria_wbc {
             const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
 
             const std::vector<std::string>& torque_sensor_joints() const { return _torque_collision_joints; }
+            const safety::TorqueCollisionDetection& torque_collision_detector() const { return _torque_collision_detection; }
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
 
