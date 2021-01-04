@@ -13,7 +13,10 @@ namespace inria_wbc {
         public:
             Cop(double sample_time = 0.001, size_t history_size = 5)
                 : _sample_time(sample_time),
-                  _history_size(history_size) {}
+                  _history_size(history_size) {
+		_cop_filtered.setZero();
+		_cop_raw.setZero();
+	    }
 
             // returns the filtered CoP
             bool update(

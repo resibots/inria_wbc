@@ -18,7 +18,7 @@ namespace inria_wbc {
 
             virtual void update(const SensorData& sensor_data = {}) override;
             virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); }
-            const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
+            virtual const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
 
             const std::vector<std::string>& torque_sensor_joints() const { return _torque_collision_joints; }
             const safety::TorqueCollisionDetection& torque_collision_detector() const { return _torque_collision_detection; }
