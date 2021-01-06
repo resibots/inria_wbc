@@ -12,6 +12,7 @@
 #include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/sensor/force_torque.hpp>
+#include <robot_dart/sensor/torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
 
 #ifdef GRAPHIC
@@ -20,6 +21,7 @@
 
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/controllers/pos_tracker.hpp"
+#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
@@ -205,6 +207,19 @@ int main(int argc, char* argv[])
                 simu.add_visual_robot(self_collision_spheres.back());
             }
         }
+        
+        std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
+
+        auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
+        for(const auto& joint : talos_tracker_controller->torque_sensor_joints())
+        {
+            torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000)); 
+            std::cerr << "Add joint torque sensor:  " << joint << std::endl;
+        }
+    
+        // reading from sensors
+        Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
+
 
         // create the collision detector (useful only if --check_self_collisions)
         inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
@@ -213,6 +228,10 @@ int main(int argc, char* argv[])
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
+
+            // get actual torque from sensors
+            for(auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
+                tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
 
             // update the sensors
             inria_wbc::controllers::SensorData sensor_data;
@@ -227,6 +246,8 @@ int main(int argc, char* argv[])
             sensor_data["velocity"] = robot->com_velocity().tail<3>();
             // joint positions (excluding floating base)
             sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+            // joint torque sensors
+            sensor_data["joints_torque"] = tq_sensors;
 
             if (vm.count("check_self_collisions")) {
                 IWBC_ASSERT(!vm.count("fast"), "=> check_self_collisions is not compatible with --fast!");
