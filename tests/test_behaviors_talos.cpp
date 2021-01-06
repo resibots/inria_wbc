@@ -18,10 +18,10 @@
 
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/controllers/pos_tracker.hpp"
+#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
-#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 
 namespace cst {
     static constexpr double dt = 0.001;
@@ -131,7 +131,7 @@ void test_behavior(const std::string& config_path,
             time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
             ++it_simu;
         }
-        // print timing information
+        // timing information
         time_simu += time_step_simu;
         time_cmd += time_step_cmd;
         time_solver += time_step_solver;
@@ -160,7 +160,9 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
     robot_dart::RobotDARTSimu simu(cst::dt);
     simu.set_collision_detector(coll);
     simu.set_control_freq(cst::frequency);
-
+    simu.add_robot(robot);
+    simu.add_checkerboard_floor();
+    
     // run the behavior
     test_behavior(config_path, simu, robot, actuators);
 }
