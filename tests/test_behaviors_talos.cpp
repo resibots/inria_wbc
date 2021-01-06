@@ -142,6 +142,7 @@ void test_behavior(const std::string& config_path,
     double t_solver = time_solver / it_cmd / 1000.;
 
     std::cout << "TIME: "
+              << "\t" << (time_simu + time_cmd + time_solver) / 1e6 << " s"
               << "\tit. simu: " << t_sim << " ms"
               << "\tit. solver:" << t_solver << " ms"
               << "\tit. cmd:" << t_cmd << " ms"
