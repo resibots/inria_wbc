@@ -161,4 +161,14 @@ install(FILES
 
 install(DIRECTORY etc/  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/inria_wbc/etc)
 
+enable_testing()
+# this is you happen to use "make test" (don't)
+list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
+# the right way of running the test is "make check"
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
+     --force-new-ctest-process
+     --verbose
+      --output-on-failure
+)
+
 ADD_SUBDIRECTORY(tests)

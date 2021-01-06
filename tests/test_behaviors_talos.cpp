@@ -12,6 +12,7 @@
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/sensor/force_torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
+#include <robot_dart/sensor/torque.hpp>
 
 #include "inria_wbc/robot_dart/cmd.hpp"
 
@@ -20,6 +21,7 @@
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
+#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 
 namespace cst {
     static constexpr double dt = 0.001;
@@ -53,12 +55,19 @@ void test_behavior(const std::string& config_path,
     BOOST_CHECK(behavior);
 
     // add sensors to the robot (robot_dart)
+    // Force/torque (feet)
     auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
     auto ft_sensor_right = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint");
+    // IMU
     robot_dart::sensor::IMUConfig imu_config;
     imu_config.body = robot->body_node("imu_link");
     imu_config.frequency = cst::frequency;
     auto imu = simu.add_sensor<robot_dart::sensor::IMU>(imu_config);
+    // Torque (joints)
+    std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
+    auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
+    for (const auto& joint : talos_tracker_controller->torque_sensor_joints())
+        torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, cst::frequency));
 
     // a few useful variables
     auto all_dofs = controller->all_dofs();
@@ -75,22 +84,24 @@ void test_behavior(const std::string& config_path,
     // the main loop
     using namespace std::chrono;
     inria_wbc::controllers::SensorData sensor_data;
+    Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
+
     Eigen::VectorXd cmd;
     while (simu.scheduler().next_time() < cst::duration) {
-        
         double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
-        // update the sensors
-        // left foot
+
+        // update the sensors from the simulator
+        for (auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
+            tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
+        sensor_data["joints_torque"] = tq_sensors;
         sensor_data["lf_torque"] = ft_sensor_left->torque();
         sensor_data["lf_force"] = ft_sensor_left->force();
-        // right foot
         sensor_data["rf_torque"] = ft_sensor_right->torque();
         sensor_data["rf_force"] = ft_sensor_right->force();
-        // accelerometer
         sensor_data["acceleration"] = imu->linear_acceleration();
         sensor_data["velocity"] = robot->com_velocity().tail<3>();
-        // joint positions (excluding floating base)
         sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+        ;
 
         // command
         if (simu.schedule(simu.control_freq())) {
@@ -156,7 +167,8 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
 
 BOOST_AUTO_TEST_CASE(behaviors)
 {
-    auto behaviors = {"../etc/squat.yaml", "../etc/arm.yaml", "../etc/clapping.yaml"};
+    // this is relative to the "tests" directory
+    auto behaviors = {"../../etc/squat.yaml", "../../etc/arm.yaml", "../../etc/talos_clapping.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity"};
 
@@ -164,5 +176,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
         for (auto& c : collision)
             for (auto& a : actuators) {
                 test_behavior(b, a, c, true);
+                if (c != std::string("dart"))
+                    test_behavior(b, a, c, false);
             }
 }
