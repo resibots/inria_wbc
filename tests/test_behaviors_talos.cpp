@@ -27,7 +27,7 @@ namespace cst {
     static constexpr double dt = 0.001;
     static constexpr double duration = 10;
     static constexpr double frequency = 1000;
-    static constexpr double pos_tracking_tol = 0.05;
+    static constexpr double pos_tracking_tol = 0.01;
 } // namespace cst
 
 namespace inria_wbc {
@@ -200,8 +200,8 @@ void test_behavior(const std::string& config_path,
                         error += (pos_dart[i] - pos_ref[i]) * (pos_dart[i] - pos_ref[i]);
                 }
                 error = sqrt(error);
-                BOOST_CHECK(error * t.weight < cst::pos_tracking_tol);
-                if (error * t.weight > cst::pos_tracking_tol) {
+                BOOST_CHECK(error < cst::pos_tracking_tol);
+                if (error > cst::pos_tracking_tol) {
                     std::cout << "ERROR = " << error
                               << "\tbehavior: " << behavior_name << "[t=" << simu.scheduler().current_time() << "]"
                               << "\ttask: " << t.name << " [" << t.tracked << "]"
@@ -253,7 +253,7 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
 BOOST_AUTO_TEST_CASE(behaviors)
 {
     // this is relative to the "tests" directory
-    auto behaviors = {"../../etc/squat.yaml", "../../etc/arm.yaml", "../../etc/talos_clapping.yaml"};
+    auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity"};
 
