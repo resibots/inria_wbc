@@ -14,6 +14,7 @@ namespace inria_wbc {
             PosTracker& operator=(const PosTracker& o) const = delete;
             virtual ~PosTracker(){};
 
+            const std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>>& tasks() const { return tasks_; }
             template <typename T>
             std::shared_ptr<T> task(const std::string& str) const
             {

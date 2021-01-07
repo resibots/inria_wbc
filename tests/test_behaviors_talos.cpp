@@ -1,19 +1,19 @@
 #define BOOST_TEST_MODULE behaviors test
 
-#include <boost/test/unit_test.hpp>
 #include <chrono>
-
-#include <inria_wbc/behaviors/behavior.hpp>
 #include <iostream>
-#include <robot_dart/robot.hpp>
-
 #include <vector>
 
+#include <boost/filesystem.hpp>
+#include <boost/test/unit_test.hpp>
+
+#include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/sensor/force_torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
 #include <robot_dart/sensor/torque.hpp>
 
+#include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 
 #include "inria_wbc/behaviors/behavior.hpp"
@@ -27,14 +27,51 @@ namespace cst {
     static constexpr double dt = 0.001;
     static constexpr double duration = 10;
     static constexpr double frequency = 1000;
-
+    static constexpr double pos_tracking_tol = 0.05;
 } // namespace cst
+
+namespace inria_wbc {
+    namespace tests {
+        struct SE3TaskData {
+            std::string name;
+            std::string tracked;
+            std::string mask;
+            double weight;
+        };
+    } // namespace tests
+} // namespace inria_wbc
+
+// we parse again:
+// - to check that the controller parses as expected
+// - and to get additional info (mask, etc.)
+std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config_path)
+{
+    std::vector<inria_wbc::tests::SE3TaskData> tasks;
+    YAML::Node config = YAML::LoadFile(config_path)["CONTROLLER"];
+    auto path = boost::filesystem::path(config_path).parent_path();
+    auto task_file = config["tasks"].as<std::string>();
+    auto p = path / boost::filesystem::path(task_file);
+    YAML::Node task_list = YAML::LoadFile(p.string());
+    for (auto it = task_list.begin(); it != task_list.end(); ++it) {
+        auto name = it->first.as<std::string>();
+        auto type = it->second["type"].as<std::string>();
+        if (type == "se3") {
+            auto weight = it->second["weight"].as<double>();
+            auto mask = it->second["mask"].as<std::string>();
+            auto tracked = it->second["tracked"].as<std::string>();
+            tasks.push_back({name, tracked, mask, weight});
+        }
+    }
+    return tasks;
+}
 
 void test_behavior(const std::string& config_path,
     robot_dart::RobotDARTSimu& simu,
     const std::shared_ptr<robot_dart::Robot>& robot,
     const std::string& actuator_type)
 {
+    // ----------------------- init -----------------------
+
     inria_wbc::controllers::Controller::Params params = {
         robot->model_filename(),
         config_path,
@@ -48,6 +85,17 @@ void test_behavior(const std::string& config_path,
     auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
     auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
     BOOST_CHECK(controller);
+    auto p_controller = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+    BOOST_CHECK(p_controller);
+    BOOST_CHECK(!p_controller->tasks().empty());
+
+    // get the list of SE3 tasks (to test the tracking)
+    auto se3_tasks = parse_tasks(config_path);
+    std::cout << "SE3 TASKS (frames): ";
+    for (auto& x : se3_tasks)
+        std::cout << x.name << "[" << x.tracked << "] ";
+    std::cout << std::endl;
+    BOOST_CHECK(!se3_tasks.empty());
 
     // get the behavior (trajectories)
     auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
@@ -81,7 +129,7 @@ void test_behavior(const std::string& config_path,
     // init the robot
     robot->set_positions(controller->q0(), all_dofs);
 
-    // the main loop
+    // ----------------------- the main loop -----------------------
     using namespace std::chrono;
     inria_wbc::controllers::SensorData sensor_data;
     Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
@@ -131,6 +179,39 @@ void test_behavior(const std::string& config_path,
             time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
             ++it_simu;
         }
+
+        // tracking information
+        for (auto& t : se3_tasks) {
+            Eigen::VectorXd pos_dart;
+            if (robot->joint(t.tracked)) {
+                auto node = robot->joint(t.tracked)->getParentBodyNode();
+                auto p = node->getWorldTransform().translation();
+                pos_dart = p + robot->joint(t.tracked)->getTransformFromParentBodyNode().translation();
+            }
+            else
+                pos_dart = robot->body_pose(t.tracked).translation();
+            // masks?
+            auto pos_ref = p_controller->get_se3_ref(t.name).translation();
+            if (t.weight > 0) {
+                double error = 0;
+                BOOST_CHECK(t.mask.size() >= 3);
+                for (int i = 0; i < 3; ++i) {
+                    if (t.mask[i] == '1')
+                        error += (pos_dart[i] - pos_ref[i]) * (pos_dart[i] - pos_ref[i]);
+                }
+                error = sqrt(error);
+                BOOST_CHECK(error * t.weight < cst::pos_tracking_tol);
+                if (error * t.weight > cst::pos_tracking_tol) {
+                    std::cout << "ERROR = " << error
+                              << "\tbehavior: " << behavior_name << "[t=" << simu.scheduler().current_time() << "]"
+                              << "\ttask: " << t.name << " [" << t.tracked << "]"
+                              << "\tref:" << pos_ref.transpose()
+                              << "\tdart:" << pos_dart.transpose()
+                              << "\t(mask =" << t.mask << ",weight=" << t.weight << ")" << std::endl;
+                }
+            }
+        }
+
         // timing information
         time_simu += time_step_simu;
         time_cmd += time_step_cmd;
@@ -143,6 +224,7 @@ void test_behavior(const std::string& config_path,
 
     std::cout << "TIME: "
               << "\t" << (time_simu + time_cmd + time_solver) / 1e6 << " s"
+              << "\t[" << (t_sim + t_cmd + t_solver) << " ms / it.]"
               << "\tit. simu: " << t_sim << " ms"
               << "\tit. solver:" << t_solver << " ms"
               << "\tit. cmd:" << t_cmd << " ms"
@@ -163,7 +245,7 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
     simu.set_control_freq(cst::frequency);
     simu.add_robot(robot);
     simu.add_checkerboard_floor();
-    
+
     // run the behavior
     test_behavior(config_path, simu, robot, actuators);
 }
