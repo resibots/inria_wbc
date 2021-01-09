@@ -129,6 +129,9 @@ void test_behavior(const std::string& config_path,
     // init the robot
     robot->set_positions(controller->q0(), all_dofs);
 
+    for (int i = 0; i < 1000; ++i)
+        simu.step_world();
+
     // ----------------------- the main loop -----------------------
     using namespace std::chrono;
     inria_wbc::controllers::SensorData sensor_data;
@@ -179,14 +182,15 @@ void test_behavior(const std::string& config_path,
             time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
             ++it_simu;
         }
-
+        std::cout << "COM:" << robot->com().transpose() << " ref:" << p_controller->com_task()->getReference().pos.transpose() << std::endl;
         // tracking information
         for (auto& t : se3_tasks) {
             Eigen::VectorXd pos_dart;
             if (robot->joint(t.tracked)) {
                 auto node = robot->joint(t.tracked)->getParentBodyNode();
-                auto p = node->getWorldTransform().translation();
-                pos_dart = p + robot->joint(t.tracked)->getTransformFromParentBodyNode().translation();
+                auto tf_bd_world = node->getWorldTransform();
+                auto tf_bd_joint = robot->joint(t.tracked)->getTransformFromParentBodyNode();
+                pos_dart = (tf_bd_world * tf_bd_joint).translation();
             }
             else
                 pos_dart = robot->body_pose(t.tracked).translation();
@@ -253,7 +257,7 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
 BOOST_AUTO_TEST_CASE(behaviors)
 {
     // this is relative to the "tests" directory
-    auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml"};
+    auto behaviors = {"../../etc/squat.yaml", "../../etc/arm.yaml",  "../../etc/talos_clapping.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity"};
 
