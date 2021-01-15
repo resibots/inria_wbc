@@ -103,8 +103,16 @@ namespace inria_wbc {
             {
                 assert(tsid_);
                 assert(robot_);
+                assert(robot_->model().existJointName(joint_name));
                 return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             }
+            pinocchio::SE3 model_frame_pos(const std::string& frame_name) const
+            {
+                assert(tsid_);
+                assert(robot_);
+                assert(robot_->model().existFrame(frame_name));
+                return robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
+            }            
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
             {
                 assert(task);

@@ -1,4 +1,5 @@
 #define BOOST_TEST_MODULE behaviors test
+#define BOOST_TEST_MAIN
 
 #include <chrono>
 #include <iostream>
@@ -12,6 +13,10 @@
 #include <robot_dart/sensor/force_torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
 #include <robot_dart/sensor/torque.hpp>
+
+#ifdef GRAPHIC
+#include <robot_dart/gui/magnum/graphics.hpp>
+#endif
 
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
@@ -27,7 +32,7 @@ namespace cst {
     static constexpr double dt = 0.001;
     static constexpr double duration = 10;
     static constexpr double frequency = 1000;
-    static constexpr double pos_tracking_tol = 0.01;
+    static constexpr double pos_tracking_tol = 0.03;
 } // namespace cst
 
 namespace inria_wbc {
@@ -129,9 +134,6 @@ void test_behavior(const std::string& config_path,
     // init the robot
     robot->set_positions(controller->q0(), all_dofs);
 
-    for (int i = 0; i < 1000; ++i)
-        simu.step_world();
-
     // ----------------------- the main loop -----------------------
     using namespace std::chrono;
     inria_wbc::controllers::SensorData sensor_data;
@@ -185,12 +187,13 @@ void test_behavior(const std::string& config_path,
         std::cout << "COM:" << robot->com().transpose() << " ref:" << p_controller->com_task()->getReference().pos.transpose() << std::endl;
         // tracking information
         for (auto& t : se3_tasks) {
-            Eigen::VectorXd pos_dart;
+            Eigen::VectorXd pos_dart, pos_tsid;
             if (robot->joint(t.tracked)) {
                 auto node = robot->joint(t.tracked)->getParentBodyNode();
                 auto tf_bd_world = node->getWorldTransform();
                 auto tf_bd_joint = robot->joint(t.tracked)->getTransformFromParentBodyNode();
                 pos_dart = (tf_bd_world * tf_bd_joint).translation();
+                pos_tsid = controller->model_joint_pos(t.tracked).translation();
             }
             else
                 pos_dart = robot->body_pose(t.tracked).translation();
@@ -211,6 +214,7 @@ void test_behavior(const std::string& config_path,
                               << "\ttask: " << t.name << " [" << t.tracked << "]"
                               << "\tref:" << pos_ref.transpose()
                               << "\tdart:" << pos_dart.transpose()
+                              << "\ttsid:" << pos_tsid.transpose()
                               << "\t(mask =" << t.mask << ",weight=" << t.weight << ")" << std::endl;
                 }
             }
@@ -250,14 +254,35 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
     simu.add_robot(robot);
     simu.add_checkerboard_floor();
 
+#ifdef GRAPHIC
+    auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>();
+    simu.set_graphics(graphics);
+    graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
+    // we always save the video (useful for bug reports)
+    graphics->record_video("test_result.mp4");
+#endif
+
     // run the behavior
     test_behavior(config_path, simu, robot, actuators);
 }
 
 BOOST_AUTO_TEST_CASE(behaviors)
 {
+    // use ./my_test -- ../../etc/arm.yaml servo fcl 0 for a specific test
+    auto argc = boost::unit_test::framework::master_test_suite().argc;
+    auto argv = boost::unit_test::framework::master_test_suite().argv;
+
+    if (argc > 1) {
+        assert(argc == 5);
+        std::cout << "using custom arguments for test" << std::endl;
+        test_behavior(argv[1], argv[2], argv[3], std::stoi(argv[4]));
+        return;
+    }
+
+    ///// the default behavior is to run all the combinations
+
     // this is relative to the "tests" directory
-    auto behaviors = {"../../etc/squat.yaml", "../../etc/arm.yaml",  "../../etc/talos_clapping.yaml"};
+    auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity"};
 
