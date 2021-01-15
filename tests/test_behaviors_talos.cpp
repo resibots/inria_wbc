@@ -32,8 +32,23 @@ namespace cst {
     static constexpr double dt = 0.001;
     static constexpr double duration = 10;
     static constexpr double frequency = 1000;
-    static constexpr double pos_tracking_tol = 0.03;
+    static constexpr double pos_tracking_tsid_tol = 0.03;
+    static constexpr double pos_tracking_dart_tol = 0.03;
+    static constexpr double com_tracking_tsid_tol = 0.03;
+    static constexpr double com_tracking_dart_tol = 0.03;
+
 } // namespace cst
+
+namespace colors {
+    static const std::string red = "\x1B[31m";
+    static const std::string green = "\x1B[32m";
+    static const std::string yellow = "\x1B[33m";
+    static const std::string blue = "\x1B[34m";
+    static const std::string magenta = "\x1B[35m";
+    static const std::string cyan = "\x1B[36m";
+    static const std::string rst = "\x1B[0m";
+    static const std::string bold = "\x1B[1m";
+} // namespace colors
 
 namespace inria_wbc {
     namespace tests {
@@ -42,6 +57,8 @@ namespace inria_wbc {
             std::string tracked;
             std::string mask;
             double weight;
+            double error_dart = 0.0;
+            double error_tsid = 0.0;
         };
     } // namespace tests
 } // namespace inria_wbc
@@ -139,6 +156,9 @@ void test_behavior(const std::string& config_path,
     inria_wbc::controllers::SensorData sensor_data;
     Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
 
+    double error_com_tsid = 0.0;
+    double error_com_dart = 0.0;
+
     Eigen::VectorXd cmd;
     while (simu.scheduler().next_time() < cst::duration) {
         double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
@@ -184,7 +204,10 @@ void test_behavior(const std::string& config_path,
             time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
             ++it_simu;
         }
-        std::cout << "COM:" << robot->com().transpose() << " ref:" << p_controller->com_task()->getReference().pos.transpose() << std::endl;
+        // compute the CoM error
+        error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
+        error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
+
         // tracking information
         for (auto& t : se3_tasks) {
             Eigen::VectorXd pos_dart, pos_tsid;
@@ -195,28 +218,25 @@ void test_behavior(const std::string& config_path,
                 pos_dart = (tf_bd_world * tf_bd_joint).translation();
                 pos_tsid = controller->model_joint_pos(t.tracked).translation();
             }
-            else
+            else {
                 pos_dart = robot->body_pose(t.tracked).translation();
-            // masks?
+                // Q: doesn't TSID create a frame for each joint?
+                pos_tsid = controller->model_frame_pos(t.tracked).translation();
+            }
+            // masks? // TODO also compute angular error
             auto pos_ref = p_controller->get_se3_ref(t.name).translation();
             if (t.weight > 0) {
-                double error = 0;
-                BOOST_CHECK(t.mask.size() >= 3);
+                double error_dart = 0.;
+                double error_tsid = 0.;
+                BOOST_CHECK(t.mask.size() == 6);
                 for (int i = 0; i < 3; ++i) {
-                    if (t.mask[i] == '1')
-                        error += (pos_dart[i] - pos_ref[i]) * (pos_dart[i] - pos_ref[i]);
+                    if (t.mask[i] == '1') {
+                        error_dart += (pos_dart[i] - pos_ref[i]) * (pos_dart[i] - pos_ref[i]);
+                        error_tsid += (pos_tsid[i] - pos_ref[i]) * (pos_tsid[i] - pos_ref[i]);
+                    }
                 }
-                error = sqrt(error);
-                BOOST_CHECK(error < cst::pos_tracking_tol);
-                if (error > cst::pos_tracking_tol) {
-                    std::cout << "ERROR = " << error
-                              << "\tbehavior: " << behavior_name << "[t=" << simu.scheduler().current_time() << "]"
-                              << "\ttask: " << t.name << " [" << t.tracked << "]"
-                              << "\tref:" << pos_ref.transpose()
-                              << "\tdart:" << pos_dart.transpose()
-                              << "\ttsid:" << pos_tsid.transpose()
-                              << "\t(mask =" << t.mask << ",weight=" << t.weight << ")" << std::endl;
-                }
+                t.error_dart += sqrt(error_dart);
+                t.error_tsid += sqrt(error_tsid);
             }
         }
 
@@ -231,18 +251,40 @@ void test_behavior(const std::string& config_path,
     double t_solver = time_solver / it_cmd / 1000.;
 
     std::cout << "TIME: "
-              << "\t" << (time_simu + time_cmd + time_solver) / 1e6 << " s"
+              << "\ttotal:" << (time_simu + time_cmd + time_solver) / 1e6 << " s"
               << "\t[" << (t_sim + t_cmd + t_solver) << " ms / it.]"
-              << "\tit. simu: " << t_sim << " ms"
-              << "\tit. solver:" << t_solver << " ms"
-              << "\tit. cmd:" << t_cmd << " ms"
+              << "\tsimu: " << t_sim << " ms/it"
+              << "\tsolver:" << t_solver << " ms/it"
+              << "\tcmd:" << t_cmd << " ms/it"
               << std::endl;
+
+    // error report for COM
+    error_com_tsid /= simu.scheduler().current_time() * 1000;
+    error_com_dart /= simu.scheduler().current_time() * 1000;
+    std::cout << "CoM: [tsid]" << error_com_tsid<< " [dart]" << error_com_dart << std::endl;
+    BOOST_CHECK(error_com_tsid < cst::com_tracking_tsid_tol);
+    BOOST_CHECK(error_com_dart < cst::com_tracking_dart_tol);
+    
+    // error report for se3 tasks
+    for (auto& t : se3_tasks) {
+        t.error_tsid /= simu.scheduler().current_time() * 1000;
+        t.error_dart /= simu.scheduler().current_time() * 1000;
+        BOOST_CHECK(t.error_tsid < cst::pos_tracking_tsid_tol);
+        BOOST_CHECK(t.error_dart < cst::pos_tracking_dart_tol);
+        std::cout << "task: " << t.name << " [" << t.tracked << "]"
+                  << "pos error TSID:" << t.error_tsid << " "
+                  << "pos error DART:" << t.error_dart << " "
+                  << "\t(mask =" << t.mask << ",weight=" << t.weight << ")" << std::endl;
+    }
+
+    std::cout << std::endl;
 }
 
 void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, bool fast)
 {
+
     std::string urdf = fast ? "talos/talos_fast.urdf" : "talos/talos.urdf";
-    std::cout << "TESTING: " << config_path << " | " << actuators << " | " << coll << " | " << urdf << std::endl;
+    std::cout << colors::blue << colors::bold << "TESTING: " << config_path << " | " << actuators << " | " << coll << " | " << urdf << colors::rst << std::endl;
 
     // create the simulator and the robot
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
@@ -262,8 +304,14 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
     graphics->record_video("test_result.mp4");
 #endif
 
-    // run the behavior
-    test_behavior(config_path, simu, robot, actuators);
+    try {
+        // run the behavior
+        test_behavior(config_path, simu, robot, actuators);
+    }
+    catch (std::exception& e) {
+        std::cout << colors::red << colors::bold << "Error (exception): t=" << simu.scheduler().current_time() << " " << colors::rst << e.what() << std::endl;
+        BOOST_FAIL(e.what());
+    }
 }
 
 BOOST_AUTO_TEST_CASE(behaviors)
