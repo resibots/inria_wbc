@@ -2,6 +2,7 @@
 #define BOOST_TEST_MAIN
 
 #include <chrono>
+#include <ctime>
 #include <iostream>
 #include <vector>
 
@@ -34,8 +35,8 @@ namespace cst {
     static constexpr double frequency = 1000;
     static constexpr double pos_tracking_tsid_tol = 0.03;
     static constexpr double pos_tracking_dart_tol = 0.03;
-    static constexpr double com_tracking_tsid_tol = 0.03;
-    static constexpr double com_tracking_dart_tol = 0.03;
+    static constexpr double com_tracking_tsid_tol = 0.01;
+    static constexpr double com_tracking_dart_tol = 0.01;
 
 } // namespace cst
 
@@ -63,17 +64,29 @@ namespace inria_wbc {
     } // namespace tests
 } // namespace inria_wbc
 
+namespace y = YAML;
+
+// for timestamps
+inline std::string date()
+{
+    char date[30];
+    time_t date_time;
+    time(&date_time);
+    strftime(date, 30, "%Y-%m-%d_%H-%M-%S", localtime(&date_time));
+    return std::string(date);
+}
+
 // we parse again:
 // - to check that the controller parses as expected
 // - and to get additional info (mask, etc.)
 std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config_path)
 {
     std::vector<inria_wbc::tests::SE3TaskData> tasks;
-    YAML::Node config = YAML::LoadFile(config_path)["CONTROLLER"];
+    y::Node config = y::LoadFile(config_path)["CONTROLLER"];
     auto path = boost::filesystem::path(config_path).parent_path();
     auto task_file = config["tasks"].as<std::string>();
     auto p = path / boost::filesystem::path(task_file);
-    YAML::Node task_list = YAML::LoadFile(p.string());
+    y::Node task_list = y::LoadFile(p.string());
     for (auto it = task_list.begin(); it != task_list.end(); ++it) {
         auto name = it->first.as<std::string>();
         auto type = it->second["type"].as<std::string>();
@@ -90,10 +103,10 @@ std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config
 void test_behavior(const std::string& config_path,
     robot_dart::RobotDARTSimu& simu,
     const std::shared_ptr<robot_dart::Robot>& robot,
-    const std::string& actuator_type)
+    const std::string& actuator_type,
+    y::Emitter& yout)
 {
     // ----------------------- init -----------------------
-
     inria_wbc::controllers::Controller::Params params = {
         robot->model_filename(),
         config_path,
@@ -101,7 +114,7 @@ void test_behavior(const std::string& config_path,
         false,
         robot->mimic_dof_names()};
 
-    YAML::Node config = YAML::LoadFile(config_path);
+    y::Node config = y::LoadFile(config_path);
 
     // get the controller
     auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
@@ -258,33 +271,39 @@ void test_behavior(const std::string& config_path,
               << "\tcmd:" << t_cmd << " ms/it"
               << std::endl;
 
+    yout << y::Key << "time" << y::Value
+         << std::vector<double>{(time_simu + time_cmd + time_solver) / 1e6, (t_sim + t_cmd + t_solver), t_sim, t_solver, t_cmd};
+
     // error report for COM
     error_com_tsid /= simu.scheduler().current_time() * 1000;
     error_com_dart /= simu.scheduler().current_time() * 1000;
-    std::cout << "CoM: [tsid]" << error_com_tsid<< " [dart]" << error_com_dart << std::endl;
+    std::vector<double> com_errors = {error_com_tsid, error_com_dart};
+    std::cout << "CoM: [tsid]" << error_com_tsid << " [dart]" << error_com_dart << std::endl;
     BOOST_CHECK(error_com_tsid < cst::com_tracking_tsid_tol);
     BOOST_CHECK(error_com_dart < cst::com_tracking_dart_tol);
-    
+    yout << y::Key << "com" << y::Value << std::vector<double>{error_com_tsid, error_com_dart};
+
     // error report for se3 tasks
     for (auto& t : se3_tasks) {
         t.error_tsid /= simu.scheduler().current_time() * 1000;
         t.error_dart /= simu.scheduler().current_time() * 1000;
-        BOOST_CHECK(t.error_tsid < cst::pos_tracking_tsid_tol);
-        BOOST_CHECK(t.error_dart < cst::pos_tracking_dart_tol);
         std::cout << "task: " << t.name << " [" << t.tracked << "]"
                   << "pos error TSID:" << t.error_tsid << " "
                   << "pos error DART:" << t.error_dart << " "
                   << "\t(mask =" << t.mask << ",weight=" << t.weight << ")" << std::endl;
+        yout << y::Key << t.name << y::Value << std::vector<double>{t.error_tsid, t.error_dart};
+        BOOST_CHECK(t.error_tsid < cst::pos_tracking_tsid_tol);
+        BOOST_CHECK(t.error_dart < cst::pos_tracking_dart_tol);
     }
 
     std::cout << std::endl;
 }
 
-void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, bool fast)
+void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, bool fast, y::Emitter& yout)
 {
-
     std::string urdf = fast ? "talos/talos_fast.urdf" : "talos/talos.urdf";
     std::cout << colors::blue << colors::bold << "TESTING: " << config_path << " | " << actuators << " | " << coll << " | " << urdf << colors::rst << std::endl;
+    yout << y::Key << urdf << y::BeginMap;
 
     // create the simulator and the robot
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
@@ -301,21 +320,29 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
     simu.set_graphics(graphics);
     graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
     // we always save the video (useful for bug reports)
-    graphics->record_video("test_result.mp4");
+    graphics->record_video("test_result_talos.mp4");
 #endif
 
     try {
         // run the behavior
-        test_behavior(config_path, simu, robot, actuators);
+        test_behavior(config_path, simu, robot, actuators, yout);
     }
     catch (std::exception& e) {
         std::cout << colors::red << colors::bold << "Error (exception): t=" << simu.scheduler().current_time() << " " << colors::rst << e.what() << std::endl;
-        BOOST_FAIL(e.what());
+        BOOST_CHECK(e.what());
     }
+    yout << y::EndMap;
 }
 
 BOOST_AUTO_TEST_CASE(behaviors)
 {
+    // we write the results in yaml file, for future comparisons and analysis
+    y::Emitter yout;
+    yout << y::BeginMap;
+
+    // the YAMl file has a timestamp (so that we can archive them)
+    yout << y::Key << "timestamp" << y::Value << date();
+
     // use ./my_test -- ../../etc/arm.yaml servo fcl 0 for a specific test
     auto argc = boost::unit_test::framework::master_test_suite().argc;
     auto argv = boost::unit_test::framework::master_test_suite().argv;
@@ -323,22 +350,36 @@ BOOST_AUTO_TEST_CASE(behaviors)
     if (argc > 1) {
         assert(argc == 5);
         std::cout << "using custom arguments for test" << std::endl;
-        test_behavior(argv[1], argv[2], argv[3], std::stoi(argv[4]));
-        return;
+        test_behavior(argv[1], argv[2], argv[3], std::stoi(argv[4]), yout);
+        // WARING: this does not write the yaml file (it would be in)
     }
 
-    ///// the default behavior is to run all the combinations
+    ///// the default behavior is to run all the combinations and write the output in the yaml file
 
     // this is relative to the "tests" directory
-    auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml"};
+    auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml", "../../etc/walk_on_spot.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity"};
 
-    for (auto& b : behaviors)
-        for (auto& c : collision)
+    for (auto& b : behaviors) {
+        yout << y::Key << b << y::Value << y::BeginMap;
+        for (auto& c : collision) {
+            yout << y::Key << c << y::Value << y::BeginMap;
             for (auto& a : actuators) {
-                test_behavior(b, a, c, true);
-                if (c != std::string("dart"))
-                    test_behavior(b, a, c, false);
+                yout << y::Key << a << y::Value << y::BeginMap;
+                test_behavior(b, a, c, true, yout);
+                if (c != std::string("dart")) {
+                    test_behavior(b, a, c, false, yout);
+                }
+                yout << y::EndMap;
+                std::cout << yout.c_str() << std::endl;
             }
+            yout << y::EndMap;
+        }
+        yout << y::EndMap;
+    }
+    yout << y::EndMap;
+    auto fname = std::string("test_results-") + date() + ".yaml";
+    std::ofstream ofs(fname.c_str());
+    ofs << yout.c_str();
 }
