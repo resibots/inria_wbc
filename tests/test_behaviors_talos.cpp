@@ -4,6 +4,7 @@
 #include <chrono>
 #include <ctime>
 #include <iostream>
+#include <map>
 #include <vector>
 
 #include <boost/filesystem.hpp>
@@ -165,6 +166,10 @@ void test_behavior(const std::string& config_path,
     // init the robot
     robot->set_positions(controller->q0(), all_dofs);
 
+    // create the collision detector to check that the robot do not collides
+    inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
+    std::map<std::string, bool> collision_map;
+
     // ----------------------- the main loop -----------------------
     using namespace std::chrono;
     inria_wbc::controllers::SensorData sensor_data;
@@ -219,8 +224,12 @@ void test_behavior(const std::string& config_path,
             ++it_simu;
         }
 
-        // TODO check the collisions
-
+        // check that we do not generate any self-collision
+        // this will do nothing with the fast URDF (no collision checks)
+        auto collision_list = collision_detector.collide();
+        for (auto& s : collision_list)
+            collision_map[s] = true;
+           
         // compute the CoM error
         error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
         error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
@@ -278,6 +287,11 @@ void test_behavior(const std::string& config_path,
     yout << y::Key << "time" << y::Value
          << std::vector<double>{(time_simu + time_cmd + time_solver) / 1e6, (t_sim + t_cmd + t_solver), t_sim, t_solver, t_cmd};
 
+    // collision report
+    for (auto& x: collision_map) {
+        BOOST_CHECK_MESSAGE(false, std::string("collision detected: ") + x.first);
+    }
+
     // error report for COM
     error_com_tsid /= simu.scheduler().current_time() * 1000;
     error_com_dart /= simu.scheduler().current_time() * 1000;
@@ -317,9 +331,8 @@ void test_behavior(const std::string& config_path,
     std::cout << std::endl;
 }
 
-void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, bool fast, const y::Node& ref, y::Emitter& yout)
+void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
 {
-    std::string urdf = fast ? "talos/talos_fast.urdf" : "talos/talos.urdf";
     std::cout << colors::blue << colors::bold << "TESTING: " << config_path << " | " << actuators << " | " << coll << " | " << urdf << colors::rst << std::endl;
     yout << y::Key << urdf << y::BeginMap;
 
@@ -400,6 +413,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml", "../../etc/walk_on_spot.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity"};
+    std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
 
     for (auto& b : behaviors) {
         yout << y::Key << b << y::Value << y::BeginMap;
@@ -407,9 +421,9 @@ BOOST_AUTO_TEST_CASE(behaviors)
             yout << y::Key << a << y::Value << y::BeginMap;
             for (auto& c : collision) {
                 yout << y::Key << c << y::Value << y::BeginMap;
-                test_behavior(b, a, c, true, ref, yout);
+                test_behavior(b, a, c, urdfs[0], ref, yout);
                 if (c != std::string("dart")) {
-                    test_behavior(b, a, c, false, ref, yout);
+                    test_behavior(b, a, c, urdfs[1], ref, yout);
                 }
                 yout << y::EndMap;
             }
