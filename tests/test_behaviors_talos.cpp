@@ -33,10 +33,8 @@ namespace cst {
     static constexpr double dt = 0.001;
     static constexpr double duration = 10;
     static constexpr double frequency = 1000;
-    static constexpr double pos_tracking_tsid_tol = 0.03;
-    static constexpr double pos_tracking_dart_tol = 0.03;
-    static constexpr double com_tracking_tsid_tol = 0.01;
-    static constexpr double com_tracking_dart_tol = 0.01;
+    static constexpr double tolerance = 1e-5;
+    static const std::string ref_path = "../../tests/ref_test_talos.yaml";
 
 } // namespace cst
 
@@ -97,6 +95,12 @@ std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config
             tasks.push_back({name, tracked, mask, weight});
         }
     }
+
+    std::cout << "SE3 TASKS (frames): ";
+    for (auto& x : tasks)
+        std::cout << x.name << "[" << x.tracked << "] ";
+    std::cout << std::endl;
+
     return tasks;
 }
 
@@ -104,6 +108,7 @@ void test_behavior(const std::string& config_path,
     robot_dart::RobotDARTSimu& simu,
     const std::shared_ptr<robot_dart::Robot>& robot,
     const std::string& actuator_type,
+    const y::Node& ref,
     y::Emitter& yout)
 {
     // ----------------------- init -----------------------
@@ -126,10 +131,6 @@ void test_behavior(const std::string& config_path,
 
     // get the list of SE3 tasks (to test the tracking)
     auto se3_tasks = parse_tasks(config_path);
-    std::cout << "SE3 TASKS (frames): ";
-    for (auto& x : se3_tasks)
-        std::cout << x.name << "[" << x.tracked << "] ";
-    std::cout << std::endl;
     BOOST_CHECK(!se3_tasks.empty());
 
     // get the behavior (trajectories)
@@ -217,6 +218,9 @@ void test_behavior(const std::string& config_path,
             time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
             ++it_simu;
         }
+
+        // TODO check the collisions
+
         // compute the CoM error
         error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
         error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
@@ -279,8 +283,6 @@ void test_behavior(const std::string& config_path,
     error_com_dart /= simu.scheduler().current_time() * 1000;
     std::vector<double> com_errors = {error_com_tsid, error_com_dart};
     std::cout << "CoM: [tsid]" << error_com_tsid << " [dart]" << error_com_dart << std::endl;
-    BOOST_CHECK(error_com_tsid < cst::com_tracking_tsid_tol);
-    BOOST_CHECK(error_com_dart < cst::com_tracking_dart_tol);
     yout << y::Key << "com" << y::Value << std::vector<double>{error_com_tsid, error_com_dart};
 
     // error report for se3 tasks
@@ -292,18 +294,44 @@ void test_behavior(const std::string& config_path,
                   << "pos error DART:" << t.error_dart << " "
                   << "\t(mask =" << t.mask << ",weight=" << t.weight << ")" << std::endl;
         yout << y::Key << t.name << y::Value << std::vector<double>{t.error_tsid, t.error_dart};
-        BOOST_CHECK(t.error_tsid < cst::pos_tracking_tsid_tol);
-        BOOST_CHECK(t.error_dart < cst::pos_tracking_dart_tol);
+    }
+
+    // comparisons to the reference values
+    try {
+        // CoM
+        auto com = ref["com"].as<std::vector<double>>();
+        BOOST_CHECK_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM");
+        BOOST_CHECK_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM");
+        // SE3 tasks
+        for (auto& t : se3_tasks) {
+            auto e = ref[t.name].as<std::vector<double>>();
+            BOOST_CHECK_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name);
+            BOOST_CHECK_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name);
+        }
+    }
+    catch (std::exception& e) {
+        std::cout << colors::red << e.what() << std::endl;
+        BOOST_CHECK(!"error in ref comparison");
     }
 
     std::cout << std::endl;
 }
 
-void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, bool fast, y::Emitter& yout)
+void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, bool fast, const y::Node& ref, y::Emitter& yout)
 {
     std::string urdf = fast ? "talos/talos_fast.urdf" : "talos/talos.urdf";
     std::cout << colors::blue << colors::bold << "TESTING: " << config_path << " | " << actuators << " | " << coll << " | " << urdf << colors::rst << std::endl;
     yout << y::Key << urdf << y::BeginMap;
+
+    y::Node node;
+    try {
+        node = ref[config_path][actuators][coll][urdf];
+    }
+    catch (std::exception& e) {
+        std::cerr << colors::red << e.what() << std::endl;
+        BOOST_CHECK(!"error in getting the ref node");
+        node = ref;
+    }
 
     // create the simulator and the robot
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
@@ -325,17 +353,28 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
 
     try {
         // run the behavior
-        test_behavior(config_path, simu, robot, actuators, yout);
+        test_behavior(config_path, simu, robot, actuators, node, yout);
     }
     catch (std::exception& e) {
-        std::cout << colors::red << colors::bold << "Error (exception): t=" << simu.scheduler().current_time() << " " << colors::rst << e.what() << std::endl;
-        BOOST_CHECK(e.what());
+        std::cerr << colors::red << colors::bold << "Error (exception): t=" << simu.scheduler().current_time() << " " << colors::rst << e.what() << std::endl;
+        BOOST_CHECK(!"exception when running the behavior");
     }
     yout << y::EndMap;
 }
 
 BOOST_AUTO_TEST_CASE(behaviors)
 {
+    // we load the reference
+    y::Node ref;
+    try {
+        ref = y::LoadFile(cst::ref_path);
+        std::cout << "ref file:" << cst::ref_path << std::endl;
+    }
+    catch (std::exception& e) {
+        std::cerr << colors::red << e.what() << " => " << cst::ref_path << std::endl;
+        BOOST_CHECK(!"cannot access the reference file");
+    }
+
     // we write the results in yaml file, for future comparisons and analysis
     y::Emitter yout;
     yout << y::BeginMap;
@@ -349,9 +388,10 @@ BOOST_AUTO_TEST_CASE(behaviors)
 
     if (argc > 1) {
         assert(argc == 5);
-        std::cout << "using custom arguments for test" << std::endl;
-        test_behavior(argv[1], argv[2], argv[3], std::stoi(argv[4]), yout);
-        // WARING: this does not write the yaml file (it would be in)
+        std::cout << "using custom arguments for test [behavior actuators collision urdf]" << std::endl;
+        auto node = ref[argv[1]][argv[2]][argv[3]][argv[4]];
+        test_behavior(argv[1], argv[2], argv[3], argv[4], ref, yout);
+        // WARING: this does not write the yaml file
     }
 
     ///// the default behavior is to run all the combinations and write the output in the yaml file
@@ -363,16 +403,15 @@ BOOST_AUTO_TEST_CASE(behaviors)
 
     for (auto& b : behaviors) {
         yout << y::Key << b << y::Value << y::BeginMap;
-        for (auto& c : collision) {
-            yout << y::Key << c << y::Value << y::BeginMap;
-            for (auto& a : actuators) {
-                yout << y::Key << a << y::Value << y::BeginMap;
-                test_behavior(b, a, c, true, yout);
+        for (auto& a : actuators) {
+            yout << y::Key << a << y::Value << y::BeginMap;
+            for (auto& c : collision) {
+                yout << y::Key << c << y::Value << y::BeginMap;
+                test_behavior(b, a, c, true, ref, yout);
                 if (c != std::string("dart")) {
-                    test_behavior(b, a, c, false, yout);
+                    test_behavior(b, a, c, false, ref, yout);
                 }
                 yout << y::EndMap;
-                std::cout << yout.c_str() << std::endl;
             }
             yout << y::EndMap;
         }
