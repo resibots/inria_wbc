@@ -226,10 +226,12 @@ void test_behavior(const std::string& config_path,
 
         // check that we do not generate any self-collision
         // this will do nothing with the fast URDF (no collision checks)
-        auto collision_list = collision_detector.collide();
-        for (auto& s : collision_list)
-            collision_map[s] = true;
-
+        if (simu.collision_detector() != "dart") {
+            auto collision_list = collision_detector.collide();
+            for (auto& s : collision_list)
+                collision_map[s] = true;
+        }
+           
         // compute the CoM error
         error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
         error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
