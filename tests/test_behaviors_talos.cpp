@@ -229,7 +229,7 @@ void test_behavior(const std::string& config_path,
         auto collision_list = collision_detector.collide();
         for (auto& s : collision_list)
             collision_map[s] = true;
-           
+
         // compute the CoM error
         error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
         error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
@@ -288,7 +288,7 @@ void test_behavior(const std::string& config_path,
          << std::vector<double>{(time_simu + time_cmd + time_solver) / 1e6, (t_sim + t_cmd + t_solver), t_sim, t_solver, t_cmd};
 
     // collision report
-    for (auto& x: collision_map) {
+    for (auto& x : collision_map) {
         BOOST_CHECK_MESSAGE(false, std::string("collision detected: ") + x.first);
     }
 
@@ -421,9 +421,9 @@ BOOST_AUTO_TEST_CASE(behaviors)
             yout << y::Key << a << y::Value << y::BeginMap;
             for (auto& c : collision) {
                 yout << y::Key << c << y::Value << y::BeginMap;
-                test_behavior(b, a, c, urdfs[0], ref, yout);
+                test_behavior(b, a, c, urdfs[1], ref, yout);
                 if (c != std::string("dart")) {
-                    test_behavior(b, a, c, urdfs[1], ref, yout);
+                    test_behavior(b, a, c, urdfs[0], ref, yout);
                 }
                 yout << y::EndMap;
             }
