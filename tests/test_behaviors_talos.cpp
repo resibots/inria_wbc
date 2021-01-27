@@ -231,7 +231,7 @@ void test_behavior(const std::string& config_path,
             for (auto& s : collision_list)
                 collision_map[s] = true;
         }
-           
+
         // compute the CoM error
         error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
         error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
@@ -316,13 +316,13 @@ void test_behavior(const std::string& config_path,
     try {
         // CoM
         auto com = ref["com"].as<std::vector<double>>();
-        BOOST_CHECK_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM");
-        BOOST_CHECK_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM");
+        BOOST_CHECK_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM tolerance --> " + std::to_string(error_com_tsid - com[0]) + " > " + std::to_string(cst::tolerance));
+        BOOST_CHECK_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM tolerance--> " + std::to_string(error_com_dart - com[1]) + " > " + std::to_string(cst::tolerance));
         // SE3 tasks
         for (auto& t : se3_tasks) {
             auto e = ref[t.name].as<std::vector<double>>();
-            BOOST_CHECK_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name);
-            BOOST_CHECK_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name);
+            BOOST_CHECK_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_tsid - e[0]) + " > " + std::to_string(cst::tolerance));
+            BOOST_CHECK_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_dart - e[1]) + " > " + std::to_string(cst::tolerance));
         }
     }
     catch (std::exception& e) {
