@@ -6,10 +6,13 @@
 #include <iostream>
 #include <signal.h>
 
+#include <dart/dynamics/BodyNode.hpp>
+
 #include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/sensor/force_torque.hpp>
+#include <robot_dart/sensor/torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
 
 #ifdef GRAPHIC
@@ -17,8 +20,12 @@
 #endif
 
 #include "inria_wbc/behaviors/behavior.hpp"
+#include "inria_wbc/controllers/pos_tracker.hpp"
+#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "inria_wbc/robot_dart/self_collision_detector.hpp"
+#include "tsid/tasks/task-self-collision.hpp"
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -42,6 +49,8 @@ int main(int argc, char* argv[])
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("ghost,g", "display the ghost (Pinocchio model)")
+        ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
+        ("check_self_collisions", "check the self collisions (print if a collision)")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("verbose,v", "verbose mode (controller)")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
@@ -131,7 +140,7 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
-        inria_wbc::controllers::Controller::Params params = { 
+        inria_wbc::controllers::Controller::Params params = {
             robot->model_filename(),
             sot_config_path,
             dt,
@@ -176,22 +185,59 @@ int main(int argc, char* argv[])
         int it_simu = 0, it_cmd = 0;
 
         std::shared_ptr<robot_dart::Robot> ghost;
-        if (vm.count("ghost")) {
+        if (vm.count("ghost") || vm.count("collisions")) {
             ghost = robot->clone_ghost();
             ghost->skeleton()->setPosition(4, -1.57);
             ghost->skeleton()->setPosition(5, 1.1);
             simu.add_robot(ghost);
         }
+
+        // self-collision shapes
+        std::vector<std::shared_ptr<robot_dart::Robot>> self_collision_spheres;
+        if (vm.count("collisions")) {
+            auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+            auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
+            for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+                Eigen::Vector6d cp = Eigen::Vector6d::Zero();
+                cp.tail(3) = task_self_collision->avoided_frames_positions()[i];
+                double r0 = task_self_collision->avoided_frames_r0s()[i];
+                auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0 * 2, r0 * 2, r0 * 2), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
+                sphere->set_color_mode("aspect");
+                self_collision_spheres.push_back(sphere);
+                simu.add_visual_robot(self_collision_spheres.back());
+            }
+        }
+        
+        std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
+
+        auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
+        for(const auto& joint : talos_tracker_controller->torque_sensor_joints())
+        {
+            torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000)); 
+            std::cerr << "Add joint torque sensor:  " << joint << std::endl;
+        }
+    
+        // reading from sensors
+        Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
+
+
+        // create the collision detector (useful only if --check_self_collisions)
+        inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
+
         // the main loop
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
+            // get actual torque from sensors
+            for(auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
+                tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
+
             // update the sensors
             inria_wbc::controllers::SensorData sensor_data;
             // left foot
             sensor_data["lf_torque"] = ft_sensor_left->torque();
-            sensor_data["lf_force"] = ft_sensor_left->force(); 
+            sensor_data["lf_force"] = ft_sensor_left->force();
             // right foot
             sensor_data["rf_torque"] = ft_sensor_right->torque();
             sensor_data["rf_force"] = ft_sensor_right->force();
@@ -200,7 +246,17 @@ int main(int argc, char* argv[])
             sensor_data["velocity"] = robot->com_velocity().tail<3>();
             // joint positions (excluding floating base)
             sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+            // joint torque sensors
+            sensor_data["joints_torque"] = tq_sensors;
 
+            if (vm.count("check_self_collisions")) {
+                IWBC_ASSERT(!vm.count("fast"), "=> check_self_collisions is not compatible with --fast!");
+                auto collision_list = collision_detector.collide();
+                if (!collision_list.empty())
+                    std::cout << " ------ Collisions ------ " << std::endl;
+                for (auto& s : collision_list)
+                    std::cout <<  s << std::endl;
+            }
             // step the command
             Eigen::VectorXd cmd;
             if (simu.schedule(simu.control_freq())) {
@@ -227,6 +283,27 @@ int main(int argc, char* argv[])
                 }
 
                 ++it_cmd;
+            }
+
+            if (simu.schedule(simu.graphics_freq()) && vm.count("collisions")) {
+                auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+                auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
+                for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+                    auto cp = self_collision_spheres[i]->base_pose();
+                    cp.translation() = task_self_collision->avoided_frames_positions()[i];
+                    cp.translation()[0] -= 1; // move to the ghost
+                    self_collision_spheres[i]->set_base_pose(cp);
+                    auto bd = self_collision_spheres[i]->skeleton()->getBodyNodes()[0];
+                    auto visual = bd->getShapeNodesWith<dart::dynamics::VisualAspect>()[0];
+                    visual->getShape()->setDataVariance(dart::dynamics::Shape::DYNAMIC_COLOR);
+                    bool c = task_self_collision->collision(i);
+                    if (c) {
+                        visual->getVisualAspect()->setRGBA(dart::Color::Red(1.0));
+                    }
+                    else {
+                        visual->getVisualAspect()->setRGBA(dart::Color::Green(1.0));
+                    }
+                }
             }
 
             // push the robot
@@ -293,9 +370,9 @@ int main(int argc, char* argv[])
                 oss << "[Cmd: " << t_cmd << " ms]" << std::endl;
                 if (push)
                     oss << "pushing..." << std::endl;
-#ifdef GRAPHIC
-                if (!vm.count("mp4"))
-                    simu.set_text_panel(oss.str());
+#ifdef GRAPHIC // to avoid the warning
+                    if (!vm.count("mp4"))
+                        simu.set_text_panel(oss.str());
 #endif
                 it_simu = 0;
                 it_cmd = 0;
@@ -311,7 +388,7 @@ int main(int argc, char* argv[])
     catch (YAML::ParserException& e) {
         std::cout << red << bold << "YAML Parse error: " << rst << e.what() << std::endl;
     }
-    catch (std::exception& e) {        
+    catch (std::exception& e) {
         std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
     }
     return 0;

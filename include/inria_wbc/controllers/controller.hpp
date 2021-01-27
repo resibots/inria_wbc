@@ -77,12 +77,14 @@ namespace inria_wbc {
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
+           
             // this could call a CoM estimator
             virtual const tsid::math::Vector3& com() const { return robot_->com(tsid_->data()); }
 
             const std::vector<int>& non_mimic_indexes() const { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmd) const { return utils::slice_vec(cmd, non_mimic_indexes_); }
 
+            Eigen::VectorXd tau(bool filter_mimics = true) const;
             Eigen::VectorXd ddq(bool filter_mimics = true) const;
             Eigen::VectorXd dq(bool filter_mimics = true) const;
             Eigen::VectorXd q0(bool filter_mimics = true) const;
@@ -101,8 +103,16 @@ namespace inria_wbc {
             {
                 assert(tsid_);
                 assert(robot_);
+                assert(robot_->model().existJointName(joint_name));
                 return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             }
+            pinocchio::SE3 model_frame_pos(const std::string& frame_name) const
+            {
+                assert(tsid_);
+                assert(robot_);
+                assert(robot_->model().existFrame(frame_name));
+                return robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
+            }            
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
             {
                 assert(task);

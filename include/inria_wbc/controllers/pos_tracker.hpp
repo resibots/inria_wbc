@@ -14,6 +14,7 @@ namespace inria_wbc {
             PosTracker& operator=(const PosTracker& o) const = delete;
             virtual ~PosTracker(){};
 
+            const std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>>& tasks() const { return tasks_; }
             template <typename T>
             std::shared_ptr<T> task(const std::string& str) const
             {
@@ -51,7 +52,7 @@ namespace inria_wbc {
            
         protected:
             virtual void parse_tasks(const std::string&);
-
+            virtual void parse_frames(const std::string&);
             // the list of all the tasks
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>> tasks_;
             // contacts are not tasks in tsid

@@ -45,6 +45,12 @@ namespace inria_wbc {
 
             YAML::Node config = YAML::LoadFile(params.sot_config_path)["CONTROLLER"];
 
+            // create additional frames if needed (optional)
+            if (config["frames"]) {
+                auto p_frames = path / boost::filesystem::path(config["frames"].as<std::string>());
+                parse_frames(p_frames.string());
+            }
+
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
             auto srdf_file = config["configurations"].as<std::string>();
@@ -102,6 +108,26 @@ namespace inria_wbc {
                 }
                 if (verbose_)
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
+            }
+        }
+
+        void PosTracker::parse_frames(const std::string& path)
+        {
+            if (verbose_)
+                std::cout<< "Parsing virtual frame file:"<<path<<std::endl;
+            YAML::Node node = YAML::LoadFile(path);
+            for (auto it = node.begin(); it != node.end(); ++it) {
+                auto name = it->first.as<std::string>();
+                auto ref = it->second["ref"].as<std::string>();
+                auto pos = it->second["pos"].as<std::vector<double>>();
+
+                pinocchio::SE3 p(1);
+                p.translation() = pinocchio::SE3::LinearType(pos[0], pos[1], pos[2]);
+                auto parent_frame_id = robot_->model().getFrameId(ref);
+                auto& frame = robot_->model().frames[parent_frame_id];
+                robot_->model().addFrame(pinocchio::Frame(name, frame.parent, parent_frame_id,
+                    frame.placement * p, pinocchio::FIXED_JOINT));
+                assert(robot_->model().existFrame(name));
             }
         }
 
