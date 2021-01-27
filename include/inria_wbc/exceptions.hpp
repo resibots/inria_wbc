@@ -22,7 +22,7 @@
 #define IWBC_CHECK(T) [&] {                                     \
     try { return T;}                                            \
     catch (std::runtime_error& e) {                                 \
-           throw IWBC_EXCEPTION(e.what());                      \
+           throw IWBC_EXCEPTION(e.what(), " when calling: ", std::string(std::string(#T)));                      \
     }}()
 
 // usage: IWBC_ASSERT(x < 3, "we received x=", x)
@@ -44,7 +44,7 @@ namespace inria_wbc {
         Exception(const char* file, int line, Types... args)
             : std::runtime_error(std::string("inria_wbc:: ")
                 + _make_msg(args...)
-                + "\t[" + file + ":" + std::to_string(line) + "]"
+                + "\t[" + file + ":" + std::to_string(line) + "]\n"
                 + "\n------ stack ------\n"
                 + boost::stacktrace::to_string(boost::stacktrace::stacktrace()))
         {

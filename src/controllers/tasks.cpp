@@ -197,8 +197,7 @@ namespace inria_wbc {
 
             // parse yaml
             auto kp = IWBC_CHECK(node["kp"].as<double>());
-            auto joint_name = node["joint"].as<std::string>();
-
+            auto joint_name = IWBC_CHECK(node["joint"].as<std::string>());
             auto lxn = IWBC_CHECK(node["lxn"].as<double>());
             auto lyn = IWBC_CHECK(node["lyn"].as<double>());
             auto lxp = IWBC_CHECK(node["lxp"].as<double>());
