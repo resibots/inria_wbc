@@ -57,7 +57,7 @@ namespace inria_wbc {
                     std::cout << " }\nfloating_base_joint_name :\t" << floating_base_joint_name << std::endl;
                 }
             };
-
+            EIGEN_MAKE_ALIGNED_OPERATOR_NEW
             Controller(const Params& params);
             Controller(const Controller&) = delete;
             Controller& operator=(const Controller& o) = delete;
@@ -119,7 +119,6 @@ namespace inria_wbc {
                 return (task->getConstraint().matrix() * ddq_ - task->getConstraint().vector()).norm();
             }
             virtual double cost(const std::string& task_name) const = 0;
-
         private:
             std::vector<int> get_non_mimics_indexes() const;
 

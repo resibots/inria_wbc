@@ -11,6 +11,8 @@ namespace inria_wbc {
 
         class TalosPosTracker : public PosTracker {
         public:
+            EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
             TalosPosTracker(const Params& params);
             TalosPosTracker(const TalosPosTracker& other) = delete;
             TalosPosTracker& operator=(const TalosPosTracker& o) const = delete;
@@ -24,7 +26,6 @@ namespace inria_wbc {
             const safety::TorqueCollisionDetection& torque_collision_detector() const { return _torque_collision_detection; }
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
-
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
             void parse_collision_thresholds(const std::string& config_path);

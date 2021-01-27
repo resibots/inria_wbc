@@ -43,20 +43,20 @@ namespace inria_wbc {
         {
             // init stabilizer
             {
-                YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"];
-                _use_stabilizer = c["activated"].as<bool>();
-                _stabilizer_p = Eigen::Vector2d(c["p"].as<std::vector<double>>().data());
-                _stabilizer_d = Eigen::Vector2d(c["d"].as<std::vector<double>>().data());
-                auto history = c["filter_size"].as<int>();
+                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"]);
+                _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
+                _stabilizer_p = IWBC_CHECK(Eigen::Vector2d(c["p"].as<std::vector<double>>().data()));
+                _stabilizer_d = IWBC_CHECK(Eigen::Vector2d(c["d"].as<std::vector<double>>().data()));
+                auto history = IWBC_CHECK(c["filter_size"].as<int>());
                 _cop_estimator.set_history_size(history);
             }
 
             // init collision detection
             {
                 YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"];
-                _use_torque_collision_detection = c["activated"].as<bool>();
-                auto filter_window_size = c["filter_size"].as<int>();
-                auto max_invalid = c["max_invalid"].as<int>();
+                _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
+                auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
+                auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
 
                 _torque_collision_joints = {
                     "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint", 
@@ -83,7 +83,7 @@ namespace inria_wbc {
                 // update thresholds from file (if any)
                 if (c["thresholds"]) {
                     auto path = boost::filesystem::path(sot_config_path).parent_path();
-                    auto p_thresh = path / boost::filesystem::path(c["thresholds"].as<std::string>());
+                    auto p_thresh = IWBC_CHECK(path / boost::filesystem::path(c["thresholds"].as<std::string>()));
                     parse_collision_thresholds(p_thresh.string());
                 }
 
@@ -114,7 +114,7 @@ namespace inria_wbc {
             {
                 std::string joint = _torque_collision_joints[jid];
                 if(config[joint])
-                    _torque_collision_threshold(jid) = config[joint].as<double>();
+                    _torque_collision_threshold(jid) = IWBC_CHECK(config[joint].as<double>());
             }
 
             return;

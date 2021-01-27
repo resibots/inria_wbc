@@ -4,6 +4,11 @@
 #include <exception>
 #include <string>
 
+#include <boost/stacktrace.hpp> // require boost 1.65+
+
+
+// TODO : use __PRETTY_FUNCTION__ or __FUNCTION__
+
 // usage: throw IWBC_EXCEPTION("error:", 42)
 #define IWBC_EXCEPTION(...) inria_wbc::Exception(__FILE__, __LINE__, __VA_ARGS__)
 #define IWBC_FIRST_ARG(N, ...) N
@@ -11,12 +16,22 @@
 #define IWBC_NEXT_ARG_SUB(ignore, ...) __VA_ARGS__
 #define IWBC_NEXT_ARG(...) IWBC_NEXT_ARG_SUB(__VA_ARGS__)
 
-// usage: assert(x < 3, "we received x=", x)
+// some magic to add the line numbers / function / call stack to an existing exception (e.g. YAML)
+// usage: IWBC_CHECK(function_that_can_throw());
+// (we create a lambda and call it directly)
+#define IWBC_CHECK(T) [&] {                                     \
+    try { return T;}                                            \
+    catch (std::runtime_error& e) {                                 \
+           throw IWBC_EXCEPTION(e.what());                      \
+    }}()
+
+// usage: IWBC_ASSERT(x < 3, "we received x=", x)
 #define IWBC_ASSERT(...)                                                             \
     {                                                                                \
         if (!(IWBC_FIRST_ARG(__VA_ARGS__)))                                          \
             throw IWBC_EXCEPTION(IWBC_FIRST_ARG_STR(__VA_ARGS__), " ", IWBC_NEXT_ARG(__VA_ARGS__)); \
     }
+
 #define IWBC_ERROR(...)                    \
     {                                      \
         throw IWBC_EXCEPTION(__VA_ARGS__); \
@@ -29,7 +44,9 @@ namespace inria_wbc {
         Exception(const char* file, int line, Types... args)
             : std::runtime_error(std::string("inria_wbc:: ")
                 + _make_msg(args...)
-                + "\t[" + file + ":" + std::to_string(line) + "]")
+                + "\t[" + file + ":" + std::to_string(line) + "]"
+                + "\n------ stack ------\n"
+                + boost::stacktrace::to_string(boost::stacktrace::stacktrace()))
         {
         }
 
