@@ -34,7 +34,7 @@ namespace cst {
     static constexpr double dt = 0.001;
     static constexpr double duration = 10;
     static constexpr double frequency = 1000;
-    static constexpr double tolerance = 1e-5;
+    static constexpr double tolerance = 1e-3;
     static const std::string ref_path = "../../tests/ref_test_talos.yaml";
 
 } // namespace cst
@@ -397,7 +397,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     // the YAMl file has a timestamp (so that we can archive them)
     yout << y::Key << "timestamp" << y::Value << date();
 
-    // use ./my_test -- ../../etc/arm.yaml servo fcl 0 for a specific test
+    // use ./my_test -- ../../etc/arm.yaml servo fcl talos/talos.urdf for a specific test
     auto argc = boost::unit_test::framework::master_test_suite().argc;
     auto argv = boost::unit_test::framework::master_test_suite().argv;
 
