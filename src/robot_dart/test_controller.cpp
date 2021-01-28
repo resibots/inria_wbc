@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
             verbose,
             robot->mimic_dof_names()};
 
-        YAML::Node config = YAML::LoadFile(sot_config_path);
+        YAML::Node config = IWBC_CHECK(YAML::LoadFile(sot_config_path));
 
         auto controller_name = IWBC_CHECK(config["CONTROLLER"]["name"].as<std::string>());
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);

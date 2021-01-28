@@ -22,7 +22,7 @@
 #define IWBC_CHECK(T) [&] {                                     \
     try { return T;}                                            \
     catch (std::runtime_error& e) {                                 \
-           throw IWBC_EXCEPTION(e.what(), " when calling: ", std::string(std::string(#T)));                      \
+           throw IWBC_EXCEPTION("[", e.what(), "] when calling: ", std::string(std::string(#T)));                      \
     }}()
 
 // usage: IWBC_ASSERT(x < 3, "we received x=", x)
