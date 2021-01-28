@@ -16,11 +16,11 @@ CONTROLLER:
     thresholds: collision_thresholds.yaml
 BEHAVIOR:
   name : walk-on-spot
-  traj_com_duration : 1.5
-  traj_foot_duration : 1.5
-  step_height : 0.3
+  traj_com_duration : 10
+  traj_foot_duration : 10
+  step_height : 0.1
   stop_duration : 0.7
-  step_height : 0.45
+  step_height : 0.7
   stop_height : 0.015
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
