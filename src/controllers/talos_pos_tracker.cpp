@@ -53,7 +53,7 @@ namespace inria_wbc {
 
             // init collision detection
             {
-                YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"];
+                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"]);
                 _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
                 auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
                 auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
@@ -109,7 +109,7 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_collision_thresholds(const std::string& config_path)
         {
-            YAML::Node config =  YAML::LoadFile(config_path);
+            YAML::Node config =  IWBC_CHECK(YAML::LoadFile(config_path));
             for(size_t jid = 0; jid < _torque_collision_joints.size(); ++jid)
             {
                 std::string joint = _torque_collision_joints[jid];

@@ -59,7 +59,9 @@ namespace inria_wbc {
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
 
             //q_tsid_ is of size 37 (pos+quat+nactuated)
-            q_tsid_ = robot_->model().referenceConfigurations[ref_config];
+            auto ref_map = robot_->model().referenceConfigurations;
+            IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
+            q_tsid_ = ref_map[ref_config];
             //q0_ is in "Dart format" for the floating base
             Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
             Eigen::AngleAxisd aaxis(quat);
@@ -92,7 +94,7 @@ namespace inria_wbc {
         {
             if (verbose_)
                 std::cout << "parsing task file:" << path << std::endl;
-            YAML::Node task_list = YAML::LoadFile(path);
+            YAML::Node task_list = IWBC_CHECK(YAML::LoadFile(path));
             for (auto it = task_list.begin(); it != task_list.end(); ++it) {
                 auto name = IWBC_CHECK(it->first.as<std::string>());
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
@@ -114,8 +116,8 @@ namespace inria_wbc {
         void PosTracker::parse_frames(const std::string& path)
         {
             if (verbose_)
-                std::cout<< "Parsing virtual frame file:"<<path<<std::endl;
-            YAML::Node node = YAML::LoadFile(path);
+                std::cout << "Parsing virtual frame file:" << path << std::endl;
+            YAML::Node node = IWBC_CHECK(YAML::LoadFile(path));
             for (auto it = node.begin(); it != node.end(); ++it) {
                 auto name = IWBC_CHECK(it->first.as<std::string>());
                 auto ref = IWBC_CHECK(it->second["ref"].as<std::string>());
