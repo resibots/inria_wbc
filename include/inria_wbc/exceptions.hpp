@@ -4,7 +4,12 @@
 #include <exception>
 #include <string>
 
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 106500 // 1.65
+#define IWBC_USE_STACKTRACE
 #include <boost/stacktrace.hpp> // require boost 1.65+
+#endif
+
 
 
 // TODO : use __PRETTY_FUNCTION__ or __FUNCTION__
@@ -46,7 +51,10 @@ namespace inria_wbc {
                 + _make_msg(args...)
                 + "\t[" + file + ":" + std::to_string(line) + "]\n"
                 + "\n------ stack ------\n"
-                + boost::stacktrace::to_string(boost::stacktrace::stacktrace()))
+#ifdef IWBC_USE_STACKTRACE
+                + boost::stacktrace::to_string(boost::stacktrace::stacktrace())
+#endif
+                )
         {
         }
 
