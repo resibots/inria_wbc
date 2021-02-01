@@ -129,13 +129,22 @@ namespace inria_wbc {
             IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
             auto ref_q = robot->model().referenceConfigurations[ref_name];
 
+            bool floating_base_flag = true;
+            if (node["floating_base"]) {
+              if ( node["floating_base"].as<std::string>() == "false") {
+                floating_base_flag = false;
+              }
+            }
+
+
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskJointPosture>(task_name, *robot);
-            task->Kp(kp * Vector::Ones(robot->nv() - 6));
+
+            task->Kp(kp * Vector::Ones(robot->nv() - floating_base_flag ? 6 : 0));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_post(robot->nv() - 6);
+            Vector mask_post(robot->nv() - floating_base_flag ? 6 : 0);
             if (!node["mask"]) {
-                mask_post = Vector::Ones(robot->nv() - 6);
+                mask_post = Vector::Ones(robot->nv() - floating_base_flag ? 6 : 0);
             }
             else {
                 auto mask = node["mask"].as<std::string>();

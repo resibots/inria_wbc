@@ -10,4 +10,5 @@ posture:
     weight: 0.75
     kp: 30.0
     ref: start
+    floating_base: false
 
