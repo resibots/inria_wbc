@@ -23,21 +23,28 @@ namespace trajectory_handler {
 
     inline std::vector<pinocchio::SE3> compute_traj(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration)
     {
-        Eigen::VectorXd eig_start(7), eig_dest(7), eig_xt(7);
-        Eigen::Quaterniond start_rotation(start.rotation());
-        Eigen::Quaterniond dest_rotation(dest.rotation());
-        eig_start << start.translation(), start_rotation.coeffs();
-        eig_dest << dest.translation(), dest_rotation.coeffs();
+        Eigen::Vector3d pos_start, pos_dest, pos_xt;
+        pos_start = start.translation();
+        pos_dest = dest.translation();
+        Eigen::Quaterniond quat_start(start.rotation());
+        Eigen::Quaterniond quat_dest(dest.rotation());
+
+        // Interpolate time as min jerk to use in slerp routine (otherwise slerp gives constant angular velocity result)
+        Eigen::VectorXd t_start(1), t_dest(1), t_xt(1);
+        t_start << 0.;
+        t_dest << 1.;
 
         uint n_steps = std::floor(trajectory_duration / dt);
-        std::vector<pinocchio::SE3> trajectory(n_steps);
+        std::vector<pinocchio::SE3> trajectory;
 
         for (uint i = 0; i < n_steps; i++) {
-            eig_xt = minimum_jerk_polynom(eig_start, eig_dest, dt * i, trajectory_duration);
-            Eigen::Quaterniond quat(eig_xt(6), eig_xt(3), eig_xt(4), eig_xt(5));
-            Eigen::Vector3d pos = eig_xt.head(3);
-            pinocchio::SE3 xt = pinocchio::SE3(quat, pos);
-            trajectory[i] = xt;
+            // Min jerk trajectory for translation
+            pos_xt = minimum_jerk_polynom(pos_start, pos_dest, dt * i, trajectory_duration);
+            t_xt = minimum_jerk_polynom(t_start, t_dest, dt * i, trajectory_duration);
+            // Slerp interpolation for quaternion
+            Eigen::Quaterniond quat_xt = quat_start.slerp(t_xt(0), quat_dest);
+            pinocchio::SE3 xt = pinocchio::SE3(quat_xt, pos_xt);
+            trajectory.push_back(xt);
         }
         return trajectory;
     }
