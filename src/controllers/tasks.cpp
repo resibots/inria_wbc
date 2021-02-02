@@ -103,14 +103,15 @@ namespace inria_wbc {
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             task->setMask(mask);
 
-            // set the reference to 0 by default
-            task->setReference(to_sample(Eigen::Vector3d(0, 0, 0)));
+            // set the reference
+            task->setReference(to_sample(robot->com(tsid->data())));
 
             // add to TSID
             tsid->addMotionTask(*task, weight, 1);
 
             return task;
         }
+
         RegisterYAML<tsid::tasks::TaskComEquality> __register_com_equality("com", make_com);
 
         ////// Momentum //////
@@ -132,7 +133,7 @@ namespace inria_wbc {
             task->Kd(2.0 * task->Kp().cwiseSqrt());
 
             // set the reference
-            task->setReference(to_sample(robot->com(tsid->data())));
+            task->setReference(to_sample(Eigen::Vector3d(0, 0, 0)));
 
             // add to TSID
             tsid->addMotionTask(*task, weight, 1);
@@ -281,7 +282,7 @@ namespace inria_wbc {
             auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, p);
             task->Kp(kp);
             task->Kd(2.0 * sqrt(task->Kp()));
-            
+
             // add the task to TSID (side effect, be careful)
             tsid->addMotionTask(*task, weight, 1);
 
