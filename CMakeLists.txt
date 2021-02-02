@@ -31,13 +31,18 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/controllers/talos_pos_tracker.hpp
                             include/inria_wbc/behaviors/talos_squat.hpp
                             include/inria_wbc/behaviors/talos_move_arm.hpp
+                            include/inria_wbc/behaviors/talos_clapping.hpp
                             include/inria_wbc/behaviors/talos_walk_on_spot.hpp
                             include/inria_wbc/utils/trajectory_handler.hpp
                             include/inria_wbc/utils/utils.hpp
+                            include/inria_wbc/safety/torque_collision_detection.hpp
                             include/inria_wbc/utils/factory.hpp
                             include/inria_wbc/exceptions.hpp
                             include/inria_wbc/robot_dart/cmd.hpp
                             include/inria_wbc/estimators/cop.hpp
+                            include/inria_wbc/estimators/filtering.hpp
+                            include/tsid/tasks/task-self-collision.hpp
+
 
 )
 
@@ -48,14 +53,19 @@ set(INRIA_WBC_SOURCES
                             src/controllers/talos_pos_tracker.cpp
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
+                            src/safety/torque_collision_detection.cpp
                             src/behaviors/talos_walk_on_spot.cpp
+                            src/behaviors/talos_clapping.cpp                            
                             src/estimators/cop.cpp
+                            src/tsid/task-self-collision.cpp
+
 )
 
-set(EXAMPLE_LIST 
+set(EXAMPLE_LIST
                 src/robot_dart/evaluate_cop.cpp
                 src/robot_dart/test_controller.cpp
                 src/robot_dart/test_masses.cpp
+                src/robot_dart/test_torque_safety.cpp
 )
 
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
@@ -121,10 +131,10 @@ set(LIBRARY inria_wbc)
 
 configure_package_config_file("cmake/inria_wbc.cmake.in"
                               "${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfig.cmake"
-                              INSTALL_DESTINATION 
+                              INSTALL_DESTINATION
                               "${LIBRARY_INSTALL_DIR}/cmake/inria_wbc"
-                              PATH_VARS 
-                              INCLUDE_INSTALL_DIR 
+                              PATH_VARS
+                              INCLUDE_INSTALL_DIR
                               LIBRARY_INSTALL_DIR LIBRARY
                               DEPENDENCIES_LIBS DEPENDENCIES_INCS
 )
@@ -151,6 +161,14 @@ install(FILES
 
 install(DIRECTORY etc/  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/inria_wbc/etc)
 
+enable_testing()
+# this is you happen to use "make test" (don't)
+list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
+# the right way of running the test is "make check"
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
+     --force-new-ctest-process
+     --verbose
+      --output-on-failure
+)
+
 ADD_SUBDIRECTORY(tests)
-
-

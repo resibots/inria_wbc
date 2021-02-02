@@ -2,8 +2,8 @@ CONTROLLER:
   name: talos-pos-tracker
   configurations: talos_configurations.srdf 
   ref_config: pal_start
-  tasks: tasks_talos.yaml
   frames: frames_talos.yaml
+  tasks: tasks_talos.yaml
   # no URDF here because this is set by the main
   stabilizer:
     activated: true
@@ -16,13 +16,13 @@ CONTROLLER:
     max_invalid: 5
     thresholds: collision_thresholds.yaml
 BEHAVIOR:
-  name : talos-move-arm
-  trajectory_duration : 4
-  motion_size : 0.2
+  name : talos-clapping
+  trajectory_duration : 1.0
+  motion_size : 1.1
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
-  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/arm.yaml
+  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/squat.yaml
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false

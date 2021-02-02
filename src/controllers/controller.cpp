@@ -137,7 +137,7 @@ namespace inria_wbc {
                 tau_tsid_ = tau;
                 a_tsid_ = dv;
                 v_tsid_ += dt_ * dv;
-
+                
                 q_tsid_ = pinocchio::integrate(robot_->model(), q_tsid_, dt_ * v_tsid_);
                 t_ += dt_;
 
@@ -215,6 +215,11 @@ namespace inria_wbc {
             std::vector<std::string> control_dofs = controllable_dofs(filter_mimics);
             all_dofs.insert(all_dofs.end(), control_dofs.begin(), control_dofs.end());
             return filter_mimics ? remove_intersection(all_dofs, mimic_dof_names_) : all_dofs;
+        }
+
+        Eigen::VectorXd Controller::tau(bool filter_mimics) const
+        {
+            return filter_mimics ? slice_vec(tau_, non_mimic_indexes_) : tau_;
         }
 
         Eigen::VectorXd Controller::ddq(bool filter_mimics) const
