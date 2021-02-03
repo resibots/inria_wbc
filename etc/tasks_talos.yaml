@@ -35,7 +35,7 @@ com:
     mask: 111
 momentum:
     type: momentum
-    weight: 1000.0
+    weight: 0.0
     kp: 300.0
 posture:
     type: posture

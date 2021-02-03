@@ -12,8 +12,8 @@
 #include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/sensor/force_torque.hpp>
-#include <robot_dart/sensor/torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
+#include <robot_dart/sensor/torque.hpp>
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
@@ -207,19 +207,16 @@ int main(int argc, char* argv[])
                 simu.add_visual_robot(self_collision_spheres.back());
             }
         }
-        
         std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
 
         auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
-        for(const auto& joint : talos_tracker_controller->torque_sensor_joints())
-        {
-            torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000)); 
+        for (const auto& joint : talos_tracker_controller->torque_sensor_joints()) {
+            torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000));
             std::cerr << "Add joint torque sensor:  " << joint << std::endl;
         }
-    
+
         // reading from sensors
         Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
-
 
         // create the collision detector (useful only if --check_self_collisions)
         inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
@@ -230,7 +227,7 @@ int main(int argc, char* argv[])
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
             // get actual torque from sensors
-            for(auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
+            for (auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
                 tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
 
             // update the sensors
@@ -255,7 +252,7 @@ int main(int argc, char* argv[])
                 if (!collision_list.empty())
                     std::cout << " ------ Collisions ------ " << std::endl;
                 for (auto& s : collision_list)
-                    std::cout <<  s << std::endl;
+                    std::cout << s << std::endl;
             }
             // step the command
             Eigen::VectorXd cmd;
@@ -346,6 +343,8 @@ int main(int argc, char* argv[])
                 else if (x.first == "ft")
                     (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
                                 << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
+                else if (x.first == "momentum") // the momentum according to pinocchio
+                    (*x.second) << controller->momentum().transpose() << std::endl;
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }
@@ -371,8 +370,8 @@ int main(int argc, char* argv[])
                 if (push)
                     oss << "pushing..." << std::endl;
 #ifdef GRAPHIC // to avoid the warning
-                    if (!vm.count("mp4"))
-                        simu.set_text_panel(oss.str());
+                if (!vm.count("mp4"))
+                    simu.set_text_panel(oss.str());
 #endif
                 it_simu = 0;
                 it_cmd = 0;

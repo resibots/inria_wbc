@@ -16,8 +16,8 @@ CONTROLLER:
     thresholds: collision_thresholds.yaml
 BEHAVIOR:
   name : walk-on-spot
-  traj_com_duration : 1.5
-  traj_foot_duration : 1.5
+  traj_com_duration : 1.0
+  traj_foot_duration : 1.0
   step_height : 0.3
   stop_duration : 0.7
   step_height : 0.45
