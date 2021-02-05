@@ -32,6 +32,8 @@ namespace inria_wbc {
             }
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return task<tsid::tasks::TaskComEquality>("com"); }
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
+            std::shared_ptr<tsid::tasks::TaskJointPosture> posture_task() { return task<tsid::tasks::TaskJointPosture>("posture"); }
+
 
             double cost(const std::string& task_name) const override { return Controller::cost(task<tsid::tasks::TaskBase>(task_name)); }
 
@@ -49,7 +51,7 @@ namespace inria_wbc {
             // typically, for external optimizers (or other use?)
             // the default weights are those of the yaml
             void set_task_weight(const std::string& task_name, double weight);
-           
+            void set_task_kp(const std::string& task_name, double kp);
         protected:
             virtual void parse_tasks(const std::string&);
             virtual void parse_frames(const std::string&);

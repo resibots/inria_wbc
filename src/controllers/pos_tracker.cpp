@@ -179,5 +179,23 @@ namespace inria_wbc {
         {
             tsid_->updateTaskWeight(task_name, weight);
         }
+
+        void PosTracker::set_task_kp(const std::string& task_name, double kp) 
+        {        
+            if (task_name == "com") {
+                auto task = com_task();
+                task->Kp(kp * Vector::Ones(6));
+                task->Kd(2.0 * task->Kp().cwiseSqrt());
+            } else if (task_name == "posture") {
+                auto task = posture_task();
+                task->Kp(kp * Vector::Ones(robot_->nv() - 6));
+                task->Kd(2.0 * task->Kp().cwiseSqrt());
+            } else {
+                auto task = se3_task(task_name);
+                task->Kp(kp * Vector::Ones(6));
+                task->Kd(2.0 * task->Kp().cwiseSqrt());
+            }
+        }
+
     } // namespace controllers
 } // namespace inria_wbc
