@@ -52,7 +52,7 @@ namespace inria_wbc {
                 + "\t[" + file + ":" + std::to_string(line) + "]\n"
                 + "\n------ stack ------\n"
 #ifdef IWBC_USE_STACKTRACE
-                + boost::stacktrace::to_string(boost::stacktrace::stacktrace())
+          //      + boost::stacktrace::to_string(boost::stacktrace::stacktrace())
 #endif
                 )
         {

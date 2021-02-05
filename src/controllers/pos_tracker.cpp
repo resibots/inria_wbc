@@ -111,9 +111,6 @@ namespace inria_wbc {
                 if (verbose_)
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
             }
-            // we sort the tasks in tsid because their order is different depending on the OS/compiler
-            // and we need them always in the same order to use set_weights
-            std::sort(tsid_->m_taskMotions.begin(), tsid_->m_taskMotions.end(), [](auto &x, auto &y) { return x->task.name().compare(y->task.name()); });
         }
 
         void PosTracker::parse_frames(const std::string& path)
@@ -178,25 +175,9 @@ namespace inria_wbc {
             IWBC_ASSERT(res, "Cannot remove an unknown task: ", task_name);
         }
 
-        size_t PosTracker::num_task_weights() const
+        void PosTracker::set_task_weight(const std::string& task_name, double weight)
         {
-            // we count all the tasks with a priority >= 1 (since it does not matter for 0)
-            size_t k = 0;
-            for (auto& x : tsid_->m_taskMotions)
-                if (x->priority > 0)
-                    ++k;
-            return k;
-        }
-        void PosTracker::update_task_weights(const std::vector<double>& new_weights)
-        {
-            int i = 0;
-            for (auto& x : tsid_->m_taskMotions) {
-                if (x->priority > 0) {
-                    IWBC_ASSERT(i < new_weights.size(), i, " vs ", new_weights.size());
-                    tsid_->updateTaskWeight(x->task.name(), new_weights[i]);
-                    ++i;
-                }
-            }
+            tsid_->updateTaskWeight(task_name, weight);
         }
     } // namespace controllers
 } // namespace inria_wbc
