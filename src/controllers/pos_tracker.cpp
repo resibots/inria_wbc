@@ -111,6 +111,9 @@ namespace inria_wbc {
                 if (verbose_)
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
             }
+            // we sort the tasks in tsid because their order is different depending on the OS/compiler
+            // and we need them always in the same order to use set_weights
+            std::sort(tsid_->m_taskMotions.begin(), tsid_->m_taskMotions.end(), [](auto &x, auto &y) { return x->task.name().compare(y->task.name()); });
         }
 
         void PosTracker::parse_frames(const std::string& path)
