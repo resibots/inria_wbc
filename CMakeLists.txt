@@ -9,8 +9,6 @@ set(INRIA_WBC_VERSION 1.0.0)
 option(COMPILE_ROBOT_DART_EXAMPLE "compile robot-dart example" ON)
 option(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "compile robot-dart example with graphics" ON)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128 -std=c++14")
-
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -19,10 +17,6 @@ list(APPEND DEPENDENCIES_LIBS
                              pinocchio::pinocchio
                              tsid::tsid
                              ${YAML_CPP_LIBRARIES}
-)
-
-list(APPEND DEPENDENCIES_INCS
-                             ${CMAKE_SOURCE_DIR}/include
 )
 
 set(INRIA_WBC_HEADERS
@@ -68,20 +62,24 @@ set(EXAMPLE_LIST
                 src/robot_dart/test_torque_safety.cpp
 )
 
+
+add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})
+target_compile_definitions(inria_wbc PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
+target_compile_features(inria_wbc PUBLIC cxx_std_14)
+
+target_link_libraries(inria_wbc PUBLIC 
+			pinocchio::pinocchio
+			tsid::tsid
+			${YAML_CPP_LIBRARIES})
+
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
-    list(APPEND DEPENDENCIES_LIBS RobotDART::Simu)
+    target_link_libraries(inria_wbc PUBLIC RobotDART::Simu)
 endif()
 
-add_library(inria_wbc SHARED ${INRIA_WBC_HEADERS} ${INRIA_WBC_SOURCES})
-
-target_link_libraries(inria_wbc PUBLIC ${DEPENDENCIES_LIBS})
-
-target_include_directories(inria_wbc
-                                           PUBLIC
-                                           $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/build/include>
-                                           $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-                                           $<INSTALL_INTERFACE:include>
-                                           $<BUILD_INTERFACE:${DEPENDENCIES_INCS}>
+target_include_directories(inria_wbc PUBLIC
+		$<BUILD_INTERFACE:${inria_wbc_BINARY_DIR}/include>
+		$<BUILD_INTERFACE:${inria_wbc_SOURCE_DIR}/include>
+		$<INSTALL_INTERFACE:include>
 )
 
 
@@ -91,9 +89,13 @@ function(compile_examples)
         string(REPLACE "src/robot_dart/" "" EXAMPLE_NAME ${EXAMPLE_NAME} )
         message("COMPILING EXAMPLE ${EXAMPLE_NAME}")
         add_executable(${EXAMPLE_NAME} ${EXAMPLE})
+	target_compile_definitions(${EXAMPLE_NAME} PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
+	target_compile_features(${EXAMPLE_NAME} PUBLIC cxx_std_14)
         target_link_libraries(${EXAMPLE_NAME} PUBLIC inria_wbc Boost::program_options)
         if(RobotDART_Magnum_FOUND)
             add_executable(${EXAMPLE_NAME}_graphics ${EXAMPLE})
+            target_compile_definitions(${EXAMPLE_NAME}_graphics PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
+            target_compile_features(${EXAMPLE_NAME}_graphics PUBLIC cxx_std_14)
             target_link_libraries(${EXAMPLE_NAME}_graphics PUBLIC inria_wbc RobotDART::Magnum Boost::program_options)
         endif()
     endforeach()
@@ -116,46 +118,33 @@ endif()
 
 generate_export_header(inria_wbc)
 
-install(TARGETS inria_wbc
-                               EXPORT targets
-                               LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-                               ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-                               RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-                               INCLUDES DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+install(TARGETS inria_wbc EXPORT targets
+                               LIBRARY DESTINATION lib
+                               ARCHIVE DESTINATION lib
+                               RUNTIME DESTINATION bin
+                               INCLUDES DESTINATION include
 )
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 
-install(DIRECTORY include/inria_wbc DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
-set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include)
-set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib)
-set(LIBRARY inria_wbc)
-
-configure_package_config_file("cmake/inria_wbc.cmake.in"
-                              "${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfig.cmake"
-                              INSTALL_DESTINATION
-                              "${LIBRARY_INSTALL_DIR}/cmake/inria_wbc"
-                              PATH_VARS
-                              INCLUDE_INSTALL_DIR
-                              LIBRARY_INSTALL_DIR LIBRARY
-                              DEPENDENCIES_LIBS DEPENDENCIES_INCS
-)
+configure_package_config_file("cmake/inria_wbc.cmake.in" "inria_wbcConfig.cmake"
+                              INSTALL_DESTINATION "lib/cmake/inria_wbc"
+                              PATH_VARS)
 
 install(EXPORT targets
-                     FILE
-                     inria_wbcTargets.cmake
-                     DESTINATION
-                     ${LIBRARY_INSTALL_DIR}/cmake/inria_wbc
+		FILE inria_wbcTargets.cmake
+		NAMESPACE inria_wbc::
+		DESTINATION lib/cmake/inria_wbc
 )
 
-write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfigVersion.cmake"
+write_basic_package_version_file("inria_wbcConfigVersion.cmake"
                                  VERSION ${INRIA_WBC_VERSION}
                                  COMPATIBILITY AnyNewerVersion
 )
 
-install(FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfig.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/inria_wbcConfigVersion.cmake"
-        DESTINATION
-        ${CMAKE_INSTALL_PREFIX}/lib/cmake/inria_wbc
+install(FILES 
+	${inria_wbc_BINARY_DIR}/inria_wbcConfig.cmake 
+	${inria_wbc_BINARY_DIR}/inria_wbcConfigVersion.cmake
+        DESTINATION lib/cmake/inria_wbc
 )
 
 
