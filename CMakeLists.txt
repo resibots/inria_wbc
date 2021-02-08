@@ -13,33 +13,6 @@ find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
-list(APPEND DEPENDENCIES_LIBS
-                             pinocchio::pinocchio
-                             tsid::tsid
-                             ${YAML_CPP_LIBRARIES}
-)
-
-set(INRIA_WBC_HEADERS
-                            include/inria_wbc/controllers/controller.hpp
-                            include/inria_wbc/controllers/pos_tracker.hpp
-                            include/inria_wbc/controllers/talos_pos_tracker.hpp
-                            include/inria_wbc/behaviors/talos_squat.hpp
-                            include/inria_wbc/behaviors/talos_move_arm.hpp
-                            include/inria_wbc/behaviors/talos_clapping.hpp
-                            include/inria_wbc/behaviors/talos_walk_on_spot.hpp
-                            include/inria_wbc/utils/trajectory_handler.hpp
-                            include/inria_wbc/utils/utils.hpp
-                            include/inria_wbc/safety/torque_collision_detection.hpp
-                            include/inria_wbc/utils/factory.hpp
-                            include/inria_wbc/exceptions.hpp
-                            include/inria_wbc/robot_dart/cmd.hpp
-                            include/inria_wbc/estimators/cop.hpp
-                            include/inria_wbc/estimators/filtering.hpp
-                            include/tsid/tasks/task-self-collision.hpp
-
-
-)
-
 set(INRIA_WBC_SOURCES
                             src/controllers/controller.cpp
                             src/controllers/pos_tracker.cpp
@@ -55,14 +28,6 @@ set(INRIA_WBC_SOURCES
 
 )
 
-set(EXAMPLE_LIST
-                src/robot_dart/evaluate_cop.cpp
-                src/robot_dart/test_controller.cpp
-                src/robot_dart/test_masses.cpp
-                src/robot_dart/test_torque_safety.cpp
-)
-
-
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})
 target_compile_definitions(inria_wbc PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
 target_compile_features(inria_wbc PUBLIC cxx_std_14)
@@ -72,49 +37,11 @@ target_link_libraries(inria_wbc PUBLIC
 			tsid::tsid
 			${YAML_CPP_LIBRARIES})
 
-if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
-    target_link_libraries(inria_wbc PUBLIC RobotDART::Simu)
-endif()
-
 target_include_directories(inria_wbc PUBLIC
 		$<BUILD_INTERFACE:${inria_wbc_BINARY_DIR}/include>
 		$<BUILD_INTERFACE:${inria_wbc_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:include>
 )
-
-
-function(compile_examples)
-    foreach(EXAMPLE ${ARGN})
-        string(REPLACE ".cpp" "" EXAMPLE_NAME ${EXAMPLE} )
-        string(REPLACE "src/robot_dart/" "" EXAMPLE_NAME ${EXAMPLE_NAME} )
-        message("COMPILING EXAMPLE ${EXAMPLE_NAME}")
-        add_executable(${EXAMPLE_NAME} ${EXAMPLE})
-	target_compile_definitions(${EXAMPLE_NAME} PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
-	target_compile_features(${EXAMPLE_NAME} PUBLIC cxx_std_14)
-        target_link_libraries(${EXAMPLE_NAME} PUBLIC inria_wbc Boost::program_options)
-        if(RobotDART_Magnum_FOUND)
-            add_executable(${EXAMPLE_NAME}_graphics ${EXAMPLE})
-            target_compile_definitions(${EXAMPLE_NAME}_graphics PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
-            target_compile_features(${EXAMPLE_NAME}_graphics PUBLIC cxx_std_14)
-            target_link_libraries(${EXAMPLE_NAME}_graphics PUBLIC inria_wbc RobotDART::Magnum Boost::program_options)
-        endif()
-    endforeach()
-endfunction()
-
-
-if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
-    # we ask for Magnum because we want to build the graphics
-    if(${COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS} STREQUAL "ON")
-        find_package(RobotDART REQUIRED OPTIONAL_COMPONENTS Magnum)
-    else()
-        find_package(RobotDART REQUIRED)
-    endif()
-    # boost is only used in the test_controller binary
-    find_package(Boost REQUIRED COMPONENTS program_options)
-    compile_examples(${EXAMPLE_LIST})
-endif()
-
-
 
 generate_export_header(inria_wbc)
 
@@ -147,8 +74,12 @@ install(FILES
         DESTINATION lib/cmake/inria_wbc
 )
 
-
 install(DIRECTORY etc/  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/inria_wbc/etc)
+
+
+# generate robot dart tests
+add_subdirectory(src/robot_dart)
+
 
 enable_testing()
 # this is you happen to use "make test" (don't)
@@ -160,4 +91,4 @@ add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND}
       --output-on-failure
 )
 
-ADD_SUBDIRECTORY(tests)
+add_subdirectory(tests)

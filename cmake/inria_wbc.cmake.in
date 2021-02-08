@@ -5,19 +5,6 @@
 @PACKAGE_INIT@
 include(CMakeFindDependencyMacro)
 
-set(COMPILE_ROBOT_DART_EXAMPLE "@COMPILE_ROBOT_DART_EXAMPLE@")
-set(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "@COMPILE_ROBOT_DART_EXAMPLE@")
-
-
-if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
-    # we ask for Magnum because we want to build the graphics
-    if(${COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS} STREQUAL "ON")
-        find_package(RobotDART REQUIRED OPTIONAL_COMPONENTS Magnum)
-    else()
-        find_package(RobotDART REQUIRED)
-    endif()
-endif()
-
 find_dependency(tsid)
 find_dependency(pinocchio)
 find_dependency(yaml-cpp)
