@@ -221,6 +221,7 @@ int main(int argc, char* argv[])
         // create the collision detector (useful only if --check_self_collisions)
         inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
 
+        std::vector<double> err_x, err_y, err_z, err_right_y, err_right_x, err_left_y, err_left_x;
         // the main loop
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
@@ -337,7 +338,9 @@ int main(int argc, char* argv[])
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
                 else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << std::endl;
+                    (*x.second) << controller->cop().transpose() << " " << controller->cop_raw().transpose() << " "
+                                << controller->lcop().transpose() << " " << controller->lcop_raw().transpose() << " "
+                                << controller->rcop().transpose() << " " << controller->rcop_raw().transpose() << " " << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(5)) << std::endl;
                 else if (x.first == "ft")
@@ -348,6 +351,15 @@ int main(int argc, char* argv[])
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }
+            err_x.push_back(controller->cop().transpose()[0] - controller->com().transpose()[0]);
+            err_y.push_back(controller->cop().transpose()[1] - controller->com().transpose()[1]);
+            err_z.push_back(controller->cop().transpose()[2] - controller->com().transpose()[2]);
+
+            err_right_x.push_back(controller->rcop().transpose()[0]);
+            err_right_y.push_back(controller->rcop().transpose()[1]);
+            err_left_x.push_back(controller->lcop().transpose()[0]);
+            err_left_y.push_back(controller->lcop().transpose()[1]);
+
             // print timing information
             time_simu += time_step_simu;
             time_cmd += time_step_cmd;
@@ -378,9 +390,43 @@ int main(int argc, char* argv[])
                 time_cmd = 0;
                 time_simu = 0;
                 time_solver = 0;
+                double sum = std::accumulate(err_x.begin(), err_x.end(), 0.0);
+                double mean = sum / err_x.size();
+                double sq_sum = std::inner_product(err_x.begin(), err_x.end(), err_x.begin(), 0.0);
+                double stdev = std::sqrt(sq_sum / err_x.size() - mean * mean);
+                // std::cout << "err_x mean: " << mean << std::endl;
+                // std::cout << "err_x stdev: " << stdev << std::endl;
+
+                sum = std::accumulate(err_y.begin(), err_y.end(), 0.0);
+                mean = sum / err_y.size();
+                sq_sum = std::inner_product(err_y.begin(), err_y.end(), err_y.begin(), 0.0);
+                stdev = std::sqrt(sq_sum / err_y.size() - mean * mean);
+                // std::cout << "err_y mean: " << mean << std::endl;
+                // std::cout << "err_y stdev: " << stdev << std::endl;
+
+                sum = std::accumulate(err_right_y.begin(), err_right_y.end(), 0.0);
+                mean = sum / err_right_y.size();
+
+                std::cout << "err_right_y mean: " << mean << std::endl;
+
+                sum = std::accumulate(err_left_y.begin(), err_left_y.end(), 0.0);
+                mean = sum / err_left_y.size();
+
+                std::cout << "err_left_y mean: " << mean << std::endl;
+
+                sum = std::accumulate(err_right_x.begin(), err_right_x.end(), 0.0);
+                mean = sum / err_right_x.size();
+
+                std::cout << "err_right_x mean: " << mean << std::endl;
+
+                sum = std::accumulate(err_left_x.begin(), err_left_x.end(), 0.0);
+                mean = sum / err_left_x.size();
+
+                std::cout << "err_left_x mean: " << mean << std::endl;
             }
         }
     }
+
     catch (YAML::RepresentationException& e) {
         std::cout << red << bold << "YAML Parse error (missing key in YAML file?): " << rst << e.what() << std::endl;
     }

@@ -47,6 +47,7 @@ namespace inria_wbc {
                 _use_stabilizer = c["activated"].as<bool>();
                 _stabilizer_p = Eigen::Vector2d(c["p"].as<std::vector<double>>().data());
                 _stabilizer_d = Eigen::Vector2d(c["d"].as<std::vector<double>>().data());
+                _stabilizer_p_ankle = Eigen::Vector2d(c["p_ankle"].as<std::vector<double>>().data());
                 auto history = c["filter_size"].as<int>();
                 _cop_estimator.set_history_size(history);
             }
@@ -59,25 +60,23 @@ namespace inria_wbc {
                 auto max_invalid = c["max_invalid"].as<int>();
 
                 _torque_collision_joints = {
-                    "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint", 
+                    "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint",
                     "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
-                    "torso_1_joint", "torso_2_joint", 
+                    "torso_1_joint", "torso_2_joint",
                     "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
-                    "arm_right_1_joint", "arm_right_2_joint","arm_right_3_joint", "arm_right_4_joint"
-                };
-                
+                    "arm_right_1_joint", "arm_right_2_joint", "arm_right_3_joint", "arm_right_4_joint"};
+
                 auto filtered_dof_names = this->all_dofs(true); // filter out mimics
-                for(const auto& joint : _torque_collision_joints)
-                {
+                for (const auto& joint : _torque_collision_joints) {
                     auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
                     _torque_collision_joints_ids.push_back(std::distance(filtered_dof_names.begin(), it));
                 }
 
                 _torque_collision_threshold.resize(_torque_collision_joints.size());
-                _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
-                    3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
-                    1e+01, 1e+01, 
-                    1e+01, 1e+01, 1e+01, 1e+01, 
+                _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                    3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                    1e+01, 1e+01,
+                    1e+01, 1e+01, 1e+01, 1e+01,
                     1e+01, 1e+01, 1e+01, 1e+01;
 
                 // update thresholds from file (if any)
@@ -86,7 +85,6 @@ namespace inria_wbc {
                     auto p_thresh = path / boost::filesystem::path(c["thresholds"].as<std::string>());
                     parse_collision_thresholds(p_thresh.string());
                 }
-
 
                 _torque_collision_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
 
@@ -102,18 +100,17 @@ namespace inria_wbc {
 
                 std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
                 std::cout << "with thresholds" << std::endl;
-                for(size_t id = 0; id < _torque_collision_joints.size(); ++id)
+                for (size_t id = 0; id < _torque_collision_joints.size(); ++id)
                     std::cout << _torque_collision_joints[id] << ": " << _torque_collision_threshold(id) << std::endl;
             }
         }
 
         void TalosPosTracker::parse_collision_thresholds(const std::string& config_path)
         {
-            YAML::Node config =  YAML::LoadFile(config_path);
-            for(size_t jid = 0; jid < _torque_collision_joints.size(); ++jid)
-            {
+            YAML::Node config = YAML::LoadFile(config_path);
+            for (size_t jid = 0; jid < _torque_collision_joints.size(); ++jid) {
                 std::string joint = _torque_collision_joints[jid];
-                if(config[joint])
+                if (config[joint])
                     _torque_collision_threshold(jid) = config[joint].as<double>();
             }
 
@@ -155,8 +152,8 @@ namespace inria_wbc {
                     cor += cor_v;
 
                     Eigen::VectorXd ref_m = com_ref.pos - Eigen::Vector3d(cor(0), cor(1), 0);
-                    Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(cor(0), cor(1), 0)/dt_);
-                    Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(cor(0), cor(1), 0)/(dt_*dt_));
+                    Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(cor(0), cor(1), 0) / dt_);
+                    Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(cor(0), cor(1), 0) / (dt_ * dt_));
                     tsid::trajectories::TrajectorySample sample;
                     sample.pos = ref_m;
                     sample.vel = vref_m;
@@ -164,15 +161,25 @@ namespace inria_wbc {
                     set_com_ref(sample);
                     // set_com_ref(ref_m);
                 }
+                auto cl = activated_contacts();
+                // for(auto &a : cl){
+                //     std::cout << a << std::endl;
+                // }
+                if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
+                    cop_admittance(_stabilizer_p_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref);
+                }
+
+                if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
+                    cop_admittance(_stabilizer_p_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref);
+                }
             }
 
-            if(_use_torque_collision_detection)
-            {
+            if (_use_torque_collision_detection) {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "torque collision detection requires torque sensor data");
                 IWBC_ASSERT(sensor_data.at("joints_torque").size() == _torque_collision_joints.size(), "torque sensor data has a wrong size. call torque_sensor_joints() for needed values");
-                
+
                 auto tsid_tau = utils::slice_vec(this->tau(), _torque_collision_joints_ids);
-                _collision_detected = (false == _torque_collision_detection.check(tsid_tau, sensor_data.at("joints_torque")));          
+                _collision_detected = (false == _torque_collision_detection.check(tsid_tau, sensor_data.at("joints_torque")));
             }
 
             // solve everything
@@ -182,6 +189,29 @@ namespace inria_wbc {
             set_com_ref(com_ref);
         }
 
+        void TalosPosTracker::cop_admittance(Eigen::Vector2d pd_gains, Eigen::Vector2d cop_foot, std::string foot, std::map<std::string, pinocchio::SE3>& contact_ref)
+        {
+            double roll = pd_gains[0] * cop_foot(1);
+            double pitch = pd_gains[1] * cop_foot(0);
+            auto ankle_ref = get_se3_ref(foot + "f");
+
+            auto it = contact_ref.find(foot);
+            if (it == contact_ref.end()) {
+                auto pos = contact("contact_" + foot + "foot")->getMotionTask().getReference().pos;
+                pinocchio::SE3 se3;
+                tsid::math::vectorToSE3(pos, se3);
+                contact_ref[foot] = se3;
+                std::cout << "init contact " << std::endl;
+            }
+
+            auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
+            auto q = Eigen::AngleAxisd(euler[0] + roll, Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1] + pitch, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
+            ankle_ref.rotation() = q.toRotationMatrix();
+            set_se3_ref(ankle_ref, foot + "f");
+
+            contact_ref[foot].rotation() = q.toRotationMatrix();
+            contact("contact_" + foot + "foot")->setReference(contact_ref[foot]);
+        }
 
         void TalosPosTracker::clear_collision_detection()
         {

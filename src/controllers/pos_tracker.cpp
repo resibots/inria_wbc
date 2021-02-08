@@ -100,6 +100,7 @@ namespace inria_wbc {
                     // the task is added to tsid by make_contact
                     auto task = tasks::make_contact_task(robot_, tsid_, name, it->second);
                     contacts_[name] = task;
+                    activated_contacts_.push_back(name);
                 }
                 else {
                     // the task is added automatically to TSID by the factory
@@ -114,7 +115,7 @@ namespace inria_wbc {
         void PosTracker::parse_frames(const std::string& path)
         {
             if (verbose_)
-                std::cout<< "Parsing virtual frame file:"<<path<<std::endl;
+                std::cout << "Parsing virtual frame file:" << path << std::endl;
             YAML::Node node = YAML::LoadFile(path);
             for (auto it = node.begin(); it != node.end(); ++it) {
                 auto name = it->first.as<std::string>();
@@ -154,6 +155,7 @@ namespace inria_wbc {
             IWBC_ASSERT(contacts_.find(contact_name) != contacts_.end(), "Trying to remove an contact:", contact_name);
             bool res = tsid_->removeRigidContact(contact_name);
             IWBC_ASSERT(res, " contact ", contact_name, " not found");
+            activated_contacts_.erase(std::remove(activated_contacts_.begin(), activated_contacts_.end(), contact_name), activated_contacts_.end());
         }
 
         void PosTracker::add_contact(const std::string& contact_name)
@@ -162,6 +164,7 @@ namespace inria_wbc {
                 std::cout << "adding contact:" << contact_name << std::endl;
             auto c = contact(contact_name);
             tsid_->addRigidContact(*c, tasks::cst::w_force_feet);
+            activated_contacts_.push_back(contact_name);
         }
 
         void PosTracker::remove_task(const std::string& task_name, double transition_duration)

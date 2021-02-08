@@ -13,10 +13,15 @@ namespace inria_wbc {
         public:
             Cop(double sample_time = 0.001, size_t history_size = 5)
                 : _sample_time(sample_time),
-                  _history_size(history_size) {
-		_cop_filtered.setZero();
-		_cop_raw.setZero();
-	    }
+                  _history_size(history_size)
+            {
+                _cop_filtered.setZero();
+                _lcop_filtered.setZero();
+                _rcop_filtered.setZero();
+                _cop_raw.setZero();
+                _lcop_raw.setZero();
+                _rcop_raw.setZero();
+            }
 
             // returns the filtered CoP
             bool update(
@@ -30,18 +35,22 @@ namespace inria_wbc {
             // estimates of cop
             const Eigen::Vector2d& cop() const { return cop_filtered(); }
             const Eigen::Vector2d& cop_filtered() const { return _cop_filtered; }
+            const Eigen::Vector2d& lcop_filtered() const { return _lcop_filtered; }
+            const Eigen::Vector2d& rcop_filtered() const { return _rcop_filtered; }
             const Eigen::Vector2d& cop_raw() const { return _cop_raw; }
+            const Eigen::Vector2d& lcop_raw() const { return _lcop_raw; }
+            const Eigen::Vector2d& rcop_raw() const { return _rcop_raw; }
 
         protected:
             static constexpr float FMIN = 30;
             double _sample_time;
             size_t _history_size;
 
-            Eigen::Vector2d _cop_raw; // last computed CoP
-            Eigen::Vector2d _cop_filtered; // filtered CoP
-            std::deque<Eigen::Vector2d> _cop_buffer; // previous values of cop
+            Eigen::Vector2d _cop_raw, _lcop_raw, _rcop_raw; // last computed CoP
+            Eigen::Vector2d _cop_filtered, _lcop_filtered, _rcop_filtered; // filtered CoP
+            std::deque<Eigen::Vector2d> _cop_buffer, _lcop_buffer, _rcop_buffer; // previous values of cop
 
-            Eigen::Vector2d _compute_cop(
+            std::vector<Eigen::Vector2d> _compute_cop(
                 const Eigen::Vector3d& lf_pos, const Eigen::Vector3d& rf_pos,
                 const Eigen::Vector3d& lf_torque, const Eigen::Vector3d& lf_force,
                 const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force);

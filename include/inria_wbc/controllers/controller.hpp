@@ -17,8 +17,8 @@
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
 #include <tsid/tasks/task-actuation-bounds.hpp>
-#include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
+#include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
@@ -71,8 +71,44 @@ namespace inria_wbc {
             // Order of the floating base in q_ according to dart naming convention
             std::vector<std::string> floating_base_dofs() const;
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
+            std::vector<std::string> activated_contacts() { return activated_contacts_; };
 
             virtual const Eigen::Vector2d& cop() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector2d& cop_raw() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector2d& lcop_raw() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector2d& rcop_raw() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector2d& lcop() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector2d& rcop() const
             {
                 static Eigen::Vector2d tmp;
                 IWBC_ERROR("No COP estimator in controller.");
@@ -139,6 +175,7 @@ namespace inria_wbc {
             std::vector<std::string> mimic_dof_names_;
             std::vector<std::string> tsid_joint_names_; //contain floating base and mimics
             std::vector<int> non_mimic_indexes_;
+            std::vector<std::string> activated_contacts_;
 
             //---- TSID conventions for the floating base: quaternion
             tsid::math::Vector q_tsid_; // tsid joint positions
