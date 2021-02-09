@@ -37,8 +37,8 @@ namespace inria_wbc {
 
             estimators::Cop _cop_estimator;
             bool _use_stabilizer = true;
-            Eigen::Vector2d _stabilizer_p = Eigen::Vector2d(0.005, 0.005);
-            Eigen::Vector2d _stabilizer_d = Eigen::Vector2d(0, 0);
+            Eigen::VectorXd _stabilizer_p;
+            Eigen::VectorXd _stabilizer_d;
             Eigen::Vector2d _stabilizer_p_ankle = Eigen::Vector2d(0.0, 0.0);
 
             std::map<std::string, pinocchio::SE3> _contact_ref;

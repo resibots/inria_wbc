@@ -45,8 +45,14 @@ namespace inria_wbc {
             {
                 YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"];
                 _use_stabilizer = c["activated"].as<bool>();
-                _stabilizer_p = Eigen::Vector2d(c["p"].as<std::vector<double>>().data());
-                _stabilizer_d = Eigen::Vector2d(c["d"].as<std::vector<double>>().data());
+                _stabilizer_p.resize(6);
+                _stabilizer_d.resize(6);
+                _stabilizer_p.setZero();
+                _stabilizer_d.setZero();
+                IWBC_ASSERT(c["p"].as<std::vector<double>>().size() == 6, "you need 6 coefficient in p for the stabilizer");
+                IWBC_ASSERT(c["d"].as<std::vector<double>>().size() == 6, "you need 6 coefficient in d for the stabilizer");
+                _stabilizer_p = Eigen::VectorXd::Map(c["p"].as<std::vector<double>>().data(), c["p"].as<std::vector<double>>().size());
+                _stabilizer_d = Eigen::VectorXd::Map(c["d"].as<std::vector<double>>().data(), c["d"].as<std::vector<double>>().size());
                 _stabilizer_p_ankle = Eigen::Vector2d(c["p_ankle"].as<std::vector<double>>().data());
                 auto history = c["filter_size"].as<int>();
                 _cop_estimator.set_history_size(history);
@@ -145,33 +151,35 @@ namespace inria_wbc {
                     Eigen::Vector3d com = tsid_->data().com[0];
                     Eigen::Vector2d ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
                     auto cop = _cop_estimator.cop_filtered();
-                    Eigen::Vector2d cor = _stabilizer_p.array() * (ref.head(2) - _cop_estimator.cop_filtered()).array();
+                    Eigen::Vector2d cor = ref.head(2) - _cop_estimator.cop_filtered();
 
                     // [not classic] we correct by the velocity of the CoM instead of the CoP because we have an IMU for this
-                    Eigen::Vector2d cor_v = _stabilizer_d.array() * sensor_data.at("velocity").block<2, 1>(0, 0).array();
-                    cor += cor_v;
+                    Eigen::Vector2d cor_v = sensor_data.at("velocity").block<2, 1>(0, 0);
 
-                    Eigen::VectorXd ref_m = com_ref.pos - Eigen::Vector3d(cor(0), cor(1), 0);
-                    Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(cor(0), cor(1), 0) / dt_);
-                    Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(cor(0), cor(1), 0) / (dt_ * dt_));
+                    Eigen::Vector2d total_corr = _stabilizer_p.block(0, 0, 1, 2).array() * cor.array() + _stabilizer_d.block(0, 0, 1, 2).array() * cor_v.array();
+                    Eigen::VectorXd ref_m = com_ref.pos - Eigen::Vector3d(total_corr(0), total_corr(1), 0);
+                    total_corr = _stabilizer_p.block(2, 0, 1, 2).array() * cor.array() + _stabilizer_d.block(2, 0, 1, 2).array() * cor_v.array();
+                    Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(total_corr(0), total_corr(1), 0) / dt_);
+                    total_corr = _stabilizer_p.block(4, 0, 1, 2).array() * cor.array() + _stabilizer_d.block(4, 0, 1, 2).array() * cor_v.array();
+                    Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(total_corr(0), total_corr(1), 0) / (dt_ * dt_));
                     tsid::trajectories::TrajectorySample sample;
                     sample.pos = ref_m;
                     sample.vel = vref_m;
-                    sample.acc.setZero(ref_m.size());
+                    sample.acc = aref_m;
                     set_com_ref(sample);
                     // set_com_ref(ref_m);
                 }
-                auto cl = activated_contacts();
-                // for(auto &a : cl){
-                //     std::cout << a << std::endl;
+                // auto cl = activated_contacts();
+                // // for(auto &a : cl){
+                // //     std::cout << a << std::endl;
+                // // }
+                // if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
+                //     cop_admittance(_stabilizer_p_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref);
                 // }
-                if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
-                    cop_admittance(_stabilizer_p_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref);
-                }
 
-                if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
-                    cop_admittance(_stabilizer_p_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref);
-                }
+                // if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
+                //     cop_admittance(_stabilizer_p_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref);
+                // }
             }
 
             if (_use_torque_collision_detection) {
@@ -207,10 +215,10 @@ namespace inria_wbc {
             auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
             auto q = Eigen::AngleAxisd(euler[0] + roll, Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1] + pitch, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
             ankle_ref.rotation() = q.toRotationMatrix();
-            set_se3_ref(ankle_ref, foot + "f");
+            // set_se3_ref(ankle_ref, foot + "f");
 
             contact_ref[foot].rotation() = q.toRotationMatrix();
-            contact("contact_" + foot + "foot")->setReference(contact_ref[foot]);
+            // contact("contact_" + foot + "foot")->setReference(contact_ref[foot]);
         }
 
         void TalosPosTracker::clear_collision_detection()

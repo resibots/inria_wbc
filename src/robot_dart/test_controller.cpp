@@ -394,35 +394,35 @@ int main(int argc, char* argv[])
                 double mean = sum / err_x.size();
                 double sq_sum = std::inner_product(err_x.begin(), err_x.end(), err_x.begin(), 0.0);
                 double stdev = std::sqrt(sq_sum / err_x.size() - mean * mean);
-                // std::cout << "err_x mean: " << mean << std::endl;
-                // std::cout << "err_x stdev: " << stdev << std::endl;
+                std::cout << "err_x mean: " << mean << std::endl;
+                std::cout << "err_x stdev: " << stdev << std::endl;
 
                 sum = std::accumulate(err_y.begin(), err_y.end(), 0.0);
                 mean = sum / err_y.size();
                 sq_sum = std::inner_product(err_y.begin(), err_y.end(), err_y.begin(), 0.0);
                 stdev = std::sqrt(sq_sum / err_y.size() - mean * mean);
-                // std::cout << "err_y mean: " << mean << std::endl;
-                // std::cout << "err_y stdev: " << stdev << std::endl;
+                std::cout << "err_y mean: " << mean << std::endl;
+                std::cout << "err_y stdev: " << stdev << std::endl;
 
                 sum = std::accumulate(err_right_y.begin(), err_right_y.end(), 0.0);
                 mean = sum / err_right_y.size();
 
-                std::cout << "err_right_y mean: " << mean << std::endl;
+                // std::cout << "err_right_y mean: " << mean << std::endl;
 
                 sum = std::accumulate(err_left_y.begin(), err_left_y.end(), 0.0);
                 mean = sum / err_left_y.size();
 
-                std::cout << "err_left_y mean: " << mean << std::endl;
+                // std::cout << "err_left_y mean: " << mean << std::endl;
 
                 sum = std::accumulate(err_right_x.begin(), err_right_x.end(), 0.0);
                 mean = sum / err_right_x.size();
 
-                std::cout << "err_right_x mean: " << mean << std::endl;
+                // std::cout << "err_right_x mean: " << mean << std::endl;
 
                 sum = std::accumulate(err_left_x.begin(), err_left_x.end(), 0.0);
                 mean = sum / err_left_x.size();
 
-                std::cout << "err_left_x mean: " << mean << std::endl;
+                // std::cout << "err_left_x mean: " << mean << std::endl;
             }
         }
     }

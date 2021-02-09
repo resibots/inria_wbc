@@ -7,20 +7,20 @@ CONTROLLER:
   stabilizer:
     activated: true
     filter_size: 5
-    p: [0.001, 0.001]
-    d: [0.0001, 0.0001]
+    p: [0.001, 0.001, 0.001, 0.001, 0.00000005, 0.00000005]
+    d: [0.0001, 0.0001, 0.0001, 0.0001,  0.0,  0.0]
     p_ankle: [0.00000, 0.0]
   collision_detection:
     activated: true
-    filter_size: 30 
+    filter_size: 30
     max_invalid: 5
     thresholds: collision_thresholds.yaml
 BEHAVIOR:
   name : walk-on-spot
-  traj_com_duration : 0.5
-  traj_foot_duration : 0.5
+  traj_com_duration : 0.4
+  traj_foot_duration : 0.4
   step_height : 0.3
-  stop_duration : 0.5
+  stop_duration : 0.4
   step_height : 0.45
   stop_height : 0.015
 PARAMS:
