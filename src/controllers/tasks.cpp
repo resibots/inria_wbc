@@ -1,4 +1,5 @@
 #include <tsid/tasks/task-actuation-bounds.hpp>
+#include <tsid/tasks/task-angular-momentum-equality.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
@@ -112,6 +113,34 @@ namespace inria_wbc {
         }
 
         RegisterYAML<tsid::tasks::TaskComEquality> __register_com_equality("com", make_com);
+
+        ////// Momentum //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_momentum(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            double kp = node["kp"].as<double>();
+            auto weight = node["weight"].as<double>();
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskAMEquality>(task_name, *robot);
+            task->Kp(kp * Vector::Ones(3));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+
+            // set the reference
+            task->setReference(to_sample(Eigen::Vector3d(0, 0, 0)));
+
+            // add to TSID
+            tsid->addMotionTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskAMEquality> __register_momentum_equality("momentum", make_momentum);
 
         ////// Posture //////
         std::shared_ptr<tsid::tasks::TaskBase> make_posture(
@@ -252,7 +281,7 @@ namespace inria_wbc {
             auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, p);
             task->Kp(kp);
             task->Kd(2.0 * sqrt(task->Kp()));
-            
+
             // add the task to TSID (side effect, be careful)
             tsid->addMotionTask(*task, weight, 1);
 
