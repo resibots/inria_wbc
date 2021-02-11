@@ -29,7 +29,7 @@ namespace inria_wbc {
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
 
-            void cop_admittance(Eigen::Vector2d pd_gains, Eigen::Vector2d cop_foot, std::string foot, std::map<std::string, pinocchio::SE3>& contact_ref);
+            void cop_admittance(Eigen::Vector2d pd_gains, Eigen::Vector2d cop_foot, std::string foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref);
 
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);

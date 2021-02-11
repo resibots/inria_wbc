@@ -148,6 +148,12 @@ namespace inria_wbc {
             task->setReference(sample);
         }
 
+        void PosTracker::set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name)
+        {
+            auto task = se3_task(task_name);
+            task->setReference(sample);
+        }
+
         void PosTracker::remove_contact(const std::string& contact_name)
         {
             if (verbose_)

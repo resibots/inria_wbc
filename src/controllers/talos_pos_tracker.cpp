@@ -127,6 +127,15 @@ namespace inria_wbc {
         {
 
             auto com_ref = com_task()->getReference();
+            auto cl = activated_contacts();
+            for (auto& contact_name : cl) {
+                auto pos = contact(contact_name)->getMotionTask().getReference().pos;
+                pinocchio::SE3 se3;
+                tsid::math::vectorToSE3(pos, se3);
+                _contact_ref[contact_name] = se3;
+            }
+            auto left_ankle_ref = get_se3_ref("lf");
+            auto right_ankle_ref = get_se3_ref("rf");
 
             if (_use_stabilizer) {
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
@@ -169,17 +178,14 @@ namespace inria_wbc {
                     set_com_ref(sample);
                     // set_com_ref(ref_m);
                 }
-                // auto cl = activated_contacts();
-                // // for(auto &a : cl){
-                // //     std::cout << a << std::endl;
-                // // }
-                // if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
-                //     cop_admittance(_stabilizer_p_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref);
-                // }
 
-                // if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
-                //     cop_admittance(_stabilizer_p_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref);
-                // }
+                if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
+                    cop_admittance(_stabilizer_p_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref);
+                }
+
+                if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
+                    cop_admittance(_stabilizer_p_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
+                }
             }
 
             if (_use_torque_collision_detection) {
@@ -195,30 +201,31 @@ namespace inria_wbc {
 
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
             set_com_ref(com_ref);
+            set_se3_ref(left_ankle_ref, "lf");
+            set_se3_ref(right_ankle_ref, "lf");
+            for (auto& contact_name : cl) {
+                contact(contact_name)->setReference(_contact_ref[contact_name]);
+            }
         }
 
-        void TalosPosTracker::cop_admittance(Eigen::Vector2d pd_gains, Eigen::Vector2d cop_foot, std::string foot, std::map<std::string, pinocchio::SE3>& contact_ref)
+        void TalosPosTracker::cop_admittance(Eigen::Vector2d pd_gains, Eigen::Vector2d cop_foot, std::string foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref)
         {
-            double roll = pd_gains[0] * cop_foot(1);
-            double pitch = pd_gains[1] * cop_foot(0);
-            auto ankle_ref = get_se3_ref(foot + "f");
+            int sign = 1;
+            if (foot == "l")
+                sign = -1;
 
-            auto it = contact_ref.find(foot);
-            if (it == contact_ref.end()) {
-                auto pos = contact("contact_" + foot + "foot")->getMotionTask().getReference().pos;
-                pinocchio::SE3 se3;
-                tsid::math::vectorToSE3(pos, se3);
-                contact_ref[foot] = se3;
-                std::cout << "init contact " << std::endl;
-            }
+            double roll = pd_gains[1] * cop_foot(1);
+            double pitch = -pd_gains[0] * cop_foot(0);
 
             auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
+            if (foot == "l")
+                std::cout << cop_foot(0) << " " << cop_foot(1) << std::endl;
             auto q = Eigen::AngleAxisd(euler[0] + roll, Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1] + pitch, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
             ankle_ref.rotation() = q.toRotationMatrix();
-            // set_se3_ref(ankle_ref, foot + "f");
+            set_se3_ref(ankle_ref, foot + "f");
 
-            contact_ref[foot].rotation() = q.toRotationMatrix();
-            // contact("contact_" + foot + "foot")->setReference(contact_ref[foot]);
+            contact_ref["contact_" + foot + "foot"].rotation() = q.toRotationMatrix();
+            contact("contact_" + foot + "foot")->setReference(contact_ref["contact_" + foot + "foot"]);
         }
 
         void TalosPosTracker::clear_collision_detection()

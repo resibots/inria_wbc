@@ -38,9 +38,10 @@ namespace inria_wbc {
 
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(to_sample(ref)); }
-            void set_com_ref(const tsid::trajectories::TrajectorySample& ref) { com_task()->setReference(ref); }
-            void set_momentum_ref(const tsid::trajectories::TrajectorySample& ref) { momentum_task()->setReference(ref); }
+            void set_com_ref(const tsid::trajectories::TrajectorySample& sample) { com_task()->setReference(sample); }
+            void set_momentum_ref(const tsid::trajectories::TrajectorySample& sample) { momentum_task()->setReference(sample); }
             void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
+            void set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name);
 
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
