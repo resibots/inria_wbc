@@ -34,7 +34,7 @@ namespace cst {
     static constexpr double dt = 0.001;
     static constexpr double duration = 10;
     static constexpr double frequency = 1000;
-    static constexpr double tolerance = 1e-3;
+    static constexpr double tolerance = 5e-3;
     static const std::string ref_path = "../../tests/ref_test_talos.yaml";
 
 } // namespace cst
