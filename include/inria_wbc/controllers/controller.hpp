@@ -2,7 +2,6 @@
 #define IWBC_TALOS_BASE_CONTROLLER_HPP
 
 #include <Eigen/Core>
-#include <boost/variant.hpp>
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -27,6 +26,8 @@
 
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
+
+#include <boost/variant.hpp>
 
 namespace inria_wbc {
 
