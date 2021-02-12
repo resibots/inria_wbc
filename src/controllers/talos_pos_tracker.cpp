@@ -43,20 +43,20 @@ namespace inria_wbc {
         {
             // init stabilizer
             {
-                YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"];
-                _use_stabilizer = c["activated"].as<bool>();
-                _stabilizer_p = Eigen::Vector2d(c["p"].as<std::vector<double>>().data());
-                _stabilizer_d = Eigen::Vector2d(c["d"].as<std::vector<double>>().data());
-                auto history = c["filter_size"].as<int>();
+                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"]);
+                _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
+                _stabilizer_p = IWBC_CHECK(Eigen::Vector2d(c["p"].as<std::vector<double>>().data()));
+                _stabilizer_d = IWBC_CHECK(Eigen::Vector2d(c["d"].as<std::vector<double>>().data()));
+                auto history = IWBC_CHECK(c["filter_size"].as<int>());
                 _cop_estimator.set_history_size(history);
             }
 
             // init collision detection
             {
-                YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"];
-                _use_torque_collision_detection = c["activated"].as<bool>();
-                auto filter_window_size = c["filter_size"].as<int>();
-                auto max_invalid = c["max_invalid"].as<int>();
+                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"]);
+                _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
+                auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
+                auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
 
                 _torque_collision_joints = {
                     "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint", 
@@ -83,7 +83,7 @@ namespace inria_wbc {
                 // update thresholds from file (if any)
                 if (c["thresholds"]) {
                     auto path = boost::filesystem::path(sot_config_path).parent_path();
-                    auto p_thresh = path / boost::filesystem::path(c["thresholds"].as<std::string>());
+                    auto p_thresh = IWBC_CHECK(path / boost::filesystem::path(c["thresholds"].as<std::string>()));
                     parse_collision_thresholds(p_thresh.string());
                 }
 
@@ -109,12 +109,12 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_collision_thresholds(const std::string& config_path)
         {
-            YAML::Node config =  YAML::LoadFile(config_path);
+            YAML::Node config =  IWBC_CHECK(YAML::LoadFile(config_path));
             for(size_t jid = 0; jid < _torque_collision_joints.size(); ++jid)
             {
                 std::string joint = _torque_collision_joints[jid];
                 if(config[joint])
-                    _torque_collision_threshold(jid) = config[joint].as<double>();
+                    _torque_collision_threshold(jid) = IWBC_CHECK(config[joint].as<double>());
             }
 
             return;
@@ -123,7 +123,7 @@ namespace inria_wbc {
         void TalosPosTracker::update(const SensorData& sensor_data)
         {
 
-            auto com_ref = com_task()->getReference().pos;
+            auto com_ref = com_task()->getReference();
 
             if (_use_stabilizer) {
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
@@ -131,7 +131,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(sensor_data.find("velocity") != sensor_data.end(), "the stabilizer needs the velocity");
 
                 // estimate the CoP / ZMP
-                bool cop_ok = _cop_estimator.update(com_ref.head(2),
+                bool cop_ok = _cop_estimator.update(com_ref.pos.head(2),
                     model_joint_pos("leg_left_6_joint").translation(),
                     model_joint_pos("leg_right_6_joint").translation(),
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
@@ -154,8 +154,15 @@ namespace inria_wbc {
                     Eigen::Vector2d cor_v = _stabilizer_d.array() * sensor_data.at("velocity").block<2, 1>(0, 0).array();
                     cor += cor_v;
 
-                    Eigen::VectorXd ref_m = com_ref - Eigen::Vector3d(cor(0), cor(1), 0);
-                    set_com_ref(ref_m);
+                    Eigen::VectorXd ref_m = com_ref.pos - Eigen::Vector3d(cor(0), cor(1), 0);
+                    Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(cor(0), cor(1), 0)/dt_);
+                    Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(cor(0), cor(1), 0)/(dt_*dt_));
+                    tsid::trajectories::TrajectorySample sample;
+                    sample.pos = ref_m;
+                    sample.vel = vref_m;
+                    sample.acc.setZero(ref_m.size());
+                    set_com_ref(sample);
+                    // set_com_ref(ref_m);
                 }
             }
 

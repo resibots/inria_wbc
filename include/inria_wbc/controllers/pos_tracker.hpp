@@ -30,6 +30,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(it != contacts_.end(), "Contact [", str, "] not found");
                 return it->second;
             }
+            std::shared_ptr<tsid::tasks::TaskAMEquality> momentum_task() { return task<tsid::tasks::TaskAMEquality>("momentum"); }
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return task<tsid::tasks::TaskComEquality>("com"); }
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
 
@@ -37,6 +38,8 @@ namespace inria_wbc {
 
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(to_sample(ref)); }
+            void set_com_ref(const tsid::trajectories::TrajectorySample& ref) { com_task()->setReference(ref); }
+            void set_momentum_ref(const tsid::trajectories::TrajectorySample& ref) { momentum_task()->setReference(ref); }
             void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
 
             void remove_contact(const std::string& contact_name);

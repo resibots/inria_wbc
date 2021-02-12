@@ -34,7 +34,7 @@ namespace cst {
     static constexpr double dt = 0.001;
     static constexpr double duration = 10;
     static constexpr double frequency = 1000;
-    static constexpr double tolerance = 1e-5;
+    static constexpr double tolerance = 5e-3;
     static const std::string ref_path = "../../tests/ref_test_talos.yaml";
 
 } // namespace cst
@@ -81,11 +81,11 @@ inline std::string date()
 std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config_path)
 {
     std::vector<inria_wbc::tests::SE3TaskData> tasks;
-    y::Node config = y::LoadFile(config_path)["CONTROLLER"];
+    y::Node config = IWBC_CHECK(y::LoadFile(config_path)["CONTROLLER"]);
     auto path = boost::filesystem::path(config_path).parent_path();
     auto task_file = config["tasks"].as<std::string>();
     auto p = path / boost::filesystem::path(task_file);
-    y::Node task_list = y::LoadFile(p.string());
+    y::Node task_list = IWBC_CHECK(y::LoadFile(p.string()));
     for (auto it = task_list.begin(); it != task_list.end(); ++it) {
         auto name = it->first.as<std::string>();
         auto type = it->second["type"].as<std::string>();
@@ -120,7 +120,7 @@ void test_behavior(const std::string& config_path,
         false,
         robot->mimic_dof_names()};
 
-    y::Node config = y::LoadFile(config_path);
+    y::Node config = IWBC_CHECK(y::LoadFile(config_path));
 
     // get the controller
     auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
@@ -231,7 +231,7 @@ void test_behavior(const std::string& config_path,
             for (auto& s : collision_list)
                 collision_map[s] = true;
         }
-           
+
         // compute the CoM error
         error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
         error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
@@ -316,13 +316,13 @@ void test_behavior(const std::string& config_path,
     try {
         // CoM
         auto com = ref["com"].as<std::vector<double>>();
-        BOOST_CHECK_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM");
-        BOOST_CHECK_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM");
+        BOOST_CHECK_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM tolerance --> " + std::to_string(error_com_tsid - com[0]) + " > " + std::to_string(cst::tolerance));
+        BOOST_CHECK_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM tolerance--> " + std::to_string(error_com_dart - com[1]) + " > " + std::to_string(cst::tolerance));
         // SE3 tasks
         for (auto& t : se3_tasks) {
             auto e = ref[t.name].as<std::vector<double>>();
-            BOOST_CHECK_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name);
-            BOOST_CHECK_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name);
+            BOOST_CHECK_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_tsid - e[0]) + " > " + std::to_string(cst::tolerance));
+            BOOST_CHECK_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_dart - e[1]) + " > " + std::to_string(cst::tolerance));
         }
     }
     catch (std::exception& e) {
@@ -382,7 +382,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     // we load the reference
     y::Node ref;
     try {
-        ref = y::LoadFile(cst::ref_path);
+        ref = IWBC_CHECK(y::LoadFile(cst::ref_path));
         std::cout << "ref file:" << cst::ref_path << std::endl;
     }
     catch (std::exception& e) {
@@ -397,7 +397,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     // the YAMl file has a timestamp (so that we can archive them)
     yout << y::Key << "timestamp" << y::Value << date();
 
-    // use ./my_test -- ../../etc/arm.yaml servo fcl 0 for a specific test
+    // use ./my_test -- ../../etc/arm.yaml servo fcl talos/talos.urdf for a specific test
     auto argc = boost::unit_test::framework::master_test_suite().argc;
     auto argv = boost::unit_test::framework::master_test_suite().argv;
 

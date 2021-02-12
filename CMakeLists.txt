@@ -30,7 +30,11 @@ set(INRIA_WBC_SOURCES
 
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})
 target_compile_definitions(inria_wbc PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
+IF(APPLE)
+    target_compile_definitions(inria_wbc PUBLIC _GNU_SOURCE=1)
+endif()
 target_compile_features(inria_wbc PUBLIC cxx_std_14)
+
 
 target_link_libraries(inria_wbc PUBLIC 
 			pinocchio::pinocchio

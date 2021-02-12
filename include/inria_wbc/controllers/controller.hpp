@@ -17,6 +17,7 @@
 #include <tsid/robots/robot-wrapper.hpp>
 #include <tsid/tasks/task-actuation-bounds.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
+#include <tsid/tasks/task-angular-momentum-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
@@ -58,7 +59,7 @@ namespace inria_wbc {
                     std::cout << " }\nfloating_base_joint_name :\t" << floating_base_joint_name << std::endl;
                 }
             };
-
+            EIGEN_MAKE_ALIGNED_OPERATOR_NEW
             Controller(const Params& params);
             Controller(const Controller&) = delete;
             Controller& operator=(const Controller& o) = delete;
@@ -78,9 +79,11 @@ namespace inria_wbc {
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
-           
+
             // this could call a CoM estimator
             virtual const tsid::math::Vector3& com() const { return robot_->com(tsid_->data()); }
+
+            virtual const tsid::math::Vector3 momentum() const { return momentum_; }
 
             const std::vector<int>& non_mimic_indexes() const { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmd) const { return utils::slice_vec(cmd, non_mimic_indexes_); }
@@ -113,14 +116,13 @@ namespace inria_wbc {
                 assert(robot_);
                 assert(robot_->model().existFrame(frame_name));
                 return robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
-            }            
+            }
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
             {
                 assert(task);
                 return (task->getConstraint().matrix() * ddq_ - task->getConstraint().vector()).norm();
             }
             virtual double cost(const std::string& task_name) const = 0;
-
         private:
             std::vector<int> get_non_mimics_indexes() const;
 
@@ -143,6 +145,7 @@ namespace inria_wbc {
             tsid::math::Vector v_tsid_; // tsid joint velocities
             tsid::math::Vector a_tsid_; // tsid joint accelerations
             tsid::math::Vector tau_tsid_; // tsid joint torques
+            tsid::math::Vector momentum_; // momentum
 
             //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart

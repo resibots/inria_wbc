@@ -24,6 +24,7 @@ public:
     {
         reset();
     }
+    virtual ~Filter(){}
 
     // virtual void init(int nvar, int wsize) {  _nvar = nvar; _wsize = wsize; reset(); };
     // virtual void set_num_var(int nvar) { _nvar = nvar; reset(); }
