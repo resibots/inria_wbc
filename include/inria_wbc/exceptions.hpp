@@ -43,6 +43,12 @@
     }
 
 namespace inria_wbc {
+
+    template<typename T>
+    inline std::string stacktrace_to_string(const T& bt) {
+        return boost::stacktrace::detail::to_string(&bt[0], bt.size());
+    }
+
     class Exception : public std::runtime_error {
     public:
         template <class... Types>
@@ -52,7 +58,7 @@ namespace inria_wbc {
                 + "\t[" + file + ":" + std::to_string(line) + "]\n"
                 + "\n------ stack ------\n"
 #ifdef IWBC_USE_STACKTRACE
-                + boost::stacktrace::to_string(boost::stacktrace::stacktrace())
+                + stacktrace_to_string(boost::stacktrace::stacktrace())
 #endif
                 )
         {
