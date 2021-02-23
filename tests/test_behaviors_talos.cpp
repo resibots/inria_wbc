@@ -207,7 +207,7 @@ void test_behavior(const std::string& config_path,
             if (actuator_type == "velocity" || actuator_type == "servo")
                 cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, cst::dt);
             else // torque
-                cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q);
+                cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
             auto t2_cmd = high_resolution_clock::now();
             time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
