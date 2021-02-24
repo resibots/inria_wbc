@@ -170,11 +170,11 @@ namespace inria_wbc {
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskJointPosture>(task_name, *robot);
 
-            task->Kp(kp * Vector::Ones(robot->nv() - floating_base_flag ? 6 : 0));
+            task->Kp(kp * Vector::Ones(robot->nv() - (floating_base_flag ? 6 : 0)));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_post(robot->nv() - floating_base_flag ? 6 : 0);
+            Vector mask_post(robot->nv() - (floating_base_flag ? 6 : 0));
             if (!node["mask"]) {
-                mask_post = Vector::Ones(robot->nv() - floating_base_flag ? 6 : 0);
+                mask_post = Vector::Ones(robot->nv() - (floating_base_flag ? 6 : 0));
             }
             else {
                 auto mask = IWBC_CHECK(node["mask"].as<std::string>());

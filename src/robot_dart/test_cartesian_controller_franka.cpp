@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
         ("conf,c", po::value<std::string>()->default_value("../etc/circular_cartesian.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/circular_cartesian.yaml]")
         ("fast,f", "fast (simplified) Talos [default: false]") //remove
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
-        ("actuators,a", po::value<std::string>()->default_value("torque"), "actuator model torque/velocity/servo (always for position control) [default:torque]")
+        ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
