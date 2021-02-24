@@ -155,6 +155,8 @@ int main(int argc, char* argv[])
 
         auto controller_name = IWBC_CHECK(config["CONTROLLER"]["name"].as<std::string>());
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+        auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+        IWBC_ASSERT(controller, "we expect a PosTracker here");
 
         auto behavior_name = IWBC_CHECK(config["BEHAVIOR"]["name"].as<std::string>());
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
@@ -200,7 +202,6 @@ int main(int argc, char* argv[])
         // self-collision shapes
         std::vector<std::shared_ptr<robot_dart::Robot>> self_collision_spheres;
         if (vm.count("collisions")) {
-            auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
             auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
             for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
                 Eigen::Vector6d cp = Eigen::Vector6d::Zero();
@@ -347,12 +348,16 @@ int main(int argc, char* argv[])
                 else if (x.first == "cop") // the cop according to controller
                     (*x.second) << controller->cop().transpose() << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
-                    (*x.second) << controller->cost(x.first.substr(5)) << std::endl;
+                    (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "ft")
                     (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
                                 << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
+                else if (x.first == "ref_com")
+                    (*x.second) << controller_pos->get_com_ref().transpose() << std::endl;
+                else if (x.first.find("ref_") != std::string::npos) // e.g. tsid_lh (lh = task name)
+                    (*x.second) << controller_pos->get_se3_ref(x.first.substr(strlen("ref_"))).translation().transpose() << std::endl;
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }
