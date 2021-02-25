@@ -44,10 +44,12 @@
 
 namespace inria_wbc {
 
+#ifdef IWBC_USE_STACKTRACE
     template<typename T>
     inline std::string stacktrace_to_string(const T& bt) {
         return boost::stacktrace::detail::to_string(&bt[0], bt.size());
     }
+#endif
 
     class Exception : public std::runtime_error {
     public:
