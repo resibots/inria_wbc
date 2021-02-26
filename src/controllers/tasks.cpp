@@ -9,6 +9,11 @@
 #include "inria_wbc/controllers/tasks.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
+
+
+
+#include <typeinfo>
+
 using namespace tsid;
 using namespace tsid::math;
 
@@ -158,6 +163,20 @@ namespace inria_wbc {
 
             IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
             auto ref_q = robot->model().referenceConfigurations[ref_name];
+
+
+            std::cout << "____________________HERE_________________________________\n\n\n\n";
+            std::string model_name = typeid( robot->model() ).name();
+            std::cout << model_name << "\n\n\n\n";
+            std::string robot_name = typeid( robot ).name();
+            std::cout << robot_name << "\n\n\n\n";
+            std::string tsid_name = typeid( tsid ).name();
+            std::cout << tsid_name << "\n\n\n\n";
+            std::string node_name = typeid( node ).name();
+            std::cout << node_name << "\n\n\n\n";
+
+
+
 
             bool floating_base_flag = true;
             if (node["floating_base"]) {
