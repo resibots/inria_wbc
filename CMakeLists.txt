@@ -39,7 +39,8 @@ target_compile_features(inria_wbc PUBLIC cxx_std_14)
 target_link_libraries(inria_wbc PUBLIC 
 			pinocchio::pinocchio
 			tsid::tsid
-			${YAML_CPP_LIBRARIES})
+			${YAML_CPP_LIBRARIES}
+            ${CMAKE_DL_LIBS})
 
 target_include_directories(inria_wbc PUBLIC
 		$<BUILD_INTERFACE:${inria_wbc_BINARY_DIR}/include>
