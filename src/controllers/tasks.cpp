@@ -164,36 +164,17 @@ namespace inria_wbc {
             IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
             auto ref_q = robot->model().referenceConfigurations[ref_name];
 
-
-            std::cout << "____________________HERE_________________________________\n\n\n\n";
-            std::string model_name = typeid( robot->model() ).name();
-            std::cout << model_name << "\n\n\n\n";
-            std::string robot_name = typeid( robot ).name();
-            std::cout << robot_name << "\n\n\n\n";
-            std::string tsid_name = typeid( tsid ).name();
-            std::cout << tsid_name << "\n\n\n\n";
-            std::string node_name = typeid( node ).name();
-            std::cout << node_name << "\n\n\n\n";
-
-
-
-
-            bool floating_base_flag = true;
-            if (node["floating_base"]) {
-              if ( node["floating_base"].as<std::string>() == "false") {
-                floating_base_flag = false;
-              }
-            }
-
+            bool floating_base_flag = (robot->na() == robot->nv()) ? false : true;
+            int n_actuated =  floating_base_flag ? robot->nv() - 6 : robot->nv();
 
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskJointPosture>(task_name, *robot);
 
-            task->Kp(kp * Vector::Ones(robot->nv() - (floating_base_flag ? 6 : 0)));
+            task->Kp(kp * Vector::Ones(n_actuated));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_post(robot->nv() - (floating_base_flag ? 6 : 0));
+            Vector mask_post(n_actuated);
             if (!node["mask"]) {
-                mask_post = Vector::Ones(robot->nv() - (floating_base_flag ? 6 : 0));
+                mask_post = Vector::Ones(n_actuated);
             }
             else {
                 auto mask = IWBC_CHECK(node["mask"].as<std::string>());
