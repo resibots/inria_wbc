@@ -12,14 +12,13 @@
 #include <pinocchio/parsers/srdf.hpp>
 #include <pinocchio/parsers/urdf.hpp>
 
+#include <boost/filesystem.hpp>
 #include <tsid/solvers/solver-HQP-base.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
 #include <tsid/solvers/solver-HQP-factory.hxx>
 #include <tsid/solvers/utils.hpp>
 #include <tsid/utils/statistics.hpp>
 #include <tsid/utils/stop-watch.hpp>
-
-#include <boost/filesystem.hpp>
 
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/controllers/tasks.hpp"
@@ -180,11 +179,11 @@ namespace inria_wbc {
                 }
 
                 if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
-                    cop_admittance(_stabilizer_p_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref);
+                    ankle_admittance(_stabilizer_p_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref);
                 }
 
                 if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
-                    cop_admittance(_stabilizer_p_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
+                    ankle_admittance(_stabilizer_p_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
                 }
             }
 
@@ -202,30 +201,50 @@ namespace inria_wbc {
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
             set_com_ref(com_ref);
             set_se3_ref(left_ankle_ref, "lf");
-            set_se3_ref(right_ankle_ref, "lf");
+            set_se3_ref(right_ankle_ref, "rf");
             for (auto& contact_name : cl) {
-                contact(contact_name)->setReference(_contact_ref[contact_name]);
+                contact(contact_name)->Contact6d::setReference(_contact_ref[contact_name]);
             }
         }
 
-        void TalosPosTracker::cop_admittance(Eigen::Vector2d pd_gains, Eigen::Vector2d cop_foot, std::string foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref)
+        Eigen::Vector3d TalosPosTracker::to_angular_vel(const Eigen::Vector3d& euler, const Eigen::Vector3d& euler_dot)
+        {
+            // see https://physics.stackexchange.com/questions/420695/how-to-derive-the-relation-between-euler-angles-and-angular-velocity-and-get-the
+            Eigen::Vector3d angular;
+            angular(0) = euler_dot[0] + sin(euler[1]) * euler_dot[2];
+            angular(1) = cos(euler[0]) * euler_dot[1] - sin(euler[0]) * cos(euler[1]) * euler_dot[2];
+            angular(2) = sin(euler[0]) * euler_dot[1] + cos(euler[0]) * cos(euler[1]) * euler_dot[2];
+            return angular;
+        }
+
+        void TalosPosTracker::ankle_admittance(Eigen::Vector2d pd_gains, Eigen::Vector2d cop_foot, std::string foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref)
         {
             int sign = 1;
             if (foot == "l")
                 sign = -1;
 
-            double roll = pd_gains[1] * cop_foot(1);
             double pitch = -pd_gains[0] * cop_foot(0);
-
             auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
-            if (foot == "l")
-                std::cout << cop_foot(0) << " " << cop_foot(1) << std::endl;
-            auto q = Eigen::AngleAxisd(euler[0] + roll, Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1] + pitch, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
+            euler[1] += pitch;
+
+            auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
             ankle_ref.rotation() = q.toRotationMatrix();
-            set_se3_ref(ankle_ref, foot + "f");
+
+            auto ankle_sample = to_sample(ankle_ref);
+            Eigen::VectorXd ref(6);
+            ref.setZero();
+            // ref.block(3, 0, 1, 3) = to_angular_vel(euler_v, (euler_v.array() / dt_).matrix());
+            ref(4) = pitch / dt_;
+            ankle_sample.vel = pd_gains[1] * ref;
+            set_se3_ref(ankle_sample, foot + "f");
 
             contact_ref["contact_" + foot + "foot"].rotation() = q.toRotationMatrix();
-            contact("contact_" + foot + "foot")->setReference(contact_ref["contact_" + foot + "foot"]);
+            ankle_sample = to_sample(contact_ref["contact_" + foot + "foot"]);
+            ref.setZero();
+            // ref.block(3, 0, 1, 3) = to_angular_vel(euler_v, (euler_v.array() / dt_).matrix());
+            ref(4) = pitch / dt_;
+            ankle_sample.vel = pd_gains[1] * ref;
+            contact("contact_" + foot + "foot")->setReference(ankle_sample);
         }
 
         void TalosPosTracker::clear_collision_detection()

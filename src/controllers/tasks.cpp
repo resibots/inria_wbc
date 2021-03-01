@@ -216,7 +216,7 @@ namespace inria_wbc {
 
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
-        std::shared_ptr<tsid::contacts::Contact6d> make_contact_task(
+        std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
             const std::string& task_name, const YAML::Node& node)
@@ -246,11 +246,11 @@ namespace inria_wbc {
                 -lyn, lyp, -lyn, lyp,
                 lz, lz, lz, lz;
             Eigen::Vector3d contact_normal(normal.data());
-            auto contact_task = std::make_shared<tsid::contacts::Contact6d>(task_name, *robot, joint_name, contact_points, contact_normal, mu, fmin, fmax);
+            auto contact_task = std::make_shared<tsid::contacts::Contact6dExt>(task_name, *robot, joint_name, contact_points, contact_normal, mu, fmin, fmax);
             contact_task->Kp(kp * Vector::Ones(6));
             contact_task->Kd(2.0 * contact_task->Kp().cwiseSqrt());
             auto contact_ref = robot->position(tsid->data(), robot->model().getJointId(joint_name));
-            contact_task->setReference(contact_ref);
+            contact_task->Contact6d::setReference(contact_ref);
 
             // add the task
             tsid->addRigidContact(*contact_task, cst::w_force_feet);

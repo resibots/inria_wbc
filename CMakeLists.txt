@@ -42,6 +42,7 @@ set(INRIA_WBC_HEADERS
                             include/inria_wbc/estimators/cop.hpp
                             include/inria_wbc/estimators/filtering.hpp
                             include/tsid/tasks/task-self-collision.hpp
+                            include/tsid/contacts/contact-6d-ext.hpp
 
 
 )

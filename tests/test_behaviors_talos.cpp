@@ -193,7 +193,6 @@ void test_behavior(const std::string& config_path,
         sensor_data["acceleration"] = imu->linear_acceleration();
         sensor_data["velocity"] = robot->com_velocity().tail<3>();
         sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
-        ;
 
         // command
         if (simu.schedule(simu.control_freq())) {

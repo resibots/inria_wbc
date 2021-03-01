@@ -5,7 +5,7 @@
 
 #include <pinocchio/spatial/se3.hpp>
 
-#include <tsid/contacts/contact-6d.hpp>
+#include <tsid/contacts/contact-6d-ext.hpp>
 #include <tsid/contacts/contact-point.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/fwd.hpp>
@@ -51,7 +51,7 @@ namespace inria_wbc {
         using RegisterYAML = FactoryYAML::AutoRegister<T>;
 
         // contacts cannot be in the same factory
-        std::shared_ptr<tsid::contacts::Contact6d> make_contact_task(
+        std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
             const std::shared_ptr<tsid::robots::RobotWrapper>& robot,
             const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>& tsid,
             const std::string& task_name, const YAML::Node& node);
