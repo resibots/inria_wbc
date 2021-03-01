@@ -53,6 +53,7 @@ namespace inria_wbc {
                 _stabilizer_p = Eigen::VectorXd::Map(IWBC_CHECK(c["p"].as<std::vector<double>>()).data(), IWBC_CHECK(c["p"].as<std::vector<double>>()).size());
                 _stabilizer_d = Eigen::VectorXd::Map(IWBC_CHECK(c["d"].as<std::vector<double>>()).data(), IWBC_CHECK(c["d"].as<std::vector<double>>()).size());
                 _stabilizer_p_ankle = Eigen::Vector2d(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).data());
+                _stabilizer_d_ankle = Eigen::Vector2d(IWBC_CHECK(c["d_ankle"].as<std::vector<double>>()).data());
                 auto history = c["filter_size"].as<int>();
                 _cop_estimator.set_history_size(history);
             }
@@ -112,11 +113,10 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_collision_thresholds(const std::string& config_path)
         {
-            YAML::Node config =  IWBC_CHECK(YAML::LoadFile(config_path));
-            for(size_t jid = 0; jid < _torque_collision_joints.size(); ++jid)
-            {
+            YAML::Node config = IWBC_CHECK(YAML::LoadFile(config_path));
+            for (size_t jid = 0; jid < _torque_collision_joints.size(); ++jid) {
                 std::string joint = _torque_collision_joints[jid];
-                if(config[joint])
+                if (config[joint])
                     _torque_collision_threshold(jid) = IWBC_CHECK(config[joint].as<double>());
             }
 
@@ -149,16 +149,18 @@ namespace inria_wbc {
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
                     sensor_data.at("rf_torque"), sensor_data.at("rf_force"));
 
+                // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
+                // CoM = CoP+zc/g \ddot{x}
+                // see Biped Walking Pattern Generation by using Preview Control of Zero-Moment Point
+                // see eq.24 of Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
+                // see eq. 21 of Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
+                Eigen::Vector2d a = tsid_->data().acom[0].head<2>();
+                Eigen::Vector3d com = tsid_->data().com[0];
+                Eigen::Vector2d ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
+
                 // modify the CoM reference (stabilizer) if the CoP is valid
                 if (cop_ok && !std::isnan(_cop_estimator.cop_filtered()(0)) && !std::isnan(_cop_estimator.cop_filtered()(1))) {
-                    // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
-                    // CoM = CoP+zc/g \ddot{x}
-                    // see Biped Walking Pattern Generation by using Preview Control of Zero-Moment Point
-                    // see eq.24 of Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
-                    // see eq. 21 of Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
-                    Eigen::Vector2d a = tsid_->data().acom[0].head<2>();
-                    Eigen::Vector3d com = tsid_->data().com[0];
-                    Eigen::Vector2d ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
+
                     auto cop = _cop_estimator.cop_filtered();
                     Eigen::Vector2d cor = ref.head(2) - _cop_estimator.cop_filtered();
 
@@ -180,11 +182,11 @@ namespace inria_wbc {
                 }
 
                 if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
-                    ankle_admittance(_stabilizer_p_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref);
+                    ankle_admittance(_stabilizer_p_ankle, _stabilizer_d_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref, ref);
                 }
 
                 if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
-                    ankle_admittance(_stabilizer_p_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
+                    ankle_admittance(_stabilizer_p_ankle, _stabilizer_d_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref, ref);
                 }
             }
 
@@ -218,33 +220,28 @@ namespace inria_wbc {
             return angular;
         }
 
-        void TalosPosTracker::ankle_admittance(Eigen::Vector2d pd_gains, Eigen::Vector2d cop_foot, std::string foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref)
+        void TalosPosTracker::ankle_admittance(const Eigen::Vector2d& p, const Eigen::Vector2d& d, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref, Eigen::Vector2d cop_ref)
         {
             int sign = 1;
             if (foot == "l")
                 sign = -1;
 
-            double pitch = -pd_gains[0] * cop_foot(0);
+            double pitch = -p[0] * (cop_foot(0) - cop_ref(0));
             auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
             euler[1] += pitch;
-
             auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
-            ankle_ref.rotation() = q.toRotationMatrix();
 
-            auto ankle_sample = to_sample(ankle_ref);
-            Eigen::VectorXd ref(6);
-            ref.setZero();
-            // ref.block(3, 0, 1, 3) = to_angular_vel(euler_v, (euler_v.array() / dt_).matrix());
+            Eigen::VectorXd ref = Eigen::VectorXd::Zero(6);
             ref(4) = pitch / dt_;
-            ankle_sample.vel = pd_gains[1] * ref;
+
+            ankle_ref.rotation() = q.toRotationMatrix();
+            auto ankle_sample = to_sample(ankle_ref);
+            ankle_sample.vel = d[0] * ref;
             set_se3_ref(ankle_sample, foot + "f");
 
             contact_ref["contact_" + foot + "foot"].rotation() = q.toRotationMatrix();
             ankle_sample = to_sample(contact_ref["contact_" + foot + "foot"]);
-            ref.setZero();
-            // ref.block(3, 0, 1, 3) = to_angular_vel(euler_v, (euler_v.array() / dt_).matrix());
-            ref(4) = pitch / dt_;
-            ankle_sample.vel = pd_gains[1] * ref;
+            ankle_sample.vel = d[0] * ref;
             contact("contact_" + foot + "foot")->setReference(ankle_sample);
         }
 

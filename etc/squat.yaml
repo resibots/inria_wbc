@@ -11,8 +11,8 @@ CONTROLLER:
     d: [0.0001, 0.0001, 0.0001, 0.0001,  0.0,  0.0]
     # p: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     # d: [0.0, 0.0, 0.0, 0.0,  0.0,  0.0]
-    p_ankle: [0.075,0.0075]
-    d_ankle: [0.0, 0.0]
+    p_ankle: [0.075, 0.0]
+    d_ankle: [0.0075, 0.0]
   collision_detection:
     activated: true
     filter_size: 30
