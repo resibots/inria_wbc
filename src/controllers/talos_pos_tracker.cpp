@@ -42,27 +42,27 @@ namespace inria_wbc {
         {
             // init stabilizer
             {
-                YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"];
-                _use_stabilizer = c["activated"].as<bool>();
+                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"]);
+                _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
                 _stabilizer_p.resize(6);
                 _stabilizer_d.resize(6);
                 _stabilizer_p.setZero();
                 _stabilizer_d.setZero();
-                IWBC_ASSERT(c["p"].as<std::vector<double>>().size() == 6, "you need 6 coefficient in p for the stabilizer");
-                IWBC_ASSERT(c["d"].as<std::vector<double>>().size() == 6, "you need 6 coefficient in d for the stabilizer");
-                _stabilizer_p = Eigen::VectorXd::Map(c["p"].as<std::vector<double>>().data(), c["p"].as<std::vector<double>>().size());
-                _stabilizer_d = Eigen::VectorXd::Map(c["d"].as<std::vector<double>>().data(), c["d"].as<std::vector<double>>().size());
-                _stabilizer_p_ankle = Eigen::Vector2d(c["p_ankle"].as<std::vector<double>>().data());
+                IWBC_ASSERT(IWBC_CHECK(c["p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the stabilizer");
+                IWBC_ASSERT(IWBC_CHECK(c["d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the stabilizer");
+                _stabilizer_p = Eigen::VectorXd::Map(IWBC_CHECK(c["p"].as<std::vector<double>>()).data(), IWBC_CHECK(c["p"].as<std::vector<double>>()).size());
+                _stabilizer_d = Eigen::VectorXd::Map(IWBC_CHECK(c["d"].as<std::vector<double>>()).data(), IWBC_CHECK(c["d"].as<std::vector<double>>()).size());
+                _stabilizer_p_ankle = Eigen::Vector2d(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).data());
                 auto history = c["filter_size"].as<int>();
                 _cop_estimator.set_history_size(history);
             }
 
             // init collision detection
             {
-                YAML::Node c = YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"];
-                _use_torque_collision_detection = c["activated"].as<bool>();
-                auto filter_window_size = c["filter_size"].as<int>();
-                auto max_invalid = c["max_invalid"].as<int>();
+                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"]);
+                _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
+                auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
+                auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
 
                 _torque_collision_joints = {
                     "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint",
@@ -87,7 +87,7 @@ namespace inria_wbc {
                 // update thresholds from file (if any)
                 if (c["thresholds"]) {
                     auto path = boost::filesystem::path(sot_config_path).parent_path();
-                    auto p_thresh = path / boost::filesystem::path(c["thresholds"].as<std::string>());
+                    auto p_thresh = IWBC_CHECK(path / boost::filesystem::path(c["thresholds"].as<std::string>()));
                     parse_collision_thresholds(p_thresh.string());
                 }
 
@@ -112,11 +112,12 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_collision_thresholds(const std::string& config_path)
         {
-            YAML::Node config = YAML::LoadFile(config_path);
-            for (size_t jid = 0; jid < _torque_collision_joints.size(); ++jid) {
+            YAML::Node config =  IWBC_CHECK(YAML::LoadFile(config_path));
+            for(size_t jid = 0; jid < _torque_collision_joints.size(); ++jid)
+            {
                 std::string joint = _torque_collision_joints[jid];
-                if (config[joint])
-                    _torque_collision_threshold(jid) = config[joint].as<double>();
+                if(config[joint])
+                    _torque_collision_threshold(jid) = IWBC_CHECK(config[joint].as<double>());
             }
 
             return;

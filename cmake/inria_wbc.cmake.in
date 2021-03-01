@@ -5,34 +5,9 @@
 @PACKAGE_INIT@
 include(CMakeFindDependencyMacro)
 
-set(COMPILE_ROBOT_DART_EXAMPLE "@COMPILE_ROBOT_DART_EXAMPLE@")
-set(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "@COMPILE_ROBOT_DART_EXAMPLE@")
-
-
-if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
-    # we ask for Magnum because we want to build the graphics
-    if(${COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS} STREQUAL "ON")
-        find_package(RobotDART REQUIRED OPTIONAL_COMPONENTS Magnum)
-    else()
-        find_package(RobotDART REQUIRED)
-    endif()
-endif()
-
-find_package(tsid REQUIRED)
-find_package(pinocchio REQUIRED)
-find_package(yaml-cpp REQUIRED)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128 -std=c++14")
+find_dependency(tsid)
+find_dependency(pinocchio)
+find_dependency(yaml-cpp)
 
 include("${CMAKE_CURRENT_LIST_DIR}/inria_wbcTargets.cmake")
-
-set_and_check(INRIA_WBC_INCLUDE_DIRS "@PACKAGE_INCLUDE_INSTALL_DIR@")
-set_and_check(INRIA_WBC_LIBRARY_DIRS "@PACKAGE_LIBRARY_INSTALL_DIR@")
-
-
-set(INRIA_WBC_LIBRARIES "@LIBRARY@")
-set(INRIA_WBC_DEFINITIONS "@DEFINITIONS@")
-set(INRIA_WBC_DEPENDENCIES_LIBS "@DEPENDENCIES_LIBS@")
-set(INRIA_WBC_DEPENDENCIES_INCS "@DEPENDENCIES_INCS@")
-
 

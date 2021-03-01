@@ -11,6 +11,8 @@ namespace inria_wbc {
 
         class TalosPosTracker : public PosTracker {
         public:
+            EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
             TalosPosTracker(const Params& params);
             TalosPosTracker(const TalosPosTracker& other) = delete;
             TalosPosTracker& operator=(const TalosPosTracker& o) const = delete;

@@ -2,7 +2,6 @@
 #define IWBC_TALOS_BASE_CONTROLLER_HPP
 
 #include <Eigen/Core>
-#include <boost/variant.hpp>
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -27,6 +26,8 @@
 
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
+
+#include <boost/variant.hpp>
 
 namespace inria_wbc {
 
@@ -58,7 +59,7 @@ namespace inria_wbc {
                     std::cout << " }\nfloating_base_joint_name :\t" << floating_base_joint_name << std::endl;
                 }
             };
-
+            EIGEN_MAKE_ALIGNED_OPERATOR_NEW
             Controller(const Params& params);
             Controller(const Controller&) = delete;
             Controller& operator=(const Controller& o) = delete;
@@ -158,7 +159,6 @@ namespace inria_wbc {
                 return (task->getConstraint().matrix() * ddq_ - task->getConstraint().vector()).norm();
             }
             virtual double cost(const std::string& task_name) const = 0;
-
         private:
             std::vector<int> get_non_mimics_indexes() const;
 

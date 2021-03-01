@@ -38,10 +38,10 @@ namespace inria_wbc {
         {
 
             // retrieve parameters from YAML
-            double kp = node["kp"].as<double>();
-            auto tracked = node["tracked"].as<std::string>();
-            auto mask_str = node["mask"].as<std::string>();
-            auto weight = node["weight"].as<double>();
+            double kp = IWBC_CHECK(node["kp"].as<double>());
+            auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
+            auto mask_str = IWBC_CHECK(node["mask"].as<std::string>());
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
 
             // convert the mask
             IWBC_ASSERT(mask_str.size() == 6, "SE3 masks needs to be 6D (x y z r p y), here:", mask_str);
@@ -90,9 +90,9 @@ namespace inria_wbc {
             assert(robot);
 
             // parse yaml
-            double kp = node["kp"].as<double>();
-            auto mask_str = node["mask"].as<std::string>();
-            auto weight = node["weight"].as<double>();
+            double kp = IWBC_CHECK(node["kp"].as<double>());
+            auto mask_str = IWBC_CHECK(node["mask"].as<std::string>());
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
 
             IWBC_ASSERT(mask_str.size() == 3, "CoM masks needs to be 3D (x y z), here:", mask_str);
             auto mask = convert_mask<3>(mask_str);
@@ -152,9 +152,9 @@ namespace inria_wbc {
             assert(robot);
 
             // parse yaml
-            double kp = node["kp"].as<double>();
-            auto weight = node["weight"].as<double>();
-            auto ref_name = node["ref"].as<std::string>();
+            double kp = IWBC_CHECK(node["kp"].as<double>());
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto ref_name = IWBC_CHECK(node["ref"].as<std::string>());
 
             IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
             auto ref_q = robot->model().referenceConfigurations[ref_name];
@@ -168,7 +168,7 @@ namespace inria_wbc {
                 mask_post = Vector::Ones(robot->nv() - 6);
             }
             else {
-                auto mask = node["mask"].as<std::string>();
+                auto mask = IWBC_CHECK(node["mask"].as<std::string>());
                 IWBC_ASSERT(mask.size() == mask_post.size(), "wrong size in posture mask, expected:", mask_post.size(), " got:", mask.size());
                 mask_post = convert_mask<Eigen::Dynamic>(mask);
             }
@@ -194,8 +194,8 @@ namespace inria_wbc {
             assert(robot);
 
             // parse yaml
-            auto weight = node["weight"].as<double>();
-            auto dt = node["dt"].as<double>(); // used to compute accelerations
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto dt = IWBC_CHECK(node["dt"].as<double>()); // used to compute accelerations
 
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskJointPosVelAccBounds>(task_name, *robot, dt, false);
@@ -225,18 +225,17 @@ namespace inria_wbc {
             assert(robot);
 
             // parse yaml
-            auto kp = node["kp"].as<double>();
-            auto joint_name = node["joint"].as<std::string>();
-
-            auto lxn = node["lxn"].as<double>();
-            auto lyn = node["lyn"].as<double>();
-            auto lxp = node["lxp"].as<double>();
-            auto lyp = node["lyp"].as<double>();
-            auto lz = node["lz"].as<double>();
-            auto mu = node["mu"].as<double>();
-            auto normal = node["normal"].as<std::vector<double>>();
-            auto fmin = node["fmin"].as<double>();
-            auto fmax = node["fmax"].as<double>();
+            auto kp = IWBC_CHECK(node["kp"].as<double>());
+            auto joint_name = IWBC_CHECK(node["joint"].as<std::string>());
+            auto lxn = IWBC_CHECK(node["lxn"].as<double>());
+            auto lyn = IWBC_CHECK(node["lyn"].as<double>());
+            auto lxp = IWBC_CHECK(node["lxp"].as<double>());
+            auto lyp = IWBC_CHECK(node["lyp"].as<double>());
+            auto lz = IWBC_CHECK(node["lz"].as<double>());
+            auto mu = IWBC_CHECK(node["mu"].as<double>());
+            auto normal = IWBC_CHECK(node["normal"].as<std::vector<double>>());
+            auto fmin = IWBC_CHECK(node["fmin"].as<double>());
+            auto fmax = IWBC_CHECK(node["fmax"].as<double>());
             IWBC_ASSERT(normal.size() == 3, "normal size:", normal.size());
             IWBC_ASSERT(robot->model().existJointName(joint_name), joint_name, " does not exist!");
 
@@ -266,14 +265,14 @@ namespace inria_wbc {
         {
 
             // retrieve parameters from YAML
-            double kp = node["kp"].as<double>();
-            auto tracked = node["tracked"].as<std::string>();
-            auto weight = node["weight"].as<double>();
-            auto p = node["p"].as<double>();
-            auto radius = node["radius"].as<double>();
+            double kp = IWBC_CHECK(node["kp"].as<double>());
+            auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto p = IWBC_CHECK(node["p"].as<double>());
+            auto radius = IWBC_CHECK(node["radius"].as<double>());
 
             std::unordered_map<std::string, double> avoided;
-            for (const auto& a : node["avoided"])
+            for (const auto& a : IWBC_CHECK(node["avoided"]))
                 avoided[a.first.as<std::string>()] = a.second.as<double>();
 
             // create the task
