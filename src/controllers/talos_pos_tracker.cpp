@@ -149,17 +149,16 @@ namespace inria_wbc {
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
                     sensor_data.at("rf_torque"), sensor_data.at("rf_force"));
 
-                // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
-                // CoM = CoP+zc/g \ddot{x}
-                // see Biped Walking Pattern Generation by using Preview Control of Zero-Moment Point
-                // see eq.24 of Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
-                // see eq. 21 of Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
-                Eigen::Vector2d a = tsid_->data().acom[0].head<2>();
-                Eigen::Vector3d com = tsid_->data().com[0];
-                Eigen::Vector2d ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
-
                 // modify the CoM reference (stabilizer) if the CoP is valid
                 if (cop_ok && !std::isnan(_cop_estimator.cop_filtered()(0)) && !std::isnan(_cop_estimator.cop_filtered()(1))) {
+                    // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
+                    // CoM = CoP+zc/g \ddot{x}
+                    // see Biped Walking Pattern Generation by using Preview Control of Zero-Moment Point
+                    // see eq.24 of Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
+                    // see eq. 21 of Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
+                    Eigen::Vector2d a = tsid_->data().acom[0].head<2>();
+                    Eigen::Vector3d com = tsid_->data().com[0];
+                    Eigen::Vector2d ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
 
                     auto cop = _cop_estimator.cop_filtered();
                     Eigen::Vector2d cor = ref.head(2) - _cop_estimator.cop_filtered();
@@ -178,15 +177,14 @@ namespace inria_wbc {
                     sample.vel = vref_m;
                     sample.acc = aref_m;
                     set_com_ref(sample);
-                    // set_com_ref(ref_m);
                 }
 
                 if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
-                    ankle_admittance(_stabilizer_p_ankle, _stabilizer_d_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref, ref);
+                    ankle_admittance(_stabilizer_p_ankle, _stabilizer_d_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref);
                 }
 
                 if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
-                    ankle_admittance(_stabilizer_p_ankle, _stabilizer_d_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref, ref);
+                    ankle_admittance(_stabilizer_p_ankle, _stabilizer_d_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
                 }
             }
 
@@ -220,24 +218,13 @@ namespace inria_wbc {
             return angular;
         }
 
-        void TalosPosTracker::ankle_admittance(const Eigen::Vector2d& p, const Eigen::Vector2d& d, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref, Eigen::Vector2d cop_ref)
+        void TalosPosTracker::ankle_admittance(const Eigen::Vector2d& p, const Eigen::Vector2d& d, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref)
         {
-            int sign = 1;
-            if (foot == "l")
-                sign = -1;
+            Eigen::Vector3d cop_ankle_ref = ankle_ref.translation();
 
-            Eigen::Vector3d cop_foot_3d = Eigen::Vector3d::Zero();
-            cop_foot_3d.block(0, 0, 2, 1) = cop_foot;
-            // std::cout << cop_ref_3d.transpose() << std::endl;
+            double pitch = -p[0] * (cop_foot(0) - cop_ankle_ref(0));
+            double roll = +p[1] * (cop_foot(1) - cop_ankle_ref(1));
 
-            Eigen::Vector3d cop_foot_world = ankle_ref.inverse().rotation() * cop_foot_3d + ankle_ref.inverse().translation();
-            std::cout <<foot << "  cop_foot_3d " << cop_foot_3d.transpose() << std::endl;
-            std::cout <<foot << "  cop_foot_world " << cop_foot_world.transpose() << std::endl;
-            std::cout << foot << "  cop_ref " << cop_ref.transpose() << std::endl;
-
-            double pitch = -p[0] * (cop_foot_world(0) - cop_ref(0));
-            double roll = p[1] * (cop_foot_world(1) - cop_ref(1));
-            // std::cout << "cop_ref " << cop_ref[1] << " " << cop_foot[1] << std::endl;
             auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
             euler[0] += roll;
             euler[1] += pitch;

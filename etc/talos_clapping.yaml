@@ -10,8 +10,8 @@ CONTROLLER:
     filter_size: 5
     p: [0.001, 0.001, 0.001, 0.001, 0.00000005, 0.00000005]
     d: [0.0001, 0.0001, 0.0001, 0.0001,  0.0,  0.0]
-    p_ankle: [0.075, 0.0]
-    d_ankle: [0.0075, 0.0]
+    p_ankle: [0.1, 0.1]
+    d_ankle: [0.01, 0.01]
   collision_detection:
     activated: true
     filter_size: 30

@@ -32,7 +32,7 @@ namespace inria_wbc {
             void clear_collision_detection();
 
             Eigen::Vector3d to_angular_vel(const Eigen::Vector3d& euler,const Eigen::Vector3d& euler_dot);
-            void ankle_admittance(const Eigen::Vector2d& p, const Eigen::Vector2d& d, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref, Eigen::Vector2d cop_ref);
+            void ankle_admittance(const Eigen::Vector2d& p, const Eigen::Vector2d& d, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref);
        
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
