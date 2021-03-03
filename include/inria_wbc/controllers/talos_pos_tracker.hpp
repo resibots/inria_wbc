@@ -31,9 +31,9 @@ namespace inria_wbc {
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
 
-            Eigen::Vector3d to_angular_vel(const Eigen::Vector3d& euler,const Eigen::Vector3d& euler_dot);
-            void ankle_admittance(const Eigen::Vector2d& p, const Eigen::Vector2d& d, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref);
-       
+            Eigen::Vector3d to_angular_vel(const Eigen::Vector3d& euler, const Eigen::Vector3d& euler_dot);
+            void ankle_admittance(const Eigen::VectorXd& p, double dt, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref);
+
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
             void parse_collision_thresholds(const std::string& config_path);
@@ -42,8 +42,7 @@ namespace inria_wbc {
             bool _use_stabilizer = true;
             Eigen::VectorXd _stabilizer_p;
             Eigen::VectorXd _stabilizer_d;
-            Eigen::Vector2d _stabilizer_p_ankle = Eigen::Vector2d(0.0, 0.0);
-            Eigen::Vector2d _stabilizer_d_ankle = Eigen::Vector2d(0.0, 0.0);
+            Eigen::VectorXd _stabilizer_p_ankle;
 
             std::map<std::string, pinocchio::SE3> _contact_ref;
 

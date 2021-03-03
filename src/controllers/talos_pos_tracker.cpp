@@ -44,16 +44,23 @@ namespace inria_wbc {
             {
                 YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"]);
                 _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
+
                 _stabilizer_p.resize(6);
                 _stabilizer_d.resize(6);
+                _stabilizer_p_ankle.resize(6);
+
                 _stabilizer_p.setZero();
                 _stabilizer_d.setZero();
+                _stabilizer_p_ankle.setZero();
+
                 IWBC_ASSERT(IWBC_CHECK(c["p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the stabilizer");
                 IWBC_ASSERT(IWBC_CHECK(c["d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the stabilizer");
-                _stabilizer_p = Eigen::VectorXd::Map(IWBC_CHECK(c["p"].as<std::vector<double>>()).data(), IWBC_CHECK(c["p"].as<std::vector<double>>()).size());
-                _stabilizer_d = Eigen::VectorXd::Map(IWBC_CHECK(c["d"].as<std::vector<double>>()).data(), IWBC_CHECK(c["d"].as<std::vector<double>>()).size());
-                _stabilizer_p_ankle = Eigen::Vector2d(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).data());
-                _stabilizer_d_ankle = Eigen::Vector2d(IWBC_CHECK(c["d_ankle"].as<std::vector<double>>()).data());
+                IWBC_ASSERT(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the stabilizer");
+
+                _stabilizer_p = Eigen::VectorXd::Map(IWBC_CHECK(c["p"].as<std::vector<double>>()).data(), _stabilizer_p.size());
+                _stabilizer_d = Eigen::VectorXd::Map(IWBC_CHECK(c["d"].as<std::vector<double>>()).data(), _stabilizer_d.size());
+                _stabilizer_p_ankle = Eigen::VectorXd::Map(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).data(), _stabilizer_p_ankle.size());
+
                 auto history = c["filter_size"].as<int>();
                 _cop_estimator.set_history_size(history);
             }
@@ -103,6 +110,7 @@ namespace inria_wbc {
                 std::cout << "Stabilizer:" << _use_stabilizer << std::endl;
                 std::cout << "P:" << _stabilizer_p.transpose() << std::endl;
                 std::cout << "D:" << _stabilizer_d.transpose() << std::endl;
+                std::cout << "P ANKLE:" << _stabilizer_p_ankle.transpose() << std::endl;
 
                 std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
                 std::cout << "with thresholds" << std::endl;
@@ -180,11 +188,11 @@ namespace inria_wbc {
                 }
 
                 if (cop_ok && !std::isnan(_cop_estimator.lcop_filtered()(0)) && !std::isnan(_cop_estimator.lcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_lfoot") != cl.end()) {
-                    ankle_admittance(_stabilizer_p_ankle, _stabilizer_d_ankle, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref);
+                    ankle_admittance(_stabilizer_p_ankle, dt_, _cop_estimator.lcop_filtered(), "l", _contact_ref, left_ankle_ref);
                 }
 
                 if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
-                    ankle_admittance(_stabilizer_p_ankle, _stabilizer_d_ankle, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
+                    ankle_admittance(_stabilizer_p_ankle, dt_, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
                 }
             }
 
@@ -218,7 +226,7 @@ namespace inria_wbc {
             return angular;
         }
 
-        void TalosPosTracker::ankle_admittance(const Eigen::Vector2d& p, const Eigen::Vector2d& d, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref)
+        void TalosPosTracker::ankle_admittance(const Eigen::VectorXd& p, double dt, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref)
         {
             Eigen::Vector3d cop_ankle_ref = ankle_ref.translation();
 
@@ -230,18 +238,24 @@ namespace inria_wbc {
             euler[1] += pitch;
             auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
 
-            Eigen::VectorXd ref = Eigen::VectorXd::Zero(6);
-            ref(4) = d[0] * pitch / dt_;
-            ref(3) = d[1] * roll / dt_;
+            Eigen::VectorXd vel_ref = Eigen::VectorXd::Zero(6);
+            vel_ref(4) = p[2] * pitch / dt;
+            vel_ref(3) = p[3] * roll / dt;
+
+            Eigen::VectorXd acc_ref = Eigen::VectorXd::Zero(6);
+            acc_ref(4) = p[4] * pitch / (dt * dt);
+            acc_ref(3) = p[5] * roll / (dt * dt);
 
             ankle_ref.rotation() = q.toRotationMatrix();
             auto ankle_sample = to_sample(ankle_ref);
-            ankle_sample.vel = ref;
+            ankle_sample.vel = vel_ref;
+            ankle_sample.acc = acc_ref;
             set_se3_ref(ankle_sample, foot + "f");
 
             contact_ref["contact_" + foot + "foot"].rotation() = q.toRotationMatrix();
             ankle_sample = to_sample(contact_ref["contact_" + foot + "foot"]);
-            ankle_sample.vel = ref;
+            ankle_sample.vel = vel_ref;
+            ankle_sample.acc = acc_ref;
             contact("contact_" + foot + "foot")->setReference(ankle_sample);
         }
 
