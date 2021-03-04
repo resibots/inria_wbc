@@ -159,6 +159,7 @@ namespace inria_wbc {
                 return (task->getConstraint().matrix() * ddq_ - task->getConstraint().vector()).norm();
             }
             virtual double cost(const std::string& task_name) const = 0;
+
         private:
             std::vector<int> get_non_mimics_indexes() const;
 
@@ -176,6 +177,7 @@ namespace inria_wbc {
             std::vector<std::string> tsid_joint_names_; //contain floating base and mimics
             std::vector<int> non_mimic_indexes_;
             std::vector<std::string> activated_contacts_;
+            std::vector<std::string> all_contacts_;
 
             //---- TSID conventions for the floating base: quaternion
             tsid::math::Vector q_tsid_; // tsid joint positions
@@ -183,6 +185,7 @@ namespace inria_wbc {
             tsid::math::Vector a_tsid_; // tsid joint accelerations
             tsid::math::Vector tau_tsid_; // tsid joint torques
             tsid::math::Vector momentum_; // momentum
+            std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces_; //tsid contact forces of the activated contacts
 
             //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart

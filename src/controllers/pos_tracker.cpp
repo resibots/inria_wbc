@@ -103,6 +103,7 @@ namespace inria_wbc {
                     auto task = tasks::make_contact_task(robot_, tsid_, name, it->second);
                     contacts_[name] = task;
                     activated_contacts_.push_back(name);
+                    all_contacts_.push_back(name);
                 }
                 else {
                     // the task is added automatically to TSID by the factory

@@ -142,6 +142,11 @@ namespace inria_wbc {
                 q_tsid_ = pinocchio::integrate(robot_->model(), q_tsid_, dt_ * v_tsid_);
                 t_ += dt_;
 
+                activated_contacts_forces_.clear();
+                for (auto& contact : activated_contacts_) {
+                    activated_contacts_forces_[contact] = tsid_->getContactForces(contact, sol);
+                }
+
                 Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                 Eigen::AngleAxisd aaxis(quat);
                 q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)

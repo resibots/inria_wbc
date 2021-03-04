@@ -48,18 +48,22 @@ namespace inria_wbc {
                 _stabilizer_p.resize(6);
                 _stabilizer_d.resize(6);
                 _stabilizer_p_ankle.resize(6);
+                _stabilizer_p_ffda.resize(6);
 
                 _stabilizer_p.setZero();
                 _stabilizer_d.setZero();
                 _stabilizer_p_ankle.setZero();
+                _stabilizer_p_ffda.setZero();
 
                 IWBC_ASSERT(IWBC_CHECK(c["p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the stabilizer");
                 IWBC_ASSERT(IWBC_CHECK(c["d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the stabilizer");
-                IWBC_ASSERT(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the stabilizer");
+                IWBC_ASSERT(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p_ankle for the stabilizer");
+                IWBC_ASSERT(IWBC_CHECK(c["p_ffda"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p_ffda for the stabilizer");
 
                 _stabilizer_p = Eigen::VectorXd::Map(IWBC_CHECK(c["p"].as<std::vector<double>>()).data(), _stabilizer_p.size());
                 _stabilizer_d = Eigen::VectorXd::Map(IWBC_CHECK(c["d"].as<std::vector<double>>()).data(), _stabilizer_d.size());
                 _stabilizer_p_ankle = Eigen::VectorXd::Map(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).data(), _stabilizer_p_ankle.size());
+                _stabilizer_p_ffda = Eigen::VectorXd::Map(IWBC_CHECK(c["p_ffda"].as<std::vector<double>>()).data(), _stabilizer_p_ffda.size());
 
                 auto history = c["filter_size"].as<int>();
                 _cop_estimator.set_history_size(history);
@@ -144,6 +148,7 @@ namespace inria_wbc {
             }
             auto left_ankle_ref = get_se3_ref("lf");
             auto right_ankle_ref = get_se3_ref("rf");
+            auto torso_ref = get_se3_ref("torso");
 
             if (_use_stabilizer) {
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
@@ -194,6 +199,8 @@ namespace inria_wbc {
                 if (cop_ok && !std::isnan(_cop_estimator.rcop_filtered()(0)) && !std::isnan(_cop_estimator.rcop_filtered()(1)) && std::find(cl.begin(), cl.end(), "contact_rfoot") != cl.end()) {
                     ankle_admittance(_stabilizer_p_ankle, dt_, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
                 }
+
+                foot_force_difference_admittance(_stabilizer_p_ffda, dt_, sensor_data.at("lf_force"), sensor_data.at("rf_force"), torso_ref, left_ankle_ref, right_ankle_ref);
             }
 
             if (_use_torque_collision_detection) {
@@ -211,6 +218,7 @@ namespace inria_wbc {
             set_com_ref(com_ref);
             set_se3_ref(left_ankle_ref, "lf");
             set_se3_ref(right_ankle_ref, "rf");
+            set_se3_ref(torso_ref, "torso");
             for (auto& contact_name : cl) {
                 contact(contact_name)->Contact6d::setReference(_contact_ref[contact_name]);
             }
@@ -257,6 +265,55 @@ namespace inria_wbc {
             ankle_sample.vel = vel_ref;
             ankle_sample.acc = acc_ref;
             contact("contact_" + foot + "foot")->setReference(ankle_sample);
+        }
+
+        //FROM :
+        //Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
+        //by Shuuji Kajita, Mitsuharu Morisawa, Kanako Miura, Shin’ichiro Nakaoka,Kensuke Harada, Kenji Kaneko, Fumio Kanehiro and Kazuhito Yokoi
+        //ALSO INSPIRED BY :
+        //Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
+        //by Stéphane Caron, Abderrahmane Kheddar, Olivier Tempier
+        //https://github.com/stephane-caron/lipm_walking_controller/blob/master/src/Stabilizer.cpp
+        void TalosPosTracker::foot_force_difference_admittance(const Eigen::VectorXd& p_ffda, double dt, const Eigen::Vector3d& lf_force, const Eigen::Vector3d& rf_force, pinocchio::SE3 torso_ref, pinocchio::SE3 lf_ankle_ref, pinocchio::SE3 rf_ankle_ref)
+        {
+
+            if (activated_contacts_forces_.find("contact_rfoot") != activated_contacts_forces_.end()
+                && activated_contacts_forces_.find("contact_lfoot") != activated_contacts_forces_.end()) {
+
+                auto lf_contact_force = activated_contacts_forces_["contact_lfoot"]; //of size 12 because the contact
+                double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(lf_contact_force); //normal force of the contact
+                auto rf_contact_force = activated_contacts_forces_["contact_rfoot"]; //of size 12 because the contact
+                double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(lf_contact_force); //normal force of the contact
+
+                double zctrl = (lf_normal_force - rf_normal_force) - (lf_force(2) - rf_force(2));
+                std::cout << zctrl << std::endl;
+
+                auto torso_roll = -p_ffda[0] * zctrl;
+
+                auto euler = torso_ref.rotation().eulerAngles(0, 1, 2);
+                euler[0] += torso_roll;
+                auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
+
+                Eigen::VectorXd vel_ref = Eigen::VectorXd::Zero(6);
+                vel_ref(3) = -p_ffda[1] * zctrl / dt;
+
+                Eigen::VectorXd acc_ref = Eigen::VectorXd::Zero(6);
+                acc_ref(3) = -p_ffda[2] * zctrl / (dt * dt);
+
+                torso_ref.rotation() = q.toRotationMatrix();
+                auto torso_sample = to_sample(torso_ref);
+                torso_sample.vel = vel_ref;
+                torso_sample.acc = acc_ref;
+                set_se3_ref(torso_sample, "torso");
+
+                lf_ankle_ref.translation()(2) += p_ffda[0] * 0.5 * zctrl;
+                rf_ankle_ref.translation()(2) += -p_ffda[0] * 0.5 * zctrl;
+
+                // set_se3_ref(lf_ankle_ref, "lf");
+                // set_se3_ref(rf_ankle_ref, "rf");
+                // contact("contact_lfoot")->setReference(to_sample(lf_ankle_ref));
+                // contact("contact_rfoot")->setReference(to_sample(rf_ankle_ref));
+            }
         }
 
         void TalosPosTracker::clear_collision_detection()
