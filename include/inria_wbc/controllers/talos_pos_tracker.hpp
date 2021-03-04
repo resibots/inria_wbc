@@ -33,7 +33,7 @@ namespace inria_wbc {
 
             Eigen::Vector3d to_angular_vel(const Eigen::Vector3d& euler, const Eigen::Vector3d& euler_dot);
             void ankle_admittance(const Eigen::VectorXd& p, double dt, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref);
-            void foot_force_difference_admittance(const Eigen::VectorXd& p_ffda, double dt, const Eigen::Vector3d& lf_force, const Eigen::Vector3d& rf_force, pinocchio::SE3 torso_ref, pinocchio::SE3 lf_ankle_ref, pinocchio::SE3 rf_ankle_ref);
+            void foot_force_difference_admittance(Eigen::VectorXd p_ffda, double dt, const Eigen::Vector3d& lf_force, const Eigen::Vector3d& rf_force, pinocchio::SE3 torso_ref, pinocchio::SE3 lf_ankle_ref, pinocchio::SE3 rf_ankle_ref, float torso_max_roll);
 
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
@@ -41,6 +41,8 @@ namespace inria_wbc {
 
             estimators::Cop _cop_estimator;
             bool _use_stabilizer = true;
+            double _torso_max_roll = 0.3;
+
             Eigen::VectorXd _stabilizer_p;
             Eigen::VectorXd _stabilizer_d;
             Eigen::VectorXd _stabilizer_p_ankle;

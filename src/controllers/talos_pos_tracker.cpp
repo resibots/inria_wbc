@@ -44,11 +44,12 @@ namespace inria_wbc {
             {
                 YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"]);
                 _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
+                _torso_max_roll = IWBC_CHECK(c["torso_max_roll"].as<double>());
 
                 _stabilizer_p.resize(6);
                 _stabilizer_d.resize(6);
                 _stabilizer_p_ankle.resize(6);
-                _stabilizer_p_ffda.resize(6);
+                _stabilizer_p_ffda.resize(3);
 
                 _stabilizer_p.setZero();
                 _stabilizer_d.setZero();
@@ -58,7 +59,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(IWBC_CHECK(c["p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the stabilizer");
                 IWBC_ASSERT(IWBC_CHECK(c["d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the stabilizer");
                 IWBC_ASSERT(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p_ankle for the stabilizer");
-                IWBC_ASSERT(IWBC_CHECK(c["p_ffda"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p_ffda for the stabilizer");
+                IWBC_ASSERT(IWBC_CHECK(c["p_ffda"].as<std::vector<double>>()).size() == 3, "you need 3 coefficient in p_ffda for the stabilizer");
 
                 _stabilizer_p = Eigen::VectorXd::Map(IWBC_CHECK(c["p"].as<std::vector<double>>()).data(), _stabilizer_p.size());
                 _stabilizer_d = Eigen::VectorXd::Map(IWBC_CHECK(c["d"].as<std::vector<double>>()).data(), _stabilizer_d.size());
@@ -200,7 +201,7 @@ namespace inria_wbc {
                     ankle_admittance(_stabilizer_p_ankle, dt_, _cop_estimator.rcop_filtered(), "r", _contact_ref, right_ankle_ref);
                 }
 
-                foot_force_difference_admittance(_stabilizer_p_ffda, dt_, sensor_data.at("lf_force"), sensor_data.at("rf_force"), torso_ref, left_ankle_ref, right_ankle_ref);
+                foot_force_difference_admittance(_stabilizer_p_ffda, dt_, sensor_data.at("lf_force"), sensor_data.at("rf_force"), torso_ref, left_ankle_ref, right_ankle_ref, _torso_max_roll);
             }
 
             if (_use_torque_collision_detection) {
@@ -219,6 +220,7 @@ namespace inria_wbc {
             set_se3_ref(left_ankle_ref, "lf");
             set_se3_ref(right_ankle_ref, "rf");
             set_se3_ref(torso_ref, "torso");
+            
             for (auto& contact_name : cl) {
                 contact(contact_name)->Contact6d::setReference(_contact_ref[contact_name]);
             }
@@ -274,7 +276,7 @@ namespace inria_wbc {
         //Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
         //by Stéphane Caron, Abderrahmane Kheddar, Olivier Tempier
         //https://github.com/stephane-caron/lipm_walking_controller/blob/master/src/Stabilizer.cpp
-        void TalosPosTracker::foot_force_difference_admittance(const Eigen::VectorXd& p_ffda, double dt, const Eigen::Vector3d& lf_force, const Eigen::Vector3d& rf_force, pinocchio::SE3 torso_ref, pinocchio::SE3 lf_ankle_ref, pinocchio::SE3 rf_ankle_ref)
+        void TalosPosTracker::foot_force_difference_admittance(Eigen::VectorXd p_ffda, double dt, const Eigen::Vector3d& lf_force, const Eigen::Vector3d& rf_force, pinocchio::SE3 torso_ref, pinocchio::SE3 lf_ankle_ref, pinocchio::SE3 rf_ankle_ref, float torso_max_roll)
         {
 
             if (activated_contacts_forces_.find("contact_rfoot") != activated_contacts_forces_.end()
@@ -286,19 +288,37 @@ namespace inria_wbc {
                 double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(lf_contact_force); //normal force of the contact
 
                 double zctrl = (lf_normal_force - rf_normal_force) - (lf_force(2) - rf_force(2));
-                std::cout << zctrl << std::endl;
 
                 auto torso_roll = -p_ffda[0] * zctrl;
+                if (torso_roll > torso_max_roll)
+                    torso_roll = torso_max_roll;
+                if (torso_roll < -torso_max_roll)
+                    torso_roll = -torso_max_roll;
 
                 auto euler = torso_ref.rotation().eulerAngles(0, 1, 2);
                 euler[0] += torso_roll;
+
+
+                if (euler[0] >= torso_max_roll && euler[0] <= M_PI / 2) {
+                    euler[0] = torso_max_roll;
+                }
+                if (euler[0] >= M_PI / 2 && euler[0] <= M_PI - torso_max_roll) {
+                    euler[0] = M_PI - torso_max_roll;
+                }
+
                 auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
 
                 Eigen::VectorXd vel_ref = Eigen::VectorXd::Zero(6);
-                vel_ref(3) = -p_ffda[1] * zctrl / dt;
+                if (p_ffda[1] > p_ffda[0]) // to be sure not to go above torso_max_roll
+                    p_ffda[1] = p_ffda[0];
+
+                vel_ref(3) = p_ffda[1] * torso_roll / dt;
+
+                if (p_ffda[2] > p_ffda[1]) // to be sure not to go above torso_max_roll
+                    p_ffda[2] = p_ffda[1];
 
                 Eigen::VectorXd acc_ref = Eigen::VectorXd::Zero(6);
-                acc_ref(3) = -p_ffda[2] * zctrl / (dt * dt);
+                acc_ref(3) = p_ffda[2] * torso_roll / (dt * dt);
 
                 torso_ref.rotation() = q.toRotationMatrix();
                 auto torso_sample = to_sample(torso_ref);
