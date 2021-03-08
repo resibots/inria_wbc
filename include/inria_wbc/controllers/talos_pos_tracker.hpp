@@ -23,44 +23,13 @@ namespace inria_wbc {
             virtual const Eigen::Vector2d& lcop() const override { return _cop_estimator.lcop_filtered(); }
             virtual const Eigen::Vector2d& rcop() const override { return _cop_estimator.rcop_filtered(); }
             virtual const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
-            virtual const Eigen::Vector2d& lcop_raw() const override { return _cop_estimator.lcop_raw(); }
-            virtual const Eigen::Vector2d& rcop_raw() const override { return _cop_estimator.rcop_raw(); }
 
             const std::vector<std::string>& torque_sensor_joints() const { return _torque_collision_joints; }
             const safety::TorqueCollisionDetection& torque_collision_detector() const { return _torque_collision_detection; }
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
 
-            void com_admittance(
-                const Eigen::VectorXd& p,
-                const Eigen::VectorXd& d,
-                const Eigen::MatrixXd& velocity,
-                const Eigen::Vector2d& cop_filtered,
-                const tsid::trajectories::TrajectorySample& com_ref,
-                tsid::InverseDynamicsFormulationAccForce::Data data,
-                tsid::trajectories::TrajectorySample& se3_sample);
-
-            void ankle_admittance(
-                double dt,
-                const std::string& foot,
-                const Eigen::Vector2d& cop_foot,
-                const Eigen::VectorXd& p,
-                pinocchio::SE3 ankle_ref,
-                std::map<std::string, pinocchio::SE3> contact_ref,
-                tsid::trajectories::TrajectorySample& contact_sample,
-                tsid::trajectories::TrajectorySample& se3_sample);
-
-            void foot_force_difference_admittance(
-                double dt,
-                float torso_max_roll,
-                Eigen::VectorXd p_ffda,
-                pinocchio::SE3 torso_ref,
-                double lf_normal_force,
-                double rf_normal_force,
-                const Eigen::Vector3d& lf_force,
-                const Eigen::Vector3d& rf_force,
-                tsid::trajectories::TrajectorySample& torso_sample,
-                std::unordered_map<std::string, tsid::math::Vector> ac_forces);
+            
 
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);

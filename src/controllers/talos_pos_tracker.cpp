@@ -22,6 +22,7 @@
 
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/controllers/tasks.hpp"
+#include "inria_wbc/stabilizers/stabilizer.hpp"
 #include "inria_wbc/utils/utils.hpp"
 
 using namespace tsid;
@@ -170,7 +171,7 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
                     && !std::isnan(_cop_estimator.cop_filtered()(1))) {
 
-                    com_admittance(_stabilizer_p, _stabilizer_d, sensor_data.at("velocity"), _cop_estimator.cop_filtered(), com_ref, tsid_->data(), com_sample);
+                    stabilizer::com_admittance(dt_, _stabilizer_p, _stabilizer_d, sensor_data.at("velocity"), _cop_estimator.cop_filtered(), com_ref, tsid_->data(), com_sample);
                     set_com_ref(com_sample);
                 }
 
@@ -179,7 +180,7 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.lcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
-                    ankle_admittance(dt_, "l", _cop_estimator.lcop_filtered(), _stabilizer_p_ankle, left_ankle_ref, _contact_ref, contact_sample, se3_sample);
+                    stabilizer::ankle_admittance(dt_, "l", _cop_estimator.lcop_filtered(), _stabilizer_p_ankle, left_ankle_ref, _contact_ref, contact_sample, se3_sample);
                     set_se3_ref(se3_sample, "lf");
                     contact("contact_lfoot")->setReference(contact_sample);
                 }
@@ -189,7 +190,7 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.rcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
 
-                    ankle_admittance(dt_, "r", _cop_estimator.rcop_filtered(), _stabilizer_p_ankle, right_ankle_ref, _contact_ref, contact_sample, se3_sample);
+                    stabilizer::ankle_admittance(dt_, "r", _cop_estimator.rcop_filtered(), _stabilizer_p_ankle, right_ankle_ref, _contact_ref, contact_sample, se3_sample);
                     set_se3_ref(se3_sample, "rf");
                     contact("contact_rfoot")->setReference(contact_sample);
                 }
@@ -201,7 +202,7 @@ namespace inria_wbc {
                     double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
 
-                    foot_force_difference_admittance(dt_, _torso_max_roll, _stabilizer_p_ffda, torso_ref, lf_normal_force, rf_normal_force, sensor_data.at("lf_force"), sensor_data.at("rf_force"), torso_sample, activated_contacts_forces_);
+                    stabilizer::foot_force_difference_admittance(dt_, _torso_max_roll, _stabilizer_p_ffda, torso_ref, lf_normal_force, rf_normal_force, sensor_data.at("lf_force"), sensor_data.at("rf_force"), torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
             }
@@ -225,147 +226,6 @@ namespace inria_wbc {
             for (auto& contact_name : ac) {
                 contact(contact_name)->Contact6d::setReference(_contact_ref[contact_name]);
             }
-        }
-
-        void TalosPosTracker::com_admittance(
-            const Eigen::VectorXd& p,
-            const Eigen::VectorXd& d,
-            const Eigen::MatrixXd& velocity,
-            const Eigen::Vector2d& cop_filtered,
-            const tsid::trajectories::TrajectorySample& com_ref,
-            tsid::InverseDynamicsFormulationAccForce::Data data,
-            tsid::trajectories::TrajectorySample& se3_sample)
-        {
-            // the expected zmp given CoM in x is x - z_c / g \ddot{x} (LIPM equations)
-            // CoM = CoP+zc/g \ddot{x}
-            // see Biped Walking Pattern Generation by using Preview Control of Zero-Moment Point
-            // see eq.24 of Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
-            // see eq. 21 of Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
-            Eigen::Vector2d a = data.acom[0].head<2>();
-            Eigen::Vector3d com = data.com[0];
-            Eigen::Vector2d ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
-            Eigen::Vector2d cor = ref.head(2) - cop_filtered;
-
-            // [not classic] we correct by the velocity of the CoM instead of the CoP because we have an IMU for this
-            Eigen::Vector2d cor_v = velocity.block<2, 1>(0, 0);
-
-            Eigen::Vector2d error = p.block(0, 0, 1, 2).array() * cor.array() + d.block(0, 0, 1, 2).array() * cor_v.array();
-            Eigen::VectorXd ref_m = com_ref.pos - Eigen::Vector3d(error(0), error(1), 0);
-
-            error = p.block(2, 0, 1, 2).array() * cor.array() + d.block(2, 0, 1, 2).array() * cor_v.array();
-            Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(error(0), error(1), 0) / dt_);
-
-            error = p.block(4, 0, 1, 2).array() * cor.array() + d.block(4, 0, 1, 2).array() * cor_v.array();
-            Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(error(0), error(1), 0) / (dt_ * dt_));
-
-            se3_sample.pos = ref_m;
-            se3_sample.vel = vref_m;
-            se3_sample.acc = aref_m;
-        }
-
-        void TalosPosTracker::ankle_admittance(
-            double dt,
-            const std::string& foot,
-            const Eigen::Vector2d& cop_foot,
-            const Eigen::VectorXd& p,
-            pinocchio::SE3 ankle_ref,
-            std::map<std::string, pinocchio::SE3> contact_ref,
-            tsid::trajectories::TrajectorySample& contact_sample,
-            tsid::trajectories::TrajectorySample& se3_sample)
-        {
-            Eigen::Vector3d cop_ankle_ref = ankle_ref.translation();
-
-            double pitch = -p[0] * (cop_foot(0) - cop_ankle_ref(0));
-            double roll = +p[1] * (cop_foot(1) - cop_ankle_ref(1));
-
-            auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
-            euler[0] += roll;
-            euler[1] += pitch;
-            auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
-
-            Eigen::VectorXd vel_ref = Eigen::VectorXd::Zero(6);
-            vel_ref(4) = p[2] * pitch / dt;
-            vel_ref(3) = p[3] * roll / dt;
-
-            Eigen::VectorXd acc_ref = Eigen::VectorXd::Zero(6);
-            acc_ref(4) = p[4] * pitch / (dt * dt);
-            acc_ref(3) = p[5] * roll / (dt * dt);
-
-            ankle_ref.rotation() = q.toRotationMatrix();
-            se3_sample = to_sample(ankle_ref);
-            se3_sample.vel = vel_ref;
-            se3_sample.acc = acc_ref;
-
-            contact_ref["contact_" + foot + "foot"].rotation() = q.toRotationMatrix();
-            contact_sample = to_sample(contact_ref["contact_" + foot + "foot"]);
-            contact_sample.vel = vel_ref;
-            contact_sample.acc = acc_ref;
-        }
-
-        //FROM :
-        //Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
-        //by Shuuji Kajita, Mitsuharu Morisawa, Kanako Miura, Shin’ichiro Nakaoka,Kensuke Harada, Kenji Kaneko, Fumio Kanehiro and Kazuhito Yokoi
-        //ALSO INSPIRED BY :
-        //Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
-        //by Stéphane Caron, Abderrahmane Kheddar, Olivier Tempier
-        //https://github.com/stephane-caron/lipm_walking_controller/blob/master/src/Stabilizer.cpp
-        void TalosPosTracker::foot_force_difference_admittance(
-            double dt,
-            float torso_max_roll,
-            Eigen::VectorXd p_ffda,
-            pinocchio::SE3 torso_ref,
-            double lf_normal_force,
-            double rf_normal_force,
-            const Eigen::Vector3d& lf_sensor_force,
-            const Eigen::Vector3d& rf_sensor_force,
-            tsid::trajectories::TrajectorySample& torso_sample,
-            std::unordered_map<std::string, tsid::math::Vector> ac_forces)
-        {
-
-            double zctrl = (lf_normal_force - rf_normal_force) - (lf_sensor_force(2) - rf_sensor_force(2));
-
-            auto torso_roll = -p_ffda[0] * zctrl;
-            if (torso_roll > torso_max_roll)
-                torso_roll = torso_max_roll;
-            if (torso_roll < -torso_max_roll)
-                torso_roll = -torso_max_roll;
-
-            auto euler = torso_ref.rotation().eulerAngles(0, 1, 2);
-            euler[0] += torso_roll;
-
-            if (euler[0] >= torso_max_roll && euler[0] <= M_PI / 2) {
-                euler[0] = torso_max_roll;
-            }
-            if (euler[0] >= M_PI / 2 && euler[0] <= M_PI - torso_max_roll) {
-                euler[0] = M_PI - torso_max_roll;
-            }
-
-            auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
-
-            Eigen::VectorXd vel_ref = Eigen::VectorXd::Zero(6);
-            if (p_ffda[1] > p_ffda[0]) // to be sure not to go above torso_max_roll
-                p_ffda[1] = p_ffda[0];
-
-            vel_ref(3) = p_ffda[1] * torso_roll / dt;
-
-            if (p_ffda[2] > p_ffda[1]) // to be sure not to go above torso_max_roll
-                p_ffda[2] = p_ffda[1];
-
-            Eigen::VectorXd acc_ref = Eigen::VectorXd::Zero(6);
-            acc_ref(3) = p_ffda[2] * torso_roll / (dt * dt);
-
-            torso_ref.rotation() = q.toRotationMatrix();
-            torso_sample = to_sample(torso_ref);
-            torso_sample.vel = vel_ref;
-            torso_sample.acc = acc_ref;
-
-            //If you want to use the anke height strategy (tested but seems less efficient)
-            // lf_ankle_ref.translation()(2) += p_ffda[0] * 0.5 * zctrl;
-            // rf_ankle_ref.translation()(2) += -p_ffda[0] * 0.5 * zctrl;
-            // set_se3_ref(lf_ankle_ref, "lf");
-            // set_se3_ref(rf_ankle_ref, "rf");
-            // contact("contact_lfoot")->setReference(to_sample(lf_ankle_ref));
-            // contact("contact_rfoot")->setReference(to_sample(rf_ankle_ref));
         }
 
         void TalosPosTracker::clear_collision_detection()

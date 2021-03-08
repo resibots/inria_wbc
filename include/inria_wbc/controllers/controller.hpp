@@ -88,20 +88,6 @@ namespace inria_wbc {
                 return tmp;
             }
 
-            virtual const Eigen::Vector2d& lcop_raw() const
-            {
-                static Eigen::Vector2d tmp;
-                IWBC_ERROR("No COP estimator in controller.");
-                return tmp;
-            }
-
-            virtual const Eigen::Vector2d& rcop_raw() const
-            {
-                static Eigen::Vector2d tmp;
-                IWBC_ERROR("No COP estimator in controller.");
-                return tmp;
-            }
-
             virtual const Eigen::Vector2d& lcop() const
             {
                 static Eigen::Vector2d tmp;
