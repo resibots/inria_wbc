@@ -31,9 +31,36 @@ namespace inria_wbc {
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
 
-            Eigen::Vector3d to_angular_vel(const Eigen::Vector3d& euler, const Eigen::Vector3d& euler_dot);
-            void ankle_admittance(const Eigen::VectorXd& p, double dt, const Eigen::Vector2d& cop_foot, const std::string& foot, std::map<std::string, pinocchio::SE3> contact_ref, pinocchio::SE3 ankle_ref);
-            void foot_force_difference_admittance(Eigen::VectorXd p_ffda, double dt, const Eigen::Vector3d& lf_force, const Eigen::Vector3d& rf_force, pinocchio::SE3 torso_ref, pinocchio::SE3 lf_ankle_ref, pinocchio::SE3 rf_ankle_ref, float torso_max_roll);
+            void com_admittance(
+                const Eigen::VectorXd& p,
+                const Eigen::VectorXd& d,
+                const Eigen::MatrixXd& velocity,
+                const Eigen::Vector2d& cop_filtered,
+                const tsid::trajectories::TrajectorySample& com_ref,
+                tsid::InverseDynamicsFormulationAccForce::Data data,
+                tsid::trajectories::TrajectorySample& se3_sample);
+
+            void ankle_admittance(
+                double dt,
+                const std::string& foot,
+                const Eigen::Vector2d& cop_foot,
+                const Eigen::VectorXd& p,
+                pinocchio::SE3 ankle_ref,
+                std::map<std::string, pinocchio::SE3> contact_ref,
+                tsid::trajectories::TrajectorySample& contact_sample,
+                tsid::trajectories::TrajectorySample& se3_sample);
+
+            void foot_force_difference_admittance(
+                double dt,
+                float torso_max_roll,
+                Eigen::VectorXd p_ffda,
+                pinocchio::SE3 torso_ref,
+                double lf_normal_force,
+                double rf_normal_force,
+                const Eigen::Vector3d& lf_force,
+                const Eigen::Vector3d& rf_force,
+                tsid::trajectories::TrajectorySample& torso_sample,
+                std::unordered_map<std::string, tsid::math::Vector> ac_forces);
 
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
