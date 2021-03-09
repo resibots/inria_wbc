@@ -69,6 +69,11 @@ namespace inria_wbc {
 
                 auto history = c["filter_size"].as<int>();
                 _cop_estimator.set_history_size(history);
+
+                _lf_force_filtered.setZero();
+                _rf_force_filtered.setZero();
+                _lf_force_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
+                _rf_force_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
             }
 
             // init collision detection
@@ -195,14 +200,23 @@ namespace inria_wbc {
                     contact("contact_rfoot")->setReference(contact_sample);
                 }
 
+                // if the foot is on the ground
+                if (sensor_data.at("lf_force").norm() > _cop_estimator.fmin())
+                    _lf_force_filtered = _lf_force_filter->filter(sensor_data.at("lf_force"));
+
+                if (sensor_data.at("rf_force").norm() > _cop_estimator.fmin())
+                    _rf_force_filtered = _rf_force_filter->filter(sensor_data.at("rf_force"));
+
                 if (activated_contacts_forces_.find("contact_rfoot") != activated_contacts_forces_.end()
-                    && activated_contacts_forces_.find("contact_lfoot") != activated_contacts_forces_.end()) {
+                    && activated_contacts_forces_.find("contact_lfoot") != activated_contacts_forces_.end()
+                    && _lf_force_filter->data_ready()
+                    && _rf_force_filter->data_ready()) {
 
                     //normal force of the contacts from tsid
                     double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
 
-                    stabilizer::foot_force_difference_admittance(dt_, _torso_max_roll, _stabilizer_p_ffda, torso_ref, lf_normal_force, rf_normal_force, sensor_data.at("lf_force"), sensor_data.at("rf_force"), torso_sample);
+                    stabilizer::foot_force_difference_admittance(dt_, _torso_max_roll, _stabilizer_p_ffda, torso_ref, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
             }

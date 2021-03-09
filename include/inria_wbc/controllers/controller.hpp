@@ -102,6 +102,20 @@ namespace inria_wbc {
                 return tmp;
             }
 
+            virtual const Eigen::Vector3d& lf_force_filtered() const
+            {
+                static Eigen::Vector3d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector3d& rf_force_filtered() const
+            {
+                static Eigen::Vector3d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
             // this could call a CoM estimator
             virtual const tsid::math::Vector3& com() const { return robot_->com(tsid_->data()); }
 

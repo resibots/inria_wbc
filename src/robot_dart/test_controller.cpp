@@ -339,13 +339,19 @@ int main(int argc, char* argv[])
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
                 else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << " " << controller->lcop().transpose() << " "
+                    (*x.second) << controller->cop().transpose() << " "
+                                << controller->lcop().transpose() << " "
                                 << controller->rcop().transpose() << " " << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(5)) << std::endl;
                 else if (x.first == "ft")
                     (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
                                 << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
+                else if (x.first == "force") // the cop according to controller
+                    (*x.second) << sensor_data["lf_force"].transpose() << " "
+                                << controller->lf_force_filtered().transpose() << " "
+                                << sensor_data["rf_force"].transpose() << " " 
+                                << controller->rf_force_filtered().transpose() << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
                 else

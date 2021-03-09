@@ -40,6 +40,7 @@ namespace inria_wbc {
             const Eigen::Vector2d& cop_raw() const { return _cop_raw; }
             const Eigen::Vector2d& lcop_raw() const { return _lcop_raw; }
             const Eigen::Vector2d& rcop_raw() const { return _rcop_raw; }
+            const float& fmin() { return FMIN; }
 
         protected:
             static constexpr float FMIN = 30;

@@ -24,12 +24,13 @@ namespace inria_wbc {
             virtual const Eigen::Vector2d& rcop() const override { return _cop_estimator.rcop_filtered(); }
             virtual const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
 
+            virtual const Eigen::Vector3d& lf_force_filtered() const override { return _lf_force_filtered; }
+            virtual const Eigen::Vector3d& rf_force_filtered() const override { return _rf_force_filtered; }
+
             const std::vector<std::string>& torque_sensor_joints() const { return _torque_collision_joints; }
             const safety::TorqueCollisionDetection& torque_collision_detector() const { return _torque_collision_detection; }
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
-
-            
 
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
@@ -45,6 +46,9 @@ namespace inria_wbc {
             Eigen::VectorXd _stabilizer_p_ffda;
 
             std::map<std::string, pinocchio::SE3> _contact_ref;
+
+            Eigen::Vector3d _lf_force_filtered, _rf_force_filtered;
+            estimators::Filter::Ptr _lf_force_filter, _rf_force_filter;
 
             bool _use_torque_collision_detection;
             bool _collision_detected = false;
