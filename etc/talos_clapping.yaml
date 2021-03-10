@@ -11,7 +11,7 @@ CONTROLLER:
     torso_max_roll: 0.25
     p: [0.001, 0.001, 0.001, 0.001, 0.00000005, 0.00000005]
     d: [0.0001, 0.0001, 0.0001, 0.0001,  0.0,  0.0]
-    p_ankle: [0.1, 0.1, 0.01, 0.01, 0.00001, 0.00001]
+    p_ankle: [0.075, 0.075, 0.01, 0.01, 0.00001, 0.00001]
     p_ffda: [0.0003, 0.0003, 0.000002]
   collision_detection:
     activated: true
@@ -20,7 +20,7 @@ CONTROLLER:
     thresholds: collision_thresholds.yaml
 BEHAVIOR:
   name : talos-clapping
-  trajectory_duration : 1.0
+  trajectory_duration : 2.0
   motion_size : 1.1
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
