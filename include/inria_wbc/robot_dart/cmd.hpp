@@ -7,7 +7,7 @@
 namespace inria_wbc {
     namespace robot_dart {
         // compute torques from positions
-        inline Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos)
+        inline Eigen::VectorXd compute_spd(dart::dynamics::SkeletonPtr robot, const Eigen::VectorXd& targetpos, double dt)
         {
             Eigen::VectorXd q = robot->getPositions();
             Eigen::VectorXd dq = robot->getVelocities();
@@ -27,11 +27,11 @@ namespace inria_wbc {
                 Kd(i, i) = 0;
             }
 
-            Eigen::MatrixXd invM = (robot->getMassMatrix() + Kd * robot->getTimeStep()).inverse();
-            Eigen::VectorXd p = -Kp * (q + dq * robot->getTimeStep() - targetpos);
+            Eigen::MatrixXd invM = (robot->getMassMatrix() + Kd  *dt).inverse();
+            Eigen::VectorXd p = -Kp * (q + dq * dt - targetpos);
             Eigen::VectorXd d = -Kd * dq;
             Eigen::VectorXd qddot = invM * (-robot->getCoriolisAndGravityForces() + p + d + robot->getConstraintForces());
-            Eigen::VectorXd commands = p + d - Kd * qddot * robot->getTimeStep();
+            Eigen::VectorXd commands = p + d - Kd * qddot * dt;
             return commands;
         }
 
