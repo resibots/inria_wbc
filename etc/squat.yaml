@@ -22,6 +22,7 @@ PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
   sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/squat.yaml
+  has_floating_base: true
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false
@@ -37,4 +38,3 @@ PARAMS:
                      "gripper_right_inner_single_joint",
                      "gripper_right_fingertip_3_joint",
                      "gripper_right_motor_single_joint"]
-

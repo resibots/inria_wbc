@@ -58,15 +58,21 @@ namespace inria_wbc {
             auto p_srdf = path / boost::filesystem::path(srdf_file);
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
 
-            //q_tsid_ is of size 37 (pos+quat+nactuated)
+            //q_tsid_ for talos is of size 37 (pos+quat+nactuated) 
             auto ref_map = robot_->model().referenceConfigurations;
             IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
             q_tsid_ = ref_map[ref_config];
-            //q0_ is in "Dart format" for the floating base
-            Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
-            Eigen::AngleAxisd aaxis(quat);
-            q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
 
+            if ( has_floating_base_){
+              //q0_ is in "Dart format" for the floating base
+              Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
+              Eigen::AngleAxisd aaxis(quat);
+              q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
+            }
+            else{
+              q0_=q_tsid_;
+            }
+   
             ////////////////////Create the inverse-dynamics formulation///////////////////
             tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
 
