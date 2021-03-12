@@ -204,10 +204,10 @@ int main(int argc, char* argv[])
         if (vm.count("collisions")) {
             auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
             for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
-                Eigen::Vector6d cp = Eigen::Vector6d::Zero();
-                cp.tail(3) = task_self_collision->avoided_frames_positions()[i];
+                auto pos = task_self_collision->avoided_frames_positions()[i];
+                auto tf =  Eigen::Isometry3d(Eigen::Translation3d(pos[0], pos[1], pos[2]));
                 double r0 = task_self_collision->avoided_frames_r0s()[i];
-                auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0 * 2, r0 * 2, r0 * 2), cp, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
+                auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0 * 2, r0 * 2, r0 * 2), tf, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
                 sphere->set_color_mode("aspect");
                 self_collision_spheres.push_back(sphere);
                 simu.add_visual_robot(self_collision_spheres.back());
