@@ -29,16 +29,19 @@ int main(int argc, char* argv[])
         po::options_description desc("Test_controller options");
         // clang-format off
         desc.add_options()
-        ("help,h", "produce help message")
-        ("conf,c", po::value<std::string>()->default_value("../etc/circular_cartesian.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/circular_cartesian.yaml]")
-        ("fast,f", "fast (simplified) Talos [default: false]") //remove
-        ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
-        ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
+        ("big_window,b", "use a big window (nicer but slower) [default:true]")
+        ("check_self_collisions", "check the self collisions (print if a collision)")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
-        ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
+        ("conf,c", po::value<std::string>()->default_value("../etc/circular_cartesian.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/circular_cartesian.yaml]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
+        ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
+        ("fast,f", "fast (simplified) Talos [default: false]")
+        ("control_freq", po::value<int>()->default_value(1000), "set the control frequency")
+        ("sim_freq", po::value<int>()->default_value(1000), "set the simulation frequency")
         ("ghost,g", "display the ghost (Pinocchio model)")
+        ("help,h", "produce help message")
+        ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("verbose,v", "verbose mode (controller)")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
@@ -91,7 +94,8 @@ int main(int argc, char* argv[])
             log_files[x] = std::make_shared<std::ofstream>((x + ".dat").c_str());
 
         // dt of the simulation and the controller
-        float dt = 0.001;
+        int sim_freq = vm["sim_freq"].as<int>();
+        float dt = 1.0f/sim_freq;
         std::cout << "dt:" << dt << std::endl;
 
         //////////////////// INIT DART ROBOT //////////////////////////////////////
@@ -132,19 +136,20 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
+        int control_freq = vm["control_freq"].as<int>();
         inria_wbc::controllers::Controller::Params params = {
             robot->model_filename(),
             sot_config_path,
-            dt,
+            1.0f/ control_freq,
             verbose,
             robot->mimic_dof_names()};
 
-        YAML::Node config = YAML::LoadFile(sot_config_path);
+        YAML::Node config = IWBC_CHECK(YAML::LoadFile(sot_config_path));
 
-        auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
+        auto controller_name = IWBC_CHECK(config["CONTROLLER"]["name"].as<std::string>());
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
 
-        auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
+        auto behavior_name = IWBC_CHECK(config["BEHAVIOR"]["name"].as<std::string>());
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
         assert(behavior);
 
@@ -162,8 +167,8 @@ int main(int argc, char* argv[])
         }
 
         //////////////////// START SIMULATION //////////////////////////////////////
-        simu.set_control_freq(1000); // 1000 Hz
-        double time_simu = 0, time_cmd = 0, time_solver = 0;
+        simu.set_control_freq(control_freq); // 1000 Hz
+        double time_simu = 0, time_cmd = 0, time_solver = 0, max_time_solver = 0, min_time_solver = 1e10;
         int it_simu = 0, it_cmd = 0;
 
         
@@ -198,14 +203,17 @@ int main(int argc, char* argv[])
 
                 auto t1_cmd = high_resolution_clock::now();
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, dt);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
                 else // torque
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q);
+                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
                 ++it_cmd;
+
+                max_time_solver = std::max(time_step_solver, max_time_solver);
+                min_time_solver = std::min(time_step_solver, min_time_solver);
             }
 
             // step the simulation
@@ -237,7 +245,7 @@ int main(int argc, char* argv[])
 
                 std::cout << "t=" << simu.scheduler().current_time()
                           << "\tit. simu: " << t_sim << " ms"
-                          << "\tit. solver:" << t_solver << " ms"
+                          << "\tit. solver:" << t_solver << " ms [" << min_time_solver / 1000. << " " << max_time_solver / 1000. << "]"
                           << "\tit. cmd:" << t_cmd << " ms"
                           << std::endl;
                 std::ostringstream oss;
@@ -254,6 +262,8 @@ int main(int argc, char* argv[])
                 time_cmd = 0;
                 time_simu = 0;
                 time_solver = 0;
+                min_time_solver = 1e10;
+                max_time_solver = 0;
             }
         }
     }
