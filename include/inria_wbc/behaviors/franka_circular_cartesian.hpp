@@ -29,8 +29,6 @@ namespace inria_wbc {
             Eigen::Vector3d xyz_offset_;
             std::vector<pinocchio::SE3> trajectory_;
             int num_traj_steps_;
-
-            
         };
     } // namespace behaviors
 } // namespace inria_wbc

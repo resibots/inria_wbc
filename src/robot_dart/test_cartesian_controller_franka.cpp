@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
         double time_simu = 0, time_cmd = 0, time_solver = 0, max_time_solver = 0, min_time_solver = 1e10;
         int it_simu = 0, it_cmd = 0;
 
-        
+
         // the main loop
         using namespace std::chrono;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {

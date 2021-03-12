@@ -25,7 +25,7 @@ set(INRIA_WBC_SOURCES
   src/behaviors/talos_move_arm.cpp
   src/safety/torque_collision_detection.cpp
   src/behaviors/talos_walk_on_spot.cpp
-  src/behaviors/talos_clapping.cpp                            
+  src/behaviors/talos_clapping.cpp
   src/behaviors/franka_circular_cartesian.cpp
   src/estimators/cop.cpp
   src/tsid/task-self-collision.cpp

@@ -60,7 +60,7 @@ namespace inria_wbc {
 
             YAML::Node c= YAML::LoadFile(params_.sot_config_path);
             has_floating_base_ = c["PARAMS"]["has_floating_base"].as<bool>();
-        
+
             if (has_floating_base_) {
 
               if (!params.floating_base_joint_name.empty()) {

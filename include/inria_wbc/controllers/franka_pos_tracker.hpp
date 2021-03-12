@@ -6,7 +6,7 @@
 
 namespace inria_wbc {
     namespace controllers {
-      
+
         class FrankaPosTracker : public PosTracker {
         public:
             FrankaPosTracker(const Params& params);

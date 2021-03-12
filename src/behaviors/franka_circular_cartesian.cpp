@@ -23,7 +23,7 @@ namespace inria_wbc {
             num_traj_steps_ = round( traj_cycle_duration_/ dt_);
             trajectory_.reserve(num_traj_steps_);
 
-            for( int i =0; i < num_traj_steps_; ++i){ 
+            for( int i =0; i < num_traj_steps_; ++i){
               float t = (float)i/(float)num_traj_steps_;
 
               pinocchio::SE3 ref_ee = func_traj( t );
@@ -31,14 +31,14 @@ namespace inria_wbc {
             }
 
         }
-        
+
         pinocchio::SE3 CircCartTraj::func_traj( const float t){
 
             pinocchio::SE3 ref_ee;
             const float beta = t*2*M_PI;
 
             Eigen::Vector3d ref_xyz;
-            ref_xyz << 
+            ref_xyz <<
               0.0,
               sin(beta) * radius_,
               cos(beta) * radius_;
@@ -63,14 +63,14 @@ namespace inria_wbc {
                    sin(psi), cos(psi), 0.,
                    0., 0., 1.;
             rot_ee = R_z * R_y * R_x;
-            ref_ee.rotation(rot_ee); 
+            ref_ee.rotation(rot_ee);
 
             return ref_ee;
         }
 
         void CircCartTraj::update(const controllers::SensorData& sensor_data)
         {
-         
+
             if ( traj_index_ == num_traj_steps_){
               traj_index_ = 0;
             }

@@ -72,7 +72,7 @@ namespace inria_wbc {
             else{
               q0_=q_tsid_;
             }
-   
+
             ////////////////////Create the inverse-dynamics formulation///////////////////
             tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
 
