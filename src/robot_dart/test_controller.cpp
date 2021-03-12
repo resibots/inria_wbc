@@ -24,6 +24,7 @@
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
@@ -51,6 +52,7 @@ int main(int argc, char* argv[])
         ("ghost,g", "display the ghost (Pinocchio model)")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
+        ("check_fall", "check if the robot has fallen (print if a collision)")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("verbose,v", "verbose mode (controller)")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
@@ -136,7 +138,7 @@ int main(int argc, char* argv[])
             graphics->record_video(vm["mp4"].as<std::string>());
 #endif
         simu.add_robot(robot);
-        simu.add_checkerboard_floor();
+        auto floor = simu.add_checkerboard_floor();
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
         std::string sot_config_path = vm["conf"].as<std::string>();
@@ -218,8 +220,12 @@ int main(int argc, char* argv[])
         // reading from sensors
         Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
 
-        // create the collision detector (useful only if --check_self_collisions)
+        // create the collision detectors (useful only if --check_self_collisions)
         inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
+        std::map<std::string, std::string> filter_body_names_pairs;
+        filter_body_names_pairs["leg_right_6_link"] = "BodyNode";
+        filter_body_names_pairs["leg_left_6_link"] = "BodyNode";
+        inria_wbc::robot_dart::ExternalCollisionDetector floor_collision_detector(robot, floor, filter_body_names_pairs);
 
         // the main loop
         using namespace std::chrono;
@@ -247,13 +253,30 @@ int main(int argc, char* argv[])
             sensor_data["joints_torque"] = tq_sensors;
 
             if (vm.count("check_self_collisions")) {
+
                 IWBC_ASSERT(!vm.count("fast"), "=> check_self_collisions is not compatible with --fast!");
                 auto collision_list = collision_detector.collide();
                 if (!collision_list.empty())
-                    std::cout << " ------ Collisions ------ " << std::endl;
+                    std::cout << " ------ SELF Collisions ------ " << std::endl;
                 for (auto& s : collision_list)
                     std::cout << s << std::endl;
             }
+
+            if (vm.count("check_fall")) {
+                auto head_z_diff = std::abs(controller->model_frame_pos("head_1_link").translation()(2) - robot->body_pose("head_1_link").translation()(2));
+                std::vector<std::string> floor_collision_list;
+                if (head_z_diff > 0.75)
+                    floor_collision_list.push_back("head_1_link");
+                if (!vm.count("fast")) {
+                    auto list2 = floor_collision_detector.collide();
+                    floor_collision_list.insert(floor_collision_list.end(), list2.begin(), list2.end());
+                }
+                if (!floor_collision_list.empty())
+                    std::cout << " ------ FLOOR Collisions ------ " << std::endl;
+                for (auto& s : floor_collision_list)
+                    std::cout << s << std::endl;
+            }
+
             // step the command
             Eigen::VectorXd cmd;
             if (simu.schedule(simu.control_freq())) {
