@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, dt);
                 else // torque
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q);
+                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, dt);
 
                 auto cmd_filtered = controller->filter_cmd(cmd).tail(ncontrollable);
                 robot->set_commands(cmd_filtered, controllable_dofs);

@@ -12,6 +12,8 @@ option(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "compile robot-dart example with grap
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
+
 
 set(INRIA_WBC_SOURCES
   src/controllers/controller.cpp
@@ -41,6 +43,13 @@ target_link_libraries(inria_wbc PUBLIC
 			pinocchio::pinocchio
 			tsid::tsid
 			${YAML_CPP_LIBRARIES})
+
+if(Boost_stacktrace_basic_FOUND)
+  target_compile_definitions(inria_wbc PUBLIC IWBC_USE_STACKTRACE=1 BOOST_STACKTRACE_DYN_LINK=1) #force to not use header library but shared
+  target_link_libraries(inria_wbc PUBLIC Boost::stacktrace_basic)
+else()
+  message(STATUS "Could NOT find Boost stacktrace")
+endif()
 
 target_include_directories(inria_wbc PUBLIC
 		$<BUILD_INTERFACE:${inria_wbc_BINARY_DIR}/include>
