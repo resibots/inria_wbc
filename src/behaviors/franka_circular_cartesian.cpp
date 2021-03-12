@@ -8,7 +8,9 @@ namespace inria_wbc {
         CircCartTraj::CircCartTraj(const controller_ptr_t& controller) : Behavior(controller)
         {
             traj_index_=0.;
-            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
+            YAML::Node config =
+              YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
+
             pitch_angle_ = config["pitch_angle"].as<float>();
             radius_ = config["radius"].as<float>();
             xyz_offset_ <<
@@ -72,10 +74,10 @@ namespace inria_wbc {
             if ( traj_index_ == num_traj_steps_){
               traj_index_ = 0;
             }
+            std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)
+              ->set_se3_ref(trajectory_[traj_index_],"ee");
 
-            std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(trajectory_[traj_index_],"ee");
             controller_->update(sensor_data);
-
             ++traj_index_;
         }
     } // namespace behaviors
