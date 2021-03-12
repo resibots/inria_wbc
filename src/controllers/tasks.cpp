@@ -9,11 +9,6 @@
 #include "inria_wbc/controllers/tasks.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
-
-
-
-#include <typeinfo>
-
 using namespace tsid;
 using namespace tsid::math;
 
@@ -164,17 +159,13 @@ namespace inria_wbc {
             IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
             auto ref_q = robot->model().referenceConfigurations[ref_name];
 
-            bool floating_base_flag = (robot->na() == robot->nv()) ? false : true;
-            int n_actuated =  floating_base_flag ? robot->nv() - 6 : robot->nv();
-
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskJointPosture>(task_name, *robot);
-
-            task->Kp(kp * Vector::Ones(n_actuated));
+            task->Kp(kp * Vector::Ones(robot->nv() - 6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_post(n_actuated);
+            Vector mask_post(robot->nv() - 6);
             if (!node["mask"]) {
-                mask_post = Vector::Ones(n_actuated);
+                mask_post = Vector::Ones(robot->nv() - 6);
             }
             else {
                 auto mask = IWBC_CHECK(node["mask"].as<std::string>());

@@ -4,7 +4,6 @@ set(EXAMPLE_LIST
 	test_controller.cpp
 	test_masses.cpp
 	test_torque_safety.cpp
-        test_cartesian_controller_franka.cpp
 )
 
 

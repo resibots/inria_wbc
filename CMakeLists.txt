@@ -16,19 +16,18 @@ find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
 
 
 set(INRIA_WBC_SOURCES
-  src/controllers/controller.cpp
-  src/controllers/franka_pos_tracker.cpp
-  src/controllers/pos_tracker.cpp
-  src/controllers/tasks.cpp
-  src/controllers/talos_pos_tracker.cpp
-  src/behaviors/talos_squat.cpp
-  src/behaviors/talos_move_arm.cpp
-  src/safety/torque_collision_detection.cpp
-  src/behaviors/talos_walk_on_spot.cpp
-  src/behaviors/talos_clapping.cpp                            
-  src/behaviors/franka_circular_cartesian.cpp
-  src/estimators/cop.cpp
-  src/tsid/task-self-collision.cpp
+                            src/controllers/controller.cpp
+                            src/controllers/pos_tracker.cpp
+                            src/controllers/tasks.cpp
+                            src/controllers/talos_pos_tracker.cpp
+                            src/behaviors/talos_squat.cpp
+                            src/behaviors/talos_move_arm.cpp
+                            src/safety/torque_collision_detection.cpp
+                            src/behaviors/talos_walk_on_spot.cpp
+                            src/behaviors/talos_clapping.cpp                            
+                            src/estimators/cop.cpp
+                            src/tsid/task-self-collision.cpp
+
 )
 
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})
