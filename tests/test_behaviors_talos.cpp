@@ -30,6 +30,7 @@
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
+#include "inria_wbc/utils/utils.hpp"
 
 namespace cst {
     static constexpr double dt = 0.001;
@@ -106,46 +107,15 @@ std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config
     return tasks;
 }
 
-bool stabilizer(bool enable, const std::string& config_path)
+std::string bool_str(bool my_bool)
 {
-    bool initial_value = true;
-    std::string section = "stabilizer:";
-    std::string str = "activated:";
-    std::string new_str = enable ? "    activated: true" : "    activated: false";
+    return my_bool ? "true" : "false";
+}
 
-    std::ifstream input_file(config_path);
-    std::vector<std::string> lines;
-    std::string input;
-    while (std::getline(input_file, input))
-        lines.push_back(input);
+bool str_bool(std::string my_str)
+{
 
-    bool found_section = false;
-    bool replace = false;
-    for (auto& line : lines) {
-        if (!found_section) {
-            if (line.find(section) != std::string::npos) {
-                replace = true;
-                found_section = true;
-            }
-        }
-
-        if (replace) {
-            if (line.find(str) != std::string::npos) {
-                if (line.find("false") != std::string::npos)
-                    initial_value = false;
-                line = new_str;
-                replace = false;
-            }
-        }
-    }
-    input_file.close();
-
-    std::ofstream output_file(config_path);
-    for (auto const& line : lines)
-        output_file << line << '\n';
-    output_file.close();
-
-    return initial_value;
+    return (my_str == "true") ? true : false;
 }
 
 void test_behavior(const std::string& config_path,
@@ -165,7 +135,8 @@ void test_behavior(const std::string& config_path,
         verbose,
         robot->mimic_dof_names()};
 
-    bool initial_value = stabilizer(enable_stabilizer, config_path);
+    bool initial_value = str_bool(inria_wbc::utils::search_and_replace(config_path, bool_str(enable_stabilizer), "stabilizer:", "activated:"));
+
     y::Node config = IWBC_CHECK(y::LoadFile(config_path));
 
     // get the controller
@@ -200,7 +171,7 @@ void test_behavior(const std::string& config_path,
     for (const auto& joint : talos_tracker_controller->torque_sensor_joints())
         torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, cst::frequency));
 
-    stabilizer(initial_value, config_path);
+    inria_wbc::utils::search_and_replace(config_path, bool_str(initial_value), "stabilizer:", "activated:");
     // a few useful variables
     auto all_dofs = controller->all_dofs();
     auto floating_base = all_dofs;
@@ -510,7 +481,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     auto argv = boost::unit_test::framework::master_test_suite().argv;
 
     if (argc > 1) {
-        assert(argc == 5);
+        assert(argc == 6);
         std::cout << "using custom arguments for test [behavior actuators collision urdf]" << std::endl;
         auto node = ref[argv[1]][argv[2]][argv[3]][argv[4]][argv[5]];
         test_behavior(argv[1], argv[2], argv[3], argv[4], argv[5], ref, yout);

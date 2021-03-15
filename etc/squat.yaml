@@ -15,9 +15,9 @@ CONTROLLER:
     max_invalid: 5
     thresholds: collision_thresholds.yaml
 BEHAVIOR:
-  name : talos-squat
-  trajectory_duration : 3
-  motion_size : 0.2
+  name: talos-squat
+  trajectory_duration: 3
+  motion_size: 0.2
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
