@@ -61,8 +61,10 @@ configure_package_config_file("cmake/@project_name@.cmake.in" "@project_name@Con
                               PATH_VARS
 )
 
+# CHANGE NAMESPACE AS YOU PREFER. The project is now linked as inria_wbc::@project_name@
 install(EXPORT targets
         FILE @project_name@Targets.cmake
+        NAMESPACE inria_wbc::
         DESTINATION lib/cmake/@project_name@
 )
 
