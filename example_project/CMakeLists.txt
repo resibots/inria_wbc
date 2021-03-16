@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(@PROJECT_NAME@_VERSION 1.0.0)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_MATH_DISABLE_FLOAT128 -std=c++14")
 
-option(COMPILE_ROBOT_DART_EXAMPLES "ON")
+option(COMPILE_ROBOT_DART_EXAMPLES "Compile Robot DART examples" ON)
 
 find_package(inria_wbc REQUIRED)
 
@@ -103,7 +103,7 @@ function(compile_examples)
     endforeach()
 endfunction()
 
-if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
+if(${COMPILE_ROBOT_DART_EXAMPLES} STREQUAL "ON")
     find_package(RobotDART COMPONENTS Simu OPTIONAL COMPONENTS Magnum)
     find_package(Boost REQUIRED COMPONENTS program_options)
     compile_examples(${EXAMPLE_LIST})
