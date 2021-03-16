@@ -5,6 +5,7 @@
 #include <ctime>
 #include <iostream>
 #include <map>
+#include <stdio.h>
 #include <vector>
 
 #include <boost/filesystem.hpp>
@@ -30,7 +31,6 @@
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
-#include "inria_wbc/utils/utils.hpp"
 
 namespace cst {
     static constexpr double dt = 0.001;
@@ -107,17 +107,6 @@ std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config
     return tasks;
 }
 
-std::string bool_str(bool my_bool)
-{
-    return my_bool ? "true" : "false";
-}
-
-bool str_bool(std::string my_str)
-{
-
-    return (my_str == "true") ? true : false;
-}
-
 void test_behavior(const std::string& config_path,
     robot_dart::RobotDARTSimu& simu,
     const std::shared_ptr<robot_dart::Robot>& robot,
@@ -127,17 +116,21 @@ void test_behavior(const std::string& config_path,
     bool enable_stabilizer = false,
     bool verbose = false)
 {
+    auto tmp_config_path = config_path.substr(0, config_path.size() - 5) + "_tmp.yaml";
     // ----------------------- init -----------------------
     inria_wbc::controllers::Controller::Params params = {
         robot->model_filename(),
-        config_path,
+        tmp_config_path,
         cst::dt,
         verbose,
         robot->mimic_dof_names()};
 
-    bool initial_value = str_bool(inria_wbc::utils::search_and_replace(config_path, bool_str(enable_stabilizer), "stabilizer:", "activated:"));
-
     y::Node config = IWBC_CHECK(y::LoadFile(config_path));
+    auto initial_value = config["CONTROLLER"]["stabilizer"]["activated"].as<std::string>();
+    config["CONTROLLER"]["stabilizer"]["activated"] = enable_stabilizer ? "true" : "false";
+    std::ofstream fout(tmp_config_path);
+    fout << config;
+    fout.close();
 
     // get the controller
     auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
@@ -150,12 +143,12 @@ void test_behavior(const std::string& config_path,
     // get the list of SE3 tasks (to test the tracking)
     auto se3_tasks = parse_tasks(config_path);
     BOOST_CHECK(!se3_tasks.empty());
-
     // get the behavior (trajectories)
     auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
     auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
     BOOST_CHECK(behavior);
 
+    BOOST_CHECK(remove(tmp_config_path.c_str()) == 0);
     // add sensors to the robot (robot_dart)
     // Force/torque (feet)
     auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
@@ -171,7 +164,6 @@ void test_behavior(const std::string& config_path,
     for (const auto& joint : talos_tracker_controller->torque_sensor_joints())
         torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, cst::frequency));
 
-    inria_wbc::utils::search_and_replace(config_path, bool_str(initial_value), "stabilizer:", "activated:");
     // a few useful variables
     auto all_dofs = controller->all_dofs();
     auto floating_base = all_dofs;
