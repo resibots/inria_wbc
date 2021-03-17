@@ -5,6 +5,7 @@
 #include <Eigen/Core>
 #include <algorithm>
 #include <deque>
+#include <vector>
 
 namespace inria_wbc {
     namespace estimators {
