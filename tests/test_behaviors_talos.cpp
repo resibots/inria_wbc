@@ -85,16 +85,16 @@ std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config
     std::vector<inria_wbc::tests::SE3TaskData> tasks;
     y::Node config = IWBC_CHECK(y::LoadFile(config_path)["CONTROLLER"]);
     auto path = boost::filesystem::path(config_path).parent_path();
-    auto task_file = config["tasks"].as<std::string>();
+    auto task_file = IWBC_CHECK(config["tasks"].as<std::string>());
     auto p = path / boost::filesystem::path(task_file);
     y::Node task_list = IWBC_CHECK(y::LoadFile(p.string()));
     for (auto it = task_list.begin(); it != task_list.end(); ++it) {
-        auto name = it->first.as<std::string>();
-        auto type = it->second["type"].as<std::string>();
+        auto name = IWBC_CHECK(it->first.as<std::string>());
+        auto type = IWBC_CHECK(it->second["type"].as<std::string>());
         if (type == "se3") {
-            auto weight = it->second["weight"].as<double>();
-            auto mask = it->second["mask"].as<std::string>();
-            auto tracked = it->second["tracked"].as<std::string>();
+            auto weight = IWBC_CHECK(it->second["weight"].as<double>());
+            auto mask = IWBC_CHECK(it->second["mask"].as<std::string>());
+            auto tracked = IWBC_CHECK(it->second["tracked"].as<std::string>());
             tasks.push_back({name, tracked, mask, weight});
         }
     }
@@ -126,14 +126,14 @@ void test_behavior(const std::string& config_path,
         robot->mimic_dof_names()};
 
     y::Node config = IWBC_CHECK(y::LoadFile(config_path));
-    auto initial_value = config["CONTROLLER"]["stabilizer"]["activated"].as<std::string>();
+    auto initial_value = IWBC_CHECK(config["CONTROLLER"]["stabilizer"]["activated"].as<std::string>());
     config["CONTROLLER"]["stabilizer"]["activated"] = enable_stabilizer ? "true" : "false";
     std::ofstream fout(tmp_config_path);
     fout << config;
     fout.close();
 
     // get the controller
-    auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
+    auto controller_name = IWBC_CHECK(config["CONTROLLER"]["name"].as<std::string>());
     auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
     BOOST_CHECK(controller);
     auto p_controller = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
@@ -144,11 +144,11 @@ void test_behavior(const std::string& config_path,
     auto se3_tasks = parse_tasks(config_path);
     BOOST_CHECK(!se3_tasks.empty());
     // get the behavior (trajectories)
-    auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
+    auto behavior_name = IWBC_CHECK(config["BEHAVIOR"]["name"].as<std::string>());
     auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
     BOOST_CHECK(behavior);
 
-    BOOST_CHECK(remove(tmp_config_path.c_str()) == 0);
+    IWBC_CHECK(remove(tmp_config_path.c_str()));
     // add sensors to the robot (robot_dart)
     // Force/torque (feet)
     auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
@@ -373,7 +373,7 @@ void test_behavior(const std::string& config_path,
     // comparisons to the reference values
     try {
         // CoM
-        auto com = ref["com"].as<std::vector<double>>();
+        auto com = IWBC_CHECK(ref["com"].as<std::vector<double>>());
         if (enable_stabilizer) {
             BOOST_WARN_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM tolerance --> " + std::to_string(error_com_tsid - com[0]) + " > " + std::to_string(cst::tolerance));
             BOOST_WARN_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM tolerance--> " + std::to_string(error_com_dart - com[1]) + " > " + std::to_string(cst::tolerance));
@@ -384,7 +384,7 @@ void test_behavior(const std::string& config_path,
         }
         // SE3 tasks
         for (auto& t : se3_tasks) {
-            auto e = ref[t.name].as<std::vector<double>>();
+            auto e = IWBC_CHECK(ref[t.name].as<std::vector<double>>());
             if (enable_stabilizer) {
                 BOOST_WARN_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_tsid - e[0]) + " > " + std::to_string(cst::tolerance));
                 BOOST_WARN_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_dart - e[1]) + " > " + std::to_string(cst::tolerance));
