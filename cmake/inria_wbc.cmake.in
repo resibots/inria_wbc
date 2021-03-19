@@ -9,5 +9,8 @@ find_dependency(tsid)
 find_dependency(pinocchio)
 find_dependency(yaml-cpp)
 
+find_dependency(Boost OPTIONAL_COMPONENTS stacktrace_basic)
+
+
 include("${CMAKE_CURRENT_LIST_DIR}/inria_wbcTargets.cmake")
 

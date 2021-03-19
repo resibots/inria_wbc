@@ -4,9 +4,7 @@
 #include <exception>
 #include <string>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION >= 106500 // 1.65
-#define IWBC_USE_STACKTRACE
+#if IWBC_USE_STACKTRACE
 #include <boost/stacktrace.hpp> // require boost 1.65+
 #endif
 

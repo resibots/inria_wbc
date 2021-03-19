@@ -20,8 +20,8 @@ CONTROLLER:
     thresholds: collision_thresholds.yaml
 BEHAVIOR:
   name : talos-move-arm
-  trajectory_duration : 4
-  motion_size : 0.2
+  trajectory_duration: 4
+  motion_size: 0.2
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
