@@ -37,8 +37,10 @@ namespace inria_wbc {
             double cost(const std::string& task_name) const override { return Controller::cost(task<tsid::tasks::TaskBase>(task_name)); }
 
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
+            tsid::trajectories::TrajectorySample get_full_se3_ref(const std::string& task_name){ return se3_task(task_name)->getReference(); }
             // we do not return the velocity for now
             const tsid::math::Vector3 get_com_ref() { return com_task()->getReference().pos; }
+            const tsid::trajectories::TrajectorySample get_full_com_ref() { return com_task()->getReference(); }
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(to_sample(ref)); }
             void set_com_ref(const tsid::trajectories::TrajectorySample& sample) { com_task()->setReference(sample); }
             void set_momentum_ref(const tsid::trajectories::TrajectorySample& sample) { momentum_task()->setReference(sample); }

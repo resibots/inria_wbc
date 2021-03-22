@@ -1,5 +1,5 @@
-#include "inria_wbc/stabilizers/stabilizer.hpp"
 #include "inria_wbc/exceptions.hpp"
+#include "inria_wbc/stabilizers/stabilizer.hpp"
 #include <tsid/math/utils.hpp>
 
 namespace inria_wbc {
@@ -157,5 +157,5 @@ namespace inria_wbc {
             // contact("contact_lfoot")->setReference(to_sample(lf_ankle_ref));
             // contact("contact_rfoot")->setReference(to_sample(rf_ankle_ref));
         }
-    }
-}
+    } // namespace stabilizer
+} // namespace inria_wbc

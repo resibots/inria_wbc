@@ -154,9 +154,9 @@ namespace inria_wbc {
                 _contact_ref[contact_name] = se3;
             }
             auto com_ref = com_task()->getReference();
-            auto left_ankle_ref = get_se3_ref("lf");
-            auto right_ankle_ref = get_se3_ref("rf");
-            auto torso_ref = get_se3_ref("torso");
+            auto left_ankle_ref = get_full_se3_ref("lf");
+            auto right_ankle_ref = get_full_se3_ref("rf");
+            auto torso_ref = get_full_se3_ref("torso");
 
             if (_use_stabilizer) {
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
@@ -185,7 +185,7 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.lcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, "l", _cop_estimator.lcop_filtered(), _stabilizer_p_ankle, left_ankle_ref, _contact_ref, contact_sample, se3_sample);
+                    stabilizer::ankle_admittance(dt_, "l", _cop_estimator.lcop_filtered(), _stabilizer_p_ankle, get_se3_ref("lf"), _contact_ref, contact_sample, se3_sample);
                     set_se3_ref(se3_sample, "lf");
                     contact("contact_lfoot")->setReference(contact_sample);
                 }
@@ -195,7 +195,7 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.rcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, "r", _cop_estimator.rcop_filtered(), _stabilizer_p_ankle, right_ankle_ref, _contact_ref, contact_sample, se3_sample);
+                    stabilizer::ankle_admittance(dt_, "r", _cop_estimator.rcop_filtered(), _stabilizer_p_ankle, get_se3_ref("rf"), _contact_ref, contact_sample, se3_sample);
                     set_se3_ref(se3_sample, "rf");
                     contact("contact_rfoot")->setReference(contact_sample);
                 }
@@ -216,7 +216,7 @@ namespace inria_wbc {
                     double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
 
-                    stabilizer::foot_force_difference_admittance(dt_, _torso_max_roll, _stabilizer_p_ffda, torso_ref, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, torso_sample);
+                    stabilizer::foot_force_difference_admittance(dt_, _torso_max_roll, _stabilizer_p_ffda, get_se3_ref("torso"), lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
             }
@@ -233,12 +233,15 @@ namespace inria_wbc {
             _solve();
 
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
-            set_com_ref(com_ref);
-            set_se3_ref(left_ankle_ref, "lf");
-            set_se3_ref(right_ankle_ref, "rf");
-            set_se3_ref(torso_ref, "torso");
-            for (auto& contact_name : ac) {
-                contact(contact_name)->Contact6d::setReference(_contact_ref[contact_name]);
+            if (_use_stabilizer) {
+                set_com_ref(com_ref);
+                set_se3_ref(left_ankle_ref, "lf");
+                set_se3_ref(right_ankle_ref, "rf");
+                set_se3_ref(torso_ref, "torso");
+
+                for (auto& contact_name : ac) {
+                    contact(contact_name)->Contact6d::setReference(_contact_ref[contact_name]);
+                }
             }
         }
 
