@@ -1,5 +1,6 @@
-#include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/stabilizers/stabilizer.hpp"
+
+#include "inria_wbc/exceptions.hpp"
 #include <tsid/math/utils.hpp>
 
 namespace inria_wbc {
