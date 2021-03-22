@@ -17,7 +17,6 @@ find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
 
 set(INRIA_WBC_SOURCES
   src/controllers/controller.cpp
-  src/controllers/franka_pos_tracker.cpp
   src/controllers/pos_tracker.cpp
   src/controllers/tasks.cpp
   src/controllers/talos_pos_tracker.cpp

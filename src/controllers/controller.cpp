@@ -59,7 +59,7 @@ namespace inria_wbc {
             pinocchio::Model robot_model;
 
             YAML::Node c= YAML::LoadFile(params_.sot_config_path);
-            has_floating_base_ = c["PARAMS"]["has_floating_base"].as<bool>();
+            has_floating_base_ = c["CONTROLLER"]["has_floating_base"].as<bool>();
 
             if (has_floating_base_) {
 

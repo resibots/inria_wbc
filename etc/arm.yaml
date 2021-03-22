@@ -15,6 +15,7 @@ CONTROLLER:
     filter_size: 30
     max_invalid: 5
     thresholds: collision_thresholds.yaml
+  has_floating_base: true
 BEHAVIOR:
   name : talos-move-arm
   trajectory_duration : 4
@@ -23,7 +24,6 @@ PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
   sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/arm.yaml
-  has_floating_base: true
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false
