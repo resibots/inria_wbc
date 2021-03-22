@@ -5,6 +5,7 @@
 #include <ctime>
 #include <iostream>
 #include <map>
+#include <stdio.h>
 #include <vector>
 
 #include <boost/filesystem.hpp>
@@ -28,6 +29,7 @@
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 
 namespace cst {
@@ -83,16 +85,16 @@ std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config
     std::vector<inria_wbc::tests::SE3TaskData> tasks;
     y::Node config = IWBC_CHECK(y::LoadFile(config_path)["CONTROLLER"]);
     auto path = boost::filesystem::path(config_path).parent_path();
-    auto task_file = config["tasks"].as<std::string>();
+    auto task_file = IWBC_CHECK(config["tasks"].as<std::string>());
     auto p = path / boost::filesystem::path(task_file);
     y::Node task_list = IWBC_CHECK(y::LoadFile(p.string()));
     for (auto it = task_list.begin(); it != task_list.end(); ++it) {
-        auto name = it->first.as<std::string>();
-        auto type = it->second["type"].as<std::string>();
+        auto name = IWBC_CHECK(it->first.as<std::string>());
+        auto type = IWBC_CHECK(it->second["type"].as<std::string>());
         if (type == "se3") {
-            auto weight = it->second["weight"].as<double>();
-            auto mask = it->second["mask"].as<std::string>();
-            auto tracked = it->second["tracked"].as<std::string>();
+            auto weight = IWBC_CHECK(it->second["weight"].as<double>());
+            auto mask = IWBC_CHECK(it->second["mask"].as<std::string>());
+            auto tracked = IWBC_CHECK(it->second["tracked"].as<std::string>());
             tasks.push_back({name, tracked, mask, weight});
         }
     }
@@ -110,20 +112,28 @@ void test_behavior(const std::string& config_path,
     const std::shared_ptr<robot_dart::Robot>& robot,
     const std::string& actuator_type,
     const y::Node& ref,
-    y::Emitter& yout)
+    y::Emitter& yout,
+    bool enable_stabilizer = false,
+    bool verbose = false)
 {
+    auto tmp_config_path = config_path.substr(0, config_path.size() - 5) + "_tmp.yaml";
     // ----------------------- init -----------------------
     inria_wbc::controllers::Controller::Params params = {
         robot->model_filename(),
-        config_path,
+        tmp_config_path,
         cst::dt,
-        false,
+        verbose,
         robot->mimic_dof_names()};
 
     y::Node config = IWBC_CHECK(y::LoadFile(config_path));
+    auto initial_value = IWBC_CHECK(config["CONTROLLER"]["stabilizer"]["activated"].as<std::string>());
+    config["CONTROLLER"]["stabilizer"]["activated"] = enable_stabilizer ? "true" : "false";
+    std::ofstream fout(tmp_config_path);
+    fout << config;
+    fout.close();
 
     // get the controller
-    auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
+    auto controller_name = IWBC_CHECK(config["CONTROLLER"]["name"].as<std::string>());
     auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
     BOOST_CHECK(controller);
     auto p_controller = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
@@ -133,12 +143,12 @@ void test_behavior(const std::string& config_path,
     // get the list of SE3 tasks (to test the tracking)
     auto se3_tasks = parse_tasks(config_path);
     BOOST_CHECK(!se3_tasks.empty());
-
     // get the behavior (trajectories)
-    auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
+    auto behavior_name = IWBC_CHECK(config["BEHAVIOR"]["name"].as<std::string>());
     auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
     BOOST_CHECK(behavior);
 
+    IWBC_CHECK(remove(tmp_config_path.c_str()));
     // add sensors to the robot (robot_dart)
     // Force/torque (feet)
     auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
@@ -170,6 +180,13 @@ void test_behavior(const std::string& config_path,
     inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
     std::map<std::string, bool> collision_map;
 
+    std::map<std::string, std::string> filter_body_names_pairs;
+    filter_body_names_pairs["leg_right_6_link"] = "BodyNode";
+    filter_body_names_pairs["leg_left_6_link"] = "BodyNode";
+    auto robot_floor = simu.robot(1);
+    inria_wbc::robot_dart::ExternalCollisionDetector floor_collision_detector(robot, robot_floor, filter_body_names_pairs);
+    std::map<std::string, bool> floor_collision_map;
+
     // ----------------------- the main loop -----------------------
     using namespace std::chrono;
     inria_wbc::controllers::SensorData sensor_data;
@@ -193,7 +210,6 @@ void test_behavior(const std::string& config_path,
         sensor_data["acceleration"] = imu->linear_acceleration();
         sensor_data["velocity"] = robot->com_velocity().tail<3>();
         sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
-        ;
 
         // command
         if (simu.schedule(simu.control_freq())) {
@@ -215,6 +231,29 @@ void test_behavior(const std::string& config_path,
             ++it_cmd;
         }
 
+        // push the robot
+        std::vector<float> pv = {1.0, 5.0};
+        if (enable_stabilizer) {
+            for (uint i = 0; i < pv.size(); i++) {
+                if (simu.scheduler().current_time() > pv[i] && simu.scheduler().current_time() < pv[i] + 0.5) {
+                    if (behavior_name == "walk-on-spot") {
+                        if (i == 0)
+                            robot->set_external_force("base_link", Eigen::Vector3d(-120, 0, 0));
+                        if (i == 1)
+                            robot->set_external_force("base_link", Eigen::Vector3d(0, 180, 0));
+                    }
+                    else {
+                        if (i == 0)
+                            robot->set_external_force("base_link", Eigen::Vector3d(-150, 0, 0));
+                        if (i == 1)
+                            robot->set_external_force("base_link", Eigen::Vector3d(0, 200, 0));
+                    }
+                }
+                if (simu.scheduler().current_time() > pv[i] + 0.25)
+                    robot->clear_external_forces();
+            }
+        }
+
         // step the simulation
         {
             auto t1_simu = high_resolution_clock::now();
@@ -224,13 +263,27 @@ void test_behavior(const std::string& config_path,
             ++it_simu;
         }
 
-        // check that we do not generate any self-collision
+        // check that we do not generate any self-collision or floor collision
         // this will do nothing with the fast URDF (no collision checks)
         if (simu.collision_detector() != "dart") {
             auto collision_list = collision_detector.collide();
             for (auto& s : collision_list)
                 collision_map[s] = true;
         }
+
+        auto head_z_diff = std::abs(controller->model_frame_pos("head_1_link").translation()(2) - robot->body_pose("head_1_link").translation()(2));
+        std::vector<std::string> floor_collision_list;
+
+        if (head_z_diff > 0.75)
+            floor_collision_list.push_back("head_1_link");
+
+        if (simu.collision_detector() != "dart") {
+            auto list2 = floor_collision_detector.collide();
+            floor_collision_list.insert(floor_collision_list.end(), list2.begin(), list2.end());
+        }
+
+        for (auto& s : floor_collision_list)
+            floor_collision_map[s] = true;
 
         // compute the CoM error
         error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
@@ -294,6 +347,11 @@ void test_behavior(const std::string& config_path,
         BOOST_CHECK_MESSAGE(false, std::string("collision detected: ") + x.first);
     }
 
+    // floor collision report
+    for (auto& x : floor_collision_map) {
+        BOOST_CHECK_MESSAGE(false, std::string("floor collision detected: ") + x.first);
+    }
+
     // error report for COM
     error_com_tsid /= simu.scheduler().current_time() * 1000;
     error_com_dart /= simu.scheduler().current_time() * 1000;
@@ -315,14 +373,26 @@ void test_behavior(const std::string& config_path,
     // comparisons to the reference values
     try {
         // CoM
-        auto com = ref["com"].as<std::vector<double>>();
-        BOOST_CHECK_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM tolerance --> " + std::to_string(error_com_tsid - com[0]) + " > " + std::to_string(cst::tolerance));
-        BOOST_CHECK_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM tolerance--> " + std::to_string(error_com_dart - com[1]) + " > " + std::to_string(cst::tolerance));
+        auto com = IWBC_CHECK(ref["com"].as<std::vector<double>>());
+        if (enable_stabilizer) {
+            BOOST_WARN_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM tolerance --> " + std::to_string(error_com_tsid - com[0]) + " > " + std::to_string(cst::tolerance));
+            BOOST_WARN_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM tolerance--> " + std::to_string(error_com_dart - com[1]) + " > " + std::to_string(cst::tolerance));
+        }
+        else {
+            BOOST_CHECK_MESSAGE(error_com_tsid <= com[0] + cst::tolerance, "CoM tolerance --> " + std::to_string(error_com_tsid - com[0]) + " > " + std::to_string(cst::tolerance));
+            BOOST_CHECK_MESSAGE(error_com_dart <= com[1] + cst::tolerance, "CoM tolerance--> " + std::to_string(error_com_dart - com[1]) + " > " + std::to_string(cst::tolerance));
+        }
         // SE3 tasks
         for (auto& t : se3_tasks) {
-            auto e = ref[t.name].as<std::vector<double>>();
-            BOOST_CHECK_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_tsid - e[0]) + " > " + std::to_string(cst::tolerance));
-            BOOST_CHECK_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_dart - e[1]) + " > " + std::to_string(cst::tolerance));
+            auto e = IWBC_CHECK(ref[t.name].as<std::vector<double>>());
+            if (enable_stabilizer) {
+                BOOST_WARN_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_tsid - e[0]) + " > " + std::to_string(cst::tolerance));
+                BOOST_WARN_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_dart - e[1]) + " > " + std::to_string(cst::tolerance));
+            }
+            else {
+                BOOST_CHECK_MESSAGE(t.error_tsid <= e[0] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_tsid - e[0]) + " > " + std::to_string(cst::tolerance));
+                BOOST_CHECK_MESSAGE(t.error_dart <= e[1] + cst::tolerance, t.name + " tolerance --> " + std::to_string(t.error_dart - e[1]) + " > " + std::to_string(cst::tolerance));
+            }
         }
     }
     catch (std::exception& e) {
@@ -333,14 +403,14 @@ void test_behavior(const std::string& config_path,
     std::cout << std::endl;
 }
 
-void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
+void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, const std::string& enable_stabilizer, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
 {
-    std::cout << colors::blue << colors::bold << "TESTING: " << config_path << " | " << actuators << " | " << coll << " | " << urdf << colors::rst << std::endl;
+    std::cout << colors::blue << colors::bold << "TESTING: " << config_path << " | " << actuators << " | " << coll << " | enable_stabilizer: " << enable_stabilizer << " | " << urdf << colors::rst << std::endl;
     yout << y::Key << urdf << y::BeginMap;
 
     y::Node node;
     try {
-        node = ref[config_path][actuators][coll][urdf];
+        node = ref[config_path][actuators][coll]["stabilized_" + enable_stabilizer][urdf];
     }
     catch (std::exception& e) {
         std::cerr << colors::red << e.what() << std::endl;
@@ -357,6 +427,7 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
     simu.set_control_freq(cst::frequency);
     simu.add_robot(robot);
     simu.add_checkerboard_floor();
+    bool stabilizer = (enable_stabilizer == "true") ? true : false;
 
 #ifdef GRAPHIC
     auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>();
@@ -368,7 +439,7 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
 
     try {
         // run the behavior
-        test_behavior(config_path, simu, robot, actuators, node, yout);
+        test_behavior(config_path, simu, robot, actuators, node, yout, stabilizer);
     }
     catch (std::exception& e) {
         std::cerr << colors::red << colors::bold << "Error (exception): t=" << simu.scheduler().current_time() << " " << colors::rst << e.what() << std::endl;
@@ -397,15 +468,15 @@ BOOST_AUTO_TEST_CASE(behaviors)
     // the YAMl file has a timestamp (so that we can archive them)
     yout << y::Key << "timestamp" << y::Value << date();
 
-    // use ./my_test -- ../../etc/arm.yaml servo fcl talos/talos.urdf for a specific test
+    // use ./my_test ../../etc/arm.yaml servo fcl false talos/talos.urdf  for a specific test
     auto argc = boost::unit_test::framework::master_test_suite().argc;
     auto argv = boost::unit_test::framework::master_test_suite().argv;
 
     if (argc > 1) {
-        assert(argc == 5);
+        assert(argc == 6);
         std::cout << "using custom arguments for test [behavior actuators collision urdf]" << std::endl;
-        auto node = ref[argv[1]][argv[2]][argv[3]][argv[4]];
-        test_behavior(argv[1], argv[2], argv[3], argv[4], ref, yout);
+        auto node = ref[argv[1]][argv[2]][argv[3]][argv[4]][argv[5]];
+        test_behavior(argv[1], argv[2], argv[3], argv[4], argv[5], ref, yout);
         // WARING: this does not write the yaml file
     }
 
@@ -415,6 +486,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml", "../../etc/walk_on_spot.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity"};
+    std::vector<std::string> stabilized = {"true", "false"};
     std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
 
     for (auto& b : behaviors) {
@@ -423,9 +495,13 @@ BOOST_AUTO_TEST_CASE(behaviors)
             yout << y::Key << a << y::Value << y::BeginMap;
             for (auto& c : collision) {
                 yout << y::Key << c << y::Value << y::BeginMap;
-                test_behavior(b, a, c, urdfs[1], ref, yout);
-                if (c != std::string("dart")) {
-                    test_behavior(b, a, c, urdfs[0], ref, yout);
+                for (auto& s : stabilized) {
+                    yout << y::Key << "stabilized_" + s << y::Value << y::BeginMap;
+                    test_behavior(b, a, c, s, urdfs[1], ref, yout);
+                    if (c != std::string("dart")) {
+                        test_behavior(b, a, c, s, urdfs[0], ref, yout);
+                    }
+                    yout << y::EndMap;
                 }
                 yout << y::EndMap;
             }
