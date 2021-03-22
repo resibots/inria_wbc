@@ -6,7 +6,7 @@ CONTROLLER:
   frames: frames_talos.yaml
   stabilizer:
     activated: true
-    filter_size: 5
+    filter_size: 7
     torso_max_roll: 0.25
     p: [0.001, 0.001, 0.0003, 0.0003, 0.00000003, 0.00000003]
     d: [0.000001, 0.000001, 0.0000001, 0.0000001,  0.0,  0.0]
