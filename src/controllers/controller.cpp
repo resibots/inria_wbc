@@ -52,10 +52,10 @@ using namespace inria_wbc::utils;
 
 namespace inria_wbc {
     namespace controllers {
-        Controller::Controller(const Params& params)
+        Controller::Controller(const Params& params) :
+        params_(params),
+        verbose_(params.verbose)
         {
-            params_ = params;
-            verbose_ = params_.verbose;
             pinocchio::Model robot_model;
             if (!params.floating_base_joint_name.empty()) {
                 fb_joint_name_ = params.floating_base_joint_name; //floating base joint already in urdf
@@ -121,15 +121,14 @@ namespace inria_wbc {
             return non_mimic_indexes;
         }
 
-        void Controller::_solve()
+        void Controller::_solve(const Eigen::VectorXd& q, const Eigen::VectorXd& dq)
         {
             //Compute the current data from the current position and solve to find next position
             assert(tsid_);
             assert(robot_);
             assert(solver_);
-
-            const HQPData& HQPData = tsid_->computeProblemData(t_, q_tsid_, v_tsid_);
-            momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * v_tsid_);
+            const HQPData& HQPData = tsid_->computeProblemData(t_, q, dq);
+            momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * dq);
 
             const HQPOutput& sol = solver_->solve(HQPData);
 

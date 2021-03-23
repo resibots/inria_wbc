@@ -24,6 +24,7 @@
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "inria_wbc/robot_dart/utils.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
@@ -31,6 +32,7 @@
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
 static const std::string bold = "\x1B[1m";
+
 
 int main(int argc, char* argv[])
 {
@@ -282,10 +284,13 @@ int main(int argc, char* argv[])
                 sensor_data["acceleration"] = imu->linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
                 // joint positions (excluding floating base)
-                sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+                sensor_data["positions"] = robot->positions(controllable_dofs);
                 // joint torque sensors
                 sensor_data["joints_torque"] = tq_sensors;
-
+                sensor_data["joint_velocities"] = robot->velocities(controllable_dofs);
+                // floating base (perfect: no noise in the estimate)
+                sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
+                sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
 
                 auto t1_solver = high_resolution_clock::now();
                 behavior->update(sensor_data);
@@ -297,7 +302,8 @@ int main(int argc, char* argv[])
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
                 else // torque
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
+                    cmd = controller->tau();
+                    //inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 

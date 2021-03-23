@@ -128,7 +128,9 @@ namespace inria_wbc {
 
         protected:
             void _reset();
-            void _solve();
+            // you can use q_tsid_ and v_tsid_ for open-loop control
+            void _solve(const Eigen::VectorXd& q, const Eigen::VectorXd &dq);
+            void _solve() { _solve( q_tsid_, v_tsid_); }
 
             Params params_;
             bool verbose_;

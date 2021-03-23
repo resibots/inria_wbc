@@ -41,9 +41,13 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_configuration_yaml(const std::string& sot_config_path)
         {
+            auto config = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]);
+            // closed loop
+            _closed_loop = IWBC_CHECK(config["closed_loop"].as<bool>());
+
             // init stabilizer
             {
-                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"]);
+                auto c = IWBC_CHECK(config["stabilizer"]);
                 _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
                 _stabilizer_p = IWBC_CHECK(Eigen::Vector2d(c["p"].as<std::vector<double>>().data()));
                 _stabilizer_d = IWBC_CHECK(Eigen::Vector2d(c["d"].as<std::vector<double>>().data()));
@@ -53,7 +57,7 @@ namespace inria_wbc {
 
             // init collision detection
             {
-                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"]);
+                YAML::Node c = IWBC_CHECK(config["collision_detection"]);
                 _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
                 auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
                 auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
@@ -175,8 +179,28 @@ namespace inria_wbc {
                 _collision_detected = (false == _torque_collision_detection.check(tsid_tau, sensor_data.at("joints_torque")));          
             }
 
-            // solve everything
-            _solve();
+            if (_closed_loop) {
+                IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(), 
+                    "we need the floating base position in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("floating_base_velocity") != sensor_data.end(),
+                    "we need the floating base velocity in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("positions") != sensor_data.end(), 
+                    "we need the joint positions in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("joint_velocities") != sensor_data.end(), 
+                    "we need the joint velocities in closed loop mode!");
+                IWBC_ASSERT(sensor_data.at("joint_velocities").size() + sensor_data.at("floating_base_velocity").size() == v_tsid_.size(), 
+                    "Joint velocities do not have the correct size:", sensor_data.at("joint_velocities").size() + sensor_data.at("floating_base_velocity").size() , " vs (expected)", dq_.size());
+                IWBC_ASSERT(sensor_data.at("positions").size() + sensor_data.at("floating_base_position").size() == q_tsid_.size(), 
+                    "Joint positions do not have the correct size:", sensor_data.at("positions").size() + sensor_data.at("floating_base_position").size(), " vs (expected)", q_tsid_.size());
+
+
+                Eigen::VectorXd q(q_tsid_.size()), dq(v_tsid_.size());
+                q << sensor_data.at("floating_base_position"), sensor_data.at("positions");
+                dq << sensor_data.at("floating_base_velocity"), sensor_data.at("joint_velocities");
+                _solve(q, dq);
+            } else {
+                _solve();
+            }
 
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
             set_com_ref(com_ref);
