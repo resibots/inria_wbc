@@ -5,7 +5,7 @@
 #include <signal.h>
 
 #include <inria_wbc/behaviors/behavior.hpp>
-#include <inria_wbc/controllers/franka_pos_tracker.hpp>
+#include <inria_wbc/controllers/pos_tracker.hpp>
 #include <inria_wbc/estimators/cop.hpp>
 #include <inria_wbc/utils/trajectory_handler.hpp>
 

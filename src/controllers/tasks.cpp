@@ -9,11 +9,6 @@
 #include "inria_wbc/controllers/tasks.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
-
-
-
-#include <typeinfo>
-
 using namespace tsid;
 using namespace tsid::math;
 
