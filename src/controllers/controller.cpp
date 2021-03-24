@@ -170,6 +170,7 @@ namespace inria_wbc {
                 default:
                     error += " => Uknown status";
                 }
+                error += " (t=" + std::to_string(t_) + ")";
                 throw IWBC_EXCEPTION(error);
             }
         }

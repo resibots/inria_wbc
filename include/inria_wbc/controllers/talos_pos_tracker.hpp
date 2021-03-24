@@ -28,6 +28,7 @@ namespace inria_wbc {
             void clear_collision_detection();
             bool closed_loop() const { return _closed_loop; }
             void set_closed_loop(bool b) { _closed_loop = b; }
+            
         protected:
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
             void parse_collision_thresholds(const std::string& config_path);
