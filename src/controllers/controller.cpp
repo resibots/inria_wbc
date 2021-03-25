@@ -257,7 +257,14 @@ namespace inria_wbc {
             }
             return masses;
         }
-
+        double Controller::pinocchio_total_model_mass() const
+        {
+            double mass = 0.0;
+            for (int i = 0; i < robot_->model().inertias.size(); i++) {
+                mass += robot_->model().inertias[i].mass();
+            }
+            return mass;
+        }
         inria_wbc::controllers::Controller::Params parse_params(YAML::Node config)
         {
             std::string urdf_path = "";

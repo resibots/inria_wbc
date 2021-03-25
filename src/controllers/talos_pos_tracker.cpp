@@ -152,6 +152,7 @@ namespace inria_wbc {
                 pinocchio::SE3 se3;
                 tsid::math::vectorToSE3(pos, se3);
                 _contact_ref[contact_name] = se3;
+                _contact_force_ref[contact_name] = contact(contact_name)->getForceReference();
             }
             auto com_ref = com_task()->getReference();
             auto left_ankle_ref = get_full_se3_ref("lf");
@@ -219,6 +220,18 @@ namespace inria_wbc {
                     stabilizer::foot_force_difference_admittance(dt_, _torso_max_roll, _stabilizer_p_ffda, get_se3_ref("torso"), lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
+                if (cop_ok
+                    && !std::isnan(_cop_estimator.cop_filtered()(0))
+                    && !std::isnan(_cop_estimator.cop_filtered()(1))) {
+                    Eigen::Matrix<double, 6, 1> left_fref, right_fref, weight_vector;
+                    m_alpha = stabilizer::zmp_distributor(pinocchio_total_model_mass(), _cop_estimator.cop_filtered(), _contact_ref, ac, contact("contact_lfoot")->getContactPoints(), contact("contact_rfoot")->getContactPoints(), left_fref, right_fref);
+
+                    weight_vector << 5, 5, 5, 5, 5, 5;
+                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(weight_vector);
+                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(weight_vector);
+                    contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
+                    contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
+                }
             }
 
             if (_use_torque_collision_detection) {
@@ -241,6 +254,7 @@ namespace inria_wbc {
 
                 for (auto& contact_name : ac) {
                     contact(contact_name)->Contact6d::setReference(_contact_ref[contact_name]);
+                    contact(contact_name)->Contact6d::setForceReference(_contact_force_ref[contact_name]);
                 }
             }
         }

@@ -19,7 +19,11 @@ namespace tsid {
             {
                 m_motionTask.setReference(sample_ref);
             }
+
+            Matrix3x getContactPoints() { return m_contactPoints; }
+
+            Vector6 getForceReference() { return m_fRef; }
         };
-    }
-}
+    } // namespace contacts
+} // namespace tsid
 #endif

@@ -24,6 +24,8 @@ namespace inria_wbc {
             virtual const Eigen::Vector2d& rcop() const override { return _cop_estimator.rcop_filtered(); }
             virtual const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
 
+            virtual const double& alpha() const { return m_alpha; }
+
             virtual const Eigen::Vector3d& lf_force_filtered() const override { return _lf_force_filtered; }
             virtual const Eigen::Vector3d& rf_force_filtered() const override { return _rf_force_filtered; }
 
@@ -40,12 +42,15 @@ namespace inria_wbc {
             bool _use_stabilizer = true;
             double _torso_max_roll = 0.3;
 
+            double m_alpha = 0;
+
             Eigen::VectorXd _stabilizer_p;
             Eigen::VectorXd _stabilizer_d;
             Eigen::VectorXd _stabilizer_p_ankle;
             Eigen::VectorXd _stabilizer_p_ffda;
 
             std::map<std::string, pinocchio::SE3> _contact_ref;
+            std::map<std::string, Eigen::Matrix<double, 6, 1>> _contact_force_ref;
 
             Eigen::Vector3d _lf_force_filtered, _rf_force_filtered;
             estimators::Filter::Ptr _lf_force_filter, _rf_force_filter;

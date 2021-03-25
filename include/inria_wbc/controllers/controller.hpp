@@ -116,6 +116,14 @@ namespace inria_wbc {
                 return tmp;
             }
 
+
+            virtual const double& alpha() const
+            {
+                static double tmp;
+                IWBC_ERROR("No zmp_distributor in controller");
+                return tmp;
+            }
+
             // this could call a CoM estimator
             virtual const tsid::math::Vector3& com() const { return robot_->com(tsid_->data()); }
 
@@ -137,6 +145,8 @@ namespace inria_wbc {
             std::shared_ptr<tsid::robots::RobotWrapper> robot() { return robot_; };
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid() { return tsid_; };
             std::vector<double> pinocchio_model_masses() const;
+            double pinocchio_total_model_mass() const;
+
             const std::vector<double>& pinocchio_model_cumulated_masses() { return tsid_->data().mass; };
             const std::vector<std::string>& pinocchio_joint_names() const { return robot_->model().names; }
             const pinocchio::SE3& model_joint_pos(const std::string& joint_name) const

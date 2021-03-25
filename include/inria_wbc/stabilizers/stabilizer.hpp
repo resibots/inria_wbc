@@ -43,6 +43,26 @@ namespace inria_wbc {
             const Eigen::Vector3d& lf_force, //measured left foot force vector
             const Eigen::Vector3d& rf_force, //measured right foot force vector
             tsid::trajectories::TrajectorySample& torso_sample); //out : modified torso ref to give to tsid
-    }
-}
+
+        double zmp_distributor(
+            const double& robot_mass,
+            const Eigen::Vector2d& cop_filtered,
+            std::map<std::string, pinocchio::SE3> contact_ref,
+            const std::vector<std::string>& activated_contacts,
+            const Eigen::Matrix<double, 3, Eigen::Dynamic>& left_foot_contact_points,
+            const Eigen::Matrix<double, 3, Eigen::Dynamic>& right_foot_contact_points,
+            Eigen::Matrix<double, 6, 1>& left_fref,
+            Eigen::Matrix<double, 6, 1>& right_fref);
+
+        Eigen::Vector3d closest_point_on_line(
+            const Eigen::Vector3d point,
+            const std::pair<Eigen::Vector3d, Eigen::Vector3d>& line);
+
+        std::pair<Eigen::Vector3d, Eigen::Vector3d> closest_line(
+            const Eigen::Vector3d& point,
+            const pinocchio::SE3& foot_ref,
+            const Eigen::Matrix<double, 3, Eigen::Dynamic>& contact_points);
+
+    } // namespace stabilizer
+} // namespace inria_wbc
 #endif
