@@ -184,7 +184,7 @@ namespace inria_wbc {
         {        
             if (task_name == "com") {
                 auto task = com_task();
-                task->Kp(kp * Vector::Ones(6));
+                task->Kp(kp * Vector::Ones(3));
                 task->Kd(2.0 * task->Kp().cwiseSqrt());
             } else if (task_name == "posture") {
                 auto task = posture_task();
