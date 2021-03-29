@@ -343,7 +343,7 @@ int main(int argc, char* argv[])
                 auto pforce = vm["norm_force"].as<float>();
                 for (auto& p : pv) {
                     if (simu.scheduler().current_time() > p && simu.scheduler().current_time() < p + 0.5) {
-                        robot->set_external_force("base_link", Eigen::Vector3d(0, pforce, 0));
+                        robot->set_external_force("base_link", Eigen::Vector3d(pforce, 0, 0));
                         push = true;
                     }
                     if (simu.scheduler().current_time() > p + 0.25)

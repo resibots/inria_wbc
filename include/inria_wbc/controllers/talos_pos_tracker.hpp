@@ -49,6 +49,11 @@ namespace inria_wbc {
             Eigen::VectorXd _stabilizer_p_ankle;
             Eigen::VectorXd _stabilizer_p_ffda;
 
+            bool _activate_zmp_distrib = false;
+            Eigen::VectorXd _stabilizer_p_zmp_distrib;
+            Eigen::VectorXd _stabilizer_d_zmp_distrib;
+            Eigen::VectorXd _stabilizer_w_zmp_distrib;
+
             std::map<std::string, pinocchio::SE3> _contact_ref;
             std::map<std::string, Eigen::Matrix<double, 6, 1>> _contact_force_ref;
 

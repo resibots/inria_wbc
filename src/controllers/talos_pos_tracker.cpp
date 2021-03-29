@@ -45,27 +45,40 @@ namespace inria_wbc {
             {
                 YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"]);
                 _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
+                _activate_zmp_distrib = IWBC_CHECK(c["activate_zmp_distrib"].as<bool>());
                 _torso_max_roll = IWBC_CHECK(c["torso_max_roll"].as<double>());
 
                 _stabilizer_p.resize(6);
                 _stabilizer_d.resize(6);
                 _stabilizer_p_ankle.resize(6);
                 _stabilizer_p_ffda.resize(3);
+                _stabilizer_p_zmp_distrib.resize(6);
+                _stabilizer_d_zmp_distrib.resize(6);
+                _stabilizer_w_zmp_distrib.resize(6);
 
                 _stabilizer_p.setZero();
                 _stabilizer_d.setZero();
                 _stabilizer_p_ankle.setZero();
                 _stabilizer_p_ffda.setZero();
+                _stabilizer_p_zmp_distrib.setZero();
+                _stabilizer_d_zmp_distrib.setZero();
+                _stabilizer_w_zmp_distrib.setZero();
 
                 IWBC_ASSERT(IWBC_CHECK(c["p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the stabilizer");
                 IWBC_ASSERT(IWBC_CHECK(c["d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the stabilizer");
                 IWBC_ASSERT(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p_ankle for the stabilizer");
                 IWBC_ASSERT(IWBC_CHECK(c["p_ffda"].as<std::vector<double>>()).size() == 3, "you need 3 coefficient in p_ffda for the stabilizer");
+                IWBC_ASSERT(IWBC_CHECK(c["p_zmp_distrib"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p_zmp_distrib for the stabilizer");
+                IWBC_ASSERT(IWBC_CHECK(c["d_zmp_distrib"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d_zmp_distrib for the stabilizer");
+                IWBC_ASSERT(IWBC_CHECK(c["w_zmp_distrib"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in w_zmp_distrib for the stabilizer");
 
                 _stabilizer_p = Eigen::VectorXd::Map(IWBC_CHECK(c["p"].as<std::vector<double>>()).data(), _stabilizer_p.size());
                 _stabilizer_d = Eigen::VectorXd::Map(IWBC_CHECK(c["d"].as<std::vector<double>>()).data(), _stabilizer_d.size());
                 _stabilizer_p_ankle = Eigen::VectorXd::Map(IWBC_CHECK(c["p_ankle"].as<std::vector<double>>()).data(), _stabilizer_p_ankle.size());
                 _stabilizer_p_ffda = Eigen::VectorXd::Map(IWBC_CHECK(c["p_ffda"].as<std::vector<double>>()).data(), _stabilizer_p_ffda.size());
+                _stabilizer_p_zmp_distrib = Eigen::VectorXd::Map(IWBC_CHECK(c["p_zmp_distrib"].as<std::vector<double>>()).data(), _stabilizer_p_zmp_distrib.size());
+                _stabilizer_d_zmp_distrib = Eigen::VectorXd::Map(IWBC_CHECK(c["d_zmp_distrib"].as<std::vector<double>>()).data(), _stabilizer_d_zmp_distrib.size());
+                _stabilizer_w_zmp_distrib = Eigen::VectorXd::Map(IWBC_CHECK(c["w_zmp_distrib"].as<std::vector<double>>()).data(), _stabilizer_w_zmp_distrib.size());
 
                 auto history = c["filter_size"].as<int>();
                 _cop_estimator.set_history_size(history);
@@ -222,13 +235,14 @@ namespace inria_wbc {
                 }
                 if (cop_ok
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
-                    && !std::isnan(_cop_estimator.cop_filtered()(1))) {
-                    Eigen::Matrix<double, 6, 1> left_fref, right_fref, weight_vector;
-                    m_alpha = stabilizer::zmp_distributor(pinocchio_total_model_mass(), _cop_estimator.cop_filtered(), _contact_ref, ac, contact("contact_lfoot")->getContactPoints(), contact("contact_rfoot")->getContactPoints(), left_fref, right_fref);
+                    && !std::isnan(_cop_estimator.cop_filtered()(1))
+                    && _activate_zmp_distrib) {
+                    Eigen::Matrix<double, 6, 1> left_fref, right_fref;
 
-                    weight_vector << 5, 5, 5, 5, 5, 5;
-                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(weight_vector);
-                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(weight_vector);
+                    m_alpha = stabilizer::zmp_distributor_admittance(dt_, _stabilizer_p_zmp_distrib, _stabilizer_d_zmp_distrib, pinocchio_total_model_mass(), _cop_estimator.cop_filtered(), _contact_ref, ac, tsid_->data(), contact("contact_lfoot")->getContactPoints(), contact("contact_rfoot")->getContactPoints(), left_fref, right_fref);
+
+                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_w_zmp_distrib);
+                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_w_zmp_distrib);
                     contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
                     contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
                 }

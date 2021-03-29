@@ -44,9 +44,23 @@ namespace inria_wbc {
             const Eigen::Vector3d& rf_force, //measured right foot force vector
             tsid::trajectories::TrajectorySample& torso_sample); //out : modified torso ref to give to tsid
 
+        double zmp_distributor_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
+            const double& robot_mass,
+            const Eigen::Vector2d& zmp,
+            std::map<std::string, pinocchio::SE3> contact_ref,
+            const std::vector<std::string>& activated_contacts,
+            const tsid::InverseDynamicsFormulationAccForce::Data& data,
+            const Eigen::Matrix<double, 3, Eigen::Dynamic>& left_foot_contact_points,
+            const Eigen::Matrix<double, 3, Eigen::Dynamic>& right_foot_contact_points,
+            Eigen::Matrix<double, 6, 1>& left_fref,
+            Eigen::Matrix<double, 6, 1>& right_fref);
+
         double zmp_distributor(
             const double& robot_mass,
-            const Eigen::Vector2d& cop_filtered,
+            const Eigen::Vector2d& zmp,
             std::map<std::string, pinocchio::SE3> contact_ref,
             const std::vector<std::string>& activated_contacts,
             const Eigen::Matrix<double, 3, Eigen::Dynamic>& left_foot_contact_points,

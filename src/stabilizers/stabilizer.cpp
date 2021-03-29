@@ -159,9 +159,54 @@ namespace inria_wbc {
             // contact("contact_rfoot")->setReference(to_sample(rf_ankle_ref));
         }
 
+        double zmp_distributor_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
+            const double& robot_mass,
+            const Eigen::Vector2d& zmp,
+            std::map<std::string, pinocchio::SE3> contact_ref,
+            const std::vector<std::string>& activated_contacts,
+            const tsid::InverseDynamicsFormulationAccForce::Data& data,
+            const Eigen::Matrix<double, 3, Eigen::Dynamic>& left_foot_contact_points,
+            const Eigen::Matrix<double, 3, Eigen::Dynamic>& right_foot_contact_points,
+            Eigen::Matrix<double, 6, 1>& left_fref,
+            Eigen::Matrix<double, 6, 1>& right_fref)
+        {
+
+            IWBC_ASSERT("you need 6 coefficient in p for zmp_distributor_admittance ", p.size() == 6);
+
+            Eigen::Vector2d a = data.acom[0].head<2>();
+            Eigen::Vector3d com = data.com[0];
+            Eigen::Vector2d zmp_ref = com.head<2>() - com(2) / 9.81 * a; //com because this is the target
+
+            Eigen::Matrix<double, 6, 1> left_fref_tsid = left_fref;
+            Eigen::Matrix<double, 6, 1> right_fref_tsid = right_fref;
+
+            zmp_distributor(robot_mass, zmp_ref, contact_ref, activated_contacts, left_foot_contact_points, right_foot_contact_points, left_fref_tsid, right_fref_tsid);
+
+            Eigen::Matrix<double, 6, 1> left_fref_sensor = left_fref;
+            Eigen::Matrix<double, 6, 1> right_fref_sensor = right_fref;
+
+            auto alpha = zmp_distributor(robot_mass, zmp, contact_ref, activated_contacts, left_foot_contact_points, right_foot_contact_points, left_fref_sensor, right_fref_sensor);
+
+            left_fref = left_fref_tsid - p.cwiseProduct(left_fref_tsid - left_fref_sensor) - d.cwiseProduct(left_fref_tsid - left_fref_sensor) / dt;
+            right_fref = right_fref_tsid - p.cwiseProduct(right_fref_tsid - right_fref_sensor) - d.cwiseProduct(left_fref_tsid - left_fref_sensor) / dt;
+
+            std::cout << "right_fref_tsid " << right_fref_tsid.transpose() << std::endl;
+            std::cout << "left_fref_tsid " << left_fref_tsid.transpose() << std::endl;
+            std::cout << "right_fref_sensor " << right_fref_sensor.transpose() << std::endl;
+            std::cout << "left_fref_sensor " << left_fref_sensor.transpose() << std::endl;
+            std::cout << "left_fref " << left_fref.transpose() << std::endl;
+            std::cout << "right_fref " << right_fref.transpose() << std::endl;
+            std::cout << "p " << p.transpose() << std::endl;
+
+            return alpha;
+        }
+
         double zmp_distributor(
             const double& robot_mass,
-            const Eigen::Vector2d& cop_filtered,
+            const Eigen::Vector2d& zmp,
             std::map<std::string, pinocchio::SE3> contact_ref,
             const std::vector<std::string>& activated_contacts,
             const Eigen::Matrix<double, 3, Eigen::Dynamic>& left_foot_contact_points,
@@ -174,8 +219,8 @@ namespace inria_wbc {
             if (std::find(activated_contacts.begin(), activated_contacts.end(), "contact_rfoot") != activated_contacts.end()
                 && std::find(activated_contacts.begin(), activated_contacts.end(), "contact_lfoot") != activated_contacts.end()) {
 
-                Eigen::Vector3d cop_filtered3 = Eigen::Vector3d::Zero();
-                cop_filtered3.head(2) = cop_filtered;
+                Eigen::Vector3d zmp3 = Eigen::Vector3d::Zero();
+                zmp3.head(2) = zmp;
 
                 // pinocchio::SE3 contact_se3 = contact_ref["contact_lfoot"];
                 // auto left_line = closest_line(cop_filtered3, contact_se3, left_foot_contact_points);
@@ -204,7 +249,7 @@ namespace inria_wbc {
                 fline.first(2) = 0;
                 fline.second(2) = 0;
 
-                auto proj = closest_point_on_line(cop_filtered3, fline);
+                auto proj = closest_point_on_line(zmp3, fline);
 
                 if ((fline.second - fline.first).norm() == (proj - fline.first).norm() + (fline.second - proj).norm()) {
                     alpha = (proj - fline.first).norm() / (fline.first - fline.second).norm();
@@ -239,7 +284,7 @@ namespace inria_wbc {
 
             auto PR = contact_ref["contact_rfoot"].translation().head(2);
             auto PL = contact_ref["contact_lfoot"].translation().head(2);
-            Eigen::Vector2d tau0 = -(PR - cop_filtered) * f_right - (PL - cop_filtered) * f_left;
+            Eigen::Vector2d tau0 = -(PR - zmp) * f_right - (PL - zmp) * f_left;
             Eigen::Vector2d tauL, tauR;
             tauR(1) = alpha * tau0(1);
             tauL(1) = (1 - alpha) * tau0(1);
@@ -254,12 +299,12 @@ namespace inria_wbc {
             }
 
             left_fref(2) = f_left;
-            left_fref(3) = tauL(0);
-            left_fref(4) = tauL(1);
+            left_fref(3) = tauL(1);
+            left_fref(4) = -tauL(0);
 
             right_fref(2) = f_right;
-            right_fref(3) = tauR(0);
-            right_fref(4) = tauR(1);
+            right_fref(3) = tauR(1);
+            right_fref(4) = -tauR(0);
 
             // std::cout << "alpha " << alpha << std::endl;
             // std::cout << "left_fref " << left_fref.transpose() << std::endl;
