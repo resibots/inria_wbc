@@ -20,6 +20,8 @@
 #include <tsid/utils/statistics.hpp>
 #include <tsid/utils/stop-watch.hpp>
 
+// #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
+
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/controllers/tasks.hpp"
 #include "inria_wbc/stabilizers/stabilizer.hpp"
@@ -47,6 +49,25 @@ namespace inria_wbc {
                 _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
                 _activate_zmp_distrib = IWBC_CHECK(c["activate_zmp_distrib"].as<bool>());
                 _torso_max_roll = IWBC_CHECK(c["torso_max_roll"].as<double>());
+
+                //set the _torso_max_roll in the bounds for safety
+                auto names = robot_->model().names;
+                names.erase(names.begin(), names.begin() + names.size() - robot_->na());
+                auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
+                auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
+                std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
+
+                for (auto& n : to_limit) {
+                    IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
+                    auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
+
+                    IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
+
+                    q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _torso_max_roll;
+                    q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _torso_max_roll;
+                }
+
+                bound_task()->setPositionBounds(q_lb, q_ub);
 
                 _stabilizer_p.resize(6);
                 _stabilizer_d.resize(6);
@@ -230,22 +251,22 @@ namespace inria_wbc {
                     double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
 
-                    stabilizer::foot_force_difference_admittance(dt_, _torso_max_roll, _stabilizer_p_ffda, get_se3_ref("torso"), lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, torso_sample);
+                    stabilizer::foot_force_difference_admittance(dt_, _stabilizer_p_ffda, get_se3_ref("torso"), lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
-                // if (cop_ok
-                //     && !std::isnan(_cop_estimator.cop_filtered()(0))
-                //     && !std::isnan(_cop_estimator.cop_filtered()(1))
-                //     && _activate_zmp_distrib) {
-                //     Eigen::Matrix<double, 6, 1> left_fref, right_fref;
+                if (cop_ok
+                    && !std::isnan(_cop_estimator.cop_filtered()(0))
+                    && !std::isnan(_cop_estimator.cop_filtered()(1))
+                    && _activate_zmp_distrib) {
+                    Eigen::Matrix<double, 6, 1> left_fref, right_fref;
 
-                //     m_alpha = stabilizer::zmp_distributor_admittance(dt_, _stabilizer_p_zmp_distrib, _stabilizer_d_zmp_distrib, pinocchio_total_model_mass(), _cop_estimator.cop_filtered(), _contact_ref, ac, tsid_->data(), contact("contact_lfoot")->getContactPoints(), contact("contact_rfoot")->getContactPoints(), left_fref, right_fref);
+                    m_alpha = stabilizer::zmp_distributor_admittance(dt_, _stabilizer_p_zmp_distrib, _stabilizer_d_zmp_distrib, pinocchio_total_model_mass(), _cop_estimator.cop_filtered(), _contact_ref, ac, tsid_->data(), contact("contact_lfoot")->getContactPoints(), contact("contact_rfoot")->getContactPoints(), left_fref, right_fref);
 
-                //     contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_w_zmp_distrib);
-                //     contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_w_zmp_distrib);
-                //     contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
-                //     contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
-                // }
+                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_w_zmp_distrib);
+                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_w_zmp_distrib);
+                    contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
+                    contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
+                }
             }
 
             if (_use_torque_collision_detection) {
@@ -268,7 +289,7 @@ namespace inria_wbc {
 
                 for (auto& contact_name : ac) {
                     contact(contact_name)->Contact6d::setReference(_contact_ref[contact_name]);
-                    // contact(contact_name)->Contact6d::setForceReference(_contact_force_ref[contact_name]);
+                    contact(contact_name)->Contact6d::setForceReference(_contact_force_ref[contact_name]);
                 }
             }
         }

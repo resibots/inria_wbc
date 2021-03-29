@@ -101,7 +101,6 @@ namespace inria_wbc {
         //https://github.com/stephane-caron/lipm_walking_controller/blob/master/src/Stabilizer.cpp
         void foot_force_difference_admittance(
             double dt,
-            float torso_max_roll,
             Eigen::VectorXd p_ffda,
             pinocchio::SE3 torso_ref,
             double lf_normal_force,
@@ -113,33 +112,14 @@ namespace inria_wbc {
             IWBC_ASSERT("you need 3 coefficient in p_ffda for ankle admittance", p_ffda.size() == 3);
 
             double zctrl = (lf_normal_force - rf_normal_force) - (lf_sensor_force(2) - rf_sensor_force(2));
-
             auto torso_roll = -p_ffda[0] * zctrl;
-            if (torso_roll > torso_max_roll)
-                torso_roll = torso_max_roll;
-            if (torso_roll < -torso_max_roll)
-                torso_roll = -torso_max_roll;
-
             auto euler = torso_ref.rotation().eulerAngles(0, 1, 2);
             euler[0] += torso_roll;
-
-            if (euler[0] >= torso_max_roll && euler[0] <= M_PI / 2) {
-                euler[0] = torso_max_roll;
-            }
-            if (euler[0] >= M_PI / 2 && euler[0] <= M_PI - torso_max_roll) {
-                euler[0] = M_PI - torso_max_roll;
-            }
 
             auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
 
             Eigen::VectorXd vel_ref = Eigen::VectorXd::Zero(6);
-            if (p_ffda[1] > p_ffda[0]) // to be sure not to go above torso_max_roll
-                p_ffda[1] = p_ffda[0];
-
             vel_ref(3) = p_ffda[1] * torso_roll / dt;
-
-            if (p_ffda[2] > p_ffda[1]) // to be sure not to go above torso_max_roll
-                p_ffda[2] = p_ffda[1];
 
             Eigen::VectorXd acc_ref = Eigen::VectorXd::Zero(6);
             acc_ref(3) = p_ffda[2] * torso_roll / (dt * dt);
@@ -193,13 +173,13 @@ namespace inria_wbc {
             left_fref = left_fref_tsid - p.cwiseProduct(left_fref_tsid - left_fref_sensor) - d.cwiseProduct(left_fref_tsid - left_fref_sensor) / dt;
             right_fref = right_fref_tsid - p.cwiseProduct(right_fref_tsid - right_fref_sensor) - d.cwiseProduct(left_fref_tsid - left_fref_sensor) / dt;
 
-            std::cout << "right_fref_tsid " << right_fref_tsid.transpose() << std::endl;
-            std::cout << "left_fref_tsid " << left_fref_tsid.transpose() << std::endl;
-            std::cout << "right_fref_sensor " << right_fref_sensor.transpose() << std::endl;
-            std::cout << "left_fref_sensor " << left_fref_sensor.transpose() << std::endl;
-            std::cout << "left_fref " << left_fref.transpose() << std::endl;
-            std::cout << "right_fref " << right_fref.transpose() << std::endl;
-            std::cout << "p " << p.transpose() << std::endl;
+            // std::cout << "right_fref_tsid " << right_fref_tsid.transpose() << std::endl;
+            // std::cout << "left_fref_tsid " << left_fref_tsid.transpose() << std::endl;
+            // std::cout << "right_fref_sensor " << right_fref_sensor.transpose() << std::endl;
+            // std::cout << "left_fref_sensor " << left_fref_sensor.transpose() << std::endl;
+            // std::cout << "left_fref " << left_fref.transpose() << std::endl;
+            // std::cout << "right_fref " << right_fref.transpose() << std::endl;
+            // std::cout << "p " << p.transpose() << std::endl;
 
             return alpha;
         }
@@ -221,26 +201,6 @@ namespace inria_wbc {
 
                 Eigen::Vector3d zmp3 = Eigen::Vector3d::Zero();
                 zmp3.head(2) = zmp;
-
-                // pinocchio::SE3 contact_se3 = contact_ref["contact_lfoot"];
-                // auto left_line = closest_line(cop_filtered3, contact_se3, left_foot_contact_points);
-
-                // contact_se3 = contact_ref["contact_rfoot"];
-                // auto right_line = closest_line(cop_filtered3, contact_se3, right_foot_contact_points);
-
-                // left_line.first(2) = 0;
-                // left_line.second(2) = 0;
-                // right_line.first(2) = 0;
-                // right_line.second(2) = 0;
-
-                // auto PL_sharp = closest_point_on_line(cop_filtered3, left_line);
-                // auto PR_sharp = closest_point_on_line(cop_filtered3, right_line);
-
-                // auto P_alpha = closest_point_on_line(cop_filtered3, std::make_pair(PL_sharp, PR_sharp));
-
-                // alpha = (P_alpha - PL_sharp).norm() / (PL_sharp - PR_sharp).norm();
-                // if (std::isnan(alpha))
-                //     IWBC_ERROR("alpha is nan");
 
                 auto fline = std::make_pair(contact_ref["contact_lfoot"].translation(), contact_ref["contact_rfoot"].translation());
 
@@ -306,29 +266,8 @@ namespace inria_wbc {
             right_fref(3) = tauR(1);
             right_fref(4) = -tauR(0);
 
-            // std::cout << "alpha " << alpha << std::endl;
-            // std::cout << "left_fref " << left_fref.transpose() << std::endl;
-            // std::cout << "right_fref " << right_fref.transpose() << std::endl;
-
-            return alpha;
-            // TO DO TAKE IMU AND PROJECT THE POINT ON THE GROUND SURFACE
-            // IN DOUBLE SUPPORT PL_sharp, COP, PR_sharp are forming a line with a slope from IMU
-            // Then project this on flat surface
+            return alpha;         
         }
-
-        // // fROM https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
-        // //    nvert: Number of vertices in the polygon. Whether to repeat the first vertex at the end has been discussed in the article referred above.
-        // //   vertx, verty: Arrays containing the x- and y-coordinates of the polygon's vertices.
-        // //  testx, testy: X- and y-coordinate of the test point.
-        // int pnpoly(int nvert, float* vertx, float* verty, float testx, float testy)
-        // {
-        //     int i, j, c = 0;
-        //     for (i = 0, j = nvert - 1; i < nvert; j = i++) {
-        //         if (((verty[i] > testy) != (verty[j] > testy)) && (testx < (vertx[j] - vertx[i]) * (testy - verty[i]) / (verty[j] - verty[i]) + vertx[i]))
-        //             c = !c;
-        //     }
-        //     return c;
-        // }
 
         Eigen::Vector3d closest_point_on_line(
             const Eigen::Vector3d point,
@@ -341,58 +280,6 @@ namespace inria_wbc {
             return line.second + unit_line_dir * d;
         }
 
-        //the problem here is that if the cop is outside of support polygon you can have non relevant results
-        //then you have to create special cases with closest vertices
-        //give backs the 2 points from contact_points defining the closest line to point
-        //contact_points are expressed in the contact_se3 frame
-        std::pair<Eigen::Vector3d, Eigen::Vector3d> closest_segment(
-            const Eigen::Vector3d& point,
-            const pinocchio::SE3& contact_se3,
-            const Eigen::Matrix<double, 3, Eigen::Dynamic>& contact_points)
-        {
-
-            auto P0 = point;
-            Eigen::Matrix3d mat = Eigen::Matrix3d::Zero();
-            P0(2) = 1;
-            mat.col(0) = P0;
-
-            double min_dist = 1000000;
-            std::pair<Eigen::Vector3d, Eigen::Vector3d> closest_line;
-
-            for (uint i = 0; i < contact_points.cols(); i++) {
-
-                Eigen::Vector3d P1 = contact_points.col(i);
-                P1 = contact_se3.translation() + contact_se3.rotation() * P1;
-
-                P1(2) = 1;
-                mat.col(1) = P1;
-
-                for (uint j = 0; j < contact_points.cols(); j++) {
-                    if (i != j) {
-                        Eigen::Vector3d P2 = contact_points.col(j);
-                        P2 = contact_se3.translation() + contact_se3.rotation() * P2;
-                        P2(2) = 1;
-                        mat.col(2) = P2;
-                        //https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
-                        double d = std::abs(mat.determinant()) / (P2 - P1).norm();
-
-                        auto pclose = closest_point_on_line(P0, std::make_pair(P1, P2));
-                        // auto d2 = (P0 - pclose).norm(); // same than d
-                        // check that we have the closest point and that P0 is on segment P1 - P2
-                        if (d < min_dist && ((P2 - P1).norm() == (pclose - P1).norm() + (P2 - pclose).norm())) {
-                            min_dist = d;
-                            closest_line.first = contact_se3.translation() + contact_se3.rotation() * contact_points.col(i);
-                            closest_line.second = contact_se3.translation() + contact_se3.rotation() * contact_points.col(j);
-                        }
-                    }
-                }
-            }
-            //if the cop projection is not on any
-            if (min_dist == 1000000) {
-                IWBC_ERROR("COP outside of support polygon");
-            }
-            return closest_line;
-        }
 
     }; // namespace stabilizer
 } // namespace inria_wbc

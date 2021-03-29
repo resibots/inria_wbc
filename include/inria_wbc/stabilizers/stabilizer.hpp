@@ -35,7 +35,6 @@ namespace inria_wbc {
 
         void foot_force_difference_admittance(
             double dt, //controller dt
-            float torso_max_roll, //max torso roll admitted to correct the foot force difference
             Eigen::VectorXd p_ffda, // proportional gains
             pinocchio::SE3 torso_ref, //tsid torso reference
             double lf_normal_force, //tsid normal left foot force

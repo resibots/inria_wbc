@@ -182,7 +182,7 @@ namespace inria_wbc {
 
             return task;
         }
-        RegisterYAML<tsid::tasks::TaskComEquality> __register_posture("posture", make_posture);
+        RegisterYAML<tsid::tasks::TaskJointPosture> __register_posture("posture", make_posture);
 
         ////// Bounds //////
         std::shared_ptr<tsid::tasks::TaskBase> make_bounds(
@@ -212,7 +212,7 @@ namespace inria_wbc {
 
             return task;
         }
-        RegisterYAML<tsid::tasks::TaskComEquality> __register_bounds("bounds", make_bounds);
+        RegisterYAML<tsid::tasks::TaskJointPosVelAccBounds> __register_bounds("bounds", make_bounds);
 
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
