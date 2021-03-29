@@ -72,10 +72,6 @@ namespace inria_wbc {
             const Eigen::Vector3d point,
             const std::pair<Eigen::Vector3d, Eigen::Vector3d>& line);
 
-        std::pair<Eigen::Vector3d, Eigen::Vector3d> closest_line(
-            const Eigen::Vector3d& point,
-            const pinocchio::SE3& foot_ref,
-            const Eigen::Matrix<double, 3, Eigen::Dynamic>& contact_points);
 
     } // namespace stabilizer
 } // namespace inria_wbc
