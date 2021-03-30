@@ -184,6 +184,13 @@ namespace inria_wbc {
             return alpha;
         }
 
+        //ZMP to feet forces and torques
+        //FROM :
+        //Biped Walking Stabilization Based on Linear Inverted Pendulum Tracking
+        //by Shuuji Kajita, Mitsuharu Morisawa, Kanako Miura, Shin’ichiro Nakaoka,Kensuke Harada, Kenji Kaneko, Fumio Kanehiro and Kazuhito Yokoi
+        //MODIFIED :
+        //I took a simpler heuristic for alpha 
+        //Torque sign is different to adjust to Talos xy convention
         double zmp_distributor(
             const double& robot_mass,
             const Eigen::Vector2d& zmp,
@@ -266,7 +273,7 @@ namespace inria_wbc {
             right_fref(3) = tauR(1);
             right_fref(4) = -tauR(0);
 
-            return alpha;         
+            return alpha;
         }
 
         Eigen::Vector3d closest_point_on_line(
@@ -279,7 +286,6 @@ namespace inria_wbc {
             auto d = v.dot(unit_line_dir);
             return line.second + unit_line_dir * d;
         }
-
 
     }; // namespace stabilizer
 } // namespace inria_wbc
