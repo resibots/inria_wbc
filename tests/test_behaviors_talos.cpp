@@ -494,6 +494,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     std::vector<std::string> stabilized = {"true", "false"};
     std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
 
+    yout << y::Key << controller << y::Value << y::BeginMap;
     for (auto& b : behaviors) {
         yout << y::Key << b << y::Value << y::BeginMap;
         for (auto& a : actuators) {
@@ -515,6 +516,8 @@ BOOST_AUTO_TEST_CASE(behaviors)
         yout << y::EndMap;
     }
     yout << y::EndMap;
+    yout << y::EndMap;
+
     auto fname = std::string("test_results-") + date() + ".yaml";
     std::ofstream ofs(fname.c_str());
     ofs << yout.c_str();
