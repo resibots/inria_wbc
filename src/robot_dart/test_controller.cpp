@@ -156,13 +156,13 @@ int main(int argc, char* argv[])
         auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
         auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
-        IWBC_ASSERT(controller, "we expect a PosTracker here");
+        IWBC_ASSERT(controller_pos, "we expect a PosTracker here");
 
         auto behavior_path = vm["behavior"].as<std::string>();
         auto behavior_config = IWBC_CHECK(YAML::LoadFile(behavior_path));
         auto behavior_name = IWBC_CHECK(behavior_config["BEHAVIOR"]["name"].as<std::string>());
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
-        assert(behavior);
+        IWBC_ASSERT(behavior, "invalid behavior");
 
 
         auto all_dofs = controller->all_dofs();
