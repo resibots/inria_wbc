@@ -21,7 +21,8 @@ namespace inria_wbc {
             double dt, //controller dt
             const Eigen::VectorXd& p, // proportional gains
             const Eigen::Vector2d& cop_filtered, //filtered cop estimation
-            const tsid::trajectories::TrajectorySample& com_ref, //tsid com reference
+            const tsid::trajectories::TrajectorySample& model_current_com, //pinocchio current com pos,vel,acc
+            const tsid::trajectories::TrajectorySample& com_ref, //next com reference
             tsid::trajectories::TrajectorySample& se3_sample); //out : modified com ref to give to tsid
 
         //correct the roll and pitch angle of the ankle to force the foot cop to be in the middle of the foot
@@ -60,7 +61,7 @@ namespace inria_wbc {
             const std::map<std::string, pinocchio::SE3>& contact_ref,
             const std::vector<std::string>& activated_contacts, // map of current activated contacts in the model
             const Eigen::Vector2d& zmp, // current measured zmp
-            const tsid::trajectories::TrajectorySample& com_ref, // current com ref
+            const tsid::trajectories::TrajectorySample& model_current_com, //pinocchio current com pos,vel,acc
             Eigen::Matrix<double, 6, 1>& left_fref, //output left foot forces + torques command
             Eigen::Matrix<double, 6, 1>& right_fref); //output right foot forces + torques command
 
@@ -88,7 +89,7 @@ namespace inria_wbc {
             double dt, //controller dt
             const Eigen::VectorXd& d, //derivative gains (for com velocity estimated with imu)
             const Eigen::MatrixXd& velocity, // imu velocity
-            const tsid::trajectories::TrajectorySample& com_ref, //tsid com reference
+            const tsid::trajectories::TrajectorySample& com_ref, //next com reference
             tsid::trajectories::TrajectorySample& se3_sample); //out : modified com ref to give to tsid
 
         //compute PD control on contact forces and torques from model zmp ref vs measured forces and torques
@@ -97,7 +98,7 @@ namespace inria_wbc {
             const double& robot_mass,
             const Eigen::VectorXd& p,
             const Eigen::VectorXd& d,
-            const tsid::trajectories::TrajectorySample& com_ref,
+            const tsid::trajectories::TrajectorySample& model_current_com, //pinocchio current com pos,vel,acc
             const std::map<std::string, pinocchio::SE3>& contact_ref,
             const std::vector<std::string>& activated_contacts,
             const Eigen::Matrix<double, 6, 1>& left_fref_sensor,

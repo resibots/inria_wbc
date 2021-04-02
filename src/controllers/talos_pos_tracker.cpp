@@ -234,14 +234,14 @@ namespace inria_wbc {
 
                 tsid::trajectories::TrajectorySample lf_se3_sample, lf_contact_sample, rf_se3_sample, rf_contact_sample;
                 tsid::trajectories::TrajectorySample com_sample, torso_sample;
-                tsid::trajectories::TrajectorySample current_com_position = stabilizer::data_to_sample(tsid_->data());
+                tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
                 // com_admittance
                 if (cop_ok
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
                     && !std::isnan(_cop_estimator.cop_filtered()(1))) {
 
-                    stabilizer::com_admittance(dt_, _com_gains, _cop_estimator.cop_filtered(), current_com_position, com_sample);
+                    stabilizer::com_admittance(dt_, _com_gains, _cop_estimator.cop_filtered(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                 }
 
@@ -254,7 +254,7 @@ namespace inria_wbc {
                     double M = pinocchio_total_model_mass();
                     Eigen::Matrix<double, 6, 1> left_fref, right_fref;
 
-                    stabilizer::zmp_distributor_admittance(dt_, _zmp_p, _zmp_d, M, contact_se3_ref, ac, _cop_estimator.cop_filtered(), current_com_position, left_fref, right_fref);
+                    stabilizer::zmp_distributor_admittance(dt_, _zmp_p, _zmp_d, M, contact_se3_ref, ac, _cop_estimator.cop_filtered(), model_current_com, left_fref, right_fref);
 
                     contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
                     contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
@@ -318,8 +318,7 @@ namespace inria_wbc {
                 set_se3_ref(torso_ref, "torso");
 
                 for (auto& contact_name : ac) {
-                    // contact(contact_name)->setReference(contact_sample_ref[contact_name]);
-                    contact(contact_name)->Contact6d::setReference(contact_se3_ref[contact_name]);
+                    contact(contact_name)->setReference(contact_sample_ref[contact_name]);
                     contact(contact_name)->Contact6d::setForceReference(contact_force_ref[contact_name]);
                 }
             }

@@ -32,12 +32,13 @@ namespace inria_wbc {
             double dt,
             const Eigen::VectorXd& p,
             const Eigen::Vector2d& cop_filtered,
+            const tsid::trajectories::TrajectorySample& model_current_com,
             const tsid::trajectories::TrajectorySample& com_ref,
             tsid::trajectories::TrajectorySample& se3_sample)
         {
             IWBC_ASSERT("you need 6 coefficient in p for com admittance", p.size() == 6);
 
-            Eigen::Vector2d ref = com_to_zmp(com_ref); //because this is the target
+            Eigen::Vector2d ref = com_to_zmp(model_current_com); //because this is the target
             Eigen::Vector2d cor = ref.head(2) - cop_filtered;
 
             Eigen::Vector2d error = p.block(0, 0, 1, 2).array() * cor.array();
@@ -182,14 +183,14 @@ namespace inria_wbc {
             const std::map<std::string, pinocchio::SE3>& contact_ref,
             const std::vector<std::string>& activated_contacts,
             const Eigen::Vector2d& zmp,
-            const tsid::trajectories::TrajectorySample& com_ref,
+            const tsid::trajectories::TrajectorySample& model_current_com,
             Eigen::Matrix<double, 6, 1>& left_fref,
             Eigen::Matrix<double, 6, 1>& right_fref)
         {
 
             IWBC_ASSERT("you need 6 coefficient in p for zmp_distributor_admittance ", p.size() == 6);
 
-            Eigen::Vector2d zmp_ref = com_to_zmp(com_ref);
+            Eigen::Vector2d zmp_ref = com_to_zmp(model_current_com);
 
             Eigen::Matrix<double, 6, 1> left_fref_tsid;
             Eigen::Matrix<double, 6, 1> right_fref_tsid;
@@ -214,14 +215,14 @@ namespace inria_wbc {
             const Eigen::VectorXd& d,
             const std::map<std::string, pinocchio::SE3>& contact_ref,
             const std::vector<std::string>& activated_contacts,
-            const tsid::trajectories::TrajectorySample& com_ref,
+            const tsid::trajectories::TrajectorySample& model_current_com,
             const Eigen::Matrix<double, 6, 1>& left_fref_sensor,
             const Eigen::Matrix<double, 6, 1>& right_fref_sensor,
             Eigen::Matrix<double, 6, 1>& left_fref,
             Eigen::Matrix<double, 6, 1>& right_fref)
         {
 
-            Eigen::Vector2d zmp_ref = com_to_zmp(com_ref);
+            Eigen::Vector2d zmp_ref = com_to_zmp(model_current_com);
 
             Eigen::Matrix<double, 6, 1> left_fref_tsid;
             Eigen::Matrix<double, 6, 1> right_fref_tsid;
