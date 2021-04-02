@@ -175,6 +175,48 @@ namespace inria_wbc {
             tsid_->addRigidContact(*c, tasks::cst::w_force_feet);
             activated_contacts_.push_back(contact_name);
         }
+        //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
+        //it corresponds to the force of contact(contact_name)->Contact6d::setForceReference(force);
+        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& foot)
+        {
+            IWBC_ASSERT(foot == "left" || foot == "right", "foot must be left or right");
+
+            std::string ct_name, tau_x_name, tau_y_name;
+            if (foot == "left") {
+                ct_name = "contact_lfoot";
+                tau_x_name = "leg_left_6_joint";
+                tau_y_name = "leg_left_5_joint";
+            }
+            if (foot == "right") {
+                ct_name = "contact_rfoot";
+                tau_x_name = "leg_right_6_joint";
+                tau_y_name = "leg_right_5_joint";
+            }
+
+            Eigen::Matrix<double, 6, 1> force_tsid;
+            force_tsid.setZero();
+
+            IWBC_ASSERT(activated_contacts_forces_.find(ct_name) != activated_contacts_forces_.end(), ct_name, "not in activated_contacts_forces_");
+            auto contact_force = activated_contacts_forces_[ct_name];
+            int n_contact_points = contact_force.size() / 3;
+            for (int i = 0; i < n_contact_points; i++) {
+                force_tsid(0) += -contact_force(0 + i * 3);
+                force_tsid(1) += -contact_force(1 + i * 3);
+                force_tsid(2) += -contact_force(2 + i * 3);
+            }
+
+            auto tau_vec = tau(false);
+            auto dofs_names = all_dofs(false);
+
+            auto it = std::find(dofs_names.begin(), dofs_names.end(), tau_x_name);
+            IWBC_ASSERT(it != dofs_names.end(), tau_x_name, "not in dofs_names");
+            force_tsid(3) = -tau_vec[std::distance(dofs_names.begin(), it)];
+            it = std::find(dofs_names.begin(), dofs_names.end(), tau_y_name);
+            IWBC_ASSERT(it != dofs_names.end(), tau_y_name, "not in dofs_names");
+            force_tsid(4) = tau_vec[std::distance(dofs_names.begin(), it)];
+
+            return force_tsid;
+        }
 
         void PosTracker::remove_task(const std::string& task_name, double transition_duration)
         {

@@ -16,6 +16,9 @@ CONTROLLER:
     p_zmp_distrib: [0.0, 0.0, 0.0, 3, 20.0, 0.0]
     w_zmp_distrib: [1, 1, 0.0, 2, 2, 2]   
     d: [0.0, 0.0, 0.0, 0.0,  0.0,  0.0]
+    ultimate_d: 0.000
+    # ultimate_d: 0.001
+    ultimate_p: 0.00
   collision_detection:
     activated: true
     filter_size: 30

@@ -116,14 +116,6 @@ namespace inria_wbc {
                 return tmp;
             }
 
-
-            virtual const double& alpha() const
-            {
-                static double tmp;
-                IWBC_ERROR("No zmp_distributor in controller");
-                return tmp;
-            }
-
             // this could call a CoM estimator
             virtual const tsid::math::Vector3& com() const { return robot_->com(tsid_->data()); }
 

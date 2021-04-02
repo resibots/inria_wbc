@@ -24,8 +24,6 @@ namespace inria_wbc {
             virtual const Eigen::Vector2d& rcop() const override { return _cop_estimator.rcop_filtered(); }
             virtual const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
 
-            virtual const double& alpha() const { return m_alpha; }
-
             virtual const Eigen::Vector3d& lf_force_filtered() const override { return _lf_force_filtered; }
             virtual const Eigen::Vector3d& rf_force_filtered() const override { return _rf_force_filtered; }
 
@@ -38,28 +36,33 @@ namespace inria_wbc {
             virtual void parse_configuration_yaml(const std::string& sot_config_path);
             void parse_collision_thresholds(const std::string& config_path);
 
+            //sensor estimation & filtering
             estimators::Cop _cop_estimator;
+
+            Eigen::Vector3d _lf_force_filtered;
+            Eigen::Vector3d _rf_force_filtered;
+            Eigen::Vector3d _lf_torque_filtered;
+            Eigen::Vector3d _rf_torque_filtered;
+
+            estimators::Filter::Ptr _lf_force_filter;
+            estimators::Filter::Ptr _rf_force_filter;
+            estimators::Filter::Ptr _lf_torque_filter;
+            estimators::Filter::Ptr _rf_torque_filter;
+
+            //stabilisation parameters
             bool _use_stabilizer = true;
             double _torso_max_roll = 0.3;
 
-            double m_alpha = 0;
+            Eigen::VectorXd _com_gains;
+            Eigen::VectorXd _ankle_gains;
+            Eigen::VectorXd _ffda_gains;
 
-            Eigen::VectorXd _stabilizer_p;
-            Eigen::VectorXd _stabilizer_d;
-            Eigen::VectorXd _stabilizer_p_ankle;
-            Eigen::VectorXd _stabilizer_p_ffda;
+            bool _activate_zmp = false;
+            Eigen::VectorXd _zmp_p;
+            Eigen::VectorXd _zmp_d;
+            Eigen::VectorXd _zmp_w;
 
-            bool _activate_zmp_distrib = false;
-            Eigen::VectorXd _stabilizer_p_zmp_distrib;
-            Eigen::VectorXd _stabilizer_d_zmp_distrib;
-            Eigen::VectorXd _stabilizer_w_zmp_distrib;
-
-            std::map<std::string, pinocchio::SE3> _contact_ref;
-            std::map<std::string, Eigen::Matrix<double, 6, 1>> _contact_force_ref;
-
-            Eigen::Vector3d _lf_force_filtered, _rf_force_filtered;
-            estimators::Filter::Ptr _lf_force_filter, _rf_force_filter;
-
+            //torque collision
             bool _use_torque_collision_detection;
             bool _collision_detected = false;
             safety::TorqueCollisionDetection _torque_collision_detection;

@@ -1,6 +1,7 @@
 #include <tsid/tasks/task-actuation-bounds.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
+#include <tsid/tasks/task-cop-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
@@ -141,6 +142,31 @@ namespace inria_wbc {
             return task;
         }
         RegisterYAML<tsid::tasks::TaskAMEquality> __register_momentum_equality("momentum", make_momentum);
+
+        ////// COP task //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_cop(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = node["weight"].as<double>();
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskCopEquality>(task_name, *robot);
+
+            // set the reference
+            task->setReference(Eigen::Vector3d(0, 0, 0));
+
+            // add to TSID
+            tsid->addForceTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskCopEquality> __register_cop_equality("cop", make_cop);
 
         ////// Posture //////
         std::shared_ptr<tsid::tasks::TaskBase> make_posture(

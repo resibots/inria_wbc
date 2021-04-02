@@ -50,6 +50,7 @@ namespace inria_wbc {
 
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
+            Eigen::VectorXd force_torque_from_solution(const std::string& foot);
 
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
             // therefore you can re-add it later by using its name
