@@ -8,7 +8,7 @@ namespace inria_wbc {
 
         class ExController : public PosTracker {
         public:
-            ExController(const Params& params);
+            ExController(const YAML::Node& config);
             ExController(const ExController& other) = delete;
             ExController& operator=(const ExController& o) const = delete;
             virtual ~ExController(){};
@@ -16,7 +16,7 @@ namespace inria_wbc {
             virtual void update(const SensorData& sensor_data = {}) override;
 
         protected:
-            virtual void parse_configuration_yaml(const std::string& sot_config_path);
+            virtual void parse_configuration(const YAML::Node& config);
         };
 
     } // namespace controllers

@@ -4,15 +4,18 @@ namespace inria_wbc {
     namespace behaviors {
         static Register<ExBehavior> __ex_behavior("ex-behavior");
 
-        ExBehavior::ExBehavior(const controller_ptr_t& controller) : Behavior(controller)
+        ExBehavior::ExBehavior(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config)
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto lh_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref("lh");
+            auto tracker = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_);
+            IWBC_ASSERT(tracker, "we need a pos tracker here");
 
-            YAML::Node config = YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
-            trajectory_duration_ = config["trajectory_duration"].as<float>();
-            motion_size_ = config["motion_size"].as<float>();
+            auto lh_init = tracker->get_se3_ref("lh");
+            
+            YAML::Node c = IWBC_CHECK(config["BEHAVIOR"]);
+            trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
+            motion_size_ = IWBC_CHECK(c["motion_size"].as<float>());
 
             auto lh_final = lh_init;
             lh_final.translation()(2) += motion_size_;
