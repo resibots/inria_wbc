@@ -279,7 +279,7 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.rcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, _cop_estimator.lcop_filtered(), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _ankle_gains, _cop_estimator.rcop_filtered(), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     contact("contact_rfoot")->setReference(rf_contact_sample);
                 }

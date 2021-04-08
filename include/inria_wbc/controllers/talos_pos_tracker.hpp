@@ -51,7 +51,7 @@ namespace inria_wbc {
 
             //stabilisation parameters
             bool _use_stabilizer = true;
-            double _torso_max_roll = 0.3;
+            double _torso_max_roll = 0.25;
 
             Eigen::VectorXd _com_gains;
             Eigen::VectorXd _ankle_gains;
