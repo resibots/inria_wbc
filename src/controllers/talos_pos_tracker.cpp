@@ -268,7 +268,7 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.lcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, _cop_estimator.lcop_filtered(), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _ankle_gains, _cop_estimator.lcop_filtered(), model_joint_pos("leg_left_6_joint"), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     contact("contact_lfoot")->setReference(lf_contact_sample);
                 }
@@ -279,7 +279,7 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.rcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, _cop_estimator.rcop_filtered(), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _ankle_gains, _cop_estimator.rcop_filtered(), model_joint_pos("leg_right_6_joint"), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     contact("contact_rfoot")->setReference(rf_contact_sample);
                 }
@@ -290,7 +290,7 @@ namespace inria_wbc {
                     && _lf_force_filter->data_ready()
                     && _rf_force_filter->data_ready()) {
 
-                    //normal force of the contacts from tsid
+                    //normal force of the contacts from tsid solution
                     double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
 

@@ -85,6 +85,7 @@ namespace inria_wbc {
             double dt,
             const Eigen::VectorXd& p,
             const Eigen::Vector2d& cop_foot,
+            const pinocchio::SE3& model_current_foot,
             const tsid::trajectories::TrajectorySample& se3_sample_ref,
             const tsid::trajectories::TrajectorySample& contact_sample_ref,
             tsid::trajectories::TrajectorySample& se3_sample,
@@ -96,8 +97,8 @@ namespace inria_wbc {
             auto ankle_pos = se3_sample_ref.pos;
             tsid::math::vectorToSE3(ankle_pos, ankle_ref);
             Eigen::Vector3d cop_ankle_ref = ankle_ref.translation();
-            double pitch = -p[0] * (cop_foot(0) - cop_ankle_ref(0)); //cop_ankle_ref shoulb be replaced by ankle from data
-            double roll = +p[1] * (cop_foot(1) - cop_ankle_ref(1)); //cop_ankle_ref shoulb be replaced by ankle from data
+            double pitch = -p[0] * (cop_foot(0) - model_current_foot.translation()(0));
+            double roll = +p[1] * (cop_foot(1) - model_current_foot.translation()(1));
 
             auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
             euler[0] += roll;

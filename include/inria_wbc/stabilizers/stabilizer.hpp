@@ -32,6 +32,7 @@ namespace inria_wbc {
             double dt, //controller dt
             const Eigen::VectorXd& p, // proportional gains
             const Eigen::Vector2d& cop_foot, //filtered foot cop estimation (from the foot force/torque sensor)
+            const pinocchio::SE3& model_current_foot, //current model foot position
             const tsid::trajectories::TrajectorySample& se3_sample_ref, //tsid ankle reference of the same foot
             const tsid::trajectories::TrajectorySample& contact_sample_ref, //tsid contact reference of the same foot
             tsid::trajectories::TrajectorySample& se3_sample, //out : modified ankle ref to give to tsid
