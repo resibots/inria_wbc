@@ -248,8 +248,8 @@ namespace inria_wbc {
 
             auto ct_lf = contact_ref.find("contact_lfoot");
             auto ct_rf = contact_ref.find("contact_rfoot");
-
-            IWBC_ASSERT((ct_lf != contact_ref.end()) && (ct_rf != contact_ref.end()), "you need contact_lfoot and contact_rfoot in contact_ref map");
+            Eigen::Vector2d PR = Eigen::Vector2d::Zero();
+            Eigen::Vector2d PL = Eigen::Vector2d::Zero();
 
             if (std::find(activated_contacts.begin(), activated_contacts.end(), "contact_rfoot") != activated_contacts.end()
                 && std::find(activated_contacts.begin(), activated_contacts.end(), "contact_lfoot") != activated_contacts.end()) {
@@ -257,7 +257,10 @@ namespace inria_wbc {
                 Eigen::Vector3d zmp3 = Eigen::Vector3d::Zero();
                 zmp3.head(2) = zmp;
 
+                IWBC_ASSERT((ct_lf != contact_ref.end()) && (ct_rf != contact_ref.end()), "you need contact_lfoot and contact_rfoot in contact_ref map");
                 auto fline = std::make_pair(ct_lf->second.translation(), ct_rf->second.translation());
+                PR = ct_rf->second.translation().head(2);
+                PL = ct_lf->second.translation().head(2);
 
                 //projection on a flat ground surface
                 // TODO porjection on slope thanks to imu
@@ -282,10 +285,14 @@ namespace inria_wbc {
             else if (std::find(activated_contacts.begin(), activated_contacts.end(), "contact_rfoot") != activated_contacts.end()
                 && std::find(activated_contacts.begin(), activated_contacts.end(), "contact_lfoot") == activated_contacts.end()) {
                 alpha = 1;
+                IWBC_ASSERT(ct_rf != contact_ref.end(), "you need contact_rfoot in contact_ref map");
+                PR = ct_rf->second.translation().head(2);
             }
             else if (std::find(activated_contacts.begin(), activated_contacts.end(), "contact_lfoot") != activated_contacts.end()
                 && std::find(activated_contacts.begin(), activated_contacts.end(), "contact_rfoot") == activated_contacts.end()) {
                 alpha = 0;
+                IWBC_ASSERT(ct_lf != contact_ref.end(), "you need contact_lfoot in contact_ref map");
+                PL = ct_lf->second.translation().head(2);
             }
             else {
                 IWBC_ERROR("No contact_rfoot or contact_rfoot in activated_contacts_ is talos jumping ?");
@@ -297,8 +304,6 @@ namespace inria_wbc {
             double f_right = -alpha * robot_mass * 9.81;
             double f_left = -(1 - alpha) * robot_mass * 9.81;
 
-            auto PR = ct_rf->second.translation().head(2);
-            auto PL = ct_lf->second.translation().head(2);
             Eigen::Vector2d tau0 = -(PR - zmp) * f_right - (PL - zmp) * f_left;
             Eigen::Vector2d tauL, tauR;
             tauR(1) = alpha * tau0(1);
