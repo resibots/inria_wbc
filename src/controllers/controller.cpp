@@ -52,23 +52,25 @@ using namespace inria_wbc::utils;
 
 namespace inria_wbc {
     namespace controllers {
-        Controller::Controller(const Params& params) :
-        params_(params),
-        verbose_(params.verbose)
+        Controller::Controller(const YAML::Node& config) :
+            config_(config)
         {
+            auto c = IWBC_CHECK(config["CONTROLLER"]);
+            auto path = IWBC_CHECK(c["base_path"]);
+            auto floating_base_joint_name =  IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
+            auto urdf = IWBC_CHECK(c["urdf"].as<std::string>());
+            dt_ = IWBC_CHECK(c["dt"].as<double>());
+            mimic_dof_names_ = IWBC_CHECK(c["mimic_dof_names"].as<std::vector<std::string>>());
+
             pinocchio::Model robot_model;
-            if (!params.floating_base_joint_name.empty()) {
-                fb_joint_name_ = params.floating_base_joint_name; //floating base joint already in urdf
-                pinocchio::urdf::buildModel(params.urdf_path, robot_model, verbose_);
-            }
-            else {
-                pinocchio::urdf::buildModel(params.urdf_path, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
+            if (!floating_base_joint_name.empty()) {
+                fb_joint_name_ = floating_base_joint_name; //floating base joint already in urdf
+                pinocchio::urdf::buildModel(urdf, robot_model, verbose_);
+            } else {
+                pinocchio::urdf::buildModel(urdf, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
                 fb_joint_name_ = "root_joint";
             }
             robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
-
-            if (verbose_)
-                params_.print();
 
             _reset();
         }
@@ -76,8 +78,6 @@ namespace inria_wbc {
         // reset everything (called from the constructor)
         void Controller::_reset()
         {
-            dt_ = params_.dt;
-            mimic_dof_names_ = params_.mimic_dof_names;
             t_ = 0.0;
 
             uint nactuated = robot_->na();
@@ -253,32 +253,32 @@ namespace inria_wbc {
             return masses;
         }
 
-        inria_wbc::controllers::Controller::Params parse_params(YAML::Node config)
-        {
-            std::string urdf_path = "";
-            std::string sot_config_path = "";
-            std::string floating_base_joint_name = "";
-            float dt = 0.001;
-            bool verbose = false;
-            std::vector<std::string> mimic_dof_names = {};
-            parse(urdf_path, "urdf_path", config, "PARAMS", verbose);
-            parse(sot_config_path, "sot_config_path", config, "PARAMS", verbose);
-            parse(floating_base_joint_name, "floating_base_joint_name", config, "PARAMS", verbose);
-            parse(dt, "dt", config, "PARAMS", verbose);
-            parse(verbose, "verbose", config, "PARAMS", verbose);
-            parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
+        // inria_wbc::controllers::Controller::Params parse_params(YAML::Node config)
+        // {
+        //     std::string urdf_path = "";
+        //     std::string sot_config_path = "";
+        //     std::string floating_base_joint_name = "";
+        //     float dt = 0.001;
+        //     bool verbose = false;
+        //     std::vector<std::string> mimic_dof_names = {};
+        //     parse(urdf_path, "urdf_path", config, "PARAMS", verbose);
+        //     parse(sot_config_path, "sot_config_path", config, "PARAMS", verbose);
+        //     parse(floating_base_joint_name, "floating_base_joint_name", config, "PARAMS", verbose);
+        //     parse(dt, "dt", config, "PARAMS", verbose);
+        //     parse(verbose, "verbose", config, "PARAMS", verbose);
+        //     parse(mimic_dof_names, "mimic_dof_names", config, "PARAMS", verbose);
 
-            Controller::Params params = {
-                urdf_path,
-                sot_config_path,
-                dt,
-                verbose,
-                mimic_dof_names,
-                floating_base_joint_name,
-            };
+        //     Controller::Params params = {
+        //         urdf_path,
+        //         sot_config_path,
+        //         dt,
+        //         verbose,
+        //         mimic_dof_names,
+        //         floating_base_joint_name,
+        //     };
 
-            return params;
-        }
+        //     return params;
+        // }
 
     } // namespace controllers
 } // namespace inria_wbc

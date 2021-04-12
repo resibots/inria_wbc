@@ -14,7 +14,7 @@ namespace inria_wbc {
 
         class WalkOnSpot : public Behavior {
         public:
-            WalkOnSpot(const controller_ptr_t& controller);
+            WalkOnSpot(const controller_ptr_t& controller, const YAML::Node& config);
             WalkOnSpot() = delete;
             WalkOnSpot(const WalkOnSpot& otehr) = default;
             void update(const controllers::SensorData& sensor_data = {}) override;

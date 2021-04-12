@@ -1,12 +1,17 @@
 CONTROLLER:
-  name: ex-controller
+  name: talos-pos-tracker
   base_path: "/home/pal/inria_wbc/etc"
-  tasks: tasks_example.yaml
+  tasks: tasks_talos.yaml
   urdf: talos.urdf
   configurations: talos_configurations.srdf 
   ref_config: pal_start
+  frames: frames_talos.yaml
   floating_base_joint_name: ""
   dt: 0.001
+  # by default we do not close the loop on the floating base
+  # because it's not required in position control
+  # and our robot does not have a very good estimator yet
+  closed_loop: false
   mimic_dof_names : ["gripper_left_inner_double_joint",
                      "gripper_left_fingertip_1_joint",
                      "gripper_left_fingertip_2_joint",
@@ -19,15 +24,13 @@ CONTROLLER:
                      "gripper_right_inner_single_joint",
                      "gripper_right_fingertip_3_joint",
                      "gripper_right_motor_single_joint"]
-  # no URDF here because this is set by the main
   stabilizer:
     activated: true
     filter_size: 5
-    p: [0.07, 0.07]
-    d: [0.01, 0.01]
-BEHAVIOR:
-  name : ex-behavior
-  trajectory_duration : 1
-  motion_size : 0.25
-
-
+    p: [0.001, 0.001]
+    d: [0.0001, 0.0001]
+  collision_detection:
+    activated: true
+    filter_size: 30
+    max_invalid: 5
+    thresholds: collision_thresholds.yaml

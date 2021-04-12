@@ -32,16 +32,15 @@ namespace inria_wbc {
     namespace controllers {
         static Register<TalosPosTracker> __talos_pos_tracking("talos-pos-tracker");
 
-        TalosPosTracker::TalosPosTracker(const Params& params) : PosTracker(params)
+        TalosPosTracker::TalosPosTracker(const YAML::Node& config) : PosTracker(config)
         {
-            parse_configuration_yaml(params.sot_config_path);
+            parse_configuration(config["CONTROLLER"]);
             if (verbose_)
                 std::cout << "Talos pos tracker initialized" << std::endl;
         }
 
-        void TalosPosTracker::parse_configuration_yaml(const std::string& sot_config_path)
+        void TalosPosTracker::parse_configuration(const YAML::Node& config)
         {
-            auto config = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]);
             // closed loop
             _closed_loop = IWBC_CHECK(config["closed_loop"].as<bool>());
 
@@ -57,7 +56,7 @@ namespace inria_wbc {
 
             // init collision detection
             {
-                YAML::Node c = IWBC_CHECK(config["collision_detection"]);
+                auto c = IWBC_CHECK(config["collision_detection"]);
                 _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
                 auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
                 auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
@@ -86,11 +85,10 @@ namespace inria_wbc {
 
                 // update thresholds from file (if any)
                 if (c["thresholds"]) {
-                    auto path = boost::filesystem::path(sot_config_path).parent_path();
-                    auto p_thresh = IWBC_CHECK(path / boost::filesystem::path(c["thresholds"].as<std::string>()));
-                    parse_collision_thresholds(p_thresh.string());
+                    auto path = IWBC_CHECK(config["base_path"].as<std::string>());
+                    auto p_thresh = IWBC_CHECK(path + "/" + c["thresholds"].as<std::string>());
+                    parse_collision_thresholds(p_thresh);
                 }
-
 
                 _torque_collision_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
 

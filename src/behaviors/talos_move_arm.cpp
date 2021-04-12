@@ -4,16 +4,17 @@ namespace inria_wbc {
     namespace behaviors {
         static Register<TalosMoveArm> __talos_move_arm("talos-move-arm");
 
-        TalosMoveArm::TalosMoveArm(const controller_ptr_t& controller) : Behavior(controller)
+        TalosMoveArm::TalosMoveArm(const controller_ptr_t& controller, const YAML::Node& config) : 
+        Behavior(controller, config)
         {
 
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
             auto lh_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref("lh");
 
-            YAML::Node config = IWBC_CHECK(YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"]);
-            trajectory_duration_ = IWBC_CHECK(config["trajectory_duration"].as<float>());
-            motion_size_ = IWBC_CHECK(config["motion_size"].as<float>());
+            auto c = IWBC_CHECK(config["BEHAVIOR"]);
+            trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
+            motion_size_ = IWBC_CHECK(c["motion_size"].as<float>());
 
             auto lh_final = lh_init;
             lh_final.translation()(2) += motion_size_;
