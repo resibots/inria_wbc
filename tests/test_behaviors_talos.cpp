@@ -130,6 +130,8 @@ void test_behavior(const std::string& controller_path,
 
     // get the controller
     auto controller_name = IWBC_CHECK(c_config["CONTROLLER"]["name"].as<std::string>());
+    if (actuator_type == "torque") // force closed-loop
+        c_config["CONTROLLER"]["closed_loop"] = true;
     auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, c_config);
     BOOST_CHECK(controller);
     auto p_controller = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
@@ -218,8 +220,11 @@ void test_behavior(const std::string& controller_path,
             auto t1_cmd = high_resolution_clock::now();
             if (actuator_type == "velocity" || actuator_type == "servo")
                 cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, cst::dt);
+            else if (actuator_type == "spd")
+                inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
             else // torque
-                cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
+                cmd = controller->tau();
+
             auto t2_cmd = high_resolution_clock::now();
             time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
@@ -425,7 +430,10 @@ const std::string& actuators, const std::string& coll, const std::string& enable
     // create the simulator and the robot
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
-    robot->set_actuator_types(actuators);
+    if (actuators ==  "spd")
+        robot->set_actuator_types("torque");
+    else
+        robot->set_actuator_types(actuators);
     robot_dart::RobotDARTSimu simu(cst::dt);
     simu.set_collision_detector(coll);
     simu.set_control_freq(cst::frequency);
@@ -490,7 +498,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     std::string controller = "../../etc/talos_pos_tracker.yaml";
     auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml", "../../etc/walk_on_spot.yaml"};
     auto collision = {"fcl", "dart"};
-    auto actuators = {"servo", "torque", "velocity"};
+    auto actuators = {"servo", "torque", "velocity", "spd"};
     std::vector<std::string> stabilized = {"true", "false"};
     std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
 
