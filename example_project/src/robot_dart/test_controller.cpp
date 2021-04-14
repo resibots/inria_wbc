@@ -130,22 +130,25 @@ int main(int argc, char* argv[])
         simu.add_checkerboard_floor();
 
         //////////////////// INIT STACK OF TASK //////////////////////////////////////
-        std::string sot_config_path = vm["conf"].as<std::string>();
-        inria_wbc::controllers::Controller::Params params = { 
-            robot->model_filename(),
-            sot_config_path,
-            dt,
-            verbose,
-            robot->mimic_dof_names()};
+        // here, controller and behavior configuration are stored in the same file
+        // still, it is possible to use seoarated files and have different controller_path, behavior_path
 
-        YAML::Node config = YAML::LoadFile(sot_config_path);
+        ///// CONTROLLER
+        auto controller_path = vm["conf"].as<std::string>();
+        auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
+        // do some modifications
+        controller_config["CONTROLLER"]["base_path"] = "../etc"; // we assume that we run in ./build
+        controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
+        controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
 
-        auto controller_name = config["CONTROLLER"]["name"].as<std::string>();
-        auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+        auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
+        auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
 
-        auto behavior_name = config["BEHAVIOR"]["name"].as<std::string>();
-        auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
-        assert(behavior);
+        auto behavior_path = vm["conf"].as<std::string>(); 
+        auto behavior_config = IWBC_CHECK(YAML::LoadFile(behavior_path));
+        auto behavior_name = IWBC_CHECK(behavior_config["BEHAVIOR"]["name"].as<std::string>());
+        auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
+        IWBC_ASSERT(behavior, "invalid behavior");
 
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;

@@ -88,20 +88,21 @@ int main(int argc, char* argv[])
     simu.add_checkerboard_floor();
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
-    inria_wbc::controllers::Controller::Params params = {
-        robot->model_filename(),
-        sot_config_path,
-        dt,
-        false,
-        robot->mimic_dof_names()};
+    auto controller_path = "../etc/talos_pos_tracker.yaml";
+    auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
+    // do some modifications
+    controller_config["CONTROLLER"]["base_path"] = "../etc";// we assume that we run in ./build
+    controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
+    controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
 
-    std::string behavior_name, controller_name;
-    YAML::Node config = IWBC_CHECK(YAML::LoadFile(sot_config_path));
-    inria_wbc::utils::parse(behavior_name, "name", config, "BEHAVIOR", false);
-    inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", false);
+    auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
+    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
 
-    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
-    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
+    auto behavior_path = sot_config_path;
+    auto behavior_config = IWBC_CHECK(YAML::LoadFile(behavior_path));
+    auto behavior_name = IWBC_CHECK(behavior_config["BEHAVIOR"]["name"].as<std::string>());
+    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
+    IWBC_ASSERT(behavior, "invalid behavior");
 
     auto all_dofs = controller->all_dofs();
     auto controllable_dofs = controller->controllable_dofs();

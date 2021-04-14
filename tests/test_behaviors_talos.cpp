@@ -38,6 +38,7 @@ namespace cst {
     static constexpr double frequency = 1000;
     static constexpr double tolerance = 5e-3;
     static const std::string ref_path = "../../tests/ref_test_talos.yaml";
+    static const std::string base_path = "../../etc";
 
 } // namespace cst
 
@@ -80,14 +81,14 @@ inline std::string date()
 // we parse again:
 // - to check that the controller parses as expected
 // - and to get additional info (mask, etc.)
-std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config_path)
+std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const y::Node& config)
 {
     std::vector<inria_wbc::tests::SE3TaskData> tasks;
-    y::Node config = IWBC_CHECK(y::LoadFile(config_path)["CONTROLLER"]);
-    auto path = boost::filesystem::path(config_path).parent_path();
-    auto task_file = IWBC_CHECK(config["tasks"].as<std::string>());
-    auto p = path / boost::filesystem::path(task_file);
-    y::Node task_list = IWBC_CHECK(y::LoadFile(p.string()));
+    auto c = IWBC_CHECK(config["CONTROLLER"]);
+    auto path = IWBC_CHECK(c["base_path"].as<std::string>());
+    auto task_file = IWBC_CHECK(c["tasks"].as<std::string>());
+    auto p = path + "/" + task_file;
+    auto task_list = IWBC_CHECK(y::LoadFile(p));
     for (auto it = task_list.begin(); it != task_list.end(); ++it) {
         auto name = IWBC_CHECK(it->first.as<std::string>());
         auto type = IWBC_CHECK(it->second["type"].as<std::string>());
@@ -107,7 +108,8 @@ std::vector<inria_wbc::tests::SE3TaskData> parse_tasks(const std::string& config
     return tasks;
 }
 
-void test_behavior(const std::string& config_path,
+void test_behavior(const std::string& controller_path,
+    const std::string& behavior_path,
     robot_dart::RobotDARTSimu& simu,
     const std::shared_ptr<robot_dart::Robot>& robot,
     const std::string& actuator_type,
@@ -116,39 +118,33 @@ void test_behavior(const std::string& config_path,
     bool enable_stabilizer = false,
     bool verbose = false)
 {
-    auto tmp_config_path = config_path.substr(0, config_path.size() - 5) + "_tmp.yaml";
     // ----------------------- init -----------------------
-    inria_wbc::controllers::Controller::Params params = {
-        robot->model_filename(),
-        tmp_config_path,
-        cst::dt,
-        verbose,
-        robot->mimic_dof_names()};
 
-    y::Node config = IWBC_CHECK(y::LoadFile(config_path));
-    auto initial_value = IWBC_CHECK(config["CONTROLLER"]["stabilizer"]["activated"].as<std::string>());
-    config["CONTROLLER"]["stabilizer"]["activated"] = enable_stabilizer ? "true" : "false";
-    std::ofstream fout(tmp_config_path);
-    fout << config;
-    fout.close();
+    y::Node c_config = IWBC_CHECK(y::LoadFile(controller_path));
+    auto initial_value = IWBC_CHECK(c_config["CONTROLLER"]["stabilizer"]["activated"].as<std::string>());
+    c_config["CONTROLLER"]["stabilizer"]["activated"] = enable_stabilizer ? "true" : "false";
+    c_config["CONTROLLER"]["base_path"] = cst::base_path;
+    c_config["CONTROLLER"]["urdf"] = robot->model_filename();
+    c_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
+
 
     // get the controller
-    auto controller_name = IWBC_CHECK(config["CONTROLLER"]["name"].as<std::string>());
-    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+    auto controller_name = IWBC_CHECK(c_config["CONTROLLER"]["name"].as<std::string>());
+    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, c_config);
     BOOST_CHECK(controller);
     auto p_controller = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
     BOOST_CHECK(p_controller);
     BOOST_CHECK(!p_controller->tasks().empty());
 
     // get the list of SE3 tasks (to test the tracking)
-    auto se3_tasks = parse_tasks(config_path);
+    auto se3_tasks = parse_tasks(c_config);
     BOOST_CHECK(!se3_tasks.empty());
     // get the behavior (trajectories)
-    auto behavior_name = IWBC_CHECK(config["BEHAVIOR"]["name"].as<std::string>());
-    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
+    y::Node b_config = IWBC_CHECK(y::LoadFile(behavior_path));
+    auto behavior_name = IWBC_CHECK(b_config["BEHAVIOR"]["name"].as<std::string>());
+    auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, b_config);
     BOOST_CHECK(behavior);
 
-    IWBC_CHECK(remove(tmp_config_path.c_str()));
     // add sensors to the robot (robot_dart)
     // Force/torque (feet)
     auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
@@ -403,14 +399,22 @@ void test_behavior(const std::string& config_path,
     std::cout << std::endl;
 }
 
-void test_behavior(const std::string& config_path, const std::string& actuators, const std::string& coll, const std::string& enable_stabilizer, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
+void test_behavior(const std::string& controller_path, 
+const std::string& behavior_path,
+const std::string& actuators, const std::string& coll, const std::string& enable_stabilizer, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
 {
-    std::cout << colors::blue << colors::bold << "TESTING: " << config_path << " | " << actuators << " | " << coll << " | enable_stabilizer: " << enable_stabilizer << " | " << urdf << colors::rst << std::endl;
+    std::cout << colors::blue << colors::bold << "TESTING: " 
+        << controller_path << " |" 
+        << behavior_path << " | " 
+        << actuators << " | " 
+        << coll << " | enable_stabilizer: " 
+        << enable_stabilizer << " | " 
+        << urdf << colors::rst << std::endl;
     yout << y::Key << urdf << y::BeginMap;
 
     y::Node node;
     try {
-        node = ref[config_path][actuators][coll]["stabilized_" + enable_stabilizer][urdf];
+        node = ref[controller_path][behavior_path][actuators][coll]["stabilized_" + enable_stabilizer][urdf];
     }
     catch (std::exception& e) {
         std::cerr << colors::red << e.what() << std::endl;
@@ -439,7 +443,7 @@ void test_behavior(const std::string& config_path, const std::string& actuators,
 
     try {
         // run the behavior
-        test_behavior(config_path, simu, robot, actuators, node, yout, stabilizer);
+        test_behavior(controller_path, behavior_path, simu, robot, actuators, node, yout, stabilizer);
     }
     catch (std::exception& e) {
         std::cerr << colors::red << colors::bold << "Error (exception): t=" << simu.scheduler().current_time() << " " << colors::rst << e.what() << std::endl;
@@ -473,22 +477,24 @@ BOOST_AUTO_TEST_CASE(behaviors)
     auto argv = boost::unit_test::framework::master_test_suite().argv;
 
     if (argc > 1) {
-        assert(argc == 6);
-        std::cout << "using custom arguments for test [behavior actuators collision urdf]" << std::endl;
-        auto node = ref[argv[1]][argv[2]][argv[3]][argv[4]][argv[5]];
-        test_behavior(argv[1], argv[2], argv[3], argv[4], argv[5], ref, yout);
+        assert(argc == 7); // TODO
+        std::cout << "using custom arguments for test [controller behavior actuators collision urdf]" << std::endl;
+        auto node = ref[argv[1]][argv[2]][argv[3]][argv[4]][argv[5]][argv[6]];
+        test_behavior(argv[1], argv[2], argv[3], argv[4], argv[5], argv[6], ref, yout);
         // WARING: this does not write the yaml file
     }
 
     ///// the default behavior is to run all the combinations and write the output in the yaml file
 
     // this is relative to the "tests" directory
+    std::string controller = "../../etc/talos_pos_tracker.yaml";
     auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml", "../../etc/walk_on_spot.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity"};
     std::vector<std::string> stabilized = {"true", "false"};
     std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
 
+    yout << y::Key << controller << y::Value << y::BeginMap;
     for (auto& b : behaviors) {
         yout << y::Key << b << y::Value << y::BeginMap;
         for (auto& a : actuators) {
@@ -497,9 +503,9 @@ BOOST_AUTO_TEST_CASE(behaviors)
                 yout << y::Key << c << y::Value << y::BeginMap;
                 for (auto& s : stabilized) {
                     yout << y::Key << "stabilized_" + s << y::Value << y::BeginMap;
-                    test_behavior(b, a, c, s, urdfs[1], ref, yout);
+                    test_behavior(controller, b, a, c, s, urdfs[1], ref, yout);
                     if (c != std::string("dart")) {
-                        test_behavior(b, a, c, s, urdfs[0], ref, yout);
+                        test_behavior(controller, b, a, c, s, urdfs[0], ref, yout);
                     }
                     yout << y::EndMap;
                 }
@@ -510,6 +516,8 @@ BOOST_AUTO_TEST_CASE(behaviors)
         yout << y::EndMap;
     }
     yout << y::EndMap;
+    yout << y::EndMap;
+
     auto fname = std::string("test_results-") + date() + ".yaml";
     std::ofstream ofs(fname.c_str());
     ofs << yout.c_str();

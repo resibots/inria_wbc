@@ -31,13 +31,13 @@ namespace inria_wbc {
     namespace controllers {
         static Register<ExController> __ex_controller("ex-controller");
 
-        ExController::ExController(const Params& params) : PosTracker(params)
+        ExController::ExController(const YAML::Node& config) : PosTracker(config)
         {
-            parse_configuration_yaml(params.sot_config_path);
+            parse_configuration(config["CONTROLLER"]);
             if (verbose_)
                 std::cout << "Talos pos tracker initialized" << std::endl;
         }
-        void ExController::parse_configuration_yaml(const std::string& sot_config_path)
+        void ExController::parse_configuration(const YAML::Node& config)
         {
             // you can open the file here and parse additional parameters
 
