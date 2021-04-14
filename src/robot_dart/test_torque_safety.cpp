@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
     // clang-format off
     desc.add_options()
     ("help,h", "produce help message")
-    ("controller,c", po::value<std::string>()->default_value("../etc/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
+    ("controller,c", po::value<std::string>()->default_value("../etc/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos_pos_tracker.yaml]")
     ("behavior,b", po::value<std::string>()->default_value("../etc/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
     ("fast,f", "fast (simplified) Talos [default: false]")
     ("big_window,b", "use a big window (nicer but slower) [default:true]")
@@ -55,11 +55,25 @@ int main(int argc, char* argv[])
     ;
     // clang-format on
     po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+    }
+    catch (po::too_many_positional_options_error& e) {
+        // A positional argument like `opt2=option_value_2` was given
+        std::cerr << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
+    catch (po::error_with_option_name& e) {
+        // Another usage error occurred
+        std::cerr << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
 
     if (vm.count("help")) {
-        std::clog << desc << std::endl;
+        std::cout << desc << std::endl;
         return 0;
     }
 
@@ -127,7 +141,7 @@ int main(int argc, char* argv[])
     controller_config["CONTROLLER"]["base_path"] = "../etc"; // we assume that we run in ./build
     controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
     controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
-    int control_freq = vm["control_freq"].as<int>();
+    controller_config["CONTROLLER"]["verbose"] = verbose;
 
     auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
     auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
@@ -158,8 +172,7 @@ int main(int argc, char* argv[])
     auto imu = simu.add_sensor<robot_dart::sensor::IMU>(imu_config);
 
     std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
-
-    auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
+    auto talos_tracker_controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
     for (const auto& joint : talos_tracker_controller->torque_sensor_joints()) {
         torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000));
         std::cerr << "Add joint torque sensor:  " << joint << std::endl;
