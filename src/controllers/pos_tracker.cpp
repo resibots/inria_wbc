@@ -43,17 +43,25 @@ namespace inria_wbc {
             // all the file paths are relative to the main config file
             auto path = boost::filesystem::path(params.sot_config_path).parent_path();
 
-            YAML::Node config = YAML::LoadFile(params.sot_config_path)["CONTROLLER"];
+            YAML::Node config = IWBC_CHECK(YAML::LoadFile(params.sot_config_path)["CONTROLLER"]);
+
+            // create additional frames if needed (optional)
+            if (config["frames"]) {
+                auto p_frames = path / boost::filesystem::path(config["frames"].as<std::string>());
+                parse_frames(p_frames.string());
+            }
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
-            auto srdf_file = config["configurations"].as<std::string>();
-            auto ref_config = config["ref_config"].as<std::string>();
+            auto srdf_file = IWBC_CHECK(config["configurations"].as<std::string>());
+            auto ref_config = IWBC_CHECK(config["ref_config"].as<std::string>());
             auto p_srdf = path / boost::filesystem::path(srdf_file);
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
 
             //q_tsid_ is of size 37 (pos+quat+nactuated)
-            q_tsid_ = robot_->model().referenceConfigurations[ref_config];
+            auto ref_map = robot_->model().referenceConfigurations;
+            IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
+            q_tsid_ = ref_map[ref_config];
             //q0_ is in "Dart format" for the floating base
             Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
             Eigen::AngleAxisd aaxis(quat);
@@ -74,7 +82,7 @@ namespace inria_wbc {
             assert(tsid_);
             assert(robot_);
 
-            auto task_file = config["tasks"].as<std::string>();
+            auto task_file = IWBC_CHECK(config["tasks"].as<std::string>());
             auto p = path / boost::filesystem::path(task_file);
             parse_tasks(p.string());
 
@@ -86,10 +94,10 @@ namespace inria_wbc {
         {
             if (verbose_)
                 std::cout << "parsing task file:" << path << std::endl;
-            YAML::Node task_list = YAML::LoadFile(path);
+            YAML::Node task_list = IWBC_CHECK(YAML::LoadFile(path));
             for (auto it = task_list.begin(); it != task_list.end(); ++it) {
-                auto name = it->first.as<std::string>();
-                auto type = it->second["type"].as<std::string>();
+                auto name = IWBC_CHECK(it->first.as<std::string>());
+                auto type = IWBC_CHECK(it->second["type"].as<std::string>());
                 if (type == "contact") {
                     // the task is added to tsid by make_contact
                     auto task = tasks::make_contact_task(robot_, tsid_, name, it->second);
@@ -102,6 +110,26 @@ namespace inria_wbc {
                 }
                 if (verbose_)
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
+            }
+        }
+
+        void PosTracker::parse_frames(const std::string& path)
+        {
+            if (verbose_)
+                std::cout << "Parsing virtual frame file:" << path << std::endl;
+            YAML::Node node = IWBC_CHECK(YAML::LoadFile(path));
+            for (auto it = node.begin(); it != node.end(); ++it) {
+                auto name = IWBC_CHECK(it->first.as<std::string>());
+                auto ref = IWBC_CHECK(it->second["ref"].as<std::string>());
+                auto pos = IWBC_CHECK(it->second["pos"].as<std::vector<double>>());
+
+                pinocchio::SE3 p(1);
+                p.translation() = pinocchio::SE3::LinearType(pos[0], pos[1], pos[2]);
+                auto parent_frame_id = robot_->model().getFrameId(ref);
+                auto& frame = robot_->model().frames[parent_frame_id];
+                robot_->model().addFrame(pinocchio::Frame(name, frame.parent, parent_frame_id,
+                    frame.placement * p, pinocchio::FIXED_JOINT));
+                assert(robot_->model().existFrame(name));
             }
         }
 

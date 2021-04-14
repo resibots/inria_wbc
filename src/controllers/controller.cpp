@@ -86,6 +86,7 @@ namespace inria_wbc {
             v_tsid_ = Vector::Zero(ndofs);
             a_tsid_ = Vector::Zero(ndofs);
             tau_tsid_ = Vector::Zero(nactuated);
+            momentum_ = Vector::Zero(3);
 
             q0_.resize(ndofs);
             q_ = Vector::Zero(ndofs);
@@ -128,6 +129,7 @@ namespace inria_wbc {
             assert(solver_);
 
             const HQPData& HQPData = tsid_->computeProblemData(t_, q_tsid_, v_tsid_);
+            momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * v_tsid_);
 
             const HQPOutput& sol = solver_->solve(HQPData);
 
@@ -137,7 +139,6 @@ namespace inria_wbc {
                 tau_tsid_ = tau;
                 a_tsid_ = dv;
                 v_tsid_ += dt_ * dv;
-
                 q_tsid_ = pinocchio::integrate(robot_->model(), q_tsid_, dt_ * v_tsid_);
                 t_ += dt_;
 
@@ -215,6 +216,11 @@ namespace inria_wbc {
             std::vector<std::string> control_dofs = controllable_dofs(filter_mimics);
             all_dofs.insert(all_dofs.end(), control_dofs.begin(), control_dofs.end());
             return filter_mimics ? remove_intersection(all_dofs, mimic_dof_names_) : all_dofs;
+        }
+
+        Eigen::VectorXd Controller::tau(bool filter_mimics) const
+        {
+            return filter_mimics ? slice_vec(tau_, non_mimic_indexes_) : tau_;
         }
 
         Eigen::VectorXd Controller::ddq(bool filter_mimics) const

@@ -3,16 +3,22 @@ CONTROLLER:
   configurations: talos_configurations.srdf 
   ref_config: pal_start
   tasks: tasks_talos.yaml
+  frames: frames_talos.yaml
   # no URDF here because this is set by the main
   stabilizer:
     activated: true
     filter_size: 5
-    p: [0.07, 0.07]
-    d: [0.01, 0.01]
+    p: [0.001, 0.001]
+    d: [0.0001, 0.0001]
+  collision_detection:
+    activated: true
+    filter_size: 30
+    max_invalid: 5
+    thresholds: collision_thresholds.yaml
 BEHAVIOR:
   name : talos-move-arm
-  trajectory_duration : 1
-  motion_size : 0.25
+  trajectory_duration: 4
+  motion_size: 0.2
 PARAMS:
   urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
   srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf

@@ -14,6 +14,7 @@ namespace inria_wbc {
             PosTracker& operator=(const PosTracker& o) const = delete;
             virtual ~PosTracker(){};
 
+            const std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>>& tasks() const { return tasks_; }
             template <typename T>
             std::shared_ptr<T> task(const std::string& str) const
             {
@@ -29,13 +30,18 @@ namespace inria_wbc {
                 IWBC_ASSERT(it != contacts_.end(), "Contact [", str, "] not found");
                 return it->second;
             }
+            std::shared_ptr<tsid::tasks::TaskAMEquality> momentum_task() { return task<tsid::tasks::TaskAMEquality>("momentum"); }
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return task<tsid::tasks::TaskComEquality>("com"); }
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
 
             double cost(const std::string& task_name) const override { return Controller::cost(task<tsid::tasks::TaskBase>(task_name)); }
 
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
+            // we do not return the velocity for now
+            const tsid::math::Vector3 get_com_ref() { return com_task()->getReference().pos; }
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(to_sample(ref)); }
+            void set_com_ref(const tsid::trajectories::TrajectorySample& ref) { com_task()->setReference(ref); }
+            void set_momentum_ref(const tsid::trajectories::TrajectorySample& ref) { momentum_task()->setReference(ref); }
             void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
 
             void remove_contact(const std::string& contact_name);
@@ -51,7 +57,7 @@ namespace inria_wbc {
            
         protected:
             virtual void parse_tasks(const std::string&);
-
+            virtual void parse_frames(const std::string&);
             // the list of all the tasks
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>> tasks_;
             // contacts are not tasks in tsid
