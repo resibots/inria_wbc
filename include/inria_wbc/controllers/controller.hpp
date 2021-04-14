@@ -104,6 +104,7 @@ namespace inria_wbc {
             virtual double cost(const std::string& task_name) const = 0;
 
             void set_verbose(bool b) { verbose_ = b; }
+            bool verbose() const { return verbose_; }
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
