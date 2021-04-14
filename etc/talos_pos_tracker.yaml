@@ -8,6 +8,7 @@ CONTROLLER:
   frames: frames_talos.yaml
   floating_base_joint_name: ""
   dt: 0.001
+  verbose: false
   mimic_dof_names : ["gripper_left_inner_double_joint",
                      "gripper_left_fingertip_1_joint",
                      "gripper_left_fingertip_2_joint",
