@@ -38,6 +38,9 @@ namespace inria_wbc {
         {
             IWBC_ASSERT("you need 6 coefficient in p for com admittance", p.size() == 6);
 
+            if (std::abs(cop_filtered(0)) >= 10 && std::abs(cop_filtered(1)) >= 10)
+                IWBC_ERROR("com_admittance : something is wrong with input cop_filtered, check sensor measurment");
+
             Eigen::Vector2d ref = com_to_zmp(model_current_com); //because this is the target
             Eigen::Vector2d cor = ref.head(2) - cop_filtered;
 
@@ -93,6 +96,9 @@ namespace inria_wbc {
         {
             IWBC_ASSERT("you need 6 coefficient in p for ankle admittance", p.size() == 6);
 
+            if (std::abs(cop_foot(0)) >= 10 && std::abs(cop_foot(1)) >= 10)
+                IWBC_ERROR("ankle_admittance : something is wrong with input cop_foot, check sensor measurment");
+
             pinocchio::SE3 ankle_ref;
             auto ankle_pos = se3_sample_ref.pos;
             tsid::math::vectorToSE3(ankle_pos, ankle_ref);
@@ -133,6 +139,7 @@ namespace inria_wbc {
 
         void foot_force_difference_admittance(
             double dt,
+            double Mg,
             Eigen::VectorXd p_ffda,
             double lf_normal_force,
             double rf_normal_force,
@@ -143,7 +150,10 @@ namespace inria_wbc {
         {
             IWBC_ASSERT("you need 3 coefficient in p_ffda for ankle admittance", p_ffda.size() == 3);
 
-            double zctrl = (lf_normal_force - rf_normal_force) - (lf_sensor_force(2) - rf_sensor_force(2));
+            if (std::abs(lf_sensor_force(2) + lf_sensor_force(2)) > 10 * Mg)
+                IWBC_ERROR("zmp_distributor_admittance : ground force is more than 10*M*g , check sensor measurment");
+
+            double zctrl = std::abs(lf_normal_force - rf_normal_force) - std::abs(lf_sensor_force(2) - rf_sensor_force(2));
             auto torso_roll = -p_ffda[0] * zctrl;
 
             pinocchio::SE3 torso_ref;
@@ -190,6 +200,9 @@ namespace inria_wbc {
         {
 
             IWBC_ASSERT("you need 6 coefficient in p for zmp_distributor_admittance ", p.size() == 6);
+
+            if (std::abs(zmp(0)) >= 10 && std::abs(zmp(1)) >= 10)
+                IWBC_ERROR("zmp_distributor_admittance : something is wrong with input zmp, check sensor measurment");
 
             Eigen::Vector2d zmp_ref = com_to_zmp(model_current_com);
 

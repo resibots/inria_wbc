@@ -47,6 +47,7 @@ namespace inria_wbc {
         */
         void foot_force_difference_admittance(
             double dt, // controller dt
+            double Mg, // Mass of the robot * gravity
             Eigen::VectorXd p_ffda, // 3d proportional gains
             double lf_normal_force, // normal left foot force from tsid solution (~= current model normal force)
             double rf_normal_force, // normal right foot force from tsid solution (~= current model normal force)

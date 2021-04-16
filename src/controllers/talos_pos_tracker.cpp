@@ -293,8 +293,9 @@ namespace inria_wbc {
                     //normal force of the contacts from tsid solution
                     double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
+                    double M = pinocchio_total_model_mass();
 
-                    stabilizer::foot_force_difference_admittance(dt_, _ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
+                    stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
             }
