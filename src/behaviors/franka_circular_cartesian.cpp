@@ -5,20 +5,20 @@ namespace inria_wbc {
 
         static Register<CircCartTraj> __franka_circular_cartesian_trajectory("circular-cartesian-trajectory");
 
-        CircCartTraj::CircCartTraj(const controller_ptr_t& controller) : Behavior(controller)
+        CircCartTraj::CircCartTraj(const controller_ptr_t& controller, const YAML::Node& config):
+        Behavior(controller, config)
         {
             traj_index_=0.;
-            YAML::Node config =
-              YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"];
+            YAML::Node c = IWBC_CHECK(config["BEHAVIOR"]);
 
-            pitch_angle_ = config["pitch_angle"].as<float>();
-            radius_ = config["radius"].as<float>();
+            pitch_angle_ = c["pitch_angle"].as<float>();
+            radius_ = c["radius"].as<float>();
             xyz_offset_ <<
-              config["x_0"].as<float>(),
-              config["y_0"].as<float>(),
-              config["z_0"].as<float>();
+              c["x_0"].as<float>(),
+              c["y_0"].as<float>(),
+              c["z_0"].as<float>();
 
-            traj_cycle_duration_ = config["traj_cycle_duration"].as<float>();
+            traj_cycle_duration_ = c["traj_cycle_duration"].as<float>();
             dt_ = controller_->dt();
             num_traj_steps_ = round( traj_cycle_duration_/ dt_);
             trajectory_.reserve(num_traj_steps_);

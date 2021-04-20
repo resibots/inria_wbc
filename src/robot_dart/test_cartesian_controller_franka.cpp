@@ -17,6 +17,7 @@
 #endif
 
 #include "inria_wbc/behaviors/behavior.hpp"
+#include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 
@@ -30,13 +31,14 @@ int main(int argc, char* argv[])
         // clang-format off
         desc.add_options()
         ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
+        ("behavior,b", po::value<std::string>()->default_value("../etc/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("conf,c", po::value<std::string>()->default_value("../etc/circular_cartesian.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/circular_cartesian.yaml]")
+        ("controller,c", po::value<std::string>()->default_value("../etc/franka_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka_pos_tracker.yaml]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
-        ("fast,f", "fast (simplified) Talos [default: false]")
         ("control_freq", po::value<int>()->default_value(1000), "set the control frequency")
         ("sim_freq", po::value<int>()->default_value(1000), "set the simulation frequency")
         ("ghost,g", "display the ghost (Pinocchio model)")
@@ -103,7 +105,6 @@ int main(int argc, char* argv[])
 
         std::vector<std::pair<std::string, std::string>> packages = {{"franka_description", "franka/franka_description"}};
         std::string urdf = "franka/franka.urdf";
-
         auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
         robot->fix_to_world();
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
@@ -134,27 +135,29 @@ int main(int argc, char* argv[])
         simu.add_robot(robot);
         simu.add_checkerboard_floor();
 
-        //////////////////// INIT STACK OF TASK //////////////////////////////////////
-        std::string sot_config_path = vm["conf"].as<std::string>();
+        ///// CONTROLLER
+        auto controller_path = vm["controller"].as<std::string>();
+        auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
+
+        controller_config["CONTROLLER"]["base_path"] = "../etc";// we assume that we run in ./build
+        controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
+        controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
+        controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
-        inria_wbc::controllers::Controller::Params params = {
-            robot->model_filename(),
-            sot_config_path,
-            1.0f/ control_freq,
-            verbose,
-            robot->mimic_dof_names()};
 
-        YAML::Node config = IWBC_CHECK(YAML::LoadFile(sot_config_path));
+        auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
+        auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
+        auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+        IWBC_ASSERT(controller_pos, "we expect a PosTracker here");
 
-        auto controller_name = IWBC_CHECK(config["CONTROLLER"]["name"].as<std::string>());
-        auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+        auto behavior_path = vm["behavior"].as<std::string>();
+        auto behavior_config = IWBC_CHECK(YAML::LoadFile(behavior_path));
+        auto behavior_name = IWBC_CHECK(behavior_config["BEHAVIOR"]["name"].as<std::string>());
+        auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
+        IWBC_ASSERT(behavior, "invalid behavior");
 
-        auto behavior_name = IWBC_CHECK(config["BEHAVIOR"]["name"].as<std::string>());
-        auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
-        assert(behavior);
 
         auto all_dofs = controller->all_dofs();
-
         auto controllable_dofs = controller->controllable_dofs();
         robot->set_positions(controller->q0(), all_dofs);
 

@@ -31,32 +31,27 @@ namespace inria_wbc {
     namespace controllers {
         static Register<PosTracker> __generic_pos_tracker("pos-tracker");
 
-        PosTracker::PosTracker(const Params& params) : Controller(params)
+        PosTracker::PosTracker(const YAML::Node& config) : Controller(config)
         {
-            if (params.sot_config_path.empty()) {
-                throw IWBC_EXCEPTION("empty configuration path! (we expect a YAML file)");
-            }
+            // we only care about the CONTROLLER section
+            YAML::Node c = IWBC_CHECK(config["CONTROLLER"]);
 
-            if (verbose_)
-                std::cout << "loading main YAML file:" << params.sot_config_path << std::endl;
+            // all the file paths are relative to base_path
+            auto path = IWBC_CHECK(c["base_path"].as<std::string>());
 
-            // all the file paths are relative to the main config file
-            auto path = boost::filesystem::path(params.sot_config_path).parent_path();
-
-            YAML::Node config = IWBC_CHECK(YAML::LoadFile(params.sot_config_path)["CONTROLLER"]);
-
+           
             // create additional frames if needed (optional)
-            if (config["frames"]) {
-                auto p_frames = path / boost::filesystem::path(config["frames"].as<std::string>());
-                parse_frames(p_frames.string());
+            if (c["frames"]) {
+                auto p_frames = path + "/" + c["frames"].as<std::string>();
+                parse_frames(p_frames);
             }
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
-            auto srdf_file = IWBC_CHECK(config["configurations"].as<std::string>());
-            auto ref_config = IWBC_CHECK(config["ref_config"].as<std::string>());
-            auto p_srdf = path / boost::filesystem::path(srdf_file);
-            pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
+            auto srdf_file = IWBC_CHECK(c["configurations"].as<std::string>());
+            auto ref_config = IWBC_CHECK(c["ref_config"].as<std::string>());
+            auto p_srdf = path + "/"  + srdf_file;
+            pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf, verbose_);
 
             //q_tsid_ for talos is of size 37 (pos+quat+nactuated) 
             auto ref_map = robot_->model().referenceConfigurations;
@@ -88,7 +83,7 @@ namespace inria_wbc {
             assert(tsid_);
             assert(robot_);
 
-            auto task_file = IWBC_CHECK(config["tasks"].as<std::string>());
+            auto task_file = IWBC_CHECK(c["tasks"].as<std::string>());
             auto p = path / boost::filesystem::path(task_file);
             parse_tasks(p.string());
 

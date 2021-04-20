@@ -13,7 +13,7 @@ namespace inria_wbc {
         public:
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-            TalosPosTracker(const Params& params);
+            TalosPosTracker(const YAML::Node& config);
             TalosPosTracker(const TalosPosTracker& other) = delete;
             TalosPosTracker& operator=(const TalosPosTracker& o) const = delete;
             virtual ~TalosPosTracker(){};
@@ -27,7 +27,7 @@ namespace inria_wbc {
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
         protected:
-            virtual void parse_configuration_yaml(const std::string& sot_config_path);
+            virtual void parse_configuration(const YAML::Node& config);
             void parse_collision_thresholds(const std::string& config_path);
             
             estimators::Cop _cop_estimator;

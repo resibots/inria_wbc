@@ -5,15 +5,16 @@ namespace inria_wbc {
 
         static Register<TalosSquat> __talos_squat("talos-squat");
 
-        TalosSquat::TalosSquat(const controller_ptr_t& controller) : Behavior(controller)
+        TalosSquat::TalosSquat(const controller_ptr_t& controller, const YAML::Node& config) : 
+            Behavior(controller, config)
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
             auto com_init = std::static_pointer_cast<controllers::PosTracker>(controller_)->com();
 
-            YAML::Node config = IWBC_CHECK(YAML::LoadFile(controller_->params().sot_config_path)["BEHAVIOR"]);
-            trajectory_duration_ = IWBC_CHECK(config["trajectory_duration"].as<float>());
-            motion_size_ = IWBC_CHECK(config["motion_size"].as<float>());
+            auto c = IWBC_CHECK(config["BEHAVIOR"]);
+            trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
+            motion_size_ = IWBC_CHECK(c["motion_size"].as<float>());
 
             auto com_final = com_init;
             com_final(2) -= motion_size_;

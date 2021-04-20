@@ -14,10 +14,13 @@ namespace inria_wbc {
 
         class CircCartTraj : public Behavior {
         public:
-            CircCartTraj(const controller_ptr_t& controller);
+            CircCartTraj(const controller_ptr_t& controller, const YAML::Node& config);
             CircCartTraj() = delete;
-            CircCartTraj(const CircCartTraj& other) = default;
+            CircCartTraj(const CircCartTraj&) = delete;
+
             void update(const controllers::SensorData& sensor_data) override;
+            virtual ~CircCartTraj() {}
+
             pinocchio::SE3 func_traj( const float t);
 
         private:
