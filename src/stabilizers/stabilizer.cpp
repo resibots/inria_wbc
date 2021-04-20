@@ -154,7 +154,7 @@ namespace inria_wbc {
                 IWBC_ERROR("zmp_distributor_admittance : ground force is more than 10*M*g , check sensor measurment");
 
             double zctrl = std::abs(lf_normal_force - rf_normal_force) - std::abs(lf_sensor_force(2) - rf_sensor_force(2));
-            auto torso_roll = -p_ffda[0] * zctrl;
+            auto torso_roll = p_ffda[0] * zctrl;
 
             pinocchio::SE3 torso_ref;
             auto torso_pos = torso_sample_ref.pos;
