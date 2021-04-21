@@ -117,7 +117,7 @@ namespace inria_wbc {
             bool verbose_ = false;
             double t_;
             double dt_;
-            bool has_floating_base_;
+            bool floating_base_;
 
             std::string fb_joint_name_; //name of the floating base joint
             std::vector<std::string> mimic_dof_names_;

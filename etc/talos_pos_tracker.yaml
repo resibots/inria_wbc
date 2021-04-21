@@ -31,6 +31,4 @@ CONTROLLER:
     filter_size: 30
     max_invalid: 5
     thresholds: collision_thresholds.yaml
-
-
-  has_floating_base: false
+  floating_base: true

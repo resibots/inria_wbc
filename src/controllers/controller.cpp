@@ -65,9 +65,9 @@ namespace inria_wbc {
 
             pinocchio::Model robot_model;
 
-            has_floating_base_ = IWBC_CHECK(c["has_floating_base"].as<bool>());
+            floating_base_ = IWBC_CHECK(c["floating_base"].as<bool>());
 
-            if (has_floating_base_) {
+            if (floating_base_) {
 
               if (!floating_base_joint_name.empty()) {
                   fb_joint_name_ = floating_base_joint_name; //floating base joint already in urdf
@@ -81,8 +81,7 @@ namespace inria_wbc {
             }
             else{
               fb_joint_name_ = "";
-              const std::vector<std::string> dummy_vec;
-              robot_ = std::make_shared<RobotWrapper>(urdf, dummy_vec ,verbose_); //this overloaded constructor allows to to not have a f_base
+              robot_ = std::make_shared<RobotWrapper>(urdf, std::vector<std::string>() ,verbose_); //this overloaded constructor allows to to not have a f_base
             }
 
             _reset();
@@ -156,7 +155,7 @@ namespace inria_wbc {
                 t_ += dt_;
 
 
-                if ( has_floating_base_){
+                if ( floating_base_){
                   Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                   Eigen::AngleAxisd aaxis(quat);
                   q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7);//q_tsid_ of size 37 (pos+quat+nactuated)
@@ -201,7 +200,7 @@ namespace inria_wbc {
         {
             auto na = robot_->model().names;
             std::vector<std::string> tsid_controllables;
-            if ( has_floating_base_){
+            if ( floating_base_){
               tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
             }
             else{
@@ -219,7 +218,7 @@ namespace inria_wbc {
         {
 
             std::vector<std::string> floating_base_dofs;
-            if ( has_floating_base_){
+            if ( floating_base_){
 
                 if (fb_joint_name_ == "root_joint") {
                     floating_base_dofs = {"rootJoint_pos_x",

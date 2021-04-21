@@ -9,5 +9,4 @@ CONTROLLER:
   dt: 0.001
   verbose: false
   mimic_dof_names : []
-
-  has_floating_base: false
+  floating_base: false

@@ -12,14 +12,14 @@
 namespace inria_wbc {
     namespace behaviors {
 
-        class CircCartTraj : public Behavior {
+        class CircularCartesianTrajectory : public Behavior {
         public:
-            CircCartTraj(const controller_ptr_t& controller, const YAML::Node& config);
-            CircCartTraj() = delete;
-            CircCartTraj(const CircCartTraj&) = delete;
+            CircularCartesianTrajectory(const controller_ptr_t& controller, const YAML::Node& config);
+            CircularCartesianTrajectory() = delete;
+            CircularCartesianTrajectory(const CircularCartesianTrajectory&) = delete;
 
             void update(const controllers::SensorData& sensor_data) override;
-            virtual ~CircCartTraj() {}
+            virtual ~CircularCartesianTrajectory() {}
 
             pinocchio::SE3 func_traj( const float t);
 

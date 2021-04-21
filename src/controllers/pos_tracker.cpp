@@ -58,7 +58,7 @@ namespace inria_wbc {
             IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
             q_tsid_ = ref_map[ref_config];
 
-            if ( has_floating_base_){
+            if ( floating_base_){
               //q0_ is in "Dart format" for the floating base
               Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
               Eigen::AngleAxisd aaxis(quat);
