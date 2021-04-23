@@ -11,11 +11,10 @@ namespace inria_wbc {
             traj_index_=0.;
             YAML::Node c = IWBC_CHECK(config["BEHAVIOR"]);
 
+            target_task_name_ = c["target_task_name"].as<std::string>();
             pitch_angle_ = c["pitch_angle"].as<float>();
             radius_ = c["radius"].as<float>();
-            auto t_0 = c["init_pos"].as<std::vector<double>>();
-            xyz_offset_ = Eigen::Vector3d(t_0.data());
-
+            init_pos_ = Eigen::Vector3d(c["init_pos"].as<std::vector<double>>().data());
             traj_cycle_duration_ = c["traj_cycle_duration"].as<float>();
             dt_ = controller_->dt();
             num_traj_steps_ = round( traj_cycle_duration_/ dt_);
@@ -41,7 +40,7 @@ namespace inria_wbc {
               sin(beta) * radius_,
               cos(beta) * radius_;
 
-            ref_ee.translation( ref_xyz + xyz_offset_);
+            ref_ee.translation( ref_xyz + init_pos_);
 
             Eigen::Matrix3d rot_ee;
             const double phi =  M_PI;
@@ -63,7 +62,7 @@ namespace inria_wbc {
               traj_index_ = 0;
             }
             std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)
-              ->set_se3_ref(trajectory_[traj_index_],"ee");
+              ->set_se3_ref(trajectory_[traj_index_], target_task_name_);
 
             controller_->update(sensor_data);
             ++traj_index_;

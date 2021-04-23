@@ -26,10 +26,12 @@ namespace inria_wbc {
         private:
             int traj_index_;
             float dt_;
+            std::string target_task_name_;
             float pitch_angle_;
             float radius_;
+            Eigen::Vector3d init_pos_;
             float traj_cycle_duration_;
-            Eigen::Vector3d xyz_offset_;
+            
             std::vector<pinocchio::SE3> trajectory_;
             int num_traj_steps_;
         };
