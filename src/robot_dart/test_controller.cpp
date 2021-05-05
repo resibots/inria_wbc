@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
         ("check_fall", "check if the robot has fallen (print if a collision)")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
-        ("controller,c", po::value<std::string>()->default_value("../etc/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
+        ("controller,c", po::value<std::string>()->default_value("../etc/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos_pos_tracker.yaml]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("fast,f", "fast (simplified) Talos [default: false]")
@@ -157,6 +157,7 @@ int main(int argc, char* argv[])
         controller_config["CONTROLLER"]["base_path"] = "../etc";// we assume that we run in ./build
         controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
+        controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
         auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
         auto closed_loop =  IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"]);
