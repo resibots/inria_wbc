@@ -160,13 +160,15 @@ int main(int argc, char* argv[])
         controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
         auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
-        auto closed_loop =  IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"]);
+        auto closed_loop =  IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"].as<bool>());
         if (vm.count("closed_loop")) {
             closed_loop = true;
             controller_config["CONTROLLER"]["closed_loop"] = true;
         }
+
         if(vm["actuators"].as<std::string>() == "torque" && !closed_loop)
-           std::cout<<"WARNING (iwbc): you should activate the closed loop if you are using torque control! (-l or yaml)" << std::endl;
+           std::cout << "WARNING (iwbc): you should activate the closed loop if you are using torque control! (--closed_loop or yaml)" << std::endl;
+
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
         auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
         IWBC_ASSERT(controller_pos, "we expect a PosTracker here");
