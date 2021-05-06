@@ -221,7 +221,7 @@ void test_behavior(const std::string& controller_path,
             if (actuator_type == "velocity" || actuator_type == "servo")
                 cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, cst::dt);
             else if (actuator_type == "spd")
-                inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
+                cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
             else // torque
                 cmd = controller->tau();
 

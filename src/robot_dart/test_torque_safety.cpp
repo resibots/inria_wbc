@@ -264,7 +264,7 @@ int main(int argc, char* argv[])
                  if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
                 else if (vm["actuators"].as<std::string>() == "spd" )
-                    inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
+                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
                 else // torque
                     cmd = controller->tau();
 
