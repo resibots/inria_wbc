@@ -178,24 +178,30 @@ namespace inria_wbc {
             }
 
             if (_closed_loop) {
-                IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(), 
+                IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(),
                     "we need the floating base position in closed loop mode!");
                 IWBC_ASSERT(sensor_data.find("floating_base_velocity") != sensor_data.end(),
                     "we need the floating base velocity in closed loop mode!");
-                IWBC_ASSERT(sensor_data.find("positions") != sensor_data.end(), 
+                IWBC_ASSERT(sensor_data.find("positions") != sensor_data.end(),
                     "we need the joint positions in closed loop mode!");
-                IWBC_ASSERT(sensor_data.find("joint_velocities") != sensor_data.end(), 
+                IWBC_ASSERT(sensor_data.find("joint_velocities") != sensor_data.end(),
                     "we need the joint velocities in closed loop mode!");
-                IWBC_ASSERT(sensor_data.at("joint_velocities").size() + sensor_data.at("floating_base_velocity").size() == v_tsid_.size(), 
-                    "Joint velocities do not have the correct size:", sensor_data.at("joint_velocities").size() + sensor_data.at("floating_base_velocity").size() , " vs (expected)", dq_.size());
-                IWBC_ASSERT(sensor_data.at("positions").size() + sensor_data.at("floating_base_position").size() == q_tsid_.size(), 
-                    "Joint positions do not have the correct size:", sensor_data.at("positions").size() + sensor_data.at("floating_base_position").size(), " vs (expected)", q_tsid_.size());
 
+                Eigen::VectorXd q_tsid(q_tsid_.size()), dq(v_tsid_.size());
+                auto pos = sensor_data.at("positions");
+                auto vel = sensor_data.at("joint_velocities");
+                auto fb_pos = sensor_data.at("floating_base_position");
+                auto fb_vel = sensor_data.at("floating_base_velocity");
 
-                Eigen::VectorXd q(q_tsid_.size()), dq(v_tsid_.size());
-                q << sensor_data.at("floating_base_position"), sensor_data.at("positions");
-                dq << sensor_data.at("floating_base_velocity"), sensor_data.at("joint_velocities");
-                _solve(q, dq);
+                IWBC_ASSERT(vel.size() + fb_vel.size() == v_tsid_.size(),
+                    "Joint velocities do not have the correct size:", vel.size() + fb_vel.size(), " vs (expected)", v_tsid_.size());
+                IWBC_ASSERT(pos.size() + fb_pos.size() == q_tsid_.size(),
+                    "Joint positions do not have the correct size:", pos.size() + fb_pos.size(), " vs (expected)", q_tsid_.size());
+
+                q_tsid << fb_pos, pos;
+                dq << fb_vel, vel;
+
+                _solve(q_tsid, dq);
             } else {
                 _solve();
             }

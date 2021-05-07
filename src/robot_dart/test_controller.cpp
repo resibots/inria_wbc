@@ -299,10 +299,10 @@ int main(int argc, char* argv[])
                 sensor_data["acceleration"] = imu->linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
                 // joint positions (excluding floating base)
-                sensor_data["positions"] = robot->positions(controllable_dofs);
+                sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
                 // joint torque sensors
                 sensor_data["joints_torque"] = tq_sensors;
-                sensor_data["joint_velocities"] = robot->velocities(controllable_dofs);
+                sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
                 // floating base (perfect: no noise in the estimate)
                 sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
                 sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
@@ -319,7 +319,7 @@ int main(int argc, char* argv[])
                 else if (vm["actuators"].as<std::string>() == "spd" )
                     cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
                 else // torque
-                    cmd = controller->tau();
+                    cmd = controller->tau(false);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
