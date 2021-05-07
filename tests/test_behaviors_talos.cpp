@@ -31,6 +31,7 @@
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
+#include "inria_wbc/robot_dart/utils.hpp"
 
 namespace cst {
     static constexpr double dt = 0.001;
@@ -127,7 +128,6 @@ void test_behavior(const std::string& controller_path,
     c_config["CONTROLLER"]["urdf"] = robot->model_filename();
     c_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
 
-
     // get the controller
     auto controller_name = IWBC_CHECK(c_config["CONTROLLER"]["name"].as<std::string>());
     if (actuator_type == "torque") // force closed-loop
@@ -207,8 +207,10 @@ void test_behavior(const std::string& controller_path,
         sensor_data["rf_force"] = ft_sensor_right->force();
         sensor_data["acceleration"] = imu->linear_acceleration();
         sensor_data["velocity"] = robot->com_velocity().tail<3>();
-        sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
-
+        sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
+        sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
+        sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
+        sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
         // command
         if (simu.schedule(simu.control_freq())) {
             auto t1_solver = high_resolution_clock::now();
@@ -223,7 +225,7 @@ void test_behavior(const std::string& controller_path,
             else if (actuator_type == "spd")
                 cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
             else // torque
-                cmd = controller->tau();
+                cmd = controller->tau(false);
 
             auto t2_cmd = high_resolution_clock::now();
             time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
@@ -404,17 +406,17 @@ void test_behavior(const std::string& controller_path,
     std::cout << std::endl;
 }
 
-void test_behavior(const std::string& controller_path, 
-const std::string& behavior_path,
-const std::string& actuators, const std::string& coll, const std::string& enable_stabilizer, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
+void test_behavior(const std::string& controller_path,
+    const std::string& behavior_path,
+    const std::string& actuators, const std::string& coll, const std::string& enable_stabilizer, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
 {
-    std::cout << colors::blue << colors::bold << "TESTING: " 
-        << controller_path << " |" 
-        << behavior_path << " | " 
-        << actuators << " | " 
-        << coll << " | enable_stabilizer: " 
-        << enable_stabilizer << " | " 
-        << urdf << colors::rst << std::endl;
+    std::cout << colors::blue << colors::bold << "TESTING: "
+              << controller_path << " |"
+              << behavior_path << " | "
+              << actuators << " | "
+              << coll << " | enable_stabilizer: "
+              << enable_stabilizer << " | "
+              << urdf << colors::rst << std::endl;
     yout << y::Key << urdf << y::BeginMap;
 
     y::Node node;
@@ -430,7 +432,7 @@ const std::string& actuators, const std::string& coll, const std::string& enable
     // create the simulator and the robot
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
-    if (actuators ==  "spd")
+    if (actuators == "spd")
         robot->set_actuator_types("torque");
     else
         robot->set_actuator_types(actuators);
