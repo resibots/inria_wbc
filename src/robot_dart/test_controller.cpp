@@ -159,6 +159,7 @@ int main(int argc, char* argv[])
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
+        controller_config["CONTROLLER"]["dt"] = 1.0 / control_freq;
         auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
         auto closed_loop =  IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"].as<bool>());
         if (vm.count("closed_loop")) {
@@ -317,7 +318,7 @@ int main(int argc, char* argv[])
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
                 else if (vm["actuators"].as<std::string>() == "spd" )
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
+                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./sim_freq);
                 else // torque
                     cmd = controller->tau(false);
                 auto t2_cmd = high_resolution_clock::now();
