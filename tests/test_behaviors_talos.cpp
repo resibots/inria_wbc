@@ -482,7 +482,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     // the YAMl file has a timestamp (so that we can archive them)
     yout << y::Key << "timestamp" << y::Value << date();
 
-    // use ./my_test ../../etc/arm.yaml servo fcl false talos/talos.urdf  for a specific test
+    // use ./my_test ./test_behaviors_talos_graphics --  ../../etc/talos_pos_tracker.yaml ../../etc/arm.yaml servo fcl false  talos/talos.urdf  for a specific test
     auto argc = boost::unit_test::framework::master_test_suite().argc;
     auto argv = boost::unit_test::framework::master_test_suite().argv;
 
@@ -512,12 +512,14 @@ BOOST_AUTO_TEST_CASE(behaviors)
             for (auto& c : collision) {
                 yout << y::Key << c << y::Value << y::BeginMap;
                 for (auto& s : stabilized) {
-                    yout << y::Key << "stabilized_" + s << y::Value << y::BeginMap;
-                    test_behavior(controller, b, a, c, s, urdfs[1], ref, yout);
-                    if (c != std::string("dart")) {
-                        test_behavior(controller, b, a, c, s, urdfs[0], ref, yout);
+                    if (!(s == std::string("true") && a == std::string("torque"))) {
+                        yout << y::Key << "stabilized_" + s << y::Value << y::BeginMap;
+                        test_behavior(controller, b, a, c, s, urdfs[1], ref, yout);
+                        if (c != std::string("dart")) {
+                            test_behavior(controller, b, a, c, s, urdfs[0], ref, yout);
+                        }
+                        yout << y::EndMap;
                     }
-                    yout << y::EndMap;
                 }
                 yout << y::EndMap;
             }
