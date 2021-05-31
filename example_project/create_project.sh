@@ -16,7 +16,8 @@ for i in $FILES; do
 done
 mv cmake/example_project.cmake.in cmake/$PROJECT_NAME.cmake.in 
 mv cmake/example_projectConfigVersion.cmake.in cmake/${PROJECT_NAME}ConfigVersion.cmake.in
-mv etc/example_project.yaml etc/$PROJECT_NAME.yaml
+mv etc/example_project_behavior.yaml etc/${PROJECT_NAME}_behavior.yaml
+mv etc/example_project_controller.yaml etc/${PROJECT_NAME}_controller.yaml
 
 #useful only on osx
 find .|grep -- -e|xargs rm -f
