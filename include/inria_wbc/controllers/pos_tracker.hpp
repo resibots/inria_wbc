@@ -9,7 +9,7 @@ namespace inria_wbc {
       
         class PosTracker : public Controller {
         public:
-            PosTracker(const Params& params);
+            PosTracker(const YAML::Node& config);
             PosTracker(const PosTracker& other) = delete;
             PosTracker& operator=(const PosTracker& o) const = delete;
             virtual ~PosTracker(){};

@@ -35,32 +35,14 @@ namespace inria_wbc {
 
         using SensorData = std::unordered_map<std::string, Eigen::MatrixXd>;
 
+        static constexpr int FIXED_BASE = 0;
+        static constexpr int SINGLE_SUPPORT = 1;
+        static constexpr int DOUBLE_SUPPORT = 2;
+
         class Controller {
         public:
-            struct Params {
-                std::string urdf_path;
-                std::string sot_config_path;
-                float dt;
-                bool verbose;
-                std::vector<std::string> mimic_dof_names;
-                std::string floating_base_joint_name = "";
-
-                void print() const
-                {
-                    std::cout << "****** params ******\n"
-                              << "urdf_path :\t" << urdf_path << "\n"
-                              << "sot_config_path :\t" << sot_config_path << "\n"
-                              << "dt :\t" << dt << "\n"
-                              << "verbose :\t" << verbose << "\n"
-                              << "mimic_dof_names :\t{ ";
-                    for (auto& m : mimic_dof_names) {
-                        std::cout << m << " ";
-                    }
-                    std::cout << " }\nfloating_base_joint_name :\t" << floating_base_joint_name << std::endl;
-                }
-            };
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-            Controller(const Params& params);
+            Controller(const YAML::Node& config);
             Controller(const Controller&) = delete;
             Controller& operator=(const Controller& o) = delete;
             virtual ~Controller(){};
@@ -132,7 +114,7 @@ namespace inria_wbc {
             tsid::math::Vector q_tsid() const { return q_tsid_; };
 
             double dt() const { return dt_; };
-            const Params& params() const { return params_; };
+            const YAML::Node& config() const { return config_; };
 
             std::shared_ptr<tsid::robots::RobotWrapper> robot() { return robot_; };
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid() { return tsid_; };
@@ -162,17 +144,31 @@ namespace inria_wbc {
             }
             virtual double cost(const std::string& task_name) const = 0;
 
+            void set_verbose(bool b) { verbose_ = b; }
+            bool verbose() const { return verbose_; }
+
+            void set_behavior_type(uint b);
+            bool behavior_type() const { return behavior_type_; }
+            virtual void parse_stabilizer(const YAML::Node& config)
+            {
+                if (verbose_)
+                    std::cout << "There is no stabilizer for this controller" << std::endl;
+            };
+
         private:
             std::vector<int> get_non_mimics_indexes() const;
 
         protected:
             void _reset();
-            void _solve();
+            // you can use q_tsid_ and v_tsid_ for open-loop control
+            void _solve(const Eigen::VectorXd& q, const Eigen::VectorXd& dq);
+            void _solve() { _solve(q_tsid_, v_tsid_); }
 
-            Params params_;
-            bool verbose_;
+            const YAML::Node& config_;
+            bool verbose_ = false;
             double t_;
             double dt_;
+            int behavior_type_ = FIXED_BASE;
 
             std::string fb_joint_name_; //name of the floating base joint
             std::vector<std::string> mimic_dof_names_;
@@ -201,8 +197,6 @@ namespace inria_wbc {
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
         };
 
-        Controller::Params parse_params(YAML::Node config);
-
         inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
         {
             tsid::trajectories::TrajectorySample sample;
@@ -220,7 +214,7 @@ namespace inria_wbc {
             return sample;
         }
 
-        using Factory = utils::Factory<Controller, Controller::Params>;
+        using Factory = utils::Factory<Controller, YAML::Node>;
         template <typename T>
         using Register = Factory::AutoRegister<T>;
     } // namespace controllers

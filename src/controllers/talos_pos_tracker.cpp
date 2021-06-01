@@ -34,87 +34,23 @@ namespace inria_wbc {
     namespace controllers {
         static Register<TalosPosTracker> __talos_pos_tracking("talos-pos-tracker");
 
-        TalosPosTracker::TalosPosTracker(const Params& params) : PosTracker(params)
+        TalosPosTracker::TalosPosTracker(const YAML::Node& config) : PosTracker(config)
         {
-            parse_configuration_yaml(params.sot_config_path);
+            parse_configuration(config["CONTROLLER"]);
             if (verbose_)
                 std::cout << "Talos pos tracker initialized" << std::endl;
         }
 
-        void TalosPosTracker::parse_configuration_yaml(const std::string& sot_config_path)
+        void TalosPosTracker::parse_configuration(const YAML::Node& config)
         {
-            // init stabilizer
-            {
-                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["stabilizer"]);
-                _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
-                _activate_zmp = IWBC_CHECK(c["activate_zmp"].as<bool>());
-                _torso_max_roll = IWBC_CHECK(c["torso_max_roll"].as<double>());
+            // closed loop
+            _closed_loop = IWBC_CHECK(config["closed_loop"].as<bool>());
 
-                //set the _torso_max_roll in the bounds for safety
-                auto names = robot_->model().names;
-                names.erase(names.begin(), names.begin() + names.size() - robot_->na());
-                auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
-                auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
-                std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
-
-                for (auto& n : to_limit) {
-                    IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
-                    auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
-
-                    IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
-
-                    q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _torso_max_roll;
-                    q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _torso_max_roll;
-                }
-
-                bound_task()->setPositionBounds(q_lb, q_ub);
-
-                //get stabilizers gains
-                _com_gains.resize(6);
-                _ankle_gains.resize(6);
-                _ffda_gains.resize(3);
-                _zmp_p.resize(6);
-                _zmp_d.resize(6);
-                _zmp_w.resize(6);
-
-                _com_gains.setZero();
-                _ankle_gains.setZero();
-                _ffda_gains.setZero();
-                _zmp_p.setZero();
-                _zmp_d.setZero();
-                _zmp_w.setZero();
-
-                IWBC_ASSERT(IWBC_CHECK(c["com"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the com stabilizer");
-                IWBC_ASSERT(IWBC_CHECK(c["ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the ankle stabilizer");
-                IWBC_ASSERT(IWBC_CHECK(c["ffda"].as<std::vector<double>>()).size() == 3, "you need 6 coefficient in p for the ffda stabilizer");
-                IWBC_ASSERT(IWBC_CHECK(c["zmp_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the zmp stabilizer");
-                IWBC_ASSERT(IWBC_CHECK(c["zmp_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the zmp stabilizer");
-                IWBC_ASSERT(IWBC_CHECK(c["zmp_w"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in w for the zmp stabilizer");
-
-                _com_gains = Eigen::VectorXd::Map(IWBC_CHECK(c["com"].as<std::vector<double>>()).data(), _com_gains.size());
-                _ankle_gains = Eigen::VectorXd::Map(IWBC_CHECK(c["ankle"].as<std::vector<double>>()).data(), _ankle_gains.size());
-                _ffda_gains = Eigen::VectorXd::Map(IWBC_CHECK(c["ffda"].as<std::vector<double>>()).data(), _ffda_gains.size());
-                _zmp_p = Eigen::VectorXd::Map(IWBC_CHECK(c["zmp_p"].as<std::vector<double>>()).data(), _zmp_p.size());
-                _zmp_d = Eigen::VectorXd::Map(IWBC_CHECK(c["zmp_d"].as<std::vector<double>>()).data(), _zmp_d.size());
-                _zmp_w = Eigen::VectorXd::Map(IWBC_CHECK(c["zmp_w"].as<std::vector<double>>()).data(), _zmp_w.size());
-
-                auto history = c["filter_size"].as<int>();
-                _cop_estimator.set_history_size(history);
-
-                _lf_force_filtered.setZero();
-                _rf_force_filtered.setZero();
-                _lf_force_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
-                _rf_force_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
-
-                _lf_torque_filtered.setZero();
-                _rf_torque_filtered.setZero();
-                _lf_torque_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
-                _rf_torque_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
-            }
+            parse_stabilizer(config);
 
             // init collision detection
             {
-                YAML::Node c = IWBC_CHECK(YAML::LoadFile(sot_config_path)["CONTROLLER"]["collision_detection"]);
+                auto c = IWBC_CHECK(config["collision_detection"]);
                 _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
                 auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
                 auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
@@ -141,9 +77,9 @@ namespace inria_wbc {
 
                 // update thresholds from file (if any)
                 if (c["thresholds"]) {
-                    auto path = boost::filesystem::path(sot_config_path).parent_path();
-                    auto p_thresh = IWBC_CHECK(path / boost::filesystem::path(c["thresholds"].as<std::string>()));
-                    parse_collision_thresholds(p_thresh.string());
+                    auto path = IWBC_CHECK(config["base_path"].as<std::string>());
+                    auto p_thresh = IWBC_CHECK(path + "/" + c["thresholds"].as<std::string>());
+                    parse_collision_thresholds(p_thresh);
                 }
 
                 _torque_collision_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
@@ -154,15 +90,6 @@ namespace inria_wbc {
             }
 
             if (verbose_) {
-                std::cout << "Stabilizer:" << _use_stabilizer << std::endl;
-                std::cout << "com:" << _com_gains.transpose() << std::endl;
-                std::cout << "ankle:" << _ankle_gains.transpose() << std::endl;
-                std::cout << "ffda:" << _ffda_gains.transpose() << std::endl;
-                std::cout << "Zmp:" << _activate_zmp << std::endl;
-                std::cout << "zmp_p:" << _zmp_p.transpose() << std::endl;
-                std::cout << "zmp_d:" << _zmp_d.transpose() << std::endl;
-                std::cout << "zmp_w:" << _zmp_w.transpose() << std::endl;
-
                 std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
                 std::cout << "with thresholds" << std::endl;
                 for (size_t id = 0; id < _torque_collision_joints.size(); ++id)
@@ -180,6 +107,97 @@ namespace inria_wbc {
             }
 
             return;
+        }
+
+        void TalosPosTracker::parse_stabilizer(const YAML::Node& config)
+        {
+            auto c = IWBC_CHECK(config["stabilizer"]);
+            _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
+
+            std::string stab_path;
+            auto path = IWBC_CHECK(config["base_path"].as<std::string>());
+            if (behavior_type_ == FIXED_BASE)
+                stab_path = IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>());
+            if (behavior_type_ == SINGLE_SUPPORT)
+                stab_path = IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>());
+            if (behavior_type_ == DOUBLE_SUPPORT)
+                stab_path = IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>());
+
+            YAML::Node s = IWBC_CHECK(YAML::LoadFile(stab_path));
+            _activate_zmp = IWBC_CHECK(s["activate_zmp"].as<bool>());
+            _torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());
+
+            //set the _torso_max_roll in the bounds for safety
+            auto names = robot_->model().names;
+            names.erase(names.begin(), names.begin() + names.size() - robot_->na());
+            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
+            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
+            std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
+
+            for (auto& n : to_limit) {
+                IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
+                auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
+
+                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
+
+                q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _torso_max_roll;
+                q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _torso_max_roll;
+            }
+
+            bound_task()->setPositionBounds(q_lb, q_ub);
+
+            //get stabilizers gains
+            _com_gains.resize(6);
+            _ankle_gains.resize(6);
+            _ffda_gains.resize(3);
+            _zmp_p.resize(6);
+            _zmp_d.resize(6);
+            _zmp_w.resize(6);
+
+            _com_gains.setZero();
+            _ankle_gains.setZero();
+            _ffda_gains.setZero();
+            _zmp_p.setZero();
+            _zmp_d.setZero();
+            _zmp_w.setZero();
+
+            IWBC_ASSERT(IWBC_CHECK(s["com"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the com stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the ankle stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["ffda"].as<std::vector<double>>()).size() == 3, "you need 6 coefficient in p for the ffda stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the zmp stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the zmp stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in w for the zmp stabilizer");
+
+            _com_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["com"].as<std::vector<double>>()).data(), _com_gains.size());
+            _ankle_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).data(), _ankle_gains.size());
+            _ffda_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ffda"].as<std::vector<double>>()).data(), _ffda_gains.size());
+            _zmp_p = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).data(), _zmp_p.size());
+            _zmp_d = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).data(), _zmp_d.size());
+            _zmp_w = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).data(), _zmp_w.size());
+
+            auto history = s["filter_size"].as<int>();
+            _cop_estimator.set_history_size(history);
+
+            _lf_force_filtered.setZero();
+            _rf_force_filtered.setZero();
+            _lf_force_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
+            _rf_force_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
+
+            _lf_torque_filtered.setZero();
+            _rf_torque_filtered.setZero();
+            _lf_torque_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
+            _rf_torque_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
+
+            if (verbose_) {
+                std::cout << "Stabilizer:" << _use_stabilizer << std::endl;
+                std::cout << "com:" << _com_gains.transpose() << std::endl;
+                std::cout << "ankle:" << _ankle_gains.transpose() << std::endl;
+                std::cout << "ffda:" << _ffda_gains.transpose() << std::endl;
+                std::cout << "Zmp:" << _activate_zmp << std::endl;
+                std::cout << "zmp_p:" << _zmp_p.transpose() << std::endl;
+                std::cout << "zmp_d:" << _zmp_d.transpose() << std::endl;
+                std::cout << "zmp_w:" << _zmp_w.transpose() << std::endl;
+            }
         }
 
         void TalosPosTracker::update(const SensorData& sensor_data)
@@ -308,8 +326,35 @@ namespace inria_wbc {
                 _collision_detected = (false == _torque_collision_detection.check(tsid_tau, sensor_data.at("joints_torque")));
             }
 
-            // solve everything
-            _solve();
+            if (_closed_loop) {
+                IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(),
+                    "we need the floating base position in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("floating_base_velocity") != sensor_data.end(),
+                    "we need the floating base velocity in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("positions") != sensor_data.end(),
+                    "we need the joint positions in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("joint_velocities") != sensor_data.end(),
+                    "we need the joint velocities in closed loop mode!");
+
+                Eigen::VectorXd q_tsid(q_tsid_.size()), dq(v_tsid_.size());
+                auto pos = sensor_data.at("positions");
+                auto vel = sensor_data.at("joint_velocities");
+                auto fb_pos = sensor_data.at("floating_base_position");
+                auto fb_vel = sensor_data.at("floating_base_velocity");
+
+                IWBC_ASSERT(vel.size() + fb_vel.size() == v_tsid_.size(),
+                    "Joint velocities do not have the correct size:", vel.size() + fb_vel.size(), " vs (expected)", v_tsid_.size());
+                IWBC_ASSERT(pos.size() + fb_pos.size() == q_tsid_.size(),
+                    "Joint positions do not have the correct size:", pos.size() + fb_pos.size(), " vs (expected)", q_tsid_.size());
+
+                q_tsid << fb_pos, pos;
+                dq << fb_vel, vel;
+
+                _solve(q_tsid, dq);
+            }
+            else {
+                _solve();
+            }
 
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
             if (_use_stabilizer) {

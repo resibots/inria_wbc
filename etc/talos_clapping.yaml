@@ -1,47 +1,5 @@
-CONTROLLER:
-  name: talos-pos-tracker
-  configurations: talos_configurations.srdf
-  ref_config: pal_start
-  frames: frames_talos.yaml
-  tasks: tasks_talos.yaml
-  # no URDF here because this is set by the main
-  stabilizer:
-    activated: true
-    filter_size: 7
-    torso_max_roll: 0.25
-    com: [0.001, 0.001, 0.0003, 0.0003, 0.00000003, 0.00000003]
-    ankle: [0.2, 0.25, 0.0001, 0.001, 0.00001, 0.00001]
-    ffda: [0.0003, 0.0, 0]
-    activate_zmp: true
-    zmp_w: [1, 1, 1, 2, 2, 2]
-    zmp_d: [0, 0, 0.0005, 0.0001, 0.002, 0]
-    zmp_p: [0, 0, 2, 10.0, 10.0, 0] 
-  collision_detection:
-    activated: true
-    filter_size: 30
-    max_invalid: 5
-    thresholds: collision_thresholds.yaml
 BEHAVIOR:
   name : talos-clapping
   trajectory_duration : 1.0
   motion_size : 1.1
-PARAMS:
-  urdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos.urdf
-  srdf_path: /home/pal/deployed_ws/src/talos_controller/etc/talos_configurations.srdf
-  sot_config_path: /home/pal/deployed_ws/src/talos_controller/etc/squat.yaml
-  floating_base_joint_name: ""
-  dt: 0.001
-  verbose: false
-  mimic_dof_names : ["gripper_left_inner_double_joint",
-                     "gripper_left_fingertip_1_joint",
-                     "gripper_left_fingertip_2_joint",
-                     "gripper_left_inner_single_joint",
-                     "gripper_left_fingertip_3_joint",
-                     "gripper_left_motor_single_joint",
-                     "gripper_right_inner_double_joint",
-                     "gripper_right_fingertip_1_joint",
-                     "gripper_right_fingertip_2_joint",
-                     "gripper_right_inner_single_joint",
-                     "gripper_right_fingertip_3_joint",
-                     "gripper_right_motor_single_joint"]
-
+  behavior_type: 2

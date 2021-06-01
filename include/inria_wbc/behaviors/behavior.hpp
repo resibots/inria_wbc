@@ -9,7 +9,14 @@ namespace inria_wbc {
         class Behavior {
         public:
             using controller_ptr_t = std::shared_ptr<inria_wbc::controllers::Controller>;
-            Behavior(const controller_ptr_t& controller) : controller_(controller) { assert(controller); };
+            Behavior(const controller_ptr_t& controller, const YAML::Node& config) : controller_(controller),
+                                                                                     config_(config)
+            {
+                IWBC_ASSERT(controller, "Invalid controller pointer");
+                auto c = IWBC_CHECK(config["BEHAVIOR"]);
+                behavior_type_ = IWBC_CHECK(c["behavior_type"].as<uint>());
+                controller->set_behavior_type(behavior_type_);
+            };
             virtual ~Behavior() {}
             virtual void update(const controllers::SensorData& sensor_data = {}) = 0;
             virtual std::shared_ptr<controllers::Controller> controller() { return controller_; };
@@ -17,8 +24,10 @@ namespace inria_wbc {
 
         protected:
             std::shared_ptr<inria_wbc::controllers::Controller> controller_;
+            const YAML::Node& config_;
+            uint behavior_type_;
         };
-        using Factory = utils::Factory<Behavior, Behavior::controller_ptr_t>;
+        using Factory = utils::Factory<Behavior, Behavior::controller_ptr_t, const YAML::Node&>;
         template <typename T>
         using Register = Factory::AutoRegister<T>;
     } // namespace behaviors

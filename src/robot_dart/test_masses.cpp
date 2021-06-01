@@ -48,7 +48,7 @@ void stopsig(int signum)
 int main(int argc, char* argv[])
 {
     // take the name of the behavior as a argument
-    std::string sot_config_path = argc > 1 ? argv[1] : "../etc/squat.yaml";
+    std::string sot_config_path = argc > 1 ? argv[1] : "../etc/talos_pos_tracker.yaml";
     std::cout << "using configuration:" << sot_config_path << std::endl;
     // dt of the simulation and the controller
     float dt = 0.001;
@@ -78,18 +78,14 @@ int main(int argc, char* argv[])
     simu.add_checkerboard_floor();
 
     //////////////////// INIT STACK OF TASK //////////////////////////////////////
-    inria_wbc::controllers::Controller::Params params = {
-        robot->model_filename(),
-        sot_config_path,
-        dt,
-        false,
-        robot->mimic_dof_names()};
-
-    std::string controller_name;
-    YAML::Node config = IWBC_CHECK(YAML::LoadFile(sot_config_path));
-    inria_wbc::utils::parse(controller_name, "name", config, "CONTROLLER", true);
-
-    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+    auto controller_path = sot_config_path;
+    auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
+    // do some modifications
+    controller_config["CONTROLLER"]["base_path"] = "../etc";// we assume that we run in ./build
+    controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
+    controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
+    auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
+    auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
 
     auto masses = controller->pinocchio_model_masses();
     std::vector<std::string> joint_names = controller->pinocchio_joint_names();

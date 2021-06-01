@@ -1,0 +1,6 @@
+BEHAVIOR:
+  name : ex-behavior
+  trajectory_duration : 1
+  motion_size : 0.25
+
+

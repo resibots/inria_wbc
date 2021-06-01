@@ -12,7 +12,7 @@ namespace inria_wbc {
     namespace behaviors {
         class TalosMoveArm : public Behavior {
         public:
-            TalosMoveArm(const controller_ptr_t& controller);
+            TalosMoveArm(const controller_ptr_t& controller, const YAML::Node& config);
             TalosMoveArm() = delete;
             TalosMoveArm(const TalosMoveArm&) = delete;
 

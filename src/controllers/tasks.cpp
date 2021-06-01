@@ -25,7 +25,7 @@ namespace inria_wbc {
         {
             assert(S == Eigen::Dynamic || mask_str.size() == S);
             Eigen::Array<double, S, 1> mask;
-            mask.resize(S); // useful for dynamic
+            mask.resize(mask_str.size()); // useful for dynamic
             for (int i = 0; i < mask_str.size(); ++i)
                 mask[i] = mask_str[i] == '0' ? 0 : 1;
             return mask;
