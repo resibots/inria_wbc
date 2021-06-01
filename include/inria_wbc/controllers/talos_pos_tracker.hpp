@@ -26,6 +26,9 @@ namespace inria_wbc {
             const safety::TorqueCollisionDetection& torque_collision_detector() const { return _torque_collision_detection; }
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
+            bool closed_loop() const { return _closed_loop; }
+            void set_closed_loop(bool b) { _closed_loop = b; }
+            
         protected:
             virtual void parse_configuration(const YAML::Node& config);
             void parse_collision_thresholds(const std::string& config_path);
@@ -42,6 +45,10 @@ namespace inria_wbc {
             std::vector<std::string> _torque_collision_joints;
             std::vector<int> _torque_collision_joints_ids;
             Eigen::VectorXd _torque_collision_threshold;
+
+            // true if we close the loop with actuator position/vel 
+            // and floating base position
+            bool _closed_loop = false;
         };
 
     } // namespace controllers

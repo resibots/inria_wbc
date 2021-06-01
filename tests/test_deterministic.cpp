@@ -1,4 +1,4 @@
-#define BOOST_TEST_MODULE behaviors test
+#define BOOST_TEST_MODULE deterministic
 #define BOOST_TEST_MAIN
 
 #include <chrono>
@@ -31,7 +31,6 @@
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
-#include "inria_wbc/robot_dart/utils.hpp"
 
 namespace cst {
     static constexpr double dt = 0.001;
@@ -128,10 +127,9 @@ void test_behavior(const std::string& controller_path,
     c_config["CONTROLLER"]["urdf"] = robot->model_filename();
     c_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
 
+
     // get the controller
     auto controller_name = IWBC_CHECK(c_config["CONTROLLER"]["name"].as<std::string>());
-    if (actuator_type == "torque") // force closed-loop
-        c_config["CONTROLLER"]["closed_loop"] = true;
     auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, c_config);
     BOOST_CHECK(controller);
     auto p_controller = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
@@ -207,10 +205,8 @@ void test_behavior(const std::string& controller_path,
         sensor_data["rf_force"] = ft_sensor_right->force();
         sensor_data["acceleration"] = imu->linear_acceleration();
         sensor_data["velocity"] = robot->com_velocity().tail<3>();
-        sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
-        sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
-        sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
-        sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
+        sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+
         // command
         if (simu.schedule(simu.control_freq())) {
             auto t1_solver = high_resolution_clock::now();
@@ -222,11 +218,8 @@ void test_behavior(const std::string& controller_path,
             auto t1_cmd = high_resolution_clock::now();
             if (actuator_type == "velocity" || actuator_type == "servo")
                 cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, cst::dt);
-            else if (actuator_type == "spd")
-                cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
             else // torque
-                cmd = controller->tau(false);
-
+                cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
             auto t2_cmd = high_resolution_clock::now();
             time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
@@ -406,17 +399,17 @@ void test_behavior(const std::string& controller_path,
     std::cout << std::endl;
 }
 
-void test_behavior(const std::string& controller_path,
-    const std::string& behavior_path,
-    const std::string& actuators, const std::string& coll, const std::string& enable_stabilizer, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
+void test_behavior(const std::string& controller_path, 
+const std::string& behavior_path,
+const std::string& actuators, const std::string& coll, const std::string& enable_stabilizer, const std::string& urdf, const y::Node& ref, y::Emitter& yout)
 {
-    std::cout << colors::blue << colors::bold << "TESTING: "
-              << controller_path << " |"
-              << behavior_path << " | "
-              << actuators << " | "
-              << coll << " | enable_stabilizer: "
-              << enable_stabilizer << " | "
-              << urdf << colors::rst << std::endl;
+    std::cout << colors::blue << colors::bold << "TESTING: " 
+        << controller_path << " |" 
+        << behavior_path << " | " 
+        << actuators << " | " 
+        << coll << " | enable_stabilizer: " 
+        << enable_stabilizer << " | " 
+        << urdf << colors::rst << std::endl;
     yout << y::Key << urdf << y::BeginMap;
 
     y::Node node;
@@ -432,10 +425,7 @@ void test_behavior(const std::string& controller_path,
     // create the simulator and the robot
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
-    if (actuators == "spd")
-        robot->set_actuator_types("torque");
-    else
-        robot->set_actuator_types(actuators);
+    robot->set_actuator_types(actuators);
     robot_dart::RobotDARTSimu simu(cst::dt);
     simu.set_collision_detector(coll);
     simu.set_control_freq(cst::frequency);
@@ -482,7 +472,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     // the YAMl file has a timestamp (so that we can archive them)
     yout << y::Key << "timestamp" << y::Value << date();
 
-    // use ./my_test ./test_behaviors_talos_graphics --  ../../etc/talos_pos_tracker.yaml ../../etc/arm.yaml servo fcl false  talos/talos.urdf  for a specific test
+    // use ./my_test ../../etc/arm.yaml servo fcl false talos/talos.urdf  for a specific test
     auto argc = boost::unit_test::framework::master_test_suite().argc;
     auto argv = boost::unit_test::framework::master_test_suite().argv;
 
@@ -500,7 +490,7 @@ BOOST_AUTO_TEST_CASE(behaviors)
     std::string controller = "../../etc/talos_pos_tracker.yaml";
     auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml", "../../etc/walk_on_spot.yaml"};
     auto collision = {"fcl", "dart"};
-    auto actuators = {"servo", "torque", "velocity", "spd"};
+    auto actuators = {"servo", "torque", "velocity"};
     std::vector<std::string> stabilized = {"true", "false"};
     std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
 
@@ -512,14 +502,12 @@ BOOST_AUTO_TEST_CASE(behaviors)
             for (auto& c : collision) {
                 yout << y::Key << c << y::Value << y::BeginMap;
                 for (auto& s : stabilized) {
-                    if (!(s == std::string("true") && a == std::string("torque"))) {
-                        yout << y::Key << "stabilized_" + s << y::Value << y::BeginMap;
-                        test_behavior(controller, b, a, c, s, urdfs[1], ref, yout);
-                        if (c != std::string("dart")) {
-                            test_behavior(controller, b, a, c, s, urdfs[0], ref, yout);
-                        }
-                        yout << y::EndMap;
+                    yout << y::Key << "stabilized_" + s << y::Value << y::BeginMap;
+                    test_behavior(controller, b, a, c, s, urdfs[1], ref, yout);
+                    if (c != std::string("dart")) {
+                        test_behavior(controller, b, a, c, s, urdfs[0], ref, yout);
                     }
+                    yout << y::EndMap;
                 }
                 yout << y::EndMap;
             }

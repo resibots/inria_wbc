@@ -122,15 +122,14 @@ namespace inria_wbc {
             return non_mimic_indexes;
         }
 
-        void Controller::_solve()
+        void Controller::_solve(const Eigen::VectorXd& q, const Eigen::VectorXd& dq)
         {
             //Compute the current data from the current position and solve to find next position
             assert(tsid_);
             assert(robot_);
             assert(solver_);
-
-            const HQPData& HQPData = tsid_->computeProblemData(t_, q_tsid_, v_tsid_);
-            momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * v_tsid_);
+            const HQPData& HQPData = tsid_->computeProblemData(t_, q, dq);
+            momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * dq);
 
             const HQPOutput& sol = solver_->solve(HQPData);
 
@@ -172,6 +171,7 @@ namespace inria_wbc {
                 default:
                     error += " => Uknown status";
                 }
+                error += " (t=" + std::to_string(t_) + ")";
                 throw IWBC_EXCEPTION(error);
             }
         }
