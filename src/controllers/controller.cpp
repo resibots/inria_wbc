@@ -52,12 +52,11 @@ using namespace inria_wbc::utils;
 
 namespace inria_wbc {
     namespace controllers {
-        Controller::Controller(const YAML::Node& config) :
-            config_(config)
+        Controller::Controller(const YAML::Node& config) : config_(config)
         {
             auto c = IWBC_CHECK(config["CONTROLLER"]);
             auto path = IWBC_CHECK(c["base_path"]);
-            auto floating_base_joint_name =  IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
+            auto floating_base_joint_name = IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
             auto urdf = IWBC_CHECK(c["urdf"].as<std::string>());
             dt_ = IWBC_CHECK(c["dt"].as<double>());
             mimic_dof_names_ = IWBC_CHECK(c["mimic_dof_names"].as<std::vector<std::string>>());
@@ -67,7 +66,8 @@ namespace inria_wbc {
             if (!floating_base_joint_name.empty()) {
                 fb_joint_name_ = floating_base_joint_name; //floating base joint already in urdf
                 pinocchio::urdf::buildModel(urdf, robot_model, verbose_);
-            } else {
+            }
+            else {
                 pinocchio::urdf::buildModel(urdf, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
                 fb_joint_name_ = "root_joint";
             }
@@ -242,6 +242,21 @@ namespace inria_wbc {
         Eigen::VectorXd Controller::q0(bool filter_mimics) const
         {
             return filter_mimics ? slice_vec(q0_, non_mimic_indexes_) : q0_;
+        }
+
+        void Controller::save_configuration(const std::string config_name, const std::string robot_name) const
+        {
+            std::ofstream config(config_name);
+            config << "<?xml version=\"1.0\" ?>" << std::endl;
+            config << "<robot name=\"" << robot_name << "\">" << std::endl;
+            config << "\t<group_state name=\"" << config_name.substr(0, config_name.length() - strlen(".srdf")) << "\" group=\"all\">" << std::endl;
+            config << "\t\t<joint name=\"root_joint\" value=\"" << q_tsid_.head(7).transpose() << "\" />" << std::endl;
+            auto names = all_dofs(false);
+            for (uint i = 6; i < names.size(); i++) {
+                config << "\t\t<joint name=\"" << names[i] << "\" value=\"" << q_[i] << "\" />" << std::endl;
+            }
+            config << "\t</group_state>" << std::endl;
+            config << "</robot>" << std::endl;
         }
 
         std::vector<double> Controller::pinocchio_model_masses() const

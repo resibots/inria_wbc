@@ -24,9 +24,9 @@
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
-#include "inria_wbc/robot_dart/utils.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
+#include "inria_wbc/robot_dart/utils.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
 static const std::string red = "\x1B[31m";
@@ -55,6 +55,7 @@ int main(int argc, char* argv[])
         ("fast,f", "fast (simplified) Talos [default: false]")
         ("control_freq", po::value<int>()->default_value(1000), "set the control frequency")
         ("sim_freq", po::value<int>()->default_value(1000), "set the simulation frequency")
+        ("srdf,s", po::value<float>()->default_value(0.0), "save the configuration at the specified time")
         ("ghost,g", "display the ghost (Pinocchio model)")
         ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
         ("help,h", "produce help message")
@@ -112,7 +113,7 @@ int main(int argc, char* argv[])
 
         // dt of the simulation and the controller
         int sim_freq = vm["sim_freq"].as<int>();
-        float dt = 1.0f/sim_freq;
+        float dt = 1.0f / sim_freq;
         std::cout << "dt:" << dt << std::endl;
 
         //////////////////// INIT DART ROBOT //////////////////////////////////////
@@ -154,21 +155,21 @@ int main(int argc, char* argv[])
         auto controller_path = vm["controller"].as<std::string>();
         auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
         // do some modifications according to command-line options
-        controller_config["CONTROLLER"]["base_path"] = "../etc";// we assume that we run in ./build
+        controller_config["CONTROLLER"]["base_path"] = "../etc"; // we assume that we run in ./build
         controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
         controller_config["CONTROLLER"]["dt"] = 1.0 / control_freq;
         auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
-        auto closed_loop =  IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"].as<bool>());
+        auto closed_loop = IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"].as<bool>());
         if (vm.count("closed_loop")) {
             closed_loop = true;
             controller_config["CONTROLLER"]["closed_loop"] = true;
         }
 
-        if(vm["actuators"].as<std::string>() == "torque" && !closed_loop)
-           std::cout << "WARNING (iwbc): you should activate the closed loop if you are using torque control! (--closed_loop or yaml)" << std::endl;
+        if (vm["actuators"].as<std::string>() == "torque" && !closed_loop)
+            std::cout << "WARNING (iwbc): you should activate the closed loop if you are using torque control! (--closed_loop or yaml)" << std::endl;
 
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
         auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
@@ -180,8 +181,6 @@ int main(int argc, char* argv[])
         auto behavior_name = IWBC_CHECK(behavior_config["BEHAVIOR"]["name"].as<std::string>());
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
         IWBC_ASSERT(behavior, "invalid behavior");
-
-        
 
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;
@@ -208,7 +207,7 @@ int main(int argc, char* argv[])
 
         //////////////////// START SIMULATION //////////////////////////////////////
         simu.set_control_freq(control_freq); // default = 1000 Hz
-        double time_simu = 0, time_cmd = 0, time_solver = 0, max_time_solver = 0, min_time_solver = 1e10;       
+        double time_simu = 0, time_cmd = 0, time_solver = 0, max_time_solver = 0, min_time_solver = 1e10;
         int it_simu = 0, it_cmd = 0;
 
         std::shared_ptr<robot_dart::Robot> ghost;
@@ -225,7 +224,7 @@ int main(int argc, char* argv[])
             auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
             for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
                 auto pos = task_self_collision->avoided_frames_positions()[i];
-                auto tf =  Eigen::Isometry3d(Eigen::Translation3d(pos[0], pos[1], pos[2]));
+                auto tf = Eigen::Isometry3d(Eigen::Translation3d(pos[0], pos[1], pos[2]));
                 double r0 = task_self_collision->avoided_frames_r0s()[i];
                 auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0 * 2, r0 * 2, r0 * 2), tf, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
                 sphere->set_color_mode("aspect");
@@ -284,7 +283,7 @@ int main(int argc, char* argv[])
 
             // step the command
             if (simu.schedule(simu.control_freq())) {
-                 // get actual torque from sensors
+                // get actual torque from sensors
                 for (auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
                     tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
 
@@ -316,9 +315,9 @@ int main(int argc, char* argv[])
 
                 auto t1_cmd = high_resolution_clock::now();
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
-                else if (vm["actuators"].as<std::string>() == "spd" )
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./sim_freq);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1. / control_freq);
+                else if (vm["actuators"].as<std::string>() == "spd")
+                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1. / sim_freq);
                 else // torque
                     cmd = controller->tau(false);
                 auto t2_cmd = high_resolution_clock::now();
@@ -406,6 +405,11 @@ int main(int argc, char* argv[])
                     (*x.second) << controller_pos->get_se3_ref(x.first.substr(strlen("ref_"))).translation().transpose() << std::endl;
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
+            }
+            if (vm.count("srdf")) {
+                auto conf = vm["srdf"].as<float>();
+                if (controller->t() >= conf && controller->t() < conf + controller->dt())
+                    controller->save_configuration("configuration.srdf");
             }
             // print timing information
             time_simu += time_step_simu;

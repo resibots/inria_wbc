@@ -96,4 +96,100 @@
         <joint name="gripper_right_motor_single_joint" value="0" />
     </group_state>
 
+    <group_state name="one_foot" group="all">
+		<joint name="root_joint" value=" -0.00222541   -0.0988973      1.07122   0.00969736 -7.92765e-05   0.00780597     0.999923" />
+		<joint name="leg_left_1_joint" value="-0.0156509" />
+		<joint name="leg_left_2_joint" value="0.138052" />
+		<joint name="leg_left_3_joint" value="-0.502346" />
+		<joint name="leg_left_4_joint" value="1.11606" />
+		<joint name="leg_left_5_joint" value="-0.613532" />
+		<joint name="leg_left_6_joint" value="-0.157359" />
+		<joint name="leg_right_1_joint" value="-0.0156138" />
+		<joint name="leg_right_2_joint" value="0.11701" />
+		<joint name="leg_right_3_joint" value="-0.176276" />
+		<joint name="leg_right_4_joint" value="0.404001" />
+		<joint name="leg_right_5_joint" value="-0.227718" />
+		<joint name="leg_right_6_joint" value="-0.136406" />
+		<joint name="torso_1_joint" value="-0.0161234" />
+		<joint name="torso_2_joint" value="0.0722355" />
+		<joint name="arm_left_1_joint" value="0.44083" />
+		<joint name="arm_left_2_joint" value="1.32224" />
+		<joint name="arm_left_3_joint" value="-0.0532495" />
+		<joint name="arm_left_4_joint" value="-0.917757" />
+		<joint name="arm_left_5_joint" value="-0.129929" />
+		<joint name="arm_left_6_joint" value="0.181504" />
+		<joint name="arm_left_7_joint" value="0.460632" />
+		<joint name="gripper_left_inner_double_joint" value="-6.72833e-05" />
+		<joint name="gripper_left_fingertip_1_joint" value="1.52478e-06" />
+		<joint name="gripper_left_fingertip_2_joint" value="1.5244e-06" />
+		<joint name="gripper_left_inner_single_joint" value="2.42934e-25" />
+		<joint name="gripper_left_fingertip_3_joint" value="9.3811e-06" />
+		<joint name="gripper_left_joint" value="-1.97985e-20" />
+		<joint name="gripper_left_motor_single_joint" value="-2.8592e-05" />
+		<joint name="arm_right_1_joint" value="-0.561075" />
+		<joint name="arm_right_2_joint" value="-1.25106" />
+		<joint name="arm_right_3_joint" value="-0.0148271" />
+		<joint name="arm_right_4_joint" value="-1.17651" />
+		<joint name="arm_right_5_joint" value="0.282453" />
+		<joint name="arm_right_6_joint" value="-0.140261" />
+		<joint name="arm_right_7_joint" value="0.587216" />
+		<joint name="gripper_right_inner_double_joint" value="-0.000581326" />
+		<joint name="gripper_right_fingertip_1_joint" value="-9.15774e-06" />
+		<joint name="gripper_right_fingertip_2_joint" value="-9.15793e-06" />
+		<joint name="gripper_right_inner_single_joint" value="-3.73342e-06" />
+		<joint name="gripper_right_fingertip_3_joint" value="3.54712e-05" />
+		<joint name="gripper_right_joint" value="6.37147e-22" />
+		<joint name="gripper_right_motor_single_joint" value="3.41447e-06" />
+		<joint name="head_1_joint" value="-0.00348013" />
+		<joint name="head_2_joint" value="-0.000820082" />
+	</group_state>
+
+    <group_state name="inria_start" group="all">
+		<joint name="root_joint" value="  -0.0351934 -5.62102e-05      1.05908  2.80019e-06   -0.0274629  6.36382e-05     0.999623" />
+		<joint name="leg_left_1_joint" value="-0.000131666" />
+		<joint name="leg_left_2_joint" value="7.44065e-05" />
+		<joint name="leg_left_3_joint" value="-0.241983" />
+		<joint name="leg_left_4_joint" value="0.604865" />
+		<joint name="leg_left_5_joint" value="-0.307949" />
+		<joint name="leg_left_6_joint" value="-8.36263e-05" />
+		<joint name="leg_right_1_joint" value="-0.000131666" />
+		<joint name="leg_right_2_joint" value="7.44045e-05" />
+		<joint name="leg_right_3_joint" value="-0.241955" />
+		<joint name="leg_right_4_joint" value="0.604872" />
+		<joint name="leg_right_5_joint" value="-0.307985" />
+		<joint name="leg_right_6_joint" value="-8.36243e-05" />
+		<joint name="torso_1_joint" value="-0.00015345" />
+		<joint name="torso_2_joint" value="0.0888125" />
+		<joint name="arm_left_1_joint" value="0.246596" />
+		<joint name="arm_left_2_joint" value="0.499783" />
+		<joint name="arm_left_3_joint" value="-0.576707" />
+		<joint name="arm_left_4_joint" value="-1.42748" />
+		<joint name="arm_left_5_joint" value="0.250343" />
+		<joint name="arm_left_6_joint" value="0.0555421" />
+		<joint name="arm_left_7_joint" value="-0.11123" />
+		<joint name="gripper_left_inner_double_joint" value="1.21119e-05" />
+		<joint name="gripper_left_fingertip_1_joint" value="1.43446e-06" />
+		<joint name="gripper_left_fingertip_2_joint" value="1.43487e-06" />
+		<joint name="gripper_left_inner_single_joint" value="-1.62538e-05" />
+		<joint name="gripper_left_fingertip_3_joint" value="2.14366e-06" />
+		<joint name="gripper_left_joint" value="2.16512e-21" />
+		<joint name="gripper_left_motor_single_joint" value="-1.24375e-05" />
+		<joint name="arm_right_1_joint" value="-0.246494" />
+		<joint name="arm_right_2_joint" value="-0.499768" />
+		<joint name="arm_right_3_joint" value="0.576798" />
+		<joint name="arm_right_4_joint" value="-1.42748" />
+		<joint name="arm_right_5_joint" value="-0.250343" />
+		<joint name="arm_right_6_joint" value="-0.0556708" />
+		<joint name="arm_right_7_joint" value="-0.111231" />
+		<joint name="gripper_right_inner_double_joint" value="1.2211e-05" />
+		<joint name="gripper_right_fingertip_1_joint" value="1.43854e-06" />
+		<joint name="gripper_right_fingertip_2_joint" value="1.43812e-06" />
+		<joint name="gripper_right_inner_single_joint" value="-1.70556e-05" />
+		<joint name="gripper_right_fingertip_3_joint" value="2.14175e-06" />
+		<joint name="gripper_right_joint" value="-4.48001e-23" />
+		<joint name="gripper_right_motor_single_joint" value="-1.24115e-05" />
+		<joint name="head_1_joint" value="-0.00393814" />
+		<joint name="head_2_joint" value="1.88099e-05" />
+	</group_state>
+
 </robot>

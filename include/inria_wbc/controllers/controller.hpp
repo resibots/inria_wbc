@@ -16,8 +16,8 @@
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
 #include <tsid/tasks/task-actuation-bounds.hpp>
-#include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
+#include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
@@ -37,7 +37,6 @@ namespace inria_wbc {
 
         class Controller {
         public:
-
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
             Controller(const YAML::Node& config);
             Controller(const Controller&) = delete;
@@ -74,6 +73,7 @@ namespace inria_wbc {
             Eigen::VectorXd q(bool filter_mimics = true) const;
             tsid::math::Vector q_tsid() const { return q_tsid_; };
 
+            double t() const { return t_; };
             double dt() const { return dt_; };
             const YAML::Node& config() const { return config_; };
 
@@ -106,14 +106,16 @@ namespace inria_wbc {
             void set_verbose(bool b) { verbose_ = b; }
             bool verbose() const { return verbose_; }
 
+            void save_configuration(const std::string config_name, const std::string robot_name = "robot") const;
+
         private:
             std::vector<int> get_non_mimics_indexes() const;
 
         protected:
             void _reset();
             // you can use q_tsid_ and v_tsid_ for open-loop control
-            void _solve(const Eigen::VectorXd& q, const Eigen::VectorXd &dq);
-            void _solve() { _solve( q_tsid_, v_tsid_); }
+            void _solve(const Eigen::VectorXd& q, const Eigen::VectorXd& dq);
+            void _solve() { _solve(q_tsid_, v_tsid_); }
 
             const YAML::Node& config_;
             bool verbose_ = false;
