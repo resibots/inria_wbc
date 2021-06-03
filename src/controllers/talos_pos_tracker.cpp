@@ -36,6 +36,7 @@ namespace inria_wbc {
 
         TalosPosTracker::TalosPosTracker(const YAML::Node& config) : PosTracker(config)
         {
+            behavior_type_ = behavior_types::FIXED_BASE;
             parse_configuration(config["CONTROLLER"]);
             if (verbose_)
                 std::cout << "Talos pos tracker initialized" << std::endl;
@@ -116,11 +117,11 @@ namespace inria_wbc {
 
             std::string stab_path;
             auto path = IWBC_CHECK(config["base_path"].as<std::string>());
-            if (behavior_type_ == FIXED_BASE)
+            if (behavior_type_ == behavior_types::FIXED_BASE)
                 stab_path = IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>());
-            if (behavior_type_ == SINGLE_SUPPORT)
+            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
                 stab_path = IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>());
-            if (behavior_type_ == DOUBLE_SUPPORT)
+            if (behavior_type_ == behavior_types::DOUBLE_SUPPORT)
                 stab_path = IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>());
 
             YAML::Node s = IWBC_CHECK(YAML::LoadFile(stab_path));

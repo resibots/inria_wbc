@@ -2,4 +2,3 @@ BEHAVIOR:
   name: talos-squat
   trajectory_duration: 3
   motion_size: 0.2
-  behavior_type: 2

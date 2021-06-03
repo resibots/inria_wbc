@@ -15,6 +15,9 @@ namespace inria_wbc {
             stop_duration_ = IWBC_CHECK(c["stop_duration"].as<float>());
             stop_height_ = IWBC_CHECK(c["stop_height"].as<float>());
 
+            behavior_type_ = this->behavior_type();
+            controller_->set_behavior_type(behavior_type_);
+
             dt_ = controller_->dt();
 
             state_ = States::INIT;

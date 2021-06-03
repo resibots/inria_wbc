@@ -13,19 +13,18 @@ namespace inria_wbc {
                                                                                      config_(config)
             {
                 IWBC_ASSERT(controller, "Invalid controller pointer");
-                auto c = IWBC_CHECK(config["BEHAVIOR"]);
-                behavior_type_ = IWBC_CHECK(c["behavior_type"].as<uint>());
-                controller->set_behavior_type(behavior_type_);
             };
+
             virtual ~Behavior() {}
             virtual void update(const controllers::SensorData& sensor_data = {}) = 0;
             virtual std::shared_ptr<controllers::Controller> controller() { return controller_; };
             virtual std::shared_ptr<const controllers::Controller> controller() const { return controller_; };
+            virtual std::string behavior_type() const = 0;
 
         protected:
             std::shared_ptr<inria_wbc::controllers::Controller> controller_;
             const YAML::Node& config_;
-            uint behavior_type_;
+            std::string behavior_type_;
         };
         using Factory = utils::Factory<Behavior, Behavior::controller_ptr_t, const YAML::Node&>;
         template <typename T>

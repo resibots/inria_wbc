@@ -52,6 +52,11 @@ using namespace inria_wbc::utils;
 
 namespace inria_wbc {
     namespace controllers {
+
+        const std::string behavior_types::FIXED_BASE = "fixed_base";
+        const std::string behavior_types::SINGLE_SUPPORT = "single_support";
+        const std::string behavior_types::DOUBLE_SUPPORT = "double_support";
+
         Controller::Controller(const YAML::Node& config) : config_(config)
         {
             auto c = IWBC_CHECK(config["CONTROLLER"]);
@@ -268,11 +273,11 @@ namespace inria_wbc {
             return mass;
         }
 
-        void Controller::set_behavior_type(uint b)
+        void Controller::set_behavior_type(std::string bt)
         {
-            if (b > 2)
-                IWBC_ERROR("behavior type is either FIXED_BASE 0, SINGLE_SUPPORT 1 or DOUBLE_SUPPORT 2");
-            behavior_type_ = b;
+            if (bt != behavior_types::FIXED_BASE && bt != behavior_types::SINGLE_SUPPORT && bt != behavior_types::DOUBLE_SUPPORT)
+                IWBC_ERROR("behavior type is either behavior_types::FIXED_BASE , behavior_types::SINGLE_SUPPORT or behavior_types::DOUBLE_SUPPORT ");
+            behavior_type_ = bt;
             parse_stabilizer(config_["CONTROLLER"]);
         }
 

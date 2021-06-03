@@ -35,10 +35,11 @@ namespace inria_wbc {
 
         using SensorData = std::unordered_map<std::string, Eigen::MatrixXd>;
 
-        static constexpr int FIXED_BASE = 0;
-        static constexpr int SINGLE_SUPPORT = 1;
-        static constexpr int DOUBLE_SUPPORT = 2;
-
+        struct behavior_types {
+            static const std::string FIXED_BASE;
+            static const std::string SINGLE_SUPPORT;
+            static const std::string DOUBLE_SUPPORT;
+        };
         class Controller {
         public:
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -147,8 +148,8 @@ namespace inria_wbc {
             void set_verbose(bool b) { verbose_ = b; }
             bool verbose() const { return verbose_; }
 
-            void set_behavior_type(uint b);
-            bool behavior_type() const { return behavior_type_; }
+            void set_behavior_type(std::string bt);
+            std::string behavior_type() const { return behavior_type_; }
             virtual void parse_stabilizer(const YAML::Node& config)
             {
                 if (verbose_)
@@ -168,7 +169,7 @@ namespace inria_wbc {
             bool verbose_ = false;
             double t_;
             double dt_;
-            int behavior_type_ = FIXED_BASE;
+            std::string behavior_type_;
 
             std::string fb_joint_name_; //name of the floating base joint
             std::vector<std::string> mimic_dof_names_;

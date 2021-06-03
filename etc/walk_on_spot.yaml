@@ -5,4 +5,3 @@ BEHAVIOR:
   step_height: 0.1
   stop_duration: 0.7
   stop_height: 0.015
-  behavior_type: 1
