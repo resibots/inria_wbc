@@ -4,7 +4,7 @@ CONTROLLER:
   tasks: tasks_example.yaml
   urdf: talos.urdf
   configurations: talos_configurations.srdf 
-  ref_config: pal_start
+  ref_config: inria_start
   frames: frames_example.yaml
   floating_base_joint_name: ""
   dt: 0.001

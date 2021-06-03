@@ -39,7 +39,6 @@ namespace inria_wbc {
             // all the file paths are relative to base_path
             auto path = IWBC_CHECK(c["base_path"].as<std::string>());
 
-           
             // create additional frames if needed (optional)
             if (c["frames"]) {
                 auto p_frames = path + "/" + c["frames"].as<std::string>();
@@ -50,7 +49,7 @@ namespace inria_wbc {
             //the srdf contains initial joint positions
             auto srdf_file = IWBC_CHECK(c["configurations"].as<std::string>());
             auto ref_config = IWBC_CHECK(c["ref_config"].as<std::string>());
-            auto p_srdf = path + "/"  + srdf_file;
+            auto p_srdf = path + "/" + srdf_file;
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf, verbose_);
 
             //q_tsid_ is of size 37 (pos+quat+nactuated)
@@ -80,6 +79,13 @@ namespace inria_wbc {
             auto task_file = IWBC_CHECK(c["tasks"].as<std::string>());
             auto p = path / boost::filesystem::path(task_file);
             parse_tasks(p.string());
+
+            if (tasks_.find("com") != tasks_.end()) {
+                if (verbose_)
+                    std::cout << "Keeping initial com configuration as com reference" << std::endl;
+                auto com_init = this->com();
+                this->set_com_ref(com_init);
+            }
 
             if (verbose_)
                 std::cout << "position tracker initializer" << std::endl;
