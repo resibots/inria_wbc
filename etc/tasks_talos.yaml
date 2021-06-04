@@ -33,6 +33,10 @@ com:
     weight: 1000.0
     kp: 30.0
     mask: 111
+momentum:
+    type: momentum
+    weight: 0.0
+    kp: 300.0
 posture:
     type: posture
     weight: 1.75
