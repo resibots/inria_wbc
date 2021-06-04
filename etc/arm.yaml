@@ -2,4 +2,3 @@ BEHAVIOR:
   name : talos-move-arm
   trajectory_duration: 4
   motion_size: 0.2
-  behavior_type: 2
