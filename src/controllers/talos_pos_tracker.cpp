@@ -34,18 +34,6 @@ namespace inria_wbc {
 
         TalosPosTracker::TalosPosTracker(const YAML::Node& config) : PosTracker(config)
         {
-            if (tasks_.find("lf") != tasks_.end() && tasks_.find("rf") != tasks_.end() && tasks_.find("com") != tasks_.end()) {
-                auto com_init = this->com();
-                auto com_final = this->com();
-                com_final.head(2) = (this->model_joint_pos("leg_left_6_joint").translation().head(2) + this->model_joint_pos("leg_right_6_joint").translation().head(2)) / 2;
-                this->set_com_ref(com_final);
-                if (verbose_) {
-                    std::cout << "Taking initial com reference in the middle of the support polygon" << std::endl;
-                    std::cout << "Previous com ref: " << com_init.transpose() << std::endl;
-                    std::cout << "New com ref: " << com_final.transpose() << std::endl;
-                }
-            }
-
             parse_configuration(config["CONTROLLER"]);
             if (verbose_)
                 std::cout << "Talos pos tracker initialized" << std::endl;

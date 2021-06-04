@@ -81,10 +81,21 @@ namespace inria_wbc {
             parse_tasks(p.string());
 
             if (tasks_.find("com") != tasks_.end()) {
-                if (verbose_)
-                    std::cout << "Keeping initial com configuration as com reference" << std::endl;
                 auto com_init = this->com();
-                this->set_com_ref(com_init);
+                auto com_final = this->com();
+
+                if (tasks_.find("lf") != tasks_.end() && tasks_.find("rf") != tasks_.end()) {
+                    com_final.head(2) = (this->get_se3_ref("lf").translation().head(2) + this->get_se3_ref("rf").translation().head(2)) / 2;
+                    this->set_com_ref(com_final);
+                    if (verbose_)
+                        std::cout << "Taking initial com reference in the middle of the support polygon" << std::endl;
+                }
+
+                if (verbose_) {
+                    std::cout << "Previous com ref: " << com_init.transpose() << std::endl;
+                    std::cout << "New com ref: " << com_final.transpose() << std::endl;
+                }
+                this->set_com_ref(com_final);
             }
 
             if (verbose_)
