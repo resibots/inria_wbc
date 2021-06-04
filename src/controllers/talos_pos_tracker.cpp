@@ -123,13 +123,14 @@ namespace inria_wbc {
         // this is called by the constructor
         // we move the CoM to the center of the feet, to always start in the most stable configuration
         // (this should already be the case with a propre SRDF)
-        void TalosPosTracker::init_com() {
+        void TalosPosTracker::init_com()
+        {
             if (tasks_.find("com") != tasks_.end()) {
                 auto com_init = this->com();
                 auto com_final = this->com();
 
                 // check that we have one task for each foot and that they are in contact
-                if (tasks_.find("lf") != tasks_.end() && tasks_.find("rf") != tasks_.end() && tasks_.find("contact_lfoot") != tasks_.end() && tasks_.find("contact_rfoot") != tasks_.end() ) {
+                if (tasks_.find("lf") != tasks_.end() && tasks_.find("rf") != tasks_.end() && contacts_.find("contact_lfoot") != contacts_.end() && contacts_.find("contact_rfoot") != contacts_.end()) {
                     com_final.head(2) = (this->get_se3_ref("lf").translation().head(2) + this->get_se3_ref("rf").translation().head(2)) / 2;
                     if ((this->com() - com_final).norm() > 0.01) // 1 cm
                         IWBC_ERROR("Wrong starting configuration: the CoM needs to be between the two feet with less than 1cm difference, but the distance is ", (this->com() - com_final).norm());
@@ -138,12 +139,18 @@ namespace inria_wbc {
                     if (verbose_)
                         std::cout << "Taking initial com reference in the middle of the support polygon" << std::endl;
                 }
+                else {
+                    IWBC_ERROR("init_com: contact_rfoot or contact_lfoot or lf or rf is missing, cannot compute initial com reference");
+                }
 
                 if (verbose_) {
                     std::cout << "Previous com ref: " << com_init.transpose() << std::endl;
                     std::cout << "New com ref: " << com_final.transpose() << std::endl;
                 }
                 this->set_com_ref(com_final);
+            }
+            else {
+                IWBC_ERROR("init_com: no com task");
             }
         }
 
