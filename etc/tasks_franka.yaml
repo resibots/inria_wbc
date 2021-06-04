@@ -4,7 +4,6 @@ ee:
     weight: 100.0
     kp: 30.0
     mask: 111111
-
 posture:
     type: posture
     weight: 0.75

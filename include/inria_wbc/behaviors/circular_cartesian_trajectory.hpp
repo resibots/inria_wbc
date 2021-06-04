@@ -1,5 +1,5 @@
-#ifndef IWBC_SWITCH_FOOT
-#define IWBC_SWITCH_FOOT
+#ifndef IWBC_CIRCULAR_CARTESIAN_TRAJECTORY
+#define IWBC_CIRCULAR_CARTESIAN_TRAJECTORY
 #include <chrono>
 #include <iostream>
 #include <signal.h>
@@ -20,6 +20,8 @@ namespace inria_wbc {
 
             void update(const controllers::SensorData& sensor_data) override;
             virtual ~CircularCartesianTrajectory() {}
+
+            std::string behavior_type() const override { return controllers::behavior_types::DOUBLE_SUPPORT; };
 
             pinocchio::SE3 func_traj( const float t);
 

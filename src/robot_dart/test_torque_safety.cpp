@@ -43,6 +43,7 @@ int main(int argc, char* argv[])
     ("fast,f", "fast (simplified) Talos [default: false]")
     ("big_window,b", "use a big window (nicer but slower) [default:true]")
     ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:torque]")
+    ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
     ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
     ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
     ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
@@ -141,6 +142,14 @@ int main(int argc, char* argv[])
     controller_config["CONTROLLER"]["base_path"] = "../etc"; // we assume that we run in ./build
     controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
     controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
+    int control_freq = vm["control_freq"].as<int>();
+    auto closed_loop = IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"]);
+    if (vm.count("closed_loop")) {
+        closed_loop = true;
+        controller_config["CONTROLLER"]["closed_loop"] = true;
+    }
+    if (vm["actuators"].as<std::string>() == "torque" && !closed_loop)
+        std::cout << "WARNING (iwbc): you should activate the closed loop if you are using torque control! (-l or yaml)" << std::endl;
     controller_config["CONTROLLER"]["verbose"] = verbose;
 
     auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
@@ -252,10 +261,12 @@ int main(int argc, char* argv[])
             auto q = controller->q(false);
             if (true) {
                 Eigen::VectorXd cmd;
-                if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, dt);
+                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
+                else if (vm["actuators"].as<std::string>() == "spd" )
+                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
                 else // torque
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, dt);
+                    cmd = controller->tau();
 
                 auto cmd_filtered = controller->filter_cmd(cmd).tail(ncontrollable);
                 robot->set_commands(cmd_filtered, controllable_dofs);

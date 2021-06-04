@@ -1,6 +1,7 @@
 #include <tsid/tasks/task-actuation-bounds.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
+#include <tsid/tasks/task-cop-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
@@ -142,6 +143,31 @@ namespace inria_wbc {
         }
         RegisterYAML<tsid::tasks::TaskAMEquality> __register_momentum_equality("momentum", make_momentum);
 
+        ////// COP task //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_cop(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = node["weight"].as<double>();
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskCopEquality>(task_name, *robot);
+
+            // set the reference
+            task->setReference(Eigen::Vector3d(0, 0, 0));
+
+            // add to TSID
+            tsid->addForceTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskCopEquality> __register_cop_equality("cop", make_cop);
+
         ////// Posture //////
         std::shared_ptr<tsid::tasks::TaskBase> make_posture(
             const std::shared_ptr<robots::RobotWrapper>& robot,
@@ -160,7 +186,7 @@ namespace inria_wbc {
             auto ref_q = robot->model().referenceConfigurations[ref_name];
 
             bool floating_base_flag = (robot->na() == robot->nv()) ? false : true;
-            int n_actuated =  floating_base_flag ? robot->nv() - 6 : robot->nv();
+            int n_actuated = floating_base_flag ? robot->nv() - 6 : robot->nv();
 
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskJointPosture>(task_name, *robot);
@@ -186,7 +212,7 @@ namespace inria_wbc {
 
             return task;
         }
-        RegisterYAML<tsid::tasks::TaskComEquality> __register_posture("posture", make_posture);
+        RegisterYAML<tsid::tasks::TaskJointPosture> __register_posture("posture", make_posture);
 
         ////// Bounds //////
         std::shared_ptr<tsid::tasks::TaskBase> make_bounds(
@@ -216,11 +242,11 @@ namespace inria_wbc {
 
             return task;
         }
-        RegisterYAML<tsid::tasks::TaskComEquality> __register_bounds("bounds", make_bounds);
+        RegisterYAML<tsid::tasks::TaskJointPosVelAccBounds> __register_bounds("bounds", make_bounds);
 
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
-        std::shared_ptr<tsid::contacts::Contact6d> make_contact_task(
+        std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
             const std::string& task_name, const YAML::Node& node)
@@ -249,11 +275,11 @@ namespace inria_wbc {
                 -lyn, lyp, -lyn, lyp,
                 lz, lz, lz, lz;
             Eigen::Vector3d contact_normal(normal.data());
-            auto contact_task = std::make_shared<tsid::contacts::Contact6d>(task_name, *robot, joint_name, contact_points, contact_normal, mu, fmin, fmax);
+            auto contact_task = std::make_shared<tsid::contacts::Contact6dExt>(task_name, *robot, joint_name, contact_points, contact_normal, mu, fmin, fmax);
             contact_task->Kp(kp * Vector::Ones(6));
             contact_task->Kd(2.0 * contact_task->Kp().cwiseSqrt());
             auto contact_ref = robot->position(tsid->data(), robot->model().getJointId(joint_name));
-            contact_task->setReference(contact_ref);
+            contact_task->Contact6d::setReference(contact_ref);
 
             // add the task
             tsid->addRigidContact(*contact_task, cst::w_force_feet);

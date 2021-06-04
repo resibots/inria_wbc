@@ -32,6 +32,7 @@ public:
 
     int get_num_var() const { return _nvar; }
     int get_window_size() const { return _wsize; }
+    bool data_ready() const { return (_cnt >=  _wsize);}
 
     Eigen::VectorXd filter(const Eigen::VectorXd& sample)
     {

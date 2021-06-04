@@ -17,6 +17,9 @@ namespace inria_wbc {
             trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
             motion_size_ = IWBC_CHECK(c["motion_size"].as<float>());
 
+            behavior_type_ = this->behavior_type();
+            controller_->set_behavior_type(behavior_type_);
+
             auto lh_final = lh_init;
             auto rh_final = rh_init;
 
