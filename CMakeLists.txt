@@ -23,11 +23,12 @@ set(INRIA_WBC_SOURCES
                             src/behaviors/talos_squat.cpp
                             src/behaviors/talos_move_arm.cpp
                             src/safety/torque_collision_detection.cpp
+                            src/stabilizers/stabilizer.cpp
                             src/behaviors/talos_walk_on_spot.cpp
-                            src/behaviors/talos_clapping.cpp                            
+                            src/behaviors/talos_clapping.cpp
+                            src/behaviors/circular_cartesian_trajectory.cpp
                             src/estimators/cop.cpp
                             src/tsid/task-self-collision.cpp
-
 )
 
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})

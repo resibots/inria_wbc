@@ -61,6 +61,7 @@ int main(int argc, char* argv[])
         ("help,h", "produce help message")
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
+        ("norm_force,n", po::value<float>()->default_value(-150) , "push norm force value")
         ("verbose,v", "verbose mode (controller)")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
             "log the trajectory of a dart body [with urdf names] or timing or CoM or cost, example: -l timing -l com -l lf -l cost_com -l cost_lf")
@@ -360,9 +361,10 @@ int main(int argc, char* argv[])
             bool push = false;
             if (vm.count("push")) {
                 auto pv = vm["push"].as<std::vector<float>>();
+                auto pforce = vm["norm_force"].as<float>();
                 for (auto& p : pv) {
                     if (simu.scheduler().current_time() > p && simu.scheduler().current_time() < p + 0.5) {
-                        robot->set_external_force("base_link", Eigen::Vector3d(-150, 0, 0));
+                        robot->set_external_force("base_link", Eigen::Vector3d(0, pforce, 0));
                         push = true;
                     }
                     if (simu.scheduler().current_time() > p + 0.25)
@@ -391,12 +393,19 @@ int main(int argc, char* argv[])
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
                 else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << std::endl;
+                    (*x.second) << controller->cop().transpose() << " "
+                                << controller->lcop().transpose() << " "
+                                << controller->rcop().transpose() << " " << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "ft")
                     (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
                                 << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
+                else if (x.first == "force") // the cop according to controller
+                    (*x.second) << ft_sensor_left->force().transpose() << " "
+                                << controller->lf_force_filtered().transpose() << " "
+                                << ft_sensor_right->force().transpose() << " " 
+                                << controller->rf_force_filtered().transpose() << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
                 else if (x.first == "ref_com")

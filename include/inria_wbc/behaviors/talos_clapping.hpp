@@ -18,6 +18,7 @@ namespace inria_wbc {
 
             void update(const controllers::SensorData& sensor_data) override;
             virtual ~TalosClapping() {}
+            std::string behavior_type() const override { return controllers::behavior_types::DOUBLE_SUPPORT; };
 
         private:
             std::vector<std::vector<pinocchio::SE3>> lh_trajs_;

@@ -7,6 +7,7 @@ CONTROLLER:
   ref_config: inria_start
   frames: frames_talos.yaml
   floating_base_joint_name: ""
+  floating_base: true
   dt: 0.001
   # by default we do not close the loop on the floating base
   # because it's not required in position control
@@ -27,9 +28,9 @@ CONTROLLER:
                      "gripper_right_motor_single_joint"]
   stabilizer:
     activated: true
-    filter_size: 5
-    p: [0.001, 0.001]
-    d: [0.0001, 0.0001]
+    params_ss: single_support.yaml
+    params_ds: double_support.yaml
+    params_fixed_base: fixed_base.yaml
   collision_detection:
     activated: true
     filter_size: 30
