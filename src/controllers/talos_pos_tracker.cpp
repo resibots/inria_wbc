@@ -34,6 +34,18 @@ namespace inria_wbc {
 
         TalosPosTracker::TalosPosTracker(const YAML::Node& config) : PosTracker(config)
         {
+            if (tasks_.find("lf") != tasks_.end() && tasks_.find("rf") != tasks_.end() && tasks_.find("com") != tasks_.end()) {
+                auto com_init = this->com();
+                auto com_final = this->com();
+                com_final.head(2) = (this->model_joint_pos("leg_left_6_joint").translation().head(2) + this->model_joint_pos("leg_right_6_joint").translation().head(2)) / 2;
+                this->set_com_ref(com_final);
+                if (verbose_) {
+                    std::cout << "Taking initial com reference in the middle of the support polygon" << std::endl;
+                    std::cout << "Previous com ref: " << com_init.transpose() << std::endl;
+                    std::cout << "New com ref: " << com_final.transpose() << std::endl;
+                }
+            }
+
             parse_configuration(config["CONTROLLER"]);
             if (verbose_)
                 std::cout << "Talos pos tracker initialized" << std::endl;
@@ -62,25 +74,23 @@ namespace inria_wbc {
                 auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
 
                 _torque_collision_joints = {
-                    "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint", 
+                    "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint",
                     "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
-                    "torso_1_joint", "torso_2_joint", 
+                    "torso_1_joint", "torso_2_joint",
                     "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
-                    "arm_right_1_joint", "arm_right_2_joint","arm_right_3_joint", "arm_right_4_joint"
-                };
-                
+                    "arm_right_1_joint", "arm_right_2_joint", "arm_right_3_joint", "arm_right_4_joint"};
+
                 auto filtered_dof_names = this->all_dofs(true); // filter out mimics
-                for(const auto& joint : _torque_collision_joints)
-                {
+                for (const auto& joint : _torque_collision_joints) {
                     auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
                     _torque_collision_joints_ids.push_back(std::distance(filtered_dof_names.begin(), it));
                 }
 
                 _torque_collision_threshold.resize(_torque_collision_joints.size());
-                _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
-                    3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05, 
-                    1e+01, 1e+01, 
-                    1e+01, 1e+01, 1e+01, 1e+01, 
+                _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                    3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                    1e+01, 1e+01,
+                    1e+01, 1e+01, 1e+01, 1e+01,
                     1e+01, 1e+01, 1e+01, 1e+01;
 
                 // update thresholds from file (if any)
@@ -104,18 +114,17 @@ namespace inria_wbc {
 
                 std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
                 std::cout << "with thresholds" << std::endl;
-                for(size_t id = 0; id < _torque_collision_joints.size(); ++id)
+                for (size_t id = 0; id < _torque_collision_joints.size(); ++id)
                     std::cout << _torque_collision_joints[id] << ": " << _torque_collision_threshold(id) << std::endl;
             }
         }
 
         void TalosPosTracker::parse_collision_thresholds(const std::string& config_path)
         {
-            YAML::Node config =  IWBC_CHECK(YAML::LoadFile(config_path));
-            for(size_t jid = 0; jid < _torque_collision_joints.size(); ++jid)
-            {
+            YAML::Node config = IWBC_CHECK(YAML::LoadFile(config_path));
+            for (size_t jid = 0; jid < _torque_collision_joints.size(); ++jid) {
                 std::string joint = _torque_collision_joints[jid];
-                if(config[joint])
+                if (config[joint])
                     _torque_collision_threshold(jid) = IWBC_CHECK(config[joint].as<double>());
             }
 
@@ -157,8 +166,8 @@ namespace inria_wbc {
                     cor += cor_v;
 
                     Eigen::VectorXd ref_m = com_ref.pos - Eigen::Vector3d(cor(0), cor(1), 0);
-                    Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(cor(0), cor(1), 0)/dt_);
-                    Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(cor(0), cor(1), 0)/(dt_*dt_));
+                    Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(cor(0), cor(1), 0) / dt_);
+                    Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(cor(0), cor(1), 0) / (dt_ * dt_));
                     tsid::trajectories::TrajectorySample sample;
                     sample.pos = ref_m;
                     sample.vel = vref_m;
@@ -168,13 +177,12 @@ namespace inria_wbc {
                 }
             }
 
-            if(_use_torque_collision_detection)
-            {
+            if (_use_torque_collision_detection) {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "torque collision detection requires torque sensor data");
                 IWBC_ASSERT(sensor_data.at("joints_torque").size() == _torque_collision_joints.size(), "torque sensor data has a wrong size. call torque_sensor_joints() for needed values");
-                
+
                 auto tsid_tau = utils::slice_vec(this->tau(), _torque_collision_joints_ids);
-                _collision_detected = (false == _torque_collision_detection.check(tsid_tau, sensor_data.at("joints_torque")));          
+                _collision_detected = (false == _torque_collision_detection.check(tsid_tau, sensor_data.at("joints_torque")));
             }
 
             if (_closed_loop) {
@@ -202,14 +210,14 @@ namespace inria_wbc {
                 dq << fb_vel, vel;
 
                 _solve(q_tsid, dq);
-            } else {
+            }
+            else {
                 _solve();
             }
 
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
             set_com_ref(com_ref);
         }
-
 
         void TalosPosTracker::clear_collision_detection()
         {
