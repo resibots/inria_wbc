@@ -86,6 +86,9 @@ namespace inria_wbc {
 
                 if (tasks_.find("lf") != tasks_.end() && tasks_.find("rf") != tasks_.end()) {
                     com_final.head(2) = (this->get_se3_ref("lf").translation().head(2) + this->get_se3_ref("rf").translation().head(2)) / 2;
+                    if ((this->com() - com_final).norm() > 0.01) // 1 cm
+                        IWBC_ERROR("Wrong starting configuration (" + srdf_file +  ") the CoM needs to be between the two feet with less than 1cm difference, but the distance is ", (this->com() - com_final).norm());
+
                     this->set_com_ref(com_final);
                     if (verbose_)
                         std::cout << "Taking initial com reference in the middle of the support polygon" << std::endl;
