@@ -169,6 +169,7 @@ namespace inria_wbc {
             bool verbose_ = false;
             double t_;
             double dt_;
+            bool floating_base_;
             std::string behavior_type_;
 
             std::string fb_joint_name_; //name of the floating base joint

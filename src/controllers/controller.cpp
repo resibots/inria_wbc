@@ -68,15 +68,24 @@ namespace inria_wbc {
             verbose_ = IWBC_CHECK(c["verbose"].as<bool>());
 
             pinocchio::Model robot_model;
-            if (!floating_base_joint_name.empty()) {
-                fb_joint_name_ = floating_base_joint_name; //floating base joint already in urdf
-                pinocchio::urdf::buildModel(urdf, robot_model, verbose_);
+            floating_base_ = IWBC_CHECK(c["floating_base"].as<bool>());
+
+            if (floating_base_) {
+
+                if (!floating_base_joint_name.empty()) {
+                    fb_joint_name_ = floating_base_joint_name; //floating base joint already in urdf
+                    pinocchio::urdf::buildModel(urdf, robot_model, verbose_);
+                }
+                else {
+                    pinocchio::urdf::buildModel(urdf, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
+                    fb_joint_name_ = "root_joint";
+                }
+                robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
             }
             else {
-                pinocchio::urdf::buildModel(urdf, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
-                fb_joint_name_ = "root_joint";
+                fb_joint_name_ = "";
+                robot_ = std::make_shared<RobotWrapper>(urdf, std::vector<std::string>(), verbose_); //this overloaded constructor allows to to not have a f_base
             }
-            robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
 
             _reset();
         }
@@ -87,7 +96,7 @@ namespace inria_wbc {
             t_ = 0.0;
 
             uint nactuated = robot_->na();
-            uint ndofs = robot_->nv(); // na + 6 (floating base)
+            uint ndofs = robot_->nv(); // na + 6 (floating base), if not f_base only na
 
             v_tsid_ = Vector::Zero(ndofs);
             a_tsid_ = Vector::Zero(ndofs);
@@ -152,11 +161,18 @@ namespace inria_wbc {
                     activated_contacts_forces_[contact] = tsid_->getContactForces(contact, sol);
                 }
 
-                Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
-                Eigen::AngleAxisd aaxis(quat);
-                q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
+                if (floating_base_) {
+                    Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
+                    Eigen::AngleAxisd aaxis(quat);
+                    q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
+                    tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
+                }
+                else {
+                    q_ << q_tsid_;
+                    tau_ << tau_tsid_;
+                }
+
                 dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
-                tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
                 ddq_ = a_tsid_;
             }
             else {
@@ -190,7 +206,14 @@ namespace inria_wbc {
         std::vector<std::string> Controller::controllable_dofs(bool filter_mimics) const
         {
             auto na = robot_->model().names;
-            auto tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
+            std::vector<std::string> tsid_controllables;
+            if (floating_base_) {
+                tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 2, robot_->model().names.end());
+            }
+            else {
+                tsid_controllables = std::vector<std::string>(robot_->model().names.begin() + 1, robot_->model().names.end());
+            }
+
             if (filter_mimics)
                 return remove_intersection(tsid_controllables, mimic_dof_names_);
             else
@@ -200,22 +223,29 @@ namespace inria_wbc {
         // Order of the floating base in q_ according to dart naming convention
         std::vector<std::string> Controller::floating_base_dofs() const
         {
+
             std::vector<std::string> floating_base_dofs;
-            if (fb_joint_name_ == "root_joint") {
-                floating_base_dofs = {"rootJoint_pos_x",
-                    "rootJoint_pos_y",
-                    "rootJoint_pos_z",
-                    "rootJoint_rot_x",
-                    "rootJoint_rot_y",
-                    "rootJoint_rot_z"};
+            if (floating_base_) {
+
+                if (fb_joint_name_ == "root_joint") {
+                    floating_base_dofs = {"rootJoint_pos_x",
+                        "rootJoint_pos_y",
+                        "rootJoint_pos_z",
+                        "rootJoint_rot_x",
+                        "rootJoint_rot_y",
+                        "rootJoint_rot_z"};
+                }
+                else {
+                    floating_base_dofs = {fb_joint_name_ + "_pos_x",
+                        fb_joint_name_ + "_pos_y",
+                        fb_joint_name_ + "_pos_z",
+                        fb_joint_name_ + "_rot_x",
+                        fb_joint_name_ + "_rot_y",
+                        fb_joint_name_ + "_rot_z"};
+                }
             }
             else {
-                floating_base_dofs = {fb_joint_name_ + "_pos_x",
-                    fb_joint_name_ + "_pos_y",
-                    fb_joint_name_ + "_pos_z",
-                    fb_joint_name_ + "_rot_x",
-                    fb_joint_name_ + "_rot_y",
-                    fb_joint_name_ + "_rot_z"};
+                floating_base_dofs = {};
             }
 
             return floating_base_dofs;

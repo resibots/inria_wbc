@@ -7,6 +7,7 @@ CONTROLLER:
   ref_config: pal_start
   frames: frames_talos.yaml
   floating_base_joint_name: ""
+  floating_base: true
   dt: 0.001
   # by default we do not close the loop on the floating base
   # because it's not required in position control
