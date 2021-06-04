@@ -25,11 +25,12 @@ namespace inria_wbc {
                 IWBC_ASSERT(t->name() == it->first, "Task name error (tsid)[", t->name(), "] vs [", it->first, "]");
                 return t;
             }
-            std::shared_ptr<tsid::contacts::Contact6d> contact(const std::string &str) const {
+            std::shared_ptr<tsid::contacts::Contact6dExt> contact(const std::string &str) const {
                 auto it = contacts_.find(str);
                 IWBC_ASSERT(it != contacts_.end(), "Contact [", str, "] not found");
                 return it->second;
             }
+            std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> bound_task() { return task<tsid::tasks::TaskJointPosVelAccBounds>("bounds"); }
             std::shared_ptr<tsid::tasks::TaskAMEquality> momentum_task() { return task<tsid::tasks::TaskAMEquality>("momentum"); }
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return task<tsid::tasks::TaskComEquality>("com"); }
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
@@ -37,15 +38,19 @@ namespace inria_wbc {
             double cost(const std::string& task_name) const override { return Controller::cost(task<tsid::tasks::TaskBase>(task_name)); }
 
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
+            tsid::trajectories::TrajectorySample get_full_se3_ref(const std::string& task_name){ return se3_task(task_name)->getReference(); }
             // we do not return the velocity for now
             const tsid::math::Vector3 get_com_ref() { return com_task()->getReference().pos; }
+            const tsid::trajectories::TrajectorySample get_full_com_ref() { return com_task()->getReference(); }
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(to_sample(ref)); }
-            void set_com_ref(const tsid::trajectories::TrajectorySample& ref) { com_task()->setReference(ref); }
-            void set_momentum_ref(const tsid::trajectories::TrajectorySample& ref) { momentum_task()->setReference(ref); }
+            void set_com_ref(const tsid::trajectories::TrajectorySample& sample) { com_task()->setReference(sample); }
+            void set_momentum_ref(const tsid::trajectories::TrajectorySample& sample) { momentum_task()->setReference(sample); }
             void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
+            void set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name);
 
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
+            Eigen::VectorXd force_torque_from_solution(const std::string& foot);
 
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
             // therefore you can re-add it later by using its name
@@ -61,7 +66,7 @@ namespace inria_wbc {
             // the list of all the tasks
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>> tasks_;
             // contacts are not tasks in tsid
-            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::Contact6d>> contacts_;
+            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::Contact6dExt>> contacts_;
 
         
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)

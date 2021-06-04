@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-#include <tsid/contacts/contact-6d.hpp>
+#include <tsid/contacts/contact-6d-ext.hpp>
 #include <tsid/contacts/contact-point.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/utils.hpp>
@@ -52,12 +52,16 @@ using namespace inria_wbc::utils;
 
 namespace inria_wbc {
     namespace controllers {
-        Controller::Controller(const YAML::Node& config) :
-            config_(config)
+
+        const std::string behavior_types::FIXED_BASE = "fixed_base";
+        const std::string behavior_types::SINGLE_SUPPORT = "single_support";
+        const std::string behavior_types::DOUBLE_SUPPORT = "double_support";
+
+        Controller::Controller(const YAML::Node& config) : config_(config)
         {
             auto c = IWBC_CHECK(config["CONTROLLER"]);
             auto path = IWBC_CHECK(c["base_path"]);
-            auto floating_base_joint_name =  IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
+            auto floating_base_joint_name = IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
             auto urdf = IWBC_CHECK(c["urdf"].as<std::string>());
             dt_ = IWBC_CHECK(c["dt"].as<double>());
             mimic_dof_names_ = IWBC_CHECK(c["mimic_dof_names"].as<std::vector<std::string>>());
@@ -67,7 +71,8 @@ namespace inria_wbc {
             if (!floating_base_joint_name.empty()) {
                 fb_joint_name_ = floating_base_joint_name; //floating base joint already in urdf
                 pinocchio::urdf::buildModel(urdf, robot_model, verbose_);
-            } else {
+            }
+            else {
                 pinocchio::urdf::buildModel(urdf, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
                 fb_joint_name_ = "root_joint";
             }
@@ -141,6 +146,11 @@ namespace inria_wbc {
                 v_tsid_ += dt_ * dv;
                 q_tsid_ = pinocchio::integrate(robot_->model(), q_tsid_, dt_ * v_tsid_);
                 t_ += dt_;
+
+                activated_contacts_forces_.clear();
+                for (auto& contact : activated_contacts_) {
+                    activated_contacts_forces_[contact] = tsid_->getContactForces(contact, sol);
+                }
 
                 Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                 Eigen::AngleAxisd aaxis(quat);
@@ -252,6 +262,23 @@ namespace inria_wbc {
                 masses.push_back(robot_->model().inertias[i].mass());
             }
             return masses;
+        }
+
+        double Controller::pinocchio_total_model_mass() const
+        {
+            double mass = 0.0;
+            for (int i = 0; i < robot_->model().inertias.size(); i++) {
+                mass += robot_->model().inertias[i].mass();
+            }
+            return mass;
+        }
+
+        void Controller::set_behavior_type(std::string bt)
+        {
+            if (bt != behavior_types::FIXED_BASE && bt != behavior_types::SINGLE_SUPPORT && bt != behavior_types::DOUBLE_SUPPORT)
+                IWBC_ERROR("behavior type is either behavior_types::FIXED_BASE , behavior_types::SINGLE_SUPPORT or behavior_types::DOUBLE_SUPPORT ");
+            behavior_type_ = bt;
+            parse_stabilizer(config_["CONTROLLER"]);
         }
 
     } // namespace controllers

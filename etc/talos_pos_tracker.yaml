@@ -27,9 +27,9 @@ CONTROLLER:
                      "gripper_right_motor_single_joint"]
   stabilizer:
     activated: true
-    filter_size: 5
-    p: [0.001, 0.001]
-    d: [0.0001, 0.0001]
+    params_ss: single_support.yaml
+    params_ds: double_support.yaml
+    params_fixed_base: fixed_base.yaml
   collision_detection:
     activated: true
     filter_size: 30

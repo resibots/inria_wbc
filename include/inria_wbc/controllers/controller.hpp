@@ -8,7 +8,7 @@
 
 #include <pinocchio/spatial/se3.hpp>
 
-#include <tsid/contacts/contact-6d.hpp>
+#include <tsid/contacts/contact-6d-ext.hpp>
 #include <tsid/contacts/contact-point.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/fwd.hpp>
@@ -16,8 +16,8 @@
 #include <tsid/robots/fwd.hpp>
 #include <tsid/robots/robot-wrapper.hpp>
 #include <tsid/tasks/task-actuation-bounds.hpp>
-#include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
+#include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
@@ -35,9 +35,13 @@ namespace inria_wbc {
 
         using SensorData = std::unordered_map<std::string, Eigen::MatrixXd>;
 
+        struct behavior_types {
+            static const std::string FIXED_BASE;
+            static const std::string SINGLE_SUPPORT;
+            static const std::string DOUBLE_SUPPORT;
+        };
         class Controller {
         public:
-
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
             Controller(const YAML::Node& config);
             Controller(const Controller&) = delete;
@@ -51,10 +55,46 @@ namespace inria_wbc {
             // Order of the floating base in q_ according to dart naming convention
             std::vector<std::string> floating_base_dofs() const;
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
+            std::vector<std::string> activated_contacts() { return activated_contacts_; };
 
             virtual const Eigen::Vector2d& cop() const
             {
                 static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector2d& cop_raw() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector2d& lcop() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector2d& rcop() const
+            {
+                static Eigen::Vector2d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector3d& lf_force_filtered() const
+            {
+                static Eigen::Vector3d tmp;
+                IWBC_ERROR("No COP estimator in controller.");
+                return tmp;
+            }
+
+            virtual const Eigen::Vector3d& rf_force_filtered() const
+            {
+                static Eigen::Vector3d tmp;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
@@ -80,6 +120,8 @@ namespace inria_wbc {
             std::shared_ptr<tsid::robots::RobotWrapper> robot() { return robot_; };
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid() { return tsid_; };
             std::vector<double> pinocchio_model_masses() const;
+            double pinocchio_total_model_mass() const;
+
             const std::vector<double>& pinocchio_model_cumulated_masses() { return tsid_->data().mass; };
             const std::vector<std::string>& pinocchio_joint_names() const { return robot_->model().names; }
             const pinocchio::SE3& model_joint_pos(const std::string& joint_name) const
@@ -106,24 +148,35 @@ namespace inria_wbc {
             void set_verbose(bool b) { verbose_ = b; }
             bool verbose() const { return verbose_; }
 
+            void set_behavior_type(std::string bt);
+            std::string behavior_type() const { return behavior_type_; }
+            virtual void parse_stabilizer(const YAML::Node& config)
+            {
+                if (verbose_)
+                    std::cout << "There is no stabilizer for this controller" << std::endl;
+            };
+
         private:
             std::vector<int> get_non_mimics_indexes() const;
 
         protected:
             void _reset();
             // you can use q_tsid_ and v_tsid_ for open-loop control
-            void _solve(const Eigen::VectorXd& q, const Eigen::VectorXd &dq);
-            void _solve() { _solve( q_tsid_, v_tsid_); }
+            void _solve(const Eigen::VectorXd& q, const Eigen::VectorXd& dq);
+            void _solve() { _solve(q_tsid_, v_tsid_); }
 
             const YAML::Node& config_;
             bool verbose_ = false;
             double t_;
             double dt_;
+            std::string behavior_type_;
 
             std::string fb_joint_name_; //name of the floating base joint
             std::vector<std::string> mimic_dof_names_;
             std::vector<std::string> tsid_joint_names_; //contain floating base and mimics
             std::vector<int> non_mimic_indexes_;
+            std::vector<std::string> activated_contacts_;
+            std::vector<std::string> all_contacts_;
 
             //---- TSID conventions for the floating base: quaternion
             tsid::math::Vector q_tsid_; // tsid joint positions
@@ -131,6 +184,7 @@ namespace inria_wbc {
             tsid::math::Vector a_tsid_; // tsid joint accelerations
             tsid::math::Vector tau_tsid_; // tsid joint torques
             tsid::math::Vector momentum_; // momentum
+            std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces_; //tsid contact forces of the activated contacts
 
             //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart
