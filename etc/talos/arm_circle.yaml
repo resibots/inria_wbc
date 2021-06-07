@@ -1,5 +1,5 @@
 BEHAVIOR:
-  name : circular-cartesian-trajectory
+  name : generic::circular-cartesian
   target_task_name: ee
   pitch_angle: 3.14
   radius: 0.1
