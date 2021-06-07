@@ -1,4 +1,4 @@
 BEHAVIOR:
-  name : talos-clapping
+  name : humanoid::clapping
   trajectory_duration : 1.0
   motion_size : 1.1

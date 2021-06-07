@@ -53,8 +53,12 @@ namespace inria_wbc {
                 auto it = _map.find(name);
                 if (it != _map.end())
                     return it->second(args...);
-                else
-                    throw IWBC_EXCEPTION(name, " is not in the factory [", boost::typeindex::type_id_runtime(*this).pretty_name(), "]");
+                else {
+                    std::string names;
+                    for (auto& i : _map)
+                        names += "\t" + i.first + "\n";
+                    throw IWBC_EXCEPTION(name, " is not in the factory [", boost::typeindex::type_id_runtime(*this).pretty_name(), "]\nThe factory contains:\n", names);
+                }
                 return ptr_t();
             }
 

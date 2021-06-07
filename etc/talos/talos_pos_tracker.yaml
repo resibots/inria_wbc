@@ -1,11 +1,11 @@
 CONTROLLER:
   name: talos-pos-tracker
-  base_path: "/home/pal/inria_wbc/etc"
-  tasks: tasks_talos.yaml
+  base_path: "/home/pal/inria_wbc/etc/talos"
+  tasks: tasks.yaml
   urdf: talos.urdf
-  configurations: talos_configurations.srdf 
+  configurations: configurations.srdf 
   ref_config: inria_start
-  frames: frames_talos.yaml
+  frames: frames.yaml
   floating_base_joint_name: ""
   floating_base: true
   dt: 0.001
@@ -28,9 +28,9 @@ CONTROLLER:
                      "gripper_right_motor_single_joint"]
   stabilizer:
     activated: true
-    params_ss: single_support.yaml
-    params_ds: double_support.yaml
-    params_fixed_base: fixed_base.yaml
+    params_ss: stab_single_support.yaml
+    params_ds: stab_double_support.yaml
+    params_fixed_base: stab_fixed_base.yaml
   collision_detection:
     activated: true
     filter_size: 30
