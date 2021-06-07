@@ -37,7 +37,7 @@ posture:
     type: posture
     weight: 1.75
     kp: 10.0
-    ref: pal_start
+    ref: inria_start
 bounds:
     type: bounds
     weight: 10000

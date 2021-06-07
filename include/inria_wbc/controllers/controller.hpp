@@ -114,6 +114,7 @@ namespace inria_wbc {
             Eigen::VectorXd q(bool filter_mimics = true) const;
             tsid::math::Vector q_tsid() const { return q_tsid_; };
 
+            double t() const { return t_; };
             double dt() const { return dt_; };
             const YAML::Node& config() const { return config_; };
 
@@ -148,6 +149,7 @@ namespace inria_wbc {
             void set_verbose(bool b) { verbose_ = b; }
             bool verbose() const { return verbose_; }
 
+            void save_configuration(const std::string config_name, const std::string robot_name = "robot") const;
             void set_behavior_type(std::string bt);
             std::string behavior_type() const { return behavior_type_; }
             virtual void parse_stabilizer(const YAML::Node& config)

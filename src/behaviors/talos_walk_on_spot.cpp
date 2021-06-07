@@ -56,7 +56,7 @@ namespace inria_wbc {
             auto rf_high = translate_up(rf_low, step_height_);
 
             // set the waypoints for the CoM : lf/rf but same height
-            Eigen::VectorXd com_init = controller->com();
+            Eigen::VectorXd com_init = controller->get_com_ref();
             Eigen::VectorXd com_lf = lf_low.translation();
             com_lf(2) = com_init(2);
             Eigen::VectorXd com_rf = rf_low.translation();
