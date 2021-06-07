@@ -150,8 +150,8 @@ namespace inria_wbc {
         {
             IWBC_ASSERT("you need 3 coefficient in p_ffda for ankle admittance", p_ffda.size() == 3);
 
-            if (std::abs(lf_sensor_force(2) + lf_sensor_force(2)) > 10 * Mg)
-                IWBC_ERROR("zmp_distributor_admittance : ground force is more than 10*M*g , check sensor measurment: ", std::abs(lf_sensor_force(2) + lf_sensor_force(2)), " > ", 10 * Mg);
+            if (std::abs(lf_sensor_force(2) + rf_sensor_force(2)) > 10 * Mg)
+                IWBC_ERROR("zmp_distributor_admittance : ground force is more than 10*M*g , check sensor measurment: ", std::abs(lf_sensor_force(2) + rf_sensor_force(2)), " > ", 10 * Mg);
 
             double zctrl = std::abs(lf_normal_force - rf_normal_force) - std::abs(lf_sensor_force(2) - rf_sensor_force(2));
             auto torso_roll = p_ffda[0] * zctrl;
@@ -258,7 +258,6 @@ namespace inria_wbc {
             Eigen::Matrix<double, 6, 1>& right_fref)
         {
             double alpha = 0;
-
             auto ct_lf = contact_ref.find("contact_lfoot");
             auto ct_rf = contact_ref.find("contact_rfoot");
             Eigen::Vector2d PR = Eigen::Vector2d::Zero();
@@ -281,8 +280,7 @@ namespace inria_wbc {
                 fline.second(2) = 0;
 
                 auto proj = closest_point_on_line(zmp3, fline);
-
-                if ((fline.second - fline.first).norm() == (proj - fline.first).norm() + (fline.second - proj).norm()) {
+                if (std::abs((fline.second - fline.first).norm() - (proj - fline.first).norm() - (fline.second - proj).norm()) < 1e-10) {
                     alpha = (proj - fline.first).norm() / (fline.first - fline.second).norm();
                 }
                 else if ((proj - fline.first).norm() < (proj - fline.second).norm()) {

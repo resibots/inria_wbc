@@ -39,6 +39,7 @@ namespace inria_wbc {
         protected:
             virtual void parse_configuration(const YAML::Node& config);
             void parse_collision_thresholds(const std::string& config_path);
+            void init_com();
 
             //sensor estimation & filtering
             estimators::Cop _cop_estimator;

@@ -10,7 +10,7 @@ namespace inria_wbc {
         {
             //////////////////// DEFINE COM TRAJECTORIES  //////////////////////////////////////
             traj_selector_ = 0;
-            auto com_init = std::static_pointer_cast<controllers::PosTracker>(controller_)->com();
+            auto com_init = std::static_pointer_cast<controllers::PosTracker>(controller_)->get_com_ref();
 
             auto c = IWBC_CHECK(config["BEHAVIOR"]);
             trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
