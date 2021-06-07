@@ -1,6 +1,6 @@
 CONTROLLER:
   name: talos-pos-tracker
-  base_path: "/home/pal/inria_wbc/etc/talos"
+  base_path: /home/pal/inria_wbc/etc/talos
   tasks: tasks.yaml
   urdf: talos.urdf
   configurations: configurations.srdf 
