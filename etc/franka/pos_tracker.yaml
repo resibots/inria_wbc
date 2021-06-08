@@ -1,9 +1,9 @@
 CONTROLLER:
   name: pos-tracker
-  base_path: "/home/pal/inria_wbc/etc"
-  tasks: tasks_franka.yaml
+  base_path: /home/pal/inria_wbc/etc/franka
+  tasks: tasks.yaml
   urdf: franka.urdf
-  configurations: franka_configurations.srdf 
+  configurations: configurations.srdf 
   ref_config: start
   floating_base: false
   floating_base_joint_name: ""

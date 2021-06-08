@@ -39,7 +39,7 @@ namespace cst {
     static constexpr double frequency = 1000;
     static constexpr double tolerance = 5e-3;
     static const std::string ref_path = "../../tests/ref_test_talos.yaml";
-    static const std::string base_path = "../../etc";
+    static const std::string base_path = "../../etc/talos/";
 
 } // namespace cst
 
@@ -127,6 +127,7 @@ void test_behavior(const std::string& controller_path,
     c_config["CONTROLLER"]["base_path"] = cst::base_path;
     c_config["CONTROLLER"]["urdf"] = robot->model_filename();
     c_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
+    c_config["CONTROLLER"]["verbose"] = verbose;
 
     // get the controller
     auto controller_name = IWBC_CHECK(c_config["CONTROLLER"]["name"].as<std::string>());
@@ -497,8 +498,8 @@ BOOST_AUTO_TEST_CASE(behaviors)
     ///// the default behavior is to run all the combinations and write the output in the yaml file
 
     // this is relative to the "tests" directory
-    std::string controller = "../../etc/talos_pos_tracker.yaml";
-    auto behaviors = {"../../etc/arm.yaml", "../../etc/squat.yaml", "../../etc/talos_clapping.yaml", "../../etc/walk_on_spot.yaml"};
+    std::string controller = "../../etc/talos/talos_pos_tracker.yaml";
+    auto behaviors = {"../../etc/talos/arm.yaml", "../../etc/talos/squat.yaml", "../../etc/talos/clapping.yaml", "../../etc/talos/walk_on_spot.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity", "spd"};
     std::vector<std::string> stabilized = {"true", "false"};

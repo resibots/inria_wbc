@@ -31,11 +31,11 @@ int main(int argc, char* argv[])
         // clang-format off
         desc.add_options()
         ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
-        ("behavior,b", po::value<std::string>()->default_value("../etc/circular_cartesian_trajectory.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/circular_cartesian_trajectory.yaml]")
+        ("behavior,b", po::value<std::string>()->default_value("../etc/franka/cartesian_line.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/circular_cartesian.yam]")
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
-        ("controller,c", po::value<std::string>()->default_value("../etc/franka_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka_pos_tracker.yaml]")
+        ("controller,c", po::value<std::string>()->default_value("../etc/franka/pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/pos_tracker.yaml]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("control_freq", po::value<int>()->default_value(1000), "set the control frequency")
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
         auto controller_path = vm["controller"].as<std::string>();
         auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
 
-        controller_config["CONTROLLER"]["base_path"] = "../etc";// we assume that we run in ./build
+        controller_config["CONTROLLER"]["base_path"] = "../etc/franka";// we assume that we run in ./build
         controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;

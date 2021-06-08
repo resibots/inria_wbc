@@ -1,7 +1,0 @@
-BEHAVIOR:
-  name : circular-cartesian-trajectory
-  target_task_name: ee
-  pitch_angle: 3.14
-  radius: 0.1
-  init_pos: [0.45, 0.0, 0.55]
-  traj_cycle_duration: 2.0

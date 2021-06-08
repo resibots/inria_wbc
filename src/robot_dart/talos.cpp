@@ -43,13 +43,13 @@ int main(int argc, char* argv[])
         // clang-format off
         desc.add_options()
         ("actuators,a", po::value<std::string>()->default_value("spd"), "actuator model torque/velocity/servo/spd  [default:spd]")
-        ("behavior,b", po::value<std::string>()->default_value("../etc/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
+        ("behavior,b", po::value<std::string>()->default_value("../etc/talos/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_squat.yaml]")
         ("big_window,w", "use a big window (nicer but slower) [default:false]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
         ("check_fall", "check if the robot has fallen (print if a collision)")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
-        ("controller,c", po::value<std::string>()->default_value("../etc/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos_pos_tracker.yaml]")
+        ("controller,c", po::value<std::string>()->default_value("../etc/talos/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_pos_tracker.yaml]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("fast,f", "fast (simplified) Talos [default: false]")
@@ -91,20 +91,20 @@ int main(int argc, char* argv[])
         }
 
         // clang-format off
-    std::cout<< "------ CONFIGURATION ------" << std::endl;
-    std::ostringstream oss_conf;
-    for (const auto& kv : vm){
-        oss_conf << kv.first << " ";
-        try { oss_conf << kv.second.as<std::string>();
-        } catch(...) {/* do nothing */ }
-        try { oss_conf << kv.second.as<bool>();
-        } catch(...) {/* do nothing */ }
-        try { oss_conf << kv.second.as<int>();
-        } catch(...) {/* do nothing */ }
-        oss_conf << std::endl;
-    }
-    std::cout << oss_conf.str();
-    std::cout << "--------------------------" << std::endl;
+        std::cout<< "------ CONFIGURATION ------" << std::endl;
+        std::ostringstream oss_conf;
+        for (const auto& kv : vm){
+            oss_conf << kv.first << " ";
+            try { oss_conf << kv.second.as<std::string>();
+            } catch(...) {/* do nothing */ }
+            try { oss_conf << kv.second.as<bool>();
+            } catch(...) {/* do nothing */ }
+            try { oss_conf << kv.second.as<int>();
+            } catch(...) {/* do nothing */ }
+            oss_conf << std::endl;
+        }
+        std::cout << oss_conf.str();
+        std::cout << "--------------------------" << std::endl;
         // clang-format on
 
         bool verbose = (vm.count("verbose") != 0);
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
         auto controller_path = vm["controller"].as<std::string>();
         auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
         // do some modifications according to command-line options
-        controller_config["CONTROLLER"]["base_path"] = "../etc"; // we assume that we run in ./build
+        controller_config["CONTROLLER"]["base_path"] = "../etc/talos"; // we assume that we run in ./build
         controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;

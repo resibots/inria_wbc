@@ -1,4 +1,4 @@
 BEHAVIOR:
-  name: talos-squat
+  name: humanoid::squat
   trajectory_duration: 3
   motion_size: 0.2

@@ -1,5 +1,5 @@
 BEHAVIOR:
-  name: walk-on-spot
+  name: humanoid::walk-on-spot
   traj_com_duration: 5
   traj_foot_duration: 5
   step_height: 0.1
