@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
         // clang-format off
         desc.add_options()
         ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
-        ("behavior,b", po::value<std::string>()->default_value("../etc/franka/circular_cartesian.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/circular_cartesian.yam]")
+        ("behavior,b", po::value<std::string>()->default_value("../etc/franka/cartesian_line.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/circular_cartesian.yam]")
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")

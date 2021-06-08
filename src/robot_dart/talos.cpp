@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
         // clang-format off
         desc.add_options()
         ("actuators,a", po::value<std::string>()->default_value("spd"), "actuator model torque/velocity/servo/spd  [default:spd]")
-        ("behavior,b", po::value<std::string>()->default_value("../etc/talos/talos_squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_squat.yaml]")
+        ("behavior,b", po::value<std::string>()->default_value("../etc/talos/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_squat.yaml]")
         ("big_window,w", "use a big window (nicer but slower) [default:false]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
         ("check_fall", "check if the robot has fallen (print if a collision)")
