@@ -33,7 +33,6 @@ static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
 static const std::string bold = "\x1B[1m";
 
-
 int main(int argc, char* argv[])
 {
     try {
@@ -365,6 +364,7 @@ int main(int argc, char* argv[])
                 for (auto& p : pv) {
                     if (simu.scheduler().current_time() > p && simu.scheduler().current_time() < p + 0.5) {
                         robot->set_external_force("base_link", Eigen::Vector3d(0, pforce, 0));
+                        // robot->set_external_force("base_link", Eigen::Vector3d(pforce, 0, 0));
                         push = true;
                     }
                     if (simu.scheduler().current_time() > p + 0.25)
@@ -404,7 +404,7 @@ int main(int argc, char* argv[])
                 else if (x.first == "force") // the cop according to controller
                     (*x.second) << ft_sensor_left->force().transpose() << " "
                                 << controller->lf_force_filtered().transpose() << " "
-                                << ft_sensor_right->force().transpose() << " " 
+                                << ft_sensor_right->force().transpose() << " "
                                 << controller->rf_force_filtered().transpose() << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;

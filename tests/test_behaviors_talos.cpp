@@ -248,7 +248,7 @@ void test_behavior(const std::string& controller_path,
                     }
                     else {
                         if (i == 0)
-                            robot->set_external_force("base_link", Eigen::Vector3d(-150, 0, 0));
+                            robot->set_external_force("base_link", Eigen::Vector3d(-135, 0, 0));
                         if (i == 1)
                             robot->set_external_force("base_link", Eigen::Vector3d(0, 200, 0));
                     }

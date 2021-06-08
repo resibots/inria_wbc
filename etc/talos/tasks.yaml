@@ -85,9 +85,9 @@ self_collision-left:
         leg_left_1_joint: 0.15
         leg_right_4_joint: 0.1
         leg_left_4_joint: 0.1
-    weight: 50
-    kp: 500.0
-    p: 4
+    weight: 500
+    kp: 700.0
+    p: 3
 self_collision-right:
     type: self-collision
     tracked: gripper_right_joint
@@ -105,9 +105,9 @@ self_collision-right:
         leg_left_1_joint: 0.15
         leg_right_4_joint: 0.1
         leg_left_4_joint: 0.1
-    weight: 50
-    kp: 500.0
-    p: 4
+    weight: 500
+    kp: 700.0
+    p: 3
 self_collision-arm-right:
     type: self-collision
     tracked: arm_right_4_joint
@@ -118,7 +118,7 @@ self_collision-arm-right:
         v_base_link_right: 0.115
     weight: 10
     kp: 10.0
-    p: 4
+    p: 3
 self_collision-arm-left:
     type: self-collision
     tracked: arm_left_4_joint
@@ -129,4 +129,4 @@ self_collision-arm-left:
         v_base_link_right: 0.115
     weight: 10
     kp: 10.0
-    p: 4
+    p: 3
