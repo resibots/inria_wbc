@@ -198,8 +198,8 @@ int main(int argc, char* argv[])
         }
 
         // add sensors to the robot
-        auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
-        auto ft_sensor_right = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint");
+        auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq);
+        auto ft_sensor_right = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq);
         robot_dart::sensor::IMUConfig imu_config;
         imu_config.body = robot->body_node("imu_link"); // choose which body the sensor is attached to
         imu_config.frequency = control_freq; // update rate of the sensor
@@ -236,7 +236,7 @@ int main(int argc, char* argv[])
 
         auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
         for (const auto& joint : talos_tracker_controller->torque_sensor_joints()) {
-            torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000));
+            torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, control_freq));
             std::cerr << "Add joint torque sensor:  " << joint << std::endl;
         }
 

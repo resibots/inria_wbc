@@ -112,10 +112,9 @@ namespace tsid {
                 double norm = sqrt(square_norm);
                 double r = m_avoided_frames_r0s[i];
 
-                
                 double eps = 1e-9; // we consider that we influence if above eps
                 double p = m_p;
-                double a = (r + m_radius);// * pow(-log(eps), -1.0 / p); //about 0.5;
+                double a = (r + m_radius); // * pow(-log(eps), -1.0 / p); //about 0.5;
 
                 // if in the influence zone
                 if (norm <= a) {
@@ -139,7 +138,7 @@ namespace tsid {
                     // A
                     m_A += m_grad_C.transpose() * J;
                     // B (note: m_drift = dJ(q)*dq)
-                    m_B += -((m_Hessian_C * J * v).transpose() * J * v + m_grad_C.transpose() * (drift + m_Kd * J * v) + m_Kp * m_C);
+                    m_B += -((m_Hessian_C * J * v).transpose() * J * v + m_grad_C.transpose() * (-drift + m_Kd * J * v) + m_Kp * m_C);
                 } // else 0 for everything
             }
 
