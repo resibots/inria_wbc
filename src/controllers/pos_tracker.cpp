@@ -31,41 +31,41 @@ namespace inria_wbc {
     namespace controllers {
         static Register<PosTracker> __generic_pos_tracker("pos-tracker");
 
-        PosTracker::PosTracker(const Params& params) : Controller(params)
+        PosTracker::PosTracker(const YAML::Node& config) : Controller(config)
         {
-            if (params.sot_config_path.empty()) {
-                throw IWBC_EXCEPTION("empty configuration path! (we expect a YAML file)");
-            }
+            // we only care about the CONTROLLER section
+            YAML::Node c = IWBC_CHECK(config["CONTROLLER"]);
 
-            if (verbose_)
-                std::cout << "loading main YAML file:" << params.sot_config_path << std::endl;
-
-            // all the file paths are relative to the main config file
-            auto path = boost::filesystem::path(params.sot_config_path).parent_path();
-
-            YAML::Node config = IWBC_CHECK(YAML::LoadFile(params.sot_config_path)["CONTROLLER"]);
+            // all the file paths are relative to base_path
+            auto path = IWBC_CHECK(c["base_path"].as<std::string>());
 
             // create additional frames if needed (optional)
-            if (config["frames"]) {
-                auto p_frames = path / boost::filesystem::path(config["frames"].as<std::string>());
-                parse_frames(p_frames.string());
+            if (c["frames"]) {
+                auto p_frames = path + "/" + c["frames"].as<std::string>();
+                parse_frames(p_frames);
             }
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
             //the srdf contains initial joint positions
-            auto srdf_file = IWBC_CHECK(config["configurations"].as<std::string>());
-            auto ref_config = IWBC_CHECK(config["ref_config"].as<std::string>());
-            auto p_srdf = path / boost::filesystem::path(srdf_file);
-            pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf.string(), verbose_);
+            auto srdf_file = IWBC_CHECK(c["configurations"].as<std::string>());
+            auto ref_config = IWBC_CHECK(c["ref_config"].as<std::string>());
+            auto p_srdf = path + "/" + srdf_file;
+            pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf, verbose_);
 
-            //q_tsid_ is of size 37 (pos+quat+nactuated)
+            //q_tsid_ for talos is of size 37 (pos+quat+nactuated)
             auto ref_map = robot_->model().referenceConfigurations;
             IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
             q_tsid_ = ref_map[ref_config];
-            //q0_ is in "Dart format" for the floating base
-            Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
-            Eigen::AngleAxisd aaxis(quat);
-            q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
+
+            if (floating_base_) {
+                //q0_ is in "Dart format" for the floating base
+                Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
+                Eigen::AngleAxisd aaxis(quat);
+                q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
+            }
+            else {
+                q0_ = q_tsid_;
+            }
 
             ////////////////////Create the inverse-dynamics formulation///////////////////
             tsid_ = std::make_shared<InverseDynamicsFormulationAccForce>("tsid", *robot_);
@@ -82,7 +82,7 @@ namespace inria_wbc {
             assert(tsid_);
             assert(robot_);
 
-            auto task_file = IWBC_CHECK(config["tasks"].as<std::string>());
+            auto task_file = IWBC_CHECK(c["tasks"].as<std::string>());
             auto p = path / boost::filesystem::path(task_file);
             parse_tasks(p.string());
 
@@ -102,6 +102,8 @@ namespace inria_wbc {
                     // the task is added to tsid by make_contact
                     auto task = tasks::make_contact_task(robot_, tsid_, name, it->second);
                     contacts_[name] = task;
+                    activated_contacts_.push_back(name);
+                    all_contacts_.push_back(name);
                 }
                 else {
                     // the task is added automatically to TSID by the factory
@@ -149,6 +151,12 @@ namespace inria_wbc {
             task->setReference(sample);
         }
 
+        void PosTracker::set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name)
+        {
+            auto task = se3_task(task_name);
+            task->setReference(sample);
+        }
+
         void PosTracker::remove_contact(const std::string& contact_name)
         {
             if (verbose_)
@@ -156,6 +164,7 @@ namespace inria_wbc {
             IWBC_ASSERT(contacts_.find(contact_name) != contacts_.end(), "Trying to remove an contact:", contact_name);
             bool res = tsid_->removeRigidContact(contact_name);
             IWBC_ASSERT(res, " contact ", contact_name, " not found");
+            activated_contacts_.erase(std::remove(activated_contacts_.begin(), activated_contacts_.end(), contact_name), activated_contacts_.end());
         }
 
         void PosTracker::add_contact(const std::string& contact_name)
@@ -164,6 +173,49 @@ namespace inria_wbc {
                 std::cout << "adding contact:" << contact_name << std::endl;
             auto c = contact(contact_name);
             tsid_->addRigidContact(*c, tasks::cst::w_force_feet);
+            activated_contacts_.push_back(contact_name);
+        }
+        //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
+        //it corresponds to the force of contact(contact_name)->Contact6d::setForceReference(force);
+        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& foot)
+        {
+            IWBC_ASSERT(foot == "left" || foot == "right", "foot must be left or right");
+
+            std::string ct_name, tau_x_name, tau_y_name;
+            if (foot == "left") {
+                ct_name = "contact_lfoot";
+                tau_x_name = "leg_left_6_joint";
+                tau_y_name = "leg_left_5_joint";
+            }
+            if (foot == "right") {
+                ct_name = "contact_rfoot";
+                tau_x_name = "leg_right_6_joint";
+                tau_y_name = "leg_right_5_joint";
+            }
+
+            Eigen::Matrix<double, 6, 1> force_tsid;
+            force_tsid.setZero();
+
+            IWBC_ASSERT(activated_contacts_forces_.find(ct_name) != activated_contacts_forces_.end(), ct_name, "not in activated_contacts_forces_");
+            auto contact_force = activated_contacts_forces_[ct_name];
+            int n_contact_points = contact_force.size() / 3;
+            for (int i = 0; i < n_contact_points; i++) {
+                force_tsid(0) += -contact_force(0 + i * 3);
+                force_tsid(1) += -contact_force(1 + i * 3);
+                force_tsid(2) += -contact_force(2 + i * 3);
+            }
+
+            auto tau_vec = tau(false);
+            auto dofs_names = all_dofs(false);
+
+            auto it = std::find(dofs_names.begin(), dofs_names.end(), tau_x_name);
+            IWBC_ASSERT(it != dofs_names.end(), tau_x_name, "not in dofs_names");
+            force_tsid(3) = -tau_vec[std::distance(dofs_names.begin(), it)];
+            it = std::find(dofs_names.begin(), dofs_names.end(), tau_y_name);
+            IWBC_ASSERT(it != dofs_names.end(), tau_y_name, "not in dofs_names");
+            force_tsid(4) = tau_vec[std::distance(dofs_names.begin(), it)];
+
+            return force_tsid;
         }
 
         void PosTracker::remove_task(const std::string& task_name, double transition_duration)

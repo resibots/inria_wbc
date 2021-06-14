@@ -1,0 +1,28 @@
+CONTROLLER:
+  name: ex-controller
+  base_path: "/home/pal/inria_wbc/etc"
+  tasks: tasks_example.yaml
+  urdf: talos.urdf
+  configurations: talos_configurations.srdf 
+  ref_config: inria_start
+  frames: frames_example.yaml
+  floating_base_joint_name: ""
+  floating_base: true
+  dt: 0.001
+  # by default we do not close the loop on the floating base
+  # because it's not required in position control
+  # and our robot does not have a very good estimator yet
+  closed_loop: false
+  verbose: true
+  mimic_dof_names : ["gripper_left_inner_double_joint",
+                     "gripper_left_fingertip_1_joint",
+                     "gripper_left_fingertip_2_joint",
+                     "gripper_left_inner_single_joint",
+                     "gripper_left_fingertip_3_joint",
+                     "gripper_left_motor_single_joint",
+                     "gripper_right_inner_double_joint",
+                     "gripper_right_fingertip_1_joint",
+                     "gripper_right_fingertip_2_joint",
+                     "gripper_right_inner_single_joint",
+                     "gripper_right_fingertip_3_joint",
+                     "gripper_right_motor_single_joint"]

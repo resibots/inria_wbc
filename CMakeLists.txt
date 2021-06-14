@@ -20,14 +20,14 @@ set(INRIA_WBC_SOURCES
                             src/controllers/pos_tracker.cpp
                             src/controllers/tasks.cpp
                             src/controllers/talos_pos_tracker.cpp
-                            src/behaviors/talos_squat.cpp
-                            src/behaviors/talos_move_arm.cpp
+                            src/behaviors/generic/cartesian.cpp
+                            src/behaviors/humanoid/squat.cpp
+                            src/behaviors/humanoid/walk_on_spot.cpp
+                            src/behaviors/humanoid/clapping.cpp
                             src/safety/torque_collision_detection.cpp
-                            src/behaviors/talos_walk_on_spot.cpp
-                            src/behaviors/talos_clapping.cpp                            
+                            src/stabilizers/stabilizer.cpp
                             src/estimators/cop.cpp
                             src/tsid/task-self-collision.cpp
-
 )
 
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})

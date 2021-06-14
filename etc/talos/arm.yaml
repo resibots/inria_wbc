@@ -1,0 +1,5 @@
+BEHAVIOR:
+  name : generic::cartesian
+  task_name: lh
+  relative_target: [0, 0, 0.1]
+  trajectory_duration: 1

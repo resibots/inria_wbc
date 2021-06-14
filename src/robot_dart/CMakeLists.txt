@@ -1,9 +1,7 @@
 
 set(EXAMPLE_LIST
-	evaluate_cop.cpp
-	test_controller.cpp
-	test_masses.cpp
-	test_torque_safety.cpp
+	talos.cpp
+    franka.cpp
 )
 
 

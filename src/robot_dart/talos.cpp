@@ -26,6 +26,7 @@
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
+#include "inria_wbc/robot_dart/utils.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
 static const std::string red = "\x1B[31m";
@@ -40,22 +41,26 @@ int main(int argc, char* argv[])
         po::options_description desc("Test_controller options");
         // clang-format off
         desc.add_options()
-        ("actuators,a", po::value<std::string>()->default_value("torque"), "actuator model torque/velocity/servo (always for position control) [default:torque]")
-        ("big_window,b", "use a big window (nicer but slower) [default:true]")
+        ("actuators,a", po::value<std::string>()->default_value("spd"), "actuator model torque/velocity/servo/spd  [default:spd]")
+        ("behavior,b", po::value<std::string>()->default_value("../etc/talos/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_squat.yaml]")
+        ("big_window,w", "use a big window (nicer but slower) [default:false]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
         ("check_fall", "check if the robot has fallen (print if a collision)")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
-        ("conf,c", po::value<std::string>()->default_value("../etc/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/squat.yaml]")
+        ("controller,c", po::value<std::string>()->default_value("../etc/talos/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_pos_tracker.yaml]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("fast,f", "fast (simplified) Talos [default: false]")
         ("control_freq", po::value<int>()->default_value(1000), "set the control frequency")
         ("sim_freq", po::value<int>()->default_value(1000), "set the simulation frequency")
+        ("srdf,s", po::value<float>()->default_value(0.0), "save the configuration at the specified time")
         ("ghost,g", "display the ghost (Pinocchio model)")
+        ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
         ("help,h", "produce help message")
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
+        ("norm_force,n", po::value<float>()->default_value(-150) , "push norm force value")
         ("verbose,v", "verbose mode (controller)")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
             "log the trajectory of a dart body [with urdf names] or timing or CoM or cost, example: -l timing -l com -l lf -l cost_com -l cost_lf")
@@ -85,20 +90,20 @@ int main(int argc, char* argv[])
         }
 
         // clang-format off
-    std::cout<< "------ CONFIGURATION ------" << std::endl;
-    std::ostringstream oss_conf;
-    for (const auto& kv : vm){
-        oss_conf << kv.first << " ";
-        try { oss_conf << kv.second.as<std::string>();
-        } catch(...) {/* do nothing */ }
-        try { oss_conf << kv.second.as<bool>();
-        } catch(...) {/* do nothing */ }
-        try { oss_conf << kv.second.as<int>();
-        } catch(...) {/* do nothing */ }
-        oss_conf << std::endl;
-    }
-    std::cout << oss_conf.str();
-    std::cout << "--------------------------" << std::endl;
+        std::cout<< "------ CONFIGURATION ------" << std::endl;
+        std::ostringstream oss_conf;
+        for (const auto& kv : vm){
+            oss_conf << kv.first << " ";
+            try { oss_conf << kv.second.as<std::string>();
+            } catch(...) {/* do nothing */ }
+            try { oss_conf << kv.second.as<bool>();
+            } catch(...) {/* do nothing */ }
+            try { oss_conf << kv.second.as<int>();
+            } catch(...) {/* do nothing */ }
+            oss_conf << std::endl;
+        }
+        std::cout << oss_conf.str();
+        std::cout << "--------------------------" << std::endl;
         // clang-format on
 
         bool verbose = (vm.count("verbose") != 0);
@@ -108,7 +113,7 @@ int main(int argc, char* argv[])
 
         // dt of the simulation and the controller
         int sim_freq = vm["sim_freq"].as<int>();
-        float dt = 1.0f/sim_freq;
+        float dt = 1.0f / sim_freq;
         std::cout << "dt:" << dt << std::endl;
 
         //////////////////// INIT DART ROBOT //////////////////////////////////////
@@ -117,7 +122,10 @@ int main(int argc, char* argv[])
         std::string urdf = vm.count("fast") ? "talos/talos_fast.urdf" : "talos/talos.urdf";
         auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
-        robot->set_actuator_types(vm["actuators"].as<std::string>());
+        if (vm["actuators"].as<std::string>() == "spd")
+            robot->set_actuator_types("torque");
+        else
+            robot->set_actuator_types(vm["actuators"].as<std::string>());
 
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
         robot_dart::RobotDARTSimu simu(dt);
@@ -143,27 +151,36 @@ int main(int argc, char* argv[])
         simu.add_robot(robot);
         auto floor = simu.add_checkerboard_floor();
 
-        //////////////////// INIT STACK OF TASK //////////////////////////////////////
-        std::string sot_config_path = vm["conf"].as<std::string>();
+        ///// CONTROLLER
+        auto controller_path = vm["controller"].as<std::string>();
+        auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
+        // do some modifications according to command-line options
+        controller_config["CONTROLLER"]["base_path"] = "../etc/talos"; // we assume that we run in ./build
+        controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
+        controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
+        controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
-        inria_wbc::controllers::Controller::Params params = {
-            robot->model_filename(),
-            sot_config_path,
-            1.0f / control_freq,
-            verbose,
-            robot->mimic_dof_names()};
+        controller_config["CONTROLLER"]["dt"] = 1.0 / control_freq;
+        auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
+        auto closed_loop = IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"].as<bool>());
+        if (vm.count("closed_loop")) {
+            closed_loop = true;
+            controller_config["CONTROLLER"]["closed_loop"] = true;
+        }
 
-        YAML::Node config = IWBC_CHECK(YAML::LoadFile(sot_config_path));
+        if (vm["actuators"].as<std::string>() == "torque" && !closed_loop)
+            std::cout << "WARNING (iwbc): you should activate the closed loop if you are using torque control! (--closed_loop or yaml)" << std::endl;
 
-        auto controller_name = IWBC_CHECK(config["CONTROLLER"]["name"].as<std::string>());
-        auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, params);
+        auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
         auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
-        IWBC_ASSERT(controller, "we expect a PosTracker here");
+        IWBC_ASSERT(controller_pos, "we expect a PosTracker here");
 
-        auto behavior_name = IWBC_CHECK(config["BEHAVIOR"]["name"].as<std::string>());
-        auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller);
-        assert(behavior);
-
+        ///// BEHAVIOR
+        auto behavior_path = vm["behavior"].as<std::string>();
+        auto behavior_config = IWBC_CHECK(YAML::LoadFile(behavior_path));
+        auto behavior_name = IWBC_CHECK(behavior_config["BEHAVIOR"]["name"].as<std::string>());
+        auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
+        IWBC_ASSERT(behavior, "invalid behavior");
 
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;
@@ -181,8 +198,8 @@ int main(int argc, char* argv[])
         }
 
         // add sensors to the robot
-        auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint");
-        auto ft_sensor_right = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint");
+        auto ft_sensor_left = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq);
+        auto ft_sensor_right = simu.add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq);
         robot_dart::sensor::IMUConfig imu_config;
         imu_config.body = robot->body_node("imu_link"); // choose which body the sensor is attached to
         imu_config.frequency = control_freq; // update rate of the sensor
@@ -190,7 +207,7 @@ int main(int argc, char* argv[])
 
         //////////////////// START SIMULATION //////////////////////////////////////
         simu.set_control_freq(control_freq); // default = 1000 Hz
-        double time_simu = 0, time_cmd = 0, time_solver = 0, max_time_solver = 0, min_time_solver = 1e10;       
+        double time_simu = 0, time_cmd = 0, time_solver = 0, max_time_solver = 0, min_time_solver = 1e10;
         int it_simu = 0, it_cmd = 0;
 
         std::shared_ptr<robot_dart::Robot> ghost;
@@ -207,7 +224,7 @@ int main(int argc, char* argv[])
             auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
             for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
                 auto pos = task_self_collision->avoided_frames_positions()[i];
-                auto tf =  Eigen::Isometry3d(Eigen::Translation3d(pos[0], pos[1], pos[2]));
+                auto tf = Eigen::Isometry3d(Eigen::Translation3d(pos[0], pos[1], pos[2]));
                 double r0 = task_self_collision->avoided_frames_r0s()[i];
                 auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0 * 2, r0 * 2, r0 * 2), tf, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
                 sphere->set_color_mode("aspect");
@@ -219,7 +236,7 @@ int main(int argc, char* argv[])
 
         auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
         for (const auto& joint : talos_tracker_controller->torque_sensor_joints()) {
-            torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, 1000));
+            torque_sensors.push_back(simu.add_sensor<robot_dart::sensor::Torque>(robot, joint, control_freq));
             std::cerr << "Add joint torque sensor:  " << joint << std::endl;
         }
 
@@ -235,6 +252,7 @@ int main(int argc, char* argv[])
 
         // the main loop
         using namespace std::chrono;
+        Eigen::VectorXd cmd;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
@@ -264,9 +282,8 @@ int main(int argc, char* argv[])
             }
 
             // step the command
-            Eigen::VectorXd cmd;
             if (simu.schedule(simu.control_freq())) {
-                 // get actual torque from sensors
+                // get actual torque from sensors
                 for (auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
                     tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
 
@@ -282,10 +299,13 @@ int main(int argc, char* argv[])
                 sensor_data["acceleration"] = imu->linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
                 // joint positions (excluding floating base)
-                sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+                sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
                 // joint torque sensors
                 sensor_data["joints_torque"] = tq_sensors;
-
+                sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
+                // floating base (perfect: no noise in the estimate)
+                sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
+                sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
 
                 auto t1_solver = high_resolution_clock::now();
                 behavior->update(sensor_data);
@@ -295,13 +315,14 @@ int main(int argc, char* argv[])
 
                 auto t1_cmd = high_resolution_clock::now();
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1. / control_freq);
+                else if (vm["actuators"].as<std::string>() == "spd")
+                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1. / sim_freq);
                 else // torque
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
+                    cmd = controller->tau(false);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 
-                robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
                 if (ghost) {
                     Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                     translate_ghost(0) -= 1;
@@ -339,9 +360,11 @@ int main(int argc, char* argv[])
             bool push = false;
             if (vm.count("push")) {
                 auto pv = vm["push"].as<std::vector<float>>();
+                auto pforce = vm["norm_force"].as<float>();
                 for (auto& p : pv) {
                     if (simu.scheduler().current_time() > p && simu.scheduler().current_time() < p + 0.5) {
-                        robot->set_external_force("base_link", Eigen::Vector3d(-150, 0, 0));
+                        robot->set_external_force("base_link", Eigen::Vector3d(0, pforce, 0));
+                        // robot->set_external_force("base_link", Eigen::Vector3d(pforce, 0, 0));
                         push = true;
                     }
                     if (simu.scheduler().current_time() > p + 0.25)
@@ -352,6 +375,7 @@ int main(int argc, char* argv[])
             // step the simulation
             {
                 auto t1_simu = high_resolution_clock::now();
+                robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
                 simu.step_world();
                 auto t2_simu = high_resolution_clock::now();
                 time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
@@ -369,12 +393,19 @@ int main(int argc, char* argv[])
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
                 else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << std::endl;
+                    (*x.second) << controller->cop().transpose() << " "
+                                << controller->lcop().transpose() << " "
+                                << controller->rcop().transpose() << " " << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "ft")
                     (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
                                 << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
+                else if (x.first == "force") // the cop according to controller
+                    (*x.second) << ft_sensor_left->force().transpose() << " "
+                                << controller->lf_force_filtered().transpose() << " "
+                                << ft_sensor_right->force().transpose() << " "
+                                << controller->rf_force_filtered().transpose() << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
                 else if (x.first == "ref_com")
@@ -383,6 +414,11 @@ int main(int argc, char* argv[])
                     (*x.second) << controller_pos->get_se3_ref(x.first.substr(strlen("ref_"))).translation().transpose() << std::endl;
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
+            }
+            if (vm.count("srdf")) {
+                auto conf = vm["srdf"].as<float>();
+                if (controller->t() >= conf && controller->t() < conf + controller->dt())
+                    controller->save_configuration("configuration.srdf");
             }
             // print timing information
             time_simu += time_step_simu;
