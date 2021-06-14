@@ -103,7 +103,7 @@ namespace inria_wbc {
             auto ankle_pos = se3_sample_ref.pos;
             tsid::math::vectorToSE3(ankle_pos, ankle_ref);
             Eigen::Vector3d cop_ankle_ref = ankle_ref.translation();
-            double pitch = -p[0] * (cop_foot(0) - model_current_foot.translation()(0));
+            double pitch = +p[0] * (cop_foot(0) - model_current_foot.translation()(0));
             double roll = +p[1] * (cop_foot(1) - model_current_foot.translation()(1));
 
             auto euler = ankle_ref.rotation().eulerAngles(0, 1, 2);
