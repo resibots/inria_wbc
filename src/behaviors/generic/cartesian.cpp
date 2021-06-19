@@ -20,6 +20,8 @@ namespace inria_wbc {
                 auto lh_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_name_);
                 auto lh_final = lh_init;
                 lh_final.translation() = relative_target_ + lh_init.translation();
+                std::cout<<"lh init:"<<lh_init.translation().transpose() << std::endl;
+                std::cout<<"lh final:"<<lh_final.translation().transpose() << std::endl;
 
                 trajectories_.push_back(trajectory_handler::compute_traj(lh_init, lh_final, controller_->dt(), trajectory_duration_));
                 trajectories_.push_back(trajectory_handler::compute_traj(lh_final, lh_init, controller_->dt(), trajectory_duration_));
