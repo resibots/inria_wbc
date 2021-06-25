@@ -63,6 +63,8 @@ inline void compare_cmds(const T& cmds, const T& cmds2)
 
 BOOST_AUTO_TEST_CASE(determinism)
 {
+    srand(time(NULL));
+
     std::string controller_path = "../../etc/talos/talos_pos_tracker.yaml";
     std::vector<std::string> behaviors_paths = {"../../etc/talos/arm.yaml", "../../etc/talos/squat.yaml", "../../etc/talos/clapping.yaml", "../../etc/talos/walk_on_spot.yaml"};
     std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
@@ -71,15 +73,27 @@ BOOST_AUTO_TEST_CASE(determinism)
     int duration = 5000;
     int nexp = 5;
     for (int b = 0; b < behaviors_paths.size(); b++) {
-        std::cout << "Testing " << behaviors_paths[b] << "determinism ";
+        std::cout << "Testing " << behaviors_paths[b] << " determinism " << std::endl;
         for (int u = 0; u < urdfs.size(); u++) {
             std::cout << "with " << urdfs[u] << std::endl;
             for (int i = 0; i < nexp; i++) {
+
                 y::Node c_config = IWBC_CHECK(y::LoadFile(controller_path));
                 c_config["CONTROLLER"]["stabilizer"]["activated"] = false;
                 c_config["CONTROLLER"]["collision_detection"]["activated"] = false;
                 c_config["CONTROLLER"]["closed_loop"] = false;
                 c_config["CONTROLLER"]["base_path"] = "../../etc/talos/";
+
+                bool load_rand_yaml = rand() % 2 == 1;
+                if (load_rand_yaml) {
+                    std::cout << "random yaml order" << std::endl;
+                    std::string tasks_path = "../../etc/talos/" + IWBC_CHECK(c_config["CONTROLLER"]["tasks"].as<std::string>());
+                    y::Node randomize = IWBC_CHECK(y::LoadFile(tasks_path));
+                    std::ofstream fout("../../etc/talos/randomize.yaml");
+                    fout << randomize;
+                    c_config["CONTROLLER"]["tasks"] = "randomize.yaml";
+                    fout.close();
+                }
 
                 //recover urdf path and mimic dof names
                 std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
@@ -114,4 +128,5 @@ BOOST_AUTO_TEST_CASE(determinism)
             }
         }
     }
+    std::remove("../../etc/talos/randomize.yaml");
 }
