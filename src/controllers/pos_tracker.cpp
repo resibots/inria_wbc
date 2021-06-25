@@ -86,12 +86,19 @@ namespace inria_wbc {
             auto p = path / boost::filesystem::path(task_file);
             parse_tasks(p.string());
 
-            if (verbose_)
+            if (verbose_) {
+                std::cout << "--------- Solver size info ---------" << std::endl;
+                std::cout << "total number of variable (acceleration + contact-force) : " << tsid_->nVar() << std::endl;
+                std::cout << "number of equality constraints : " << tsid_->nEq() << std::endl;
+                std::cout << "number of inequality constraints : " << tsid_->nIn() << std::endl;
+                std::cout << "--------- ------------- ---------" << std::endl;
                 std::cout << "position tracker initializer" << std::endl;
+            }
         }
 
         void PosTracker::parse_tasks(const std::string& path)
         {
+            int task_count = 0;
             if (verbose_)
                 std::cout << "parsing task file:" << path << std::endl;
             YAML::Node task_list = IWBC_CHECK(YAML::LoadFile(path));
@@ -100,19 +107,22 @@ namespace inria_wbc {
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
                 if (type == "contact") {
                     // the task is added to tsid by make_contact
-                    auto task = tasks::make_contact_task(robot_, tsid_, name, it->second);
+                    auto task = tasks::make_contact_task(robot_, tsid_, name, it->second, config_);
                     contacts_[name] = task;
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
                 else {
                     // the task is added automatically to TSID by the factory
-                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second);
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config_);
                     tasks_[name] = task;
                 }
                 if (verbose_)
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
+                task_count++;
             }
+            if (verbose_)
+                std::cout << "Number of parsed tasks " << task_count << std::endl;
         }
 
         void PosTracker::parse_frames(const std::string& path)

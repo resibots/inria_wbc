@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
         ("ghost,g", "display the ghost (Pinocchio model)")
         ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
         ("help,h", "produce help message")
+        ("height", po::value<bool>()->default_value(false), "print total feet force data to adjust height in config")
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("norm_force,n", po::value<float>()->default_value(-150) , "push norm force value")
@@ -281,11 +282,15 @@ int main(int argc, char* argv[])
                     std::cout << s << std::endl;
             }
 
+            // get actual torque from sensors
+            for (auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
+                tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
+
+            if (vm["height"].as<bool>())
+                std::cout << controller->t() << "  floating base height: " << controller->q(false)[2] << " - total feet force: " << ft_sensor_right->force().norm() + ft_sensor_left->force().norm() << std::endl;
+
             // step the command
             if (simu.schedule(simu.control_freq())) {
-                // get actual torque from sensors
-                for (auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
-                    tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
 
                 // update the sensors
                 inria_wbc::controllers::SensorData sensor_data;

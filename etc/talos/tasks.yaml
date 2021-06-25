@@ -41,7 +41,6 @@ posture:
 bounds:
     type: bounds
     weight: 10000
-    dt: 0.001
 contact_lfoot:
     type: contact
     joint: leg_left_6_joint
