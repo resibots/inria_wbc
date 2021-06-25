@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <boost/filesystem.hpp>
-#include <boost/test/unit_test.hpp>
+#include <boost/program_options.hpp>
 
 #include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
@@ -385,7 +385,7 @@ void test_behavior(utest::test_t test,
             auto e = IWBC_CHECK(ref[t.name].as<std::vector<double>>());
             if (enable_stabilizer) {
                 UTEST_WARN_MESSAGE(test, t.name + " tolerance --> " + std::to_string(t.error_tsid - e[0]) + " > " + std::to_string(cst::tolerance), t.error_tsid <= e[0] + cst::tolerance);
-                UTEST_WARN_MESSAGE(test,  t.name + " tolerance --> " + std::to_string(t.error_dart - e[1]) + " > " + std::to_string(cst::tolerance), t.error_dart <= e[1] + cst::tolerance);
+                UTEST_WARN_MESSAGE(test, t.name + " tolerance --> " + std::to_string(t.error_dart - e[1]) + " > " + std::to_string(cst::tolerance), t.error_dart <= e[1] + cst::tolerance);
             }
             else {
                 UTEST_CHECK_MESSAGE(test, t.name + " tolerance --> " + std::to_string(t.error_tsid - e[0]) + " > " + std::to_string(cst::tolerance), t.error_tsid <= e[0] + cst::tolerance);
@@ -421,7 +421,7 @@ void test_behavior(utest::test_t test,
     }
     catch (std::exception& e) {
         std::cerr << colors::red << e.what() << std::endl;
-        BOOST_CHECK(!"error in getting the ref node");
+        UTEST_ERROR(test, "error in getting the ref node");
         node = ref;
     }
 
@@ -462,16 +462,43 @@ void test_behavior(utest::test_t test,
 
 int main(int argc, char** argv)
 {
+
+    // program options
+    namespace po = boost::program_options;
+    po::options_description desc("Test_controller options");
+    // clang-format off
+        desc.add_options()
+        ("generate_ref,g", "generate a reference file")
+        ("n_threads,n", po::value<int>()->default_value(-1), "run tests in parallel (default = number of cores)")
+        ("single,s", "run a single test, args: controller behavior actuators collision urdf")
+        ;
+    // clang-format on
+    po::variables_map vm;
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+    }
+    catch (po::too_many_positional_options_error& e) {
+        // A positional argument like `opt2=option_value_2` was given
+        std::cerr << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
+    catch (po::error_with_option_name& e) {
+        // Another usage error occurred
+        std::cerr << e.what() << std::endl;
+        std::cerr << desc << std::endl;
+        return 1;
+    }
+
     utest::TestSuite test_suite;
 
     // we load the reference
-    y::Node ref;
-    ref = IWBC_CHECK(y::LoadFile(cst::ref_path));
+    y::Node ref = IWBC_CHECK(y::LoadFile(cst::ref_path));
 
     // we write the results in yaml file, for future comparisons and analysis
     auto yout = std::make_shared<y::Emitter>();
     (*yout) << y::BeginMap;
-
     // the YAMl file has a timestamp (so that we can archive them)
     (*yout) << y::Key << "timestamp" << y::Value << date();
 
@@ -479,11 +506,11 @@ int main(int argc, char** argv)
     //auto argc = boost::unit_test::framework::master_test_suite().argc;
     //auto argv = boost::unit_test::framework::master_test_suite().argv;
 
-    if (argc > 1) {
+    if (vm.count("single")) {
         assert(argc == 7); // TODO
         std::cout << "using custom arguments for test [controller behavior actuators collision urdf]" << std::endl;
         auto node = ref[argv[1]][argv[2]][argv[3]][argv[4]][argv[5]][argv[6]];
-        //test_behavior(test, argv[1], argv[2], argv[3], argv[4], argv[5], argv[6], ref, yout);
+        // test_behavior(test, argv[1], argv[2], argv[3], argv[4], argv[5], argv[6], ref, yout);
         // WARING: this does not write the yaml file
     }
 
@@ -511,11 +538,16 @@ int main(int argc, char** argv)
                             + b + " | "
                             + a + " | "
                             + c + " | "
-                            + "enable_stabilizer: " + s;
+                            + "stab: " + s;
                         auto test1 = utest::make_test(name + " | " + urdfs[1]);
-                        if (test_suite.test_cases.size() < 2)
-                            UTEST_REGISTER(test_suite, test1, test_behavior(test1, controller, b, a, c, s, urdfs[1], ref, std::shared_ptr<y::Emitter>()));
 
+                        if (vm.count("generate_ref")) {
+                            std::cout<<"generating..."<<std::endl;
+                            test_behavior(test1, controller, b, a, c, s, urdfs[1], ref, yout);
+                        }
+                        else {
+                                UTEST_REGISTER(test_suite, test1, test_behavior(test1, controller, b, a, c, s, urdfs[1], ref, std::shared_ptr<y::Emitter>()));
+                        }
                         //test_behavior(controller, b, a, c, s, urdfs[1], ref, yout);
                         if (c != std::string("dart")) {
                             auto test2 = utest::make_test(name + " | " + urdfs[0]);

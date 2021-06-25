@@ -5,7 +5,9 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
+#include <algorithm>
 
 namespace utest {
 
@@ -16,6 +18,7 @@ namespace utest {
         static const std::string blue = "\x1B[34m";
         static const std::string magenta = "\x1B[35m";
         static const std::string cyan = "\x1B[36m";
+        static const std::string grey = "\x1B[90m";
         static const std::string rst = "\x1B[0m";
         static const std::string bold = "\x1B[1m";
     } // namespace colors
@@ -57,15 +60,26 @@ namespace utest {
     test_t make_test(const std::string& name) { return std::make_shared<Test>(name); }
 
     struct TestSuite {
-        void run(bool verbose = true)
+        void run(int n_threads = std::thread::hardware_concurrency(), bool verbose = true)
         {
-            for (int i = 0; i < test_cases.size(); ++i) {
-                if (verbose) {
-                    std::cout << "[" << i + 1 << "/" << test_cases.size() << "]";
-                    std::cout.flush();
-                }
-                test_cases[i]->function();
+            n_threads = std::min(n_threads, int(test_cases.size()));
+            std::vector<std::shared_ptr<std::thread>> threads(n_threads);
+            int cases_per_thread = std::max(int(test_cases.size() / n_threads), 1);
+            std::cout<<"nthreads:"<<n_threads<<" cases per thread"<<cases_per_thread<<std::endl;
+            for (int t = 0; t < n_threads; ++t) {
+                threads[t] = std::make_shared<std::thread>([=] {
+                    for (int i = 0; i < cases_per_thread; ++i) {
+                        int c = i + t * cases_per_thread ;
+                        if (verbose) {
+                            std::cout << ".";
+                            std::cout.flush();
+                        }
+                        test_cases[c]->function();
+                } });
+                //threads[t]->join();
             }
+            for (auto &t : threads)
+                t->join();
             if (verbose)
                 std::cout << std::endl;
         }
@@ -104,64 +118,69 @@ namespace utest {
                     if (x.result == res::ok && full)
                         os << colors::green << "\tOK ";
                     else if (x.result == res::info && full)
-                        os << colors::green <<"\tINFO ";
+                        os << colors::green << "\tINFO ";
                     else if (x.result == res::warning)
-                        os << colors::yellow <<"\tWARNING ";
+                        os << colors::yellow << "\tWARNING ";
                     else if (x.result == res::error)
                         os << colors::red << "\tERROR ";
-                        
+
                     if (x.result == res::error || full)
-                        os << colors::rst << x.msg << " [" << x.test << "] (" << x.file << ":" << x.line << ")" << std::endl;
+                        os << colors::rst << x.msg << " [" << x.test << "] " << colors::grey << " (" << x.file << ":" << x.line << ")" << colors::rst << std::endl;
                 }
             if (full)
                 os << std::endl;
         }
         os << "=> success: " << total / test_suite.test_cases.size() * 100.0 << "%" << std::endl;
     }
+    std::string strip_path(const std::string& s)
+    {
+        return s.substr(s.find_last_of("/") + 1);
+    }
 }; // namespace utest
 
+#define __UTEST_FILE utest::strip_path(__FILE__)
+
 #define __UTEST_CHECK_MESSAGE(test, message, to_test, level)                                            \
-    {                                                                                               \
-        utest::res::result_t ok = utest::res::ok;                                                   \
-        try {                                                                                       \
-            ok = (bool)(to_test) ? utest::res::ok : level;                              \
-        }                                                                                           \
-        catch (std::exception) {                                                                    \
-            ok = level;                                                                 \
-        }                                                                                           \
-        test->test_results.push_back(utest::TestResult{#to_test, message, __FILE__, __LINE__, ok}); \
+    {                                                                                                   \
+        utest::res::result_t ok = utest::res::ok;                                                       \
+        try {                                                                                           \
+            ok = (bool)(to_test) ? utest::res::ok : level;                                              \
+        }                                                                                               \
+        catch (std::exception) {                                                                        \
+            ok = level;                                                                                 \
+        }                                                                                               \
+        test->test_results.push_back(utest::TestResult{#to_test, message, __UTEST_FILE, __LINE__, ok}); \
     }
 
-#define UTEST_CHECK_MESSAGE(test, message, to_test)  __UTEST_CHECK_MESSAGE(test, message, to_test, utest::res::error)      
+#define UTEST_CHECK_MESSAGE(test, message, to_test) __UTEST_CHECK_MESSAGE(test, message, to_test, utest::res::error)
 #define UTEST_CHECK(test, to_test) UTEST_CHECK_MESSAGE(test, "", to_test)
 #define UTEST_WARN(test, to_test) __UTEST_CHECK_MESSAGE(test, "", to_test, utest::res::warning)
 #define UTEST_WARN_MESSAGE(test, msg, to_test) __UTEST_CHECK_MESSAGE(test, msg, to_test, utest::res::warning)
 
-#define UTEST_CHECK_EXCEPTION(test, to_test)                                                 \
-    {                                                                                          \
-        utest::res::result_t ok = utest::res::ok;                                              \
-        try {                                                                                  \
-        }                                                                                      \
-        catch (std::exception) {                                                               \
-            ok = res::error;                                                                   \
-        }                                                                                      \
-        test->test_results.push_back(utest::TestResult{#to_test, "", __FILE__, __LINE__, ok}); \
+#define UTEST_CHECK_EXCEPTION(test, to_test)                                                       \
+    {                                                                                              \
+        utest::res::result_t ok = utest::res::ok;                                                  \
+        try {                                                                                      \
+        }                                                                                          \
+        catch (std::exception) {                                                                   \
+            ok = res::error;                                                                       \
+        }                                                                                          \
+        test->test_results.push_back(utest::TestResult{#to_test, "", __UTEST_FILE, __LINE__, ok}); \
     }
 
-#define UTEST_ERROR(test, msg)                                                                                 \
-    {                                                                                                          \
-        test->test_results.push_back(utest::TestResult{"error:", msg, __FILE__, __LINE__, utest::res::error}); \
+#define UTEST_ERROR(test, msg)                                                                               \
+    {                                                                                                        \
+        test->test_results.push_back(utest::TestResult{"", msg, __UTEST_FILE, __LINE__, utest::res::error}); \
     }
 
- 
-#define UTEST_WARNING(test, msg)                                                                                 \
+#define UTEST_WARNING(test, msg)                                                                               \
     {                                                                                                          \
-        test->test_results.push_back(utest::TestResult{"warning:", msg, __FILE__, __LINE__, utest::res::warning}); \
+        test->test_results.push_back(utest::TestResult{"", msg, __UTEST_FILE, __LINE__, utest::res::warning}); \
     }
 
-#define UTEST_INFO(test, msg)                                                                                 \
-    {                                                                                                          \
-        test->test_results.push_back(utest::TestResult{"warning:", msg, __FILE__, __LINE__, utest::res::info}); \
+#define UTEST_INFO(test, msg)                                                                               \
+    {                                                                                                       \
+        test->test_results.push_back(utest::TestResult{"", msg, __UTEST_FILE, __LINE__, utest::res::info}); \
     }
 
 #define UTEST_REGISTER(test_suite, test, function) test_suite.reg(test, [=]() { function; })
