@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <robot name="talos">
     <group_state name="inria_start" group="all">
-		<joint name="root_joint" value="  -0.0374385 -5.73035e-05      1.05847   2.2858e-06   -0.0328617  6.66461e-05      0.99946" />
+		<joint name="root_joint" value="  -0.0374385 -5.73035e-05      1.051606   2.2858e-06   -0.0328617  6.66461e-05      0.99946" />
 		<joint name="leg_left_1_joint" value="-0.000138691" />
 		<joint name="leg_left_2_joint" value="7.6436e-05" />
 		<joint name="leg_left_3_joint" value="-0.233079" />
