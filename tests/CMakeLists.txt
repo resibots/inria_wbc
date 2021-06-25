@@ -1,5 +1,8 @@
 find_package(Boost COMPONENTS program_options)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 set(BINARY ${CMAKE_PROJECT_NAME}_test)
 
 # the tests require Dart to run
@@ -13,11 +16,11 @@ foreach(TEST ${TEST_SOURCES})
         message("TEST: ${TEST_NAME}")
         add_executable(${TEST_NAME} ${TEST})
         add_test(NAME ${TEST_NAME}  COMMAND ${TEST_NAME})
-        target_link_libraries(${TEST_NAME} PUBLIC inria_wbc RobotDART::Simu Boost::program_options)
+        target_link_libraries(${TEST_NAME} PUBLIC inria_wbc RobotDART::Simu Boost::program_options Threads::Threads)
         # having the graphics can be helpful for debugging (to see what happens)
         if(RobotDART_Magnum_FOUND)
                 add_executable(${TEST_NAME}_graphics ${TEST})
-                target_link_libraries(${TEST_NAME}_graphics PUBLIC inria_wbc RobotDART::Magnum RobotDART::Simu Boost::program_options)
+                target_link_libraries(${TEST_NAME}_graphics PUBLIC inria_wbc RobotDART::Magnum RobotDART::Simu Boost::program_options Threads::Threads)
         endif()
 endforeach()
 
