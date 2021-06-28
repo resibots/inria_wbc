@@ -498,8 +498,9 @@ int main(int argc, char** argv)
     
     try {
         IWBC_CHECK(y::LoadFile(cst::ref_path));
-    } catch (std::runtime_exception& e) {
-        UTEST_ERROR("cannot load reference file, path=" + cst::ref_path + " what:" + e.what());
+    } catch (std::exception& e) {
+        std::cerr << "cannot load reference file, path="  << cst::ref_path  << " what:"  << e.what() << std::endl;
+        return 1;
     }
     // we write the results in yaml file, for future comparisons and analysis
     auto yout = std::make_shared<y::Emitter>();
