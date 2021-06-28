@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(determinism)
     std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
 
     std::vector<std::pair<std::vector<Eigen::VectorXd>, std::vector<Eigen::VectorXd>>> results;
-    int duration = 5000;
+    int duration = 50000;
     int nexp = 5;
     for (int b = 0; b < behaviors_paths.size(); b++) {
         std::cout << "Testing " << behaviors_paths[b] << " determinism " << std::endl;
