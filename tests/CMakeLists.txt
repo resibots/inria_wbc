@@ -8,7 +8,7 @@ set(BINARY ${CMAKE_PROJECT_NAME}_test)
 # the tests require Dart to run
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
         find_package(RobotDART REQUIRED COMPONENTS Simu OPTIONAL_COMPONENTS Magnum)
-        set(TEST_SOURCES test_behaviors_talos.cpp)
+        set(TEST_SOURCES talos.cpp)
 endif()
 
 foreach(TEST ${TEST_SOURCES})
