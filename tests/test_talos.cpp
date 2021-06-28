@@ -512,7 +512,7 @@ int main(int argc, char** argv)
         std::cout << "Single test:" << name << std::endl;
         auto test1 = utest::make_test(name);
 #ifdef GRAPHIC
-        test_behavior(test1, args[0], args[1], args[2], args[3], args[4], args[5], ref, std::shared_ptr<y::Emitter>())
+        test_behavior(test1, args[0], args[1], args[2], args[3], args[4], args[5], ref, std::shared_ptr<y::Emitter>());
 #else
         UTEST_REGISTER(test_suite, test1, test_behavior(test1, args[0], args[1], args[2], args[3], args[4], args[5], ref, std::shared_ptr<y::Emitter>()));
         test_suite.run(1, true);
