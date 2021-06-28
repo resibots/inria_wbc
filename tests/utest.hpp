@@ -62,6 +62,8 @@ namespace utest {
     struct TestSuite {
         void run(int n_threads = std::thread::hardware_concurrency(), bool verbose = true)
         {
+            if (n_threads == -1)
+                n_threads = std::thread::hardware_concurrency();
             if (test_cases.size() == 0) {
                 std::cerr << "utest::Warning: empty test suite!" << std::endl;
                 return;
