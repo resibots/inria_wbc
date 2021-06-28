@@ -2,12 +2,12 @@
 #ifndef UTEST_HPP__
 #define UTEST_HPP__
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
 #include <vector>
-#include <algorithm>
 
 namespace utest {
 
@@ -62,10 +62,17 @@ namespace utest {
     struct TestSuite {
         void run(int n_threads = std::thread::hardware_concurrency(), bool verbose = true)
         {
+            if (test_cases.size() == 0) {
+                std::cerr << "utest::Warning: empty test suite!" << std::endl;
+                return;
+            }
             n_threads = std::min(n_threads, int(test_cases.size()));
             std::vector<std::shared_ptr<std::thread>> threads(n_threads);
             int cases_per_thread = std::max(int(test_cases.size() / n_threads), 1);
-            std::cout<<"nthreads:"<<n_threads<<" cases per thread"<<cases_per_thread<<std::endl;
+            if (verbose) {
+                std::cout << "test cases:" << test_cases.size() << std::endl;
+                std::cout << "nthreads:" << n_threads << " cases per thread:" << cases_per_thread << std::endl;
+            }
             for (int t = 0; t < n_threads; ++t) {
                 threads[t] = std::make_shared<std::thread>([=] {
                     for (int i = 0; i < cases_per_thread; ++i) {
@@ -78,7 +85,7 @@ namespace utest {
                 } });
                 //threads[t]->join();
             }
-            for (auto &t : threads)
+            for (auto& t : threads)
                 t->join();
             if (verbose)
                 std::cout << std::endl;

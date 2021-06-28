@@ -395,7 +395,7 @@ void test_behavior(utest::test_t test,
     }
     catch (std::exception& e) {
         //std::cout << colors::red << e.what() << std::endl;
-        UTEST_ERROR(test, "error in ref comparison");
+        UTEST_ERROR(test, std::string("error in ref comparison:") + e.what());
     }
 
     //std::cout << std::endl;
@@ -420,11 +420,9 @@ void test_behavior(utest::test_t test,
         node = ref[controller_path][behavior_path][actuators][coll]["stabilized_" + enable_stabilizer][urdf];
     }
     catch (std::exception& e) {
-        std::cerr << colors::red << e.what() << std::endl;
-        UTEST_ERROR(test, "error in getting the ref node");
+        UTEST_ERROR(test, std::string("error in getting the ref node:") + e.what());
         node = ref;
     }
-
     // create the simulator and the robot
     std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
     auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
@@ -448,13 +446,10 @@ void test_behavior(utest::test_t test,
 #endif
 
     try {
-        // run the behavior
-        // std::cout<<"test 1:"<<test<<std::endl;
         test_behavior(test, controller_path, behavior_path, simu, robot, actuators, node, stabilizer, yout);
     }
     catch (std::exception& e) {
-        //std::cerr << colors::red << colors::bold << "Error (exception): t=" << simu.scheduler().current_time() << " " << colors::rst << e.what() << std::endl;
-        UTEST_ERROR(test, "exception when running the behavior");
+        UTEST_ERROR(test, std::string("exception when running the behavior:") + e.what());
     }
     if (yout)
         (*yout) << y::EndMap;
@@ -470,7 +465,7 @@ int main(int argc, char** argv)
         desc.add_options()
         ("generate_ref,g", "generate a reference file")
         ("n_threads,n", po::value<int>()->default_value(-1), "run tests in parallel (default = number of cores)")
-        ("single,s", "run a single test, args: controller behavior actuators collision urdf")
+        ("single,s", po::value<std::vector<std::string> >()->multitoken(), "run a single test, args: controller_path behavior_path actuators coll enable_stabilizer urdf")
         ;
     // clang-format on
     po::variables_map vm;
@@ -495,11 +490,12 @@ int main(int argc, char** argv)
 
     // we load the reference
     y::Node ref;
-    
+
     try {
-        IWBC_CHECK(y::LoadFile(cst::ref_path));
-    } catch (std::exception& e) {
-        std::cerr << "cannot load reference file, path="  << cst::ref_path  << " what:"  << e.what() << std::endl;
+        ref = IWBC_CHECK(y::LoadFile(cst::ref_path));
+    }
+    catch (std::exception& e) {
+        std::cerr << "cannot load reference file, path=" << cst::ref_path << " what:" << e.what() << std::endl;
         return 1;
     }
     // we write the results in yaml file, for future comparisons and analysis
@@ -508,19 +504,29 @@ int main(int argc, char** argv)
     // the YAMl file has a timestamp (so that we can archive them)
     (*yout) << y::Key << "timestamp" << y::Value << date();
 
-    // use ./my_test ./test_behaviors_talos_graphics --  ../../etc/talos_pos_tracker.yaml ../../etc/arm.yaml servo fcl false  talos/talos.urdf  for a specific test
-    //auto argc = boost::unit_test::framework::master_test_suite().argc;
-    //auto argv = boost::unit_test::framework::master_test_suite().argv;
-
     if (vm.count("single")) {
-        assert(argc == 7); // TODO
-        std::cout << "using custom arguments for test [controller behavior actuators collision urdf]" << std::endl;
-        auto node = ref[argv[1]][argv[2]][argv[3]][argv[4]][argv[5]][argv[6]];
-        // test_behavior(test, argv[1], argv[2], argv[3], argv[4], argv[5], argv[6], ref, yout);
-        // WARING: this does not write the yaml file
+        auto args = vm["single"].as<std::vector<std::string>>();
+        if (args.size() != 6) {
+            std::cerr << " Wrong number of arguments: (" << args.size() << ")"
+                      << "controller_path behavior_path actuators coll enable_stabilizer urdf"
+                      << std::endl;
+            return 1;
+        }
+        std::string name = args[0] + " | "
+            + args[1] + " | "
+            + args[2] + " | "
+            + args[3] + " | "
+            + args[4] + " | "
+            + args[5];
+        std::cout << "Single test:" << name << std::endl;
+        auto test1 = utest::make_test(name);
+        UTEST_REGISTER(test_suite, test1, test_behavior(test1, args[0], args[1], args[2], args[3], args[4], args[5], ref, std::shared_ptr<y::Emitter>()));
+        test_suite.run(1, true);
+        utest::write_report(test_suite, std::cout, true);
+        return 0;
     }
 
-    ///// the default behavior is to run all the combinations and write the output in the yaml file
+    ///// the default behavior is to run all the combinations in different threads
 
     // this is relative to the "tests" directory
     std::string controller = "../../etc/talos/talos_pos_tracker.yaml";
@@ -546,19 +552,18 @@ int main(int argc, char** argv)
                             + c + " | "
                             + "stab: " + s;
                         auto test1 = utest::make_test(name + " | " + urdfs[1]);
+                        auto test2 = utest::make_test(name + " | " + urdfs[0]);
 
                         if (vm.count("generate_ref")) {
-                            std::cout<<"generating..."<<std::endl;
+                            std::cout << "generating..." << std::endl;
                             test_behavior(test1, controller, b, a, c, s, urdfs[1], ref, yout);
+                            if (c != std::string("dart"))
+                                test_behavior(test2, controller, b, a, c, s, urdfs[0], ref, yout);
                         }
                         else {
-                                UTEST_REGISTER(test_suite, test1, test_behavior(test1, controller, b, a, c, s, urdfs[1], ref, std::shared_ptr<y::Emitter>()));
-                        }
-                        //test_behavior(controller, b, a, c, s, urdfs[1], ref, yout);
-                        if (c != std::string("dart")) {
-                            auto test2 = utest::make_test(name + " | " + urdfs[0]);
-                            // UTEST_REGISTER(test_suite, test2, test_behavior(test2, controller, b, a, c, s, urdfs[0], ref, std::shared_ptr<y::Emitter>()));
-                            //  test_behavior(controller, b, a, c, s, urdfs[0], ref, yout);
+                            UTEST_REGISTER(test_suite, test1, test_behavior(test1, controller, b, a, c, s, urdfs[1], ref, std::shared_ptr<y::Emitter>()));
+                            if (c != std::string("dart"))
+                                UTEST_REGISTER(test_suite, test2, test_behavior(test2, controller, b, a, c, s, urdfs[0], ref, std::shared_ptr<y::Emitter>()));
                         }
                         (*yout) << y::EndMap;
                     }
@@ -577,12 +582,12 @@ int main(int argc, char** argv)
     ofs << yout->c_str();
 
     if (vm.count("generate_ref"))
-        test_suite.run(1);// single thread
+        test_suite.run(1); // single thread
     else
-        test_suite.run(1);// single thread
-    
+        test_suite.run(); // single thread
+
     utest::write_report(test_suite, std::cout, true);
 
-    std::cout << "--------" << std::endl;
+    std::cout << "------------ SUMMARY ------------" << std::endl;
     utest::write_report(test_suite, std::cout, false);
 }
