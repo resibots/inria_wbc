@@ -494,8 +494,13 @@ int main(int argc, char** argv)
     utest::TestSuite test_suite;
 
     // we load the reference
-    y::Node ref = IWBC_CHECK(y::LoadFile(cst::ref_path));
-
+    y::Node ref;
+    
+    try {
+        IWBC_CHECK(y::LoadFile(cst::ref_path));
+    } catch (std::runtime_exception& e) {
+        UTEST_ERROR("cannot load reference file, path=" + cst::ref_path + " what:" + e.what());
+    }
     // we write the results in yaml file, for future comparisons and analysis
     auto yout = std::make_shared<y::Emitter>();
     (*yout) << y::BeginMap;
@@ -570,7 +575,11 @@ int main(int argc, char** argv)
     std::ofstream ofs(fname.c_str());
     ofs << yout->c_str();
 
-    test_suite.run();
+    if (vm.count("generate_ref"))
+        test_suite.run(1);// single thread
+    else
+        test_suite.run(1);// single thread
+    
     utest::write_report(test_suite, std::cout, true);
 
     std::cout << "--------" << std::endl;
