@@ -1,5 +1,6 @@
 #!/bin/bash
 # args are CMAKE_PREFIX_PATH CMAKE_INSTALL_PREFIX  NUM_CORES
+echo "WARNING: this test assumes that there was a make install before!"
 set -x
 
 # out of the build dir
