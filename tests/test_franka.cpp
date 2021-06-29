@@ -178,9 +178,9 @@ void test_behavior(utest::test_t test,
 
             auto t1_cmd = high_resolution_clock::now();
             if (actuator_type == "velocity" || actuator_type == "servo")
-                cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, cst::dt);
+                cmd = inria_wbc::robot_dart::compute_velocities(robot, q, cst::dt);
             else if (actuator_type == "spd")
-                cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, cst::dt);
+                cmd = inria_wbc::robot_dart::compute_spd(robot, q, cst::dt);
             else // torque
                 cmd = controller->tau(false);
 
@@ -299,7 +299,7 @@ void test_behavior(utest::test_t test,
         robot->set_actuator_types(actuators);
     robot->fix_to_world();
     robot->set_position_enforced(true);
-    
+
     robot_dart::RobotDARTSimu simu(cst::dt);
     simu.set_collision_detector(coll);
     simu.set_control_freq(cst::frequency);
