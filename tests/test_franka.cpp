@@ -448,7 +448,10 @@ int main(int argc, char** argv)
         utest::write_report(test_suite, std::cout, true);
         std::cout << "------------ SUMMARY ------------" << std::endl;
         utest::write_report(test_suite, std::cout, false);
-        return !test_suite.success();
+        if(test_suite.success())
+            return 0;
+        else 
+            return 1;
     }
     return 0;
 }
