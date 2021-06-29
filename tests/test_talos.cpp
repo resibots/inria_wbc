@@ -429,7 +429,6 @@ void test_behavior(utest::test_t test,
     graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
     // we always save the video (useful for bug reports)
     graphics->record_video("test_result_talos.mp4");
-    std::cout << "graphics attached" << std::endl;
 #endif
 
     try {

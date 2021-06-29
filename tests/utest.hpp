@@ -73,7 +73,7 @@ namespace utest {
             int cases_per_thread = std::max(int(test_cases.size() / n_threads), 1);
             if (verbose) {
                 std::cout << "test cases:" << test_cases.size() << std::endl;
-                std::cout << "nthreads:" << n_threads << " cases per thread:" << cases_per_thread << std::endl;
+                std::cout << "nthreads:" << n_threads << " # cases/thread:" << cases_per_thread << std::endl;
             }
             for (int t = 0; t < n_threads; ++t) {
                 threads[t] = std::make_shared<std::thread>([=] {
