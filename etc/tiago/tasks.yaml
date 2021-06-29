@@ -1,11 +1,23 @@
 ee:
     type: se3
-    tracked: arm_4_joint
-    weight: 1000.0
-    kp: 300.0
+    tracked: gripper_link
+    weight: 100.0
+    kp: 1300.0
     mask: 111111
 posture:
     type: posture
-    weight: 0.95
-    kp: 30.0
+    weight: 10.00
+    kp: 10.0
     ref: start
+bounds:
+    type: bounds
+    weight: 10000
+self_collision-gripper:
+    type: self-collision
+    tracked: gripper_link
+    radius: 0.1
+    avoided: 
+        base_link: 0.325
+    weight: 100
+    kp: 700.0
+    p: 3
