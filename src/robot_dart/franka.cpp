@@ -34,6 +34,7 @@ int main(int argc, char* argv[])
         ("behavior,b", po::value<std::string>()->default_value("../etc/franka/cartesian_line.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/circular_cartesian.yam]")
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
+        ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("controller,c", po::value<std::string>()->default_value("../etc/franka/pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/pos_tracker.yaml]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
@@ -107,7 +108,12 @@ int main(int argc, char* argv[])
         auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
         robot->fix_to_world();
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
-        robot->set_actuator_types(vm["actuators"].as<std::string>());
+        if (vm["actuators"].as<std::string>() == "spd")
+            robot->set_actuator_types("torque");
+        else
+            robot->set_actuator_types(vm["actuators"].as<std::string>());
+
+    
 
 
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
@@ -143,6 +149,11 @@ int main(int argc, char* argv[])
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
+        auto closed_loop = IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"].as<bool>());
+        if (vm.count("closed_loop")) {
+            closed_loop = true;
+            controller_config["CONTROLLER"]["closed_loop"] = true;
+        }
 
         auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
@@ -206,8 +217,10 @@ int main(int argc, char* argv[])
                 auto t1_cmd = high_resolution_clock::now();
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot, q, 1./control_freq);
-                else // torque
+                else if (vm["actuators"].as<std::string>() == "spd")
                     cmd = inria_wbc::robot_dart::compute_spd(robot, q, 1./control_freq);
+                else // torque
+                    cmd = controller->tau(false);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 

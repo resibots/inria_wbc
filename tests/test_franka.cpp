@@ -408,7 +408,7 @@ int main(int argc, char** argv)
     std::string controller = "../../etc/franka/pos_tracker.yaml";
     auto behaviors = {"../../etc/franka/cartesian_line.yaml"};
     auto collision = {"fcl"};
-    auto actuators = {"servo", "torque", "velocity", "spd"};
+    auto actuators = {"servo", "velocity", "spd"};
     std::string urdf = "franka/franka.urdf";
 
     (*yout) << y::Key << controller << y::Value << y::BeginMap;

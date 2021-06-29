@@ -7,6 +7,7 @@ CONTROLLER:
   ref_config: start
   floating_base: false
   floating_base_joint_name: ""
+  closed_loop: false
   dt: 0.001
   verbose: false
   mimic_dof_names : []
