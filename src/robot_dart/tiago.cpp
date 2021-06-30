@@ -109,8 +109,11 @@ int main(int argc, char* argv[])
         auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
         robot->fix_to_world();
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
-        robot->set_actuator_types(vm["actuators"].as<std::string>());
-
+        if (vm["actuators"].as<std::string>() == "spd")
+            robot->set_actuator_types("torque");
+        else
+            robot->set_actuator_types(vm["actuators"].as<std::string>());
+        
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
         robot_dart::RobotDARTSimu simu(dt);
         simu.set_collision_detector(vm["collision"].as<std::string>());
@@ -222,9 +225,11 @@ int main(int argc, char* argv[])
 
                 auto t1_cmd = high_resolution_clock::now();
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1. / control_freq);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q, 1. / control_freq);
+                else if (vm["actuators"].as<std::string>() == "spd")
+                    cmd = inria_wbc::robot_dart::compute_spd(robot, q, 1. / sim_freq);
                 else // torque
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1. / control_freq);
+                    cmd = controller->tau(false);
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);

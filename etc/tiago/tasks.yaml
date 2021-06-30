@@ -17,7 +17,7 @@ self_collision-gripper:
     tracked: gripper_link
     radius: 0.1
     avoided: 
-        base_link: 0.325
+        base_link: 0.330
         torso_lift_link: 0.25
         v_torso_1: 0.2
         v_torso_2: 0.2
@@ -30,7 +30,7 @@ self_collision-5:
     tracked: arm_5_link
     radius: 0.1
     avoided: 
-        base_link: 0.325
+        base_link: 0.330
         torso_lift_link: 0.25
         v_torso_1: 0.2
         v_torso_2: 0.2
