@@ -36,6 +36,7 @@ int main(int argc, char* argv[])
         ("behavior,b", po::value<std::string>()->default_value("../etc/franka/cartesian_line.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/circular_cartesian.yam]")
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
+        ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("controller,c", po::value<std::string>()->default_value("../etc/franka/pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/pos_tracker.yaml]")
@@ -147,6 +148,11 @@ int main(int argc, char* argv[])
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
+        auto closed_loop = IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"].as<bool>());
+        if (vm.count("closed_loop")) {
+            closed_loop = true;
+            controller_config["CONTROLLER"]["closed_loop"] = true;
+        }
 
         auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);

@@ -5,6 +5,7 @@ CONTROLLER:
   frames: frames.yaml
   urdf: tiago_steel.urdf
   configurations: configurations.srdf 
+  closed_loop: false
   ref_config: start
   floating_base: false
   floating_base_joint_name: ""
