@@ -86,6 +86,15 @@ namespace inria_wbc {
                 robot_ = std::make_shared<RobotWrapper>(urdf, std::vector<std::string>(), verbose_); //this overloaded constructor allows to to not have a f_base
             }
 
+            if (verbose_) {
+                std::cout << "--------- Robot size info ---------" << std::endl;
+                std::cout << "Number of actuators : " << robot_->na() << std::endl;
+                std::cout << "Dimension of the configuration vector : " << robot_->nq() << std::endl;
+                std::cout << "Dimension of the velocity vector : " << robot_->nv() << std::endl;
+                std::cout << "--------- ------------- ---------" << std::endl;
+                std::cout << "position tracker initializer" << std::endl;
+            }
+
             _reset();
         }
 
