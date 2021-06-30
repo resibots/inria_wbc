@@ -1,5 +1,6 @@
 BEHAVIOR:
   name : generic::cartesian
-  task_name: ee
+  task_names: [ee]
   trajectory_duration: 4
-  relative_target: [-0.90, 0.0, -0.50]
+  relative_targets: [[-0.90, 0.0, -0.50]]
+  loop: true
