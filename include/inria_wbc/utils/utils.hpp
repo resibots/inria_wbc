@@ -61,6 +61,7 @@ namespace inria_wbc {
             }
             return filtered;
         }
+
     } // namespace utils
 } // namespace inria_wbc
 #endif

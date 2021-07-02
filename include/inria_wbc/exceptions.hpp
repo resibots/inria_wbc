@@ -4,9 +4,7 @@
 #include <exception>
 #include <string>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION >= 106500 // 1.65
-#define IWBC_USE_STACKTRACE
+#if IWBC_USE_STACKTRACE
 #include <boost/stacktrace.hpp> // require boost 1.65+
 #endif
 
@@ -43,6 +41,14 @@
     }
 
 namespace inria_wbc {
+
+#ifdef IWBC_USE_STACKTRACE
+    template<typename T>
+    inline std::string stacktrace_to_string(const T& bt) {
+        return boost::stacktrace::detail::to_string(&bt[0], bt.size());
+    }
+#endif
+
     class Exception : public std::runtime_error {
     public:
         template <class... Types>
@@ -53,6 +59,7 @@ namespace inria_wbc {
                 + "\n------ stack ------\n"
 #ifdef IWBC_USE_STACKTRACE
           //      + boost::stacktrace::to_string(boost::stacktrace::stacktrace())
+                + stacktrace_to_string(boost::stacktrace::stacktrace())
 #endif
                 )
         {

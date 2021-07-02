@@ -12,13 +12,13 @@ namespace inria_wbc {
     namespace behaviors {
         class ExBehavior : public Behavior {
         public:
-            ExBehavior(const controller_ptr_t& controller);
+            ExBehavior(const controller_ptr_t& controller, const YAML::Node& config);
             ExBehavior() = delete;
             ExBehavior(const ExBehavior&) = delete;
 
             void update(const controllers::SensorData& sensor_data) override;
             virtual ~ExBehavior() {}
-
+            std::string behavior_type() const override { return controllers::behavior_types::DOUBLE_SUPPORT; };
         private:
             int time_ = 0;
             int traj_selector_ = 0;
