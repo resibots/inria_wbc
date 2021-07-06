@@ -160,8 +160,8 @@ namespace inria_wbc {
                 const Vector& dv = tsid_->getAccelerations(sol);
                 tau_tsid_ = tau;
                 a_tsid_ = dv;
-                v_tsid_ += dt_ * dv;
-                q_tsid_ = pinocchio::integrate(robot_->model(), q_tsid_, dt_ * v_tsid_);
+                v_tsid_ = dq + dt_ * dv;
+                q_tsid_ = pinocchio::integrate(robot_->model(), q, dt_ * v_tsid_);
                 t_ += dt_;
 
                 activated_contacts_forces_.clear();
