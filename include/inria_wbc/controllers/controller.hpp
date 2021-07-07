@@ -56,7 +56,7 @@ namespace inria_wbc {
             std::vector<std::string> floating_base_dofs() const;
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
             std::vector<std::string> activated_contacts() { return activated_contacts_; };
-
+            std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces() { return activated_contacts_forces_; };
             virtual const Eigen::Vector2d& cop() const
             {
                 static Eigen::Vector2d tmp;
