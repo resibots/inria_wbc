@@ -47,8 +47,8 @@ namespace inria_wbc {
         protected:
             std::shared_ptr<::robot_dart::Robot> _robot, _external_robot;
             std::shared_ptr<dart::collision::CollisionDetector> _collision_detector;
-            std::shared_ptr<dart::collision::BodyNodeCollisionFilter> _collision_filter;
             std::unique_ptr<dart::collision::CollisionGroup> _collision_group, _external_collision_group;
+            std::shared_ptr<dart::collision::BodyNodeCollisionFilter> _collision_filter;
             dart::collision::CollisionOption _collision_option;
             dart::collision::CollisionResult _collision_result;
             std::vector<std::string> _collision_names;
