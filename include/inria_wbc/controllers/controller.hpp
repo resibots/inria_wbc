@@ -48,7 +48,7 @@ namespace inria_wbc {
             Controller& operator=(const Controller& o) = delete;
             virtual ~Controller(){};
 
-            virtual void update(const SensorData& sensor_data = {}) { _solve(); };
+            virtual void update(const SensorData& sensor_data = {});
 
             // Removes the universe and root (floating base) joint names
             std::vector<std::string> controllable_dofs(bool filter_mimics = true) const;
@@ -172,6 +172,11 @@ namespace inria_wbc {
             double t_;
             double dt_;
             bool floating_base_;
+
+            // true if we close the loop with actuator position/vel
+            // and floating base position
+            bool _closed_loop = false;
+
             std::string behavior_type_;
 
             std::string fb_joint_name_; //name of the floating base joint
