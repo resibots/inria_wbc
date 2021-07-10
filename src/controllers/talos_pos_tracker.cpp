@@ -45,9 +45,6 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_configuration(const YAML::Node& config)
         {
-            // closed loop
-            _closed_loop = IWBC_CHECK(config["closed_loop"].as<bool>());
-
             parse_stabilizer(config);
 
             // init collision detection
