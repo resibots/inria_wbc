@@ -218,7 +218,8 @@ int main(int argc, char* argv[])
             sensor_data["acceleration"] = Eigen::Vector3d::Zero();
             sensor_data["velocity"] = Eigen::Vector3d::Zero();
             // joint positions (excluding floating base)
-            sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+            sensor_data["positions"] =  robot->positions(controller->controllable_dofs(false));
+            sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
 
             // step the command
             Eigen::VectorXd cmd;
