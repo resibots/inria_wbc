@@ -7,7 +7,7 @@
 namespace inria_wbc {
     namespace robot_dart {
         // compute torques from positions
-        inline Eigen::VectorXd compute_spd(const std::shared_ptr<::robot_dart::Robot>&  robot, const Eigen::VectorXd& targetpos, double dt)
+        inline Eigen::VectorXd compute_spd(const std::shared_ptr<::robot_dart::Robot>& robot, const Eigen::VectorXd& targetpos, double dt)
         {
             Eigen::VectorXd q = robot->positions();
             Eigen::VectorXd dq = robot->velocities();
@@ -29,7 +29,7 @@ namespace inria_wbc {
                     Kd(i, i) = 0;
                 }
 
-            Eigen::MatrixXd invM = (robot->mass_matrix() + Kd  * dt).inverse();
+            Eigen::MatrixXd invM = (robot->mass_matrix() + Kd * dt).inverse();
             Eigen::VectorXd p = -Kp * (q + dq * dt - targetpos);
             Eigen::VectorXd d = -Kd * dq;
             Eigen::VectorXd qddot = invM * (-robot->coriolis_gravity_forces() + p + d + robot->skeleton()->getConstraintForces());
@@ -38,7 +38,7 @@ namespace inria_wbc {
         }
 
         // compute velocities from positions
-        inline Eigen::VectorXd compute_velocities(const std::shared_ptr<::robot_dart::Robot>&  robot, const Eigen::VectorXd& targetpos, double dt)
+        inline Eigen::VectorXd compute_velocities(const std::shared_ptr<::robot_dart::Robot>& robot, const Eigen::VectorXd& targetpos, double dt)
         {
             Eigen::VectorXd q = robot->positions();
             Eigen::VectorXd vel = (targetpos - q) / dt;

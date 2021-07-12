@@ -67,6 +67,9 @@ namespace inria_wbc {
             mimic_dof_names_ = IWBC_CHECK(c["mimic_dof_names"].as<std::vector<std::string>>());
             verbose_ = IWBC_CHECK(c["verbose"].as<bool>());
 
+            // closed loop
+            _closed_loop = IWBC_CHECK(c["closed_loop"].as<bool>());
+
             pinocchio::Model robot_model;
             floating_base_ = IWBC_CHECK(c["floating_base"].as<bool>());
 
@@ -84,6 +87,15 @@ namespace inria_wbc {
             else {
                 fb_joint_name_ = "";
                 robot_ = std::make_shared<RobotWrapper>(urdf, std::vector<std::string>(), verbose_); //this overloaded constructor allows to to not have a f_base
+            }
+
+            if (verbose_) {
+                std::cout << "--------- Robot size info ---------" << std::endl;
+                std::cout << "Number of actuators : " << robot_->na() << std::endl;
+                std::cout << "Dimension of the configuration vector : " << robot_->nq() << std::endl;
+                std::cout << "Dimension of the velocity vector : " << robot_->nv() << std::endl;
+                std::cout << "--------- ------------- ---------" << std::endl;
+                std::cout << "position tracker initializer" << std::endl;
             }
 
             _reset();
@@ -111,6 +123,57 @@ namespace inria_wbc {
             tsid_joint_names_ = all_dofs(false);
             non_mimic_indexes_ = get_non_mimics_indexes();
         }
+
+        void Controller::update(const SensorData& sensor_data)
+        {
+            if (_closed_loop) {
+
+                IWBC_ASSERT(sensor_data.find("positions") != sensor_data.end(),
+                    "we need the joint positions in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("joint_velocities") != sensor_data.end(),
+                    "we need the joint velocities in closed loop mode!");
+                    Eigen::VectorXd q_tsid(q_tsid_.size()), dq(v_tsid_.size());
+
+                auto pos = sensor_data.at("positions");
+                auto vel = sensor_data.at("joint_velocities");
+
+                if (floating_base_)
+                {
+                    IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(),
+                        "we need the floating base position in closed loop mode!");
+                    IWBC_ASSERT(sensor_data.find("floating_base_velocity") != sensor_data.end(),
+                        "we need the floating base velocity in closed loop mode!");
+
+                    Eigen::VectorXd q_tsid(q_tsid_.size()), dq(v_tsid_.size());
+                    auto fb_pos = sensor_data.at("floating_base_position");
+                    auto fb_vel = sensor_data.at("floating_base_velocity");
+
+                    IWBC_ASSERT(vel.size() + fb_vel.size() == v_tsid_.size(),
+                        "Joint velocities do not have the correct size:", vel.size() + fb_vel.size(), " vs (expected)", v_tsid_.size());
+                    IWBC_ASSERT(pos.size() + fb_pos.size() == q_tsid_.size(),
+                        "Joint positions do not have the correct size:", pos.size() + fb_pos.size(), " vs (expected)", q_tsid_.size());
+
+                    q_tsid << fb_pos, pos;
+                    dq << fb_vel, vel;
+
+                    _solve(q_tsid, dq);
+                }
+                else
+                {
+                    IWBC_ASSERT(vel.size() == v_tsid_.size(),
+                        "Joint velocities do not have the correct size:", vel.size(), " vs (expected)", v_tsid_.size());
+                    IWBC_ASSERT(pos.size() == q_tsid_.size(),
+                        "Joint positions do not have the correct size:", pos.size(), " vs (expected)", q_tsid_.size());
+
+                    _solve(pos, vel);
+                }
+            }
+            else
+            {
+                _solve(); 
+            }
+            
+        };
 
         std::vector<int> Controller::get_non_mimics_indexes() const
         {
@@ -151,8 +214,8 @@ namespace inria_wbc {
                 const Vector& dv = tsid_->getAccelerations(sol);
                 tau_tsid_ = tau;
                 a_tsid_ = dv;
-                v_tsid_ += dt_ * dv;
-                q_tsid_ = pinocchio::integrate(robot_->model(), q_tsid_, dt_ * v_tsid_);
+                v_tsid_ = dq + dt_ * dv;
+                q_tsid_ = pinocchio::integrate(robot_->model(), q, dt_ * v_tsid_);
                 t_ += dt_;
 
                 activated_contacts_forces_.clear();
