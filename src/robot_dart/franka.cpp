@@ -112,12 +112,6 @@ int main(int argc, char* argv[])
             robot->set_actuator_types("torque");
         else
             robot->set_actuator_types(vm["actuators"].as<std::string>());
-<<<<<<< HEAD
-
-    
-
-=======
->>>>>>> devel
 
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
         robot_dart::RobotDARTSimu simu(dt);
