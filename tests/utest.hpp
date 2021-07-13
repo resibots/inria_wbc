@@ -70,15 +70,18 @@ namespace utest {
             }
             n_threads = std::min(n_threads, int(test_cases.size()));
             std::vector<std::shared_ptr<std::thread>> threads(n_threads);
-            int cases_per_thread = std::max(int(test_cases.size() / n_threads), 1);
+            
+            int cases_per_thread = std::max(int(std::ceil((float)test_cases.size() / n_threads)), 1);
             if (verbose) {
                 std::cout << "test cases:" << test_cases.size() << std::endl;
-                std::cout << "nthreads:" << n_threads << " # cases/thread:" << cases_per_thread << std::endl;
+                std::cout << "nthreads:" << n_threads << " # max cases/thread:" << cases_per_thread << std::endl;
             }
             for (int t = 0; t < n_threads; ++t) {
                 threads[t] = std::make_shared<std::thread>([=] {
                     for (int i = 0; i < cases_per_thread; ++i) {
-                        int c = i + t * cases_per_thread ;
+                        unsigned int c = t + i * n_threads;
+                        if(c >= test_cases.size())
+                            break;
                         if (verbose) {
                             std::cout << ".";
                             std::cout.flush();
