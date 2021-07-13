@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
         po::options_description desc("Test_controller options");
         // clang-format off
         desc.add_options()
-        ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
+        ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model spd/velocity/servo (always for position control) [default:servo]")
         ("behavior,b", po::value<std::string>()->default_value("../etc/franka/cartesian_line.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/circular_cartesian.yam]")
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
@@ -112,9 +112,12 @@ int main(int argc, char* argv[])
             robot->set_actuator_types("torque");
         else
             robot->set_actuator_types(vm["actuators"].as<std::string>());
+<<<<<<< HEAD
 
     
 
+=======
+>>>>>>> devel
 
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
         robot_dart::RobotDARTSimu simu(dt);
