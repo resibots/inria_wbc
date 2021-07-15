@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
         po::options_description desc("Test_controller options");
         // clang-format off
         desc.add_options()
-        ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
+        ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model spd/velocity/servo (always for position control) [default:servo]")
         ("behavior,b", po::value<std::string>()->default_value("../etc/franka/cartesian_line.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/franka/circular_cartesian.yam]")
         ("big_window,b", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
@@ -40,6 +40,7 @@ int main(int argc, char* argv[])
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("control_freq", po::value<int>()->default_value(1000), "set the control frequency")
         ("sim_freq", po::value<int>()->default_value(1000), "set the simulation frequency")
+        ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
         ("ghost,g", "display the ghost (Pinocchio model)")
         ("help,h", "produce help message")
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
@@ -107,8 +108,10 @@ int main(int argc, char* argv[])
         auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
         robot->fix_to_world();
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
-        robot->set_actuator_types(vm["actuators"].as<std::string>());
-
+        if (vm["actuators"].as<std::string>() == "spd")
+            robot->set_actuator_types("torque");
+        else
+            robot->set_actuator_types(vm["actuators"].as<std::string>());
 
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
         robot_dart::RobotDARTSimu simu(dt);
@@ -143,6 +146,15 @@ int main(int argc, char* argv[])
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
+
+        auto closed_loop = IWBC_CHECK(controller_config["CONTROLLER"]["closed_loop"].as<bool>());
+        if (vm.count("closed_loop")) {
+            closed_loop = true;
+            controller_config["CONTROLLER"]["closed_loop"] = true;
+        }
+        
+        if (vm["actuators"].as<std::string>() == "torque" && !closed_loop)
+            std::cout << "WARNING (iwbc): you should activate the closed loop if you are using torque control! (--closed_loop or yaml)" << std::endl;
 
         auto controller_name = IWBC_CHECK(controller_config["CONTROLLER"]["name"].as<std::string>());
         auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, controller_config);
@@ -191,7 +203,8 @@ int main(int argc, char* argv[])
             sensor_data["acceleration"] = Eigen::Vector3d::Zero();
             sensor_data["velocity"] = Eigen::Vector3d::Zero();
             // joint positions (excluding floating base)
-            sensor_data["positions"] = robot->skeleton()->getPositions().tail(ncontrollable);
+            sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
+            sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
 
 
             // step the command
@@ -205,9 +218,12 @@ int main(int argc, char* argv[])
 
                 auto t1_cmd = high_resolution_clock::now();
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q, 1./control_freq);
+                else if (vm["actuators"].as<std::string>() == "spd")
+                    cmd = inria_wbc::robot_dart::compute_spd(robot, q, 1. / sim_freq);
                 else // torque
-                    cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
+                    cmd = controller->tau(false);
+                    
                 auto t2_cmd = high_resolution_clock::now();
                 time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
 

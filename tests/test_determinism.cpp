@@ -1,11 +1,7 @@
-#define BOOST_TEST_MODULE determinism
-#define BOOST_TEST_MAIN
-
 #include <map>
 #include <vector>
 
 #include <boost/filesystem.hpp>
-#include <boost/test/unit_test.hpp>
 
 #include <robot_dart/robot.hpp>
 
@@ -20,6 +16,9 @@
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "inria_wbc/robot_dart/utils.hpp"
+
+#include "utest.hpp"
+
 namespace y = YAML;
 
 std::pair<std::vector<Eigen::VectorXd>, std::vector<Eigen::VectorXd>> inline test_behavior(
@@ -48,20 +47,20 @@ std::pair<std::vector<Eigen::VectorXd>, std::vector<Eigen::VectorXd>> inline tes
 }
 
 template <typename T>
-inline void compare_cmds(const T& cmds, const T& cmds2)
+inline void compare_cmds(utest::test_t test, const T& cmds, const T& cmds2)
 {
     std::cout << "Comparing commands:";
-    BOOST_CHECK_EQUAL(cmds.first.size(), cmds2.first.size());
+    UTEST_CHECK(test, cmds.first.size() == cmds2.first.size());
     for (int i = 0; i < cmds.first.size(); ++i) {
         // std::cout << i << " ";
         std::cout.flush();
-        BOOST_CHECK(cmds.first[i].isApprox(cmds2.first[i], 1e-8));
-        BOOST_CHECK(cmds.second[i].isApprox(cmds2.second[i], 1e-8));
+        if( (cmds.first[i] - cmds2.first[i]).norm() < 1e-8 || (cmds.second[i] - cmds2.second[i]).norm() < 1e-8 )
+            UTEST_ERROR(test, "Error, cmds are not the same")
     }
     std::cout << "done" << std::endl;
 }
 
-BOOST_AUTO_TEST_CASE(determinism)
+void test_determinism(utest::test_t test)
 {
     srand(time(NULL));
 
@@ -104,17 +103,17 @@ BOOST_AUTO_TEST_CASE(determinism)
                 // get the controller
                 auto controller_name = IWBC_CHECK(c_config["CONTROLLER"]["name"].as<std::string>());
                 auto controller = inria_wbc::controllers::Factory::instance().create(controller_name, c_config);
-                BOOST_CHECK(controller);
+                UTEST_CHECK(test, controller.get() != 0);
 
                 auto p_controller = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
-                BOOST_CHECK(p_controller);
-                BOOST_CHECK(!p_controller->tasks().empty());
+                UTEST_CHECK(test, p_controller.get() != 0);
+                UTEST_CHECK(test, !p_controller->tasks().empty());
 
                 // get the behavior (trajectories)
                 y::Node b_config = IWBC_CHECK(y::LoadFile(behaviors_paths[b]));
                 auto behavior_name = IWBC_CHECK(b_config["BEHAVIOR"]["name"].as<std::string>());
                 auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, b_config);
-                BOOST_CHECK(behavior);
+                UTEST_CHECK(test, behavior.get() != 0);
 
                 results.push_back(test_behavior(behavior, duration));
             }
@@ -122,11 +121,19 @@ BOOST_AUTO_TEST_CASE(determinism)
             for (int i = 0; i < nexp; i++) {
                 for (int j = 0; j < nexp; j++) {
                     if (i != j) {
-                        compare_cmds(results[i], results[j]);
+                        compare_cmds(test, results[i], results[j]);
                     }
                 }
             }
         }
     }
     std::remove("../../etc/talos/randomize.yaml");
+}
+
+int main(int argc, char** argv){
+    utest::TestSuite test_suite;
+    auto test1 = utest::make_test("test_determinism");
+    UTEST_REGISTER(test_suite, test1, test_determinism(test1));
+    test_suite.run();
+    utest::write_report(test_suite, std::cout, true);
 }
