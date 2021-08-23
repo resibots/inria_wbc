@@ -20,6 +20,7 @@
 #include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
+#include "inria_wbc/utils/timer.hpp"
 
 
 int main(int argc, char* argv[])
@@ -175,7 +176,8 @@ int main(int argc, char* argv[])
 
 
         // the main loop
-        using namespace std::chrono;
+        inria_wbc::utils::Timer timer;
+
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
@@ -197,76 +199,49 @@ int main(int argc, char* argv[])
             // step the command
             Eigen::VectorXd cmd;
             if (simu.schedule(simu.control_freq())) {
-                auto t1_solver = high_resolution_clock::now();
+                timer.begin("solver");
                 behavior->update(sensor_data);
                 auto q = controller->q(false);
-                auto t2_solver = high_resolution_clock::now();
-                time_step_solver = duration_cast<microseconds>(t2_solver - t1_solver).count();
+                timer.end("solver");
 
-                auto t1_cmd = high_resolution_clock::now();
+                timer.begin("cmd");
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1./control_freq);
                 else // torque
                     cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1./control_freq);
-                auto t2_cmd = high_resolution_clock::now();
-                time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
+                timer.end("cmd");
 
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
                 ++it_cmd;
-
-                max_time_solver = std::max(time_step_solver, max_time_solver);
-                min_time_solver = std::min(time_step_solver, min_time_solver);
             }
 
             // step the simulation
             {
-                auto t1_simu = high_resolution_clock::now();
+                timer.begin("sim");
                 simu.step_world();
-                auto t2_simu = high_resolution_clock::now();
-                time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
-                ++it_simu;
+                timer.end("sim");
             }
 
             // log if needed
             for (auto& x : log_files) {
                 if (x.first == "timing")
-                    (*x.second) << time_step_solver / 1000.0 << "\t" << time_step_cmd / 1000.0 << "\t" << time_step_simu / 1000.0 << std::endl;
+                    timer.report(*x.second, simu.scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }
             // print timing information
-            time_simu += time_step_simu;
-            time_cmd += time_step_cmd;
-            time_solver += time_step_solver;
-            if (it_simu == 100) {
-                double t_sim = time_simu / it_simu / 1000.;
-                double t_cmd = time_cmd / it_cmd / 1000.;
-                double t_solver = time_solver / it_cmd / 1000.;
-
-                std::cout << "t=" << simu.scheduler().current_time()
-                          << "\tit. simu: " << t_sim << " ms"
-                          << "\tit. solver:" << t_solver << " ms [" << min_time_solver / 1000. << " " << max_time_solver / 1000. << "]"
-                          << "\tit. cmd:" << t_cmd << " ms"
-                          << std::endl;
+           if (timer.iteration() == 100) {
                 std::ostringstream oss;
-                oss.precision(3);
-                oss << "[Sim: " << t_sim << " ms]" << std::endl;
-                oss << "[Solver: " << t_solver << " ms]" << std::endl;
-                oss << "[Cmd: " << t_cmd << " ms]" << std::endl;
-#ifdef GRAPHIC
-                if (!vm.count("mp4"))
-                    simu.set_text_panel(oss.str());
+#ifdef GRAPHIC // to avoid the warning
+               oss.precision(3);
+               timer.report(oss, simu.scheduler().current_time(), -1, '\n');
+               if (!vm.count("mp4"))
+                   simu.set_text_panel(oss.str());
 #endif
-                it_simu = 0;
-                it_cmd = 0;
-                time_cmd = 0;
-                time_simu = 0;
-                time_solver = 0;
-                min_time_solver = 1e10;
-                max_time_solver = 0;
             }
+            timer.report(simu.scheduler().current_time(), 100);
         }
     }
     catch (std::exception& e) {
