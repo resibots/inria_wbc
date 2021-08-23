@@ -28,6 +28,7 @@
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "inria_wbc/robot_dart/utils.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
+#include "inria_wbc/utils/timer.hpp"
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -207,8 +208,6 @@ int main(int argc, char* argv[])
 
         //////////////////// START SIMULATION //////////////////////////////////////
         simu.set_control_freq(control_freq); // default = 1000 Hz
-        double time_simu = 0, time_cmd = 0, time_solver = 0, max_time_solver = 0, min_time_solver = 1e10;
-        int it_simu = 0, it_cmd = 0;
 
         std::shared_ptr<robot_dart::Robot> ghost;
         if (vm.count("ghost") || vm.count("collisions")) {
@@ -253,11 +252,10 @@ int main(int argc, char* argv[])
         // the main loop
         using namespace std::chrono;
         Eigen::VectorXd cmd;
+        inria_wbc::utils::Timer timer;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
-            double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
             if (vm.count("check_self_collisions")) {
-
                 IWBC_ASSERT(!vm.count("fast"), "=> check_self_collisions is not compatible with --fast!");
                 auto collision_list = collision_detector.collide();
                 if (!collision_list.empty())
@@ -307,21 +305,19 @@ int main(int argc, char* argv[])
                 sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
                 sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
 
-                auto t1_solver = high_resolution_clock::now();
+                timer.begin("solver");
                 behavior->update(sensor_data);
                 auto q = controller->q(false);
-                auto t2_solver = high_resolution_clock::now();
-                time_step_solver = duration_cast<microseconds>(t2_solver - t1_solver).count();
+                timer.end("solver");
 
-                auto t1_cmd = high_resolution_clock::now();
+                timer.begin("cmd");
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot->skeleton(), q, 1. / control_freq);
                 else if (vm["actuators"].as<std::string>() == "spd")
                     cmd = inria_wbc::robot_dart::compute_spd(robot->skeleton(), q, 1. / sim_freq);
                 else // torque
                     cmd = controller->tau(false);
-                auto t2_cmd = high_resolution_clock::now();
-                time_step_cmd = duration_cast<microseconds>(t2_cmd - t1_cmd).count();
+                timer.end("cmd");
 
                 if (ghost) {
                     Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
@@ -329,10 +325,6 @@ int main(int argc, char* argv[])
                     ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
                     ghost->set_positions(q.head(6) + translate_ghost, floating_base);
                 }
-
-                ++it_cmd;
-                max_time_solver = std::max(time_step_solver, max_time_solver);
-                min_time_solver = std::min(time_step_solver, min_time_solver);
             }
 
             if (simu.schedule(simu.graphics_freq()) && vm.count("collisions")) {
@@ -374,18 +366,16 @@ int main(int argc, char* argv[])
 
             // step the simulation
             {
-                auto t1_simu = high_resolution_clock::now();
+                timer.begin("sim");
                 robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
                 simu.step_world();
-                auto t2_simu = high_resolution_clock::now();
-                time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
-                ++it_simu;
+                timer.end("sim");
             }
 
             // log if needed
             for (auto& x : log_files) {
                 if (x.first == "timing")
-                    (*x.second) << time_step_solver / 1000.0 << "\t" << time_step_cmd / 1000.0 << "\t" << time_step_simu / 1000.0 << std::endl;
+                    timer.report(*x.second, simu.scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
                 else if (x.first == "com") // the real com
@@ -420,40 +410,16 @@ int main(int argc, char* argv[])
                 if (controller->t() >= conf && controller->t() < conf + controller->dt())
                     controller->save_configuration("configuration.srdf");
             }
-            // print timing information
-            time_simu += time_step_simu;
-            time_cmd += time_step_cmd;
-            time_solver += time_step_solver;
-
-            if (it_simu == 100) {
-                double t_sim = time_simu / it_simu / 1000.;
-                double t_cmd = time_cmd / it_cmd / 1000.;
-                double t_solver = time_solver / it_cmd / 1000.;
-
-                std::cout << "t=" << simu.scheduler().current_time()
-                          << "\tit. simu: " << t_sim << " ms"
-                          << "\tit. solver:" << t_solver << " ms [" << min_time_solver / 1000. << " " << max_time_solver / 1000. << "]"
-                          << "\tit. cmd:" << t_cmd << " ms"
-                          << std::endl;
+            if (timer.iteration() == 100) {
                 std::ostringstream oss;
-                oss.precision(3);
-                oss << "[Sim: " << t_sim << " ms]" << std::endl;
-                oss << "[Solver: " << t_solver << " ms]" << std::endl;
-                oss << "[Cmd: " << t_cmd << " ms]" << std::endl;
-                if (push)
-                    oss << "pushing..." << std::endl;
 #ifdef GRAPHIC // to avoid the warning
-                if (!vm.count("mp4"))
-                    simu.set_text_panel(oss.str());
+               oss.precision(3);
+               timer.report(oss, simu.scheduler().current_time(), -1, '\n');
+               if (!vm.count("mp4"))
+                   simu.set_text_panel(oss.str());
 #endif
-                it_simu = 0;
-                it_cmd = 0;
-                time_cmd = 0;
-                time_simu = 0;
-                time_solver = 0;
-                min_time_solver = 1e10;
-                max_time_solver = 0;
             }
+            timer.report(simu.scheduler().current_time(), 100);
         }
     }
     catch (YAML::RepresentationException& e) {
