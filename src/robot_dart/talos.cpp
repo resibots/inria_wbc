@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("norm_force,n", po::value<float>()->default_value(-150) , "push norm force value")
         ("verbose,v", "verbose mode (controller)")
-        ("save_traj,S", po::value<std::vector<std::string>>()->multitoken(), "save the trajectory in dir <dir> for references <refs>: -s traj1 rh lh com")
+        ("save_traj,S", po::value<std::vector<std::string>>()->multitoken(), "save the trajectory in dir <dir> for references <refs>: -S traj1 rh lh com")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
             "log the trajectory of a dart body [with urdf names] or timing or CoM or cost, example: -l timing -l com -l lf -l cost_com -l cost_lf")
         ;

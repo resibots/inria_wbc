@@ -12,6 +12,8 @@ namespace inria_wbc {
                 auto yaml_traj = IWBC_CHECK(c["trajectories"].as<std::string>());
                 auto traj_yaml_path = controller->base_path() + "/" + yaml_traj;
                 traj_loader_ = std::make_shared<trajs::Loader>(traj_yaml_path);
+
+                step_ = 1;
             }
 
             void CartesianTraj::update(const controllers::SensorData& sensor_data)
@@ -28,10 +30,14 @@ namespace inria_wbc {
                 }
                 controller->update(sensor_data);
 
-                time_++;
-                if (time_ > traj_loader_->size())
-                    time_ = traj_loader_->size() - 1;
-                // todo: loop back & forth
+                time_ += step_;
+
+                if (time_ >= traj_loader_->size() - 1)
+                    step_ = -1;
+                else if (time_ <= 0)
+                    step_ = 1;
+
+                // TODO a variable time exists in this scope ???
             }
         } // namespace generic
     } // namespace behaviors
