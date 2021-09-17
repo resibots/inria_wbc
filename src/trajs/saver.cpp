@@ -9,10 +9,15 @@ namespace inria_wbc {
               _ref_names(ref_names)
         {
             // create a directory
-            boost::filesystem::create_directory(boost::filesystem::path{traj_name});
+            boost::filesystem::path traj_dir(traj_name);
+            boost::filesystem::create_directory(traj_dir);
+
+            std::string yaml_name = (traj_dir.filename_is_dot() || traj_dir.filename_is_dot_dot()) ? 
+                "trajectory" : traj_dir.stem().string();
+
             // create a file in the directory for each se3 reference
             for (auto& x : ref_names)
-                _ref_ofs.push_back(std::make_shared<std::ofstream>((traj_name + "/" + x + ".csv").c_str()));
+                _ref_ofs.push_back(std::make_shared<std::ofstream>((traj_dir / (x + ".csv")).c_str()));
             // create the yaml file for meta data
             namespace y = YAML;
             // we make a "ref maps" because we might want to add more meta-data in the future (e.g., contacts)
@@ -23,7 +28,7 @@ namespace inria_wbc {
             _yaml << y::EndMap; // end map of refs
             _yaml << y::EndMap; // end map of meta_data
 
-            std::ofstream ofs((traj_name + "/" + traj_name + ".yaml").c_str());
+            std::ofstream ofs((traj_dir / (yaml_name + ".yaml")).c_str());
             ofs << _yaml.c_str();
         }
         
