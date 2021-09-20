@@ -36,8 +36,6 @@ namespace inria_wbc {
                     step_ = -1;
                 else if (time_ <= 0)
                     step_ = 1;
-
-                // TODO a variable time exists in this scope ???
             }
         } // namespace generic
     } // namespace behaviors
