@@ -35,7 +35,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_se3(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
 
             // retrieve parameters from YAML
@@ -85,7 +85,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_com(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
@@ -119,7 +119,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_momentum(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
@@ -147,7 +147,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_cop(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
@@ -172,7 +172,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_posture(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
@@ -218,14 +218,14 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_bounds(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
 
             // parse yaml
             auto weight = IWBC_CHECK(node["weight"].as<double>());
-            auto dt = IWBC_CHECK(node["dt"].as<double>()); // used to compute accelerations
+            auto dt = IWBC_CHECK(controller_node["CONTROLLER"]["dt"].as<double>());
 
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskJointPosVelAccBounds>(task_name, *robot, dt, false);
@@ -249,7 +249,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
@@ -291,7 +291,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_self_collision(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
 
             // retrieve parameters from YAML

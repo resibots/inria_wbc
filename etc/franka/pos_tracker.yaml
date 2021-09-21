@@ -8,5 +8,6 @@ CONTROLLER:
   floating_base: false
   floating_base_joint_name: ""
   dt: 0.001
+  closed_loop: false
   verbose: false
   mimic_dof_names : []
