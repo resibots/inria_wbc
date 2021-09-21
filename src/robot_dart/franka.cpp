@@ -218,7 +218,7 @@ int main(int argc, char* argv[])
 
                 auto t1_cmd = high_resolution_clock::now();
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q, 1./control_freq);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q, 1./control_freq, controller->all_dofs(false));
                 else if (vm["actuators"].as<std::string>() == "spd")
                     cmd = inria_wbc::robot_dart::compute_spd(robot, q, 1. / sim_freq);
                 else // torque

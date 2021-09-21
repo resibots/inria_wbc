@@ -38,9 +38,9 @@ namespace inria_wbc {
         }
 
         // compute velocities from positions
-        inline Eigen::VectorXd compute_velocities(const std::shared_ptr<::robot_dart::Robot>& robot, const Eigen::VectorXd& targetpos, double dt)
+        inline Eigen::VectorXd compute_velocities(const std::shared_ptr<::robot_dart::Robot>& robot, const Eigen::VectorXd& targetpos, double dt, const std::vector<std::string>& joints)
         {
-            Eigen::VectorXd q = robot->positions();
+            Eigen::VectorXd q = robot->positions(joints);
             Eigen::VectorXd vel = (targetpos - q) / dt;
             return vel;
         }

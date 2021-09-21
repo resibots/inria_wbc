@@ -54,6 +54,7 @@ namespace inria_wbc {
             std::vector<std::string> controllable_dofs(bool filter_mimics = true) const;
             // Order of the floating base in q_ according to dart naming convention
             std::vector<std::string> floating_base_dofs() const;
+            const std::vector<std::string>& mimic_names() const { return mimic_dof_names_; }
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
             std::vector<std::string> activated_contacts() { return activated_contacts_; };
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces() { return activated_contacts_forces_; };

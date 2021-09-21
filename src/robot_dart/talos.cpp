@@ -1,4 +1,3 @@
-
 #include <algorithm>
 #include <boost/program_options.hpp>
 #include <chrono>
@@ -32,6 +31,34 @@
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
 static const std::string bold = "\x1B[1m";
+
+// make a command with the subset of new_joints (e.g., for damage)
+Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmds,
+    const std::vector<std::string>& orig_joints,
+    const std::vector<std::string>& new_joints)
+{
+    Eigen::VectorXd new_commands = Eigen::VectorXd::Zero(new_joints.size());
+    for (size_t n = 0; n < new_joints.size(); ++n)
+        for (size_t k = 0; k < orig_joints.size(); ++k)
+            if (new_joints[n] == orig_joints[k])
+                new_commands(n) = cmds(k);
+    return new_commands;
+}
+
+
+// remove some joints from the command (e.g., mimic, damage, etc.)
+// TODO : optimize with indices computed once, then use slice
+Eigen::VectorXd rm_from_command(const Eigen::VectorXd& cmds,
+    const std::vector<std::string>& orig_joints,
+    const std::vector<std::string>& to_remove)
+{
+    Eigen::VectorXd new_commands = Eigen::VectorXd::Zero(cmds.size());
+    int j = 0;
+    for (size_t n = 0; n < orig_joints.size(); ++n)
+        if (std::find(to_remove.begin(), to_remove.end(), orig_joints[n]) == to_remove.end())
+            new_commands(j++) = cmds(n);
+    return new_commands.head(j);
+}
 
 int main(int argc, char* argv[])
 {
@@ -254,6 +281,10 @@ int main(int argc, char* argv[])
         // the main loop
         using namespace std::chrono;
         Eigen::VectorXd cmd;
+        bool damaged = false;
+        inria_wbc::controllers::SensorData sensor_data;
+        auto dart_joint_names = controllable_dofs; // undamaged case
+        auto dart_all_dofs = controller->all_dofs(false); // false here: no filter at all
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
@@ -283,8 +314,11 @@ int main(int argc, char* argv[])
             }
 
             // get actual torque from sensors
-            for (auto tq_sens = torque_sensors.cbegin(); tq_sens < torque_sensors.cend(); ++tq_sens)
-                tq_sensors(std::distance(torque_sensors.cbegin(), tq_sens)) = (*tq_sens)->torques()(0, 0);
+            for (size_t i = 0; i < torque_sensors.size(); ++i)
+                if (torque_sensors[i]->active())
+                    tq_sensors(i) = torque_sensors[i]->torques()(0, 0);
+                else
+                    tq_sensors(i) = 0;
 
             if (vm["height"].as<bool>())
                 std::cout << controller->t() << "  floating base height: " << controller->q(false)[2] << " - total feet force: " << ft_sensor_right->force().norm() + ft_sensor_left->force().norm() << std::endl;
@@ -293,21 +327,41 @@ int main(int argc, char* argv[])
             if (simu.schedule(simu.control_freq())) {
 
                 // update the sensors
-                inria_wbc::controllers::SensorData sensor_data;
                 // left foot
-                sensor_data["lf_torque"] = ft_sensor_left->torque();
-                sensor_data["lf_force"] = ft_sensor_left->force();
+                if (ft_sensor_left->active()) {
+                    sensor_data["lf_torque"] = ft_sensor_left->torque();
+                    sensor_data["lf_force"] = ft_sensor_left->force();
+                }
+                else {
+                    sensor_data["lf_torque"] = Eigen::VectorXd::Zero(6);
+                    sensor_data["lf_force"] = Eigen::VectorXd::Zero(3);
+                }
                 // right foot
-                sensor_data["rf_torque"] = ft_sensor_right->torque();
-                sensor_data["rf_force"] = ft_sensor_right->force();
+                if (ft_sensor_right->active()) {
+                    sensor_data["rf_torque"] = ft_sensor_right->torque();
+                    sensor_data["rf_force"] = ft_sensor_right->force();
+                }
+                else {
+                    sensor_data["rf_torque"] = Eigen::VectorXd::Zero(6);
+                    sensor_data["rf_force"] = Eigen::VectorXd::Zero(3);
+                }
                 // accelerometer
                 sensor_data["acceleration"] = imu->linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
-                // joint positions (excluding floating base)
-                sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
-                // joint torque sensors
+                // joint positions / velocities (excluding floating base)
+                // 0 for joints that are not in dart_joint_names
+                Eigen::VectorXd positions = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
+                Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
+                for (size_t i = 0; i < controllable_dofs.size(); ++i) {
+                    auto name = controllable_dofs[i];
+                    if (std::count(dart_joint_names.begin(), dart_joint_names.end(), name) > 0) {
+                        positions(i) = robot->positions({name})[0];
+                        velocities(i) = robot->velocities({name})[0];
+                    }
+                }
+                sensor_data["positions"] = positions;
                 sensor_data["joints_torque"] = tq_sensors;
-                sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
+                sensor_data["joint_velocities"] = velocities;
                 // floating base (perfect: no noise in the estimate)
                 sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
                 sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
@@ -319,10 +373,18 @@ int main(int argc, char* argv[])
                 time_step_solver = duration_cast<microseconds>(t2_solver - t1_solver).count();
 
                 auto t1_cmd = high_resolution_clock::now();
+                auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable);//no fb
+                auto q_damaged = filter_cmd(q_no_mimic, controllable_dofs, dart_joint_names);
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q, 1. / control_freq);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, dart_joint_names);
                 else if (vm["actuators"].as<std::string>() == "spd")
-                    cmd = inria_wbc::robot_dart::compute_spd(robot, q, 1. / sim_freq);
+                {
+                    auto cmd_all = inria_wbc::robot_dart::compute_spd(robot,  filter_cmd(q, controller->all_dofs(false), dart_all_dofs), 1. / sim_freq);
+                    //auto cmd_no_mimic = controller->filter_cmd(cmd_all);//rm_from_command(cmd_all, dart_all_dofs, controller->mimic_names());
+                    auto cmd_no_mimic = rm_from_command(cmd_all, dart_all_dofs, controller->mimic_names());
+                    std::cout<<"cmd no mimic size:"<<cmd_no_mimic.size()<<" dart joints"<<dart_joint_names.size()<<std::endl;
+                    cmd = cmd_no_mimic.tail(cmd_no_mimic.size() - 6); // remove the flloating base
+                }
                 else // torque
                     cmd = controller->tau(false);
                 auto t2_cmd = high_resolution_clock::now();
@@ -377,10 +439,40 @@ int main(int argc, char* argv[])
                 }
             }
 
+            if (simu.scheduler().current_time() > 2.0 && !damaged) {
+                damaged = true;
+                std::cout << "DAMAGE!" << std::endl;
+                auto body_node = robot->skeleton()->getBodyNode("leg_right_4_link");
+                auto tmp_skel = body_node->split("tmp");
+                // get the names of the joints that we removed
+                std::vector<std::string> removed_joints;
+                for (size_t i = 0; i < tmp_skel->getNumJoints(); ++i) {
+                    auto name = tmp_skel->getJoint(i)->getName();
+                    removed_joints.push_back(name);
+                    if (ft_sensor_left->active() && name == ft_sensor_left->attached_to())
+                        ft_sensor_left->detach();
+                    if (ft_sensor_right->active() && name == ft_sensor_right->attached_to())
+                        ft_sensor_right->detach();
+                    for (auto& t : torque_sensors)
+                        if (t->active() && name == t->attached_to())
+                            t->detach();
+                }
+                robot->update_joint_dof_maps();
+                dart_joint_names.clear();
+                dart_all_dofs.clear();
+                auto j_names = robot->joint_names(); // TODO factorize
+                for (auto& x : controllable_dofs)
+                    if (std::find(removed_joints.begin(), removed_joints.end(), x) == removed_joints.end())
+                        dart_joint_names.push_back(x);
+                for (auto& x : controller->all_dofs(false))
+                    if (std::find(removed_joints.begin(), removed_joints.end(), x) == removed_joints.end())
+                        dart_all_dofs.push_back(x);
+
+            }
             // step the simulation
             {
                 auto t1_simu = high_resolution_clock::now();
-                robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+                robot->set_commands(cmd, dart_joint_names);
                 simu.step_world();
                 auto t2_simu = high_resolution_clock::now();
                 time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
