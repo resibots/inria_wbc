@@ -22,6 +22,7 @@
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
+#include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
@@ -63,6 +64,7 @@ int main(int argc, char* argv[])
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("norm_force,n", po::value<float>()->default_value(-150) , "push norm force value")
         ("verbose,v", "verbose mode (controller)")
+        ("save_traj,S", po::value<std::vector<std::string>>()->multitoken(), "save the trajectory in dir <dir> for references <refs>: -S traj1 rh lh com")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
             "log the trajectory of a dart body [with urdf names] or timing or CoM or cost, example: -l timing -l com -l lf -l cost_com -l cost_lf")
         ;
@@ -251,8 +253,16 @@ int main(int argc, char* argv[])
         filter_body_names_pairs["leg_left_6_link"] = "BodyNode";
         inria_wbc::robot_dart::ExternalCollisionDetector floor_collision_detector(robot, floor, filter_body_names_pairs);
 
-        // the main loop
         using namespace std::chrono;
+        // to save trajectories
+        std::shared_ptr<inria_wbc::trajs::Saver> traj_saver;
+        if (!vm["save_traj"].empty()) {
+            auto args = vm["save_traj"].as<std::vector<std::string>>();
+            auto name = args[0];
+            auto refs = std::vector<std::string>(args.begin() + 1, args.end());
+            traj_saver = std::make_shared<inria_wbc::trajs::Saver>(controller_pos, args[0], refs);
+        }
+        // the main loop
         Eigen::VectorXd cmd;
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
@@ -386,7 +396,8 @@ int main(int argc, char* argv[])
                 time_step_simu = duration_cast<microseconds>(t2_simu - t1_simu).count();
                 ++it_simu;
             }
-
+            if (traj_saver)
+                traj_saver->update();
             // log if needed
             for (auto& x : log_files) {
                 if (x.first == "timing")
@@ -413,10 +424,6 @@ int main(int argc, char* argv[])
                                 << controller->rf_force_filtered().transpose() << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
-                else if (x.first == "ref_com")
-                    (*x.second) << controller_pos->get_com_ref().transpose() << std::endl;
-                else if (x.first.find("ref_") != std::string::npos) // e.g. tsid_lh (lh = task name)
-                    (*x.second) << controller_pos->get_se3_ref(x.first.substr(strlen("ref_"))).translation().transpose() << std::endl;
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }

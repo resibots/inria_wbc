@@ -48,6 +48,10 @@ namespace inria_wbc {
             Controller& operator=(const Controller& o) = delete;
             virtual ~Controller(){};
 
+
+            // path where the files are stored (everything should be relative to this)
+            const std::string& base_path() const { return base_path_; }
+
             virtual void update(const SensorData& sensor_data = {});
 
             // Removes the universe and root (floating base) joint names
@@ -172,6 +176,7 @@ namespace inria_wbc {
             double t_;
             double dt_;
             bool floating_base_;
+            std::string base_path_;
 
             // true if we close the loop with actuator position/vel
             // and floating base position
