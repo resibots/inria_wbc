@@ -60,7 +60,7 @@ namespace inria_wbc {
         Controller::Controller(const YAML::Node& config) : config_(config)
         {
             auto c = IWBC_CHECK(config["CONTROLLER"]);
-            auto path = IWBC_CHECK(c["base_path"]);
+            base_path_ = IWBC_CHECK(c["base_path"].as<std::string>());
             auto floating_base_joint_name = IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
             auto urdf = IWBC_CHECK(c["urdf"].as<std::string>());
             dt_ = IWBC_CHECK(c["dt"].as<double>());
