@@ -44,13 +44,13 @@ namespace inria_wbc {
             Eigen::Vector2d ref = com_to_zmp(model_current_com); //because this is the target
             Eigen::Vector2d cor = ref.head(2) - cop_filtered;
 
-            Eigen::Vector2d error = p.block(0, 0, 1, 2).array() * cor.array();
+            Eigen::Vector2d error = p.segment(0, 2).array() * cor.array();
             Eigen::VectorXd ref_m = com_ref.pos - Eigen::Vector3d(error(0), error(1), 0);
 
-            error = p.block(2, 0, 1, 2).array() * cor.array();
+            error = p.segment(2, 2).array() * cor.array();
             Eigen::VectorXd vref_m = com_ref.vel - (Eigen::Vector3d(error(0), error(1), 0) / dt);
 
-            error = p.block(4, 0, 1, 2).array() * cor.array();
+            error = p.segment(4, 2).array() * cor.array();
             Eigen::VectorXd aref_m = com_ref.acc - (Eigen::Vector3d(error(0), error(1), 0) / (dt * dt));
 
             se3_sample.pos = ref_m;

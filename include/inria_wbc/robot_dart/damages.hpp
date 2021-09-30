@@ -80,30 +80,6 @@ namespace inria_wbc {
                 _damage_list.push_back(motor_damage);
             }
 
-            Eigen::VectorXd rm_from_command(const Eigen::VectorXd& cmds,
-                const std::vector<std::string>& orig_joints,
-                const std::vector<std::string>& to_remove)
-            {
-                Eigen::VectorXd new_commands = Eigen::VectorXd::Zero(cmds.size());
-                int j = 0;
-                for (size_t n = 0; n < orig_joints.size(); ++n)
-                    if (std::find(to_remove.begin(), to_remove.end(), orig_joints[n]) == to_remove.end())
-                        new_commands(j++) = cmds(n);
-                return new_commands.head(j);
-            }
-
-            Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmds,
-                const std::vector<std::string>& orig_joints,
-                const std::vector<std::string>& new_joints)
-            {
-                Eigen::VectorXd new_commands = Eigen::VectorXd::Zero(new_joints.size());
-                for (size_t n = 0; n < new_joints.size(); ++n)
-                    for (size_t k = 0; k < orig_joints.size(); ++k)
-                        if (new_joints[n] == orig_joints[k])
-                            new_commands(n) = cmds(k);
-                return new_commands;
-            }
-
             void update_sensor(const std::string& joint_name, std::vector<std::shared_ptr<::robot_dart::sensor::Sensor>>& affected_sensors)
             {
                 for (auto& s : _sensors) {

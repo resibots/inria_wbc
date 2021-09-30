@@ -51,6 +51,7 @@ int main(int argc, char* argv[])
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
         ("controller,c", po::value<std::string>()->default_value("../etc/talos/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_pos_tracker.yaml]")
+        ("damage", po::value<bool>()->default_value(false), "damage talos")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("fast,f", "fast (simplified) Talos [default: false]")
@@ -265,11 +266,11 @@ int main(int argc, char* argv[])
         Eigen::VectorXd cmd;
         inria_wbc::controllers::SensorData sensor_data;
         inria_wbc::utils::Timer timer;
-        auto dart_joint_names = controllable_dofs; // undamaged case
-        auto dart_all_dofs = controller->all_dofs(false); // false here: no filter at all
-        inria_wbc::robot_dart::RobotDamages robot_damages(robot, simu, dart_joint_names, dart_all_dofs);
+        auto active_dofs_controllable = controllable_dofs; // undamaged case
+        auto active_dofs = controller->all_dofs(false); // false here: no filter at all
+        inria_wbc::robot_dart::RobotDamages robot_damages(robot, simu, active_dofs_controllable, active_dofs);
 
-        Eigen::VectorXd activated_joints = Eigen::VectorXd::Zero(dart_all_dofs.size());
+        Eigen::VectorXd activated_joints = Eigen::VectorXd::Zero(active_dofs.size());
         while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
 
             if (vm.count("check_self_collisions")) {
@@ -303,7 +304,7 @@ int main(int argc, char* argv[])
                 else
                     tq_sensors(i) = 0;
 
-            if (vm["height"].as<bool>())
+            if (vm["height"].as<bool>() && ft_sensor_left->active() && ft_sensor_right->active())
                 std::cout << controller->t() << "  floating base height: " << controller->q(false)[2] << " - total feet force: " << ft_sensor_right->force().norm() + ft_sensor_left->force().norm() << std::endl;
 
             // step the command
@@ -332,16 +333,17 @@ int main(int argc, char* argv[])
                 sensor_data["acceleration"] = imu->linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
                 // joint positions / velocities (excluding floating base)
-                // 0 for joints that are not in dart_joint_names
+                // 0 for joints that are not in active_dofs_controllable
                 Eigen::VectorXd positions = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
                 Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
                 for (size_t i = 0; i < controllable_dofs.size(); ++i) {
                     auto name = controllable_dofs[i];
-                    if (std::count(dart_joint_names.begin(), dart_joint_names.end(), name) > 0) {
+                    if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0) {
                         positions(i) = robot->positions({name})[0];
                         velocities(i) = robot->velocities({name})[0];
                     }
                 }
+
                 sensor_data["positions"] = positions;
                 sensor_data["joints_torque"] = tq_sensors;
                 sensor_data["joint_velocities"] = velocities;
@@ -355,16 +357,12 @@ int main(int argc, char* argv[])
                 timer.end("solver");
 
                 auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
-                auto q_damaged = robot_damages.filter_cmd(q_no_mimic, controllable_dofs, dart_joint_names);
+                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
                 timer.begin("cmd");
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, dart_joint_names);
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, active_dofs_controllable);
                 else if (vm["actuators"].as<std::string>() == "spd") {
-                    auto cmd_all = inria_wbc::robot_dart::compute_spd(robot, robot_damages.filter_cmd(q, controller->all_dofs(false), dart_all_dofs), 1. / sim_freq);
-                    //auto cmd_no_mimic = controller->filter_cmd(cmd_all);//rm_from_command(cmd_all, dart_all_dofs, controller->mimic_names());
-                    auto cmd_no_mimic = robot_damages.rm_from_command(cmd_all, dart_all_dofs, controller->mimic_names());
-                    std::cout << "cmd no mimic size:" << cmd_no_mimic.size() << " dart joints" << dart_joint_names.size() << std::endl;
-                    cmd = cmd_no_mimic.tail(cmd_no_mimic.size() - 6); // remove the flloating base
+                    cmd = inria_wbc::robot_dart::compute_spd(robot, q_damaged, 1. / sim_freq, active_dofs_controllable, false);
                 }
                 else // torque
                     cmd = controller->tau(false);
@@ -415,25 +413,29 @@ int main(int argc, char* argv[])
                 }
             }
 
-            if (simu->scheduler().current_time() >= 1.0 && simu->scheduler().current_time() < 1.0 + dt) {
-                robot_damages.cut("arm_right_2_link");
-                dart_joint_names = robot_damages.active_dofs_controllable();
-                dart_all_dofs = robot_damages.active_dofs();
-            }
-
-            if (simu->scheduler().current_time() >= 2.0 + dt && simu->scheduler().current_time() < 2.0 + 2 * dt) {
-                robot_damages.cut("leg_right_4_link");
-                dart_joint_names = robot_damages.active_dofs_controllable();
-                dart_all_dofs = robot_damages.active_dofs();
-            }
-            std::cout << robot_damages.active_joints_mask().transpose() << std::endl;
             // step the simulation
             {
                 timer.begin("sim");
-                robot->set_commands(cmd, dart_joint_names);
+                robot->set_commands(cmd, active_dofs_controllable);
                 simu->step_world();
                 timer.end("sim");
             }
+
+            if (vm["damage"].as<bool>()) {
+
+                if (simu->scheduler().current_time() >= 0.5 && simu->scheduler().current_time() < 0.5 + dt) {
+                    robot_damages.cut("arm_right_2_link");
+                    active_dofs_controllable = robot_damages.active_dofs_controllable();
+                    active_dofs = robot_damages.active_dofs();
+                }
+
+                if (simu->scheduler().current_time() >= 1.0 + dt && simu->scheduler().current_time() < 1.0 + 2 * dt) {
+                    robot_damages.motor_damage("leg_right_4_joint", inria_wbc::robot_dart::LOCKED);
+                    active_dofs_controllable = robot_damages.active_dofs_controllable();
+                    active_dofs = robot_damages.active_dofs();
+                }
+            }
+
             if (traj_saver)
                 traj_saver->update();
             // log if needed
