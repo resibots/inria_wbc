@@ -422,17 +422,20 @@ int main(int argc, char* argv[])
             }
 
             if (vm["damage"].as<bool>()) {
-
-                if (simu->scheduler().current_time() >= 0.5 && simu->scheduler().current_time() < 0.5 + dt) {
-                    robot_damages.cut("arm_right_2_link");
-                    active_dofs_controllable = robot_damages.active_dofs_controllable();
-                    active_dofs = robot_damages.active_dofs();
+                try {
+                    if (simu->scheduler().current_time() >= 0.5 && simu->scheduler().current_time() < 0.5 + dt) {
+                        robot_damages.cut("arm_right_2_link");
+                        active_dofs_controllable = robot_damages.active_dofs_controllable();
+                        active_dofs = robot_damages.active_dofs();
+                    }
+                    if (simu->scheduler().current_time() >= 1.0 + dt && simu->scheduler().current_time() < 1.0 + 2 * dt) {
+                        robot_damages.motor_damage("leg_right_4_joint", inria_wbc::robot_dart::LOCKED);
+                        active_dofs_controllable = robot_damages.active_dofs_controllable();
+                        active_dofs = robot_damages.active_dofs();
+                    }
                 }
-
-                if (simu->scheduler().current_time() >= 1.0 + dt && simu->scheduler().current_time() < 1.0 + 2 * dt) {
-                    robot_damages.motor_damage("leg_right_4_joint", inria_wbc::robot_dart::LOCKED);
-                    active_dofs_controllable = robot_damages.active_dofs_controllable();
-                    active_dofs = robot_damages.active_dofs();
+                catch (std::exception& e) {
+                    std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
                 }
             }
 

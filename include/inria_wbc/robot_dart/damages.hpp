@@ -4,6 +4,7 @@
 #include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/sensor/sensor.hpp>
+#include <inria_wbc/exceptions.hpp>
 
 namespace inria_wbc {
     namespace robot_dart {
@@ -38,6 +39,9 @@ namespace inria_wbc {
 
             void cut(const std::string& link_name)
             {
+                if (std::find(_robot->body_names().begin(), _robot->body_names().end(), link_name) == _robot->body_names().end())
+                    IWBC_ERROR("cut ", link_name, " is not a valid robot body name");
+
                 _damaged = true;
                 std::vector<std::string> affected_joints;
                 std::vector<std::shared_ptr<::robot_dart::sensor::Sensor>> affected_sensors;
@@ -61,6 +65,9 @@ namespace inria_wbc {
 
             void motor_damage(const std::string& joint_name, const int& damage_type)
             {
+                if (_robot->joint_map().find(joint_name) == _robot->joint_map().end())
+                    IWBC_ERROR("motor_damage ", joint_name, " not in the robot joint map");
+
                 _damaged = true;
                 std::vector<std::string> affected_joints = {joint_name};
                 std::vector<std::shared_ptr<::robot_dart::sensor::Sensor>> affected_sensors;
@@ -69,7 +76,6 @@ namespace inria_wbc {
                 update_joint_lists();
 
                 auto jt = _robot->skeleton()->getJoint(joint_name);
-
                 if (damage_type == LOCKED)
                     _robot->set_actuator_type("locked", joint_name);
                 if (damage_type == PASSIVE)
