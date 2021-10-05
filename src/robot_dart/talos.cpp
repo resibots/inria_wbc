@@ -27,6 +27,7 @@
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "inria_wbc/robot_dart/utils.hpp"
+#include "inria_wbc/trajs/loader.hpp"
 #include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/utils/timer.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
@@ -69,6 +70,7 @@ int main(int argc, char* argv[])
         ("save_traj,S", po::value<std::vector<std::string>>()->multitoken(), "save the trajectory in dir <dir> for references <refs>: -S traj1 rh lh com")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
             "log the trajectory of a dart body [with urdf names] or timing or CoM or cost, example: -l timing -l com -l lf -l cost_com -l cost_lf")
+        ("loader, L", po::value<std::string>()->default_value(""), "load external position commands")
         ;
         // clang-format on
         po::variables_map vm;
@@ -271,7 +273,45 @@ int main(int argc, char* argv[])
         inria_wbc::robot_dart::RobotDamages robot_damages(robot, simu, active_dofs_controllable, active_dofs);
 
         Eigen::VectorXd activated_joints = Eigen::VectorXd::Zero(active_dofs.size());
-        while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
+
+        std::shared_ptr<inria_wbc::trajs::Loader> traj_loader;
+        int it_loader = 0;
+        int it_loader_end = 1;
+        if (!vm["loader"].as<std::string>().empty()) {
+            auto traj_path = vm["loader"].as<std::string>();
+            traj_loader = std::make_shared<inria_wbc::trajs::Loader>(traj_path);
+            auto rnv = traj_loader->ref_names_vec();
+            IWBC_ASSERT(std::find(rnv.begin(), rnv.end(), "q") != rnv.end(), "You need to give a posture to the trajectory loader");
+            it_loader_end = traj_loader->size_vec();
+            IWBC_ASSERT(it_loader_end > 1, "Your posture trajectory does not contain enough points");
+            for (auto& n : rnv) {
+                std::cout << n << std::endl;
+            }
+            std::cout << it_loader_end << std::endl;
+
+            auto map = traj_loader->task_refs_vec();
+
+            for (auto& it : map) {
+                // Do stuff
+                std::cout << it.first << std::endl;
+                std::cout << it.second.size() << std::endl;
+            }
+        }
+
+        while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done() && it_loader < it_loader_end) {
+
+            if (vm["damage"].as<bool>()) {
+                try {
+                    if (simu->scheduler().current_time() == 0.0) {
+                        robot_damages.cut("leg_left_1_link");
+                        active_dofs_controllable = robot_damages.active_dofs_controllable();
+                        active_dofs = robot_damages.active_dofs();
+                    }
+                }
+                catch (std::exception& e) {
+                    std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
+                }
+            }
 
             if (vm.count("check_self_collisions")) {
                 IWBC_ASSERT(!vm.count("fast"), "=> check_self_collisions is not compatible with --fast!");
@@ -317,7 +357,7 @@ int main(int argc, char* argv[])
                     sensor_data["lf_force"] = ft_sensor_left->force();
                 }
                 else {
-                    sensor_data["lf_torque"] = Eigen::VectorXd::Constant(6, 1e-8);
+                    sensor_data["lf_torque"] = Eigen::VectorXd::Constant(3, 1e-8);
                     sensor_data["lf_force"] = Eigen::VectorXd::Constant(3, 1e-8);
                 }
                 // right foot
@@ -326,7 +366,7 @@ int main(int argc, char* argv[])
                     sensor_data["rf_force"] = ft_sensor_right->force();
                 }
                 else {
-                    sensor_data["rf_torque"] = Eigen::VectorXd::Constant(6, 1e-8);
+                    sensor_data["rf_torque"] = Eigen::VectorXd::Constant(3, 1e-8);
                     sensor_data["rf_force"] = Eigen::VectorXd::Constant(3, 1e-8);
                 }
                 // accelerometer
@@ -357,8 +397,17 @@ int main(int argc, char* argv[])
                 timer.end("solver");
 
                 auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
-                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
                 timer.begin("cmd");
+
+                if (vm["damage"].as<bool>()) {
+                    IWBC_ASSERT((traj_loader->task_ref_vec("q", it_loader).size() - 7) == active_dofs_controllable.size(), "Loader: your recording should match active_dofs_controllable");
+                    auto q_tsid = traj_loader->task_ref_vec("q", it_loader);
+                    q_no_mimic = q_tsid.tail(q_tsid.size() - 1);
+                    it_loader++;
+                }
+
+                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
+
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, active_dofs_controllable);
                 else if (vm["actuators"].as<std::string>() == "spd") {
@@ -419,24 +468,6 @@ int main(int argc, char* argv[])
                 robot->set_commands(cmd, active_dofs_controllable);
                 simu->step_world();
                 timer.end("sim");
-            }
-
-            if (vm["damage"].as<bool>()) {
-                try {
-                    if (simu->scheduler().current_time() >= 0.5 && simu->scheduler().current_time() < 0.5 + dt) {
-                        robot_damages.cut("arm_right_2_link");
-                        active_dofs_controllable = robot_damages.active_dofs_controllable();
-                        active_dofs = robot_damages.active_dofs();
-                    }
-                    if (simu->scheduler().current_time() >= 1.0 + dt && simu->scheduler().current_time() < 1.0 + 2 * dt) {
-                        robot_damages.motor_damage("leg_right_4_joint", inria_wbc::robot_dart::LOCKED);
-                        active_dofs_controllable = robot_damages.active_dofs_controllable();
-                        active_dofs = robot_damages.active_dofs();
-                    }
-                }
-                catch (std::exception& e) {
-                    std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
-                }
             }
 
             if (traj_saver)
