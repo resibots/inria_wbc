@@ -52,6 +52,7 @@ int main(int argc, char* argv[])
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
         ("controller,c", po::value<std::string>()->default_value("../etc/talos/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_pos_tracker.yaml]")
+        ("cut", po::value<std::string>()->default_value("leg_left_1_link"), "joint to cut it damage option is enabled")
         ("damage", po::value<bool>()->default_value(false), "damage talos")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
@@ -125,6 +126,9 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT DART ROBOT //////////////////////////////////////
         std::srand(std::time(NULL));
+        // std::vector<std::pair<std::string, std::string>> packages = {{"talos_data", "/home/pal/talos_data"}};
+        // std::string urdf = vm.count("fast") ? "talos/talos_fast.urdf" : "talos/talos.urdf";
+        // urdf = "/home/pal/talos_data/example-robot-data/robots/talos_data/robots/talos_full_v2.urdf";
         std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
         std::string urdf = vm.count("fast") ? "talos/talos_fast.urdf" : "talos/talos.urdf";
         auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
@@ -276,34 +280,22 @@ int main(int argc, char* argv[])
 
         std::shared_ptr<inria_wbc::trajs::Loader> traj_loader;
         int it_loader = 0;
-        int it_loader_end = 1;
+        int it_loader_end = 0;
         if (!vm["loader"].as<std::string>().empty()) {
             auto traj_path = vm["loader"].as<std::string>();
             traj_loader = std::make_shared<inria_wbc::trajs::Loader>(traj_path);
             auto rnv = traj_loader->ref_names_vec();
             IWBC_ASSERT(std::find(rnv.begin(), rnv.end(), "q") != rnv.end(), "You need to give a posture to the trajectory loader");
             it_loader_end = traj_loader->size_vec();
-            IWBC_ASSERT(it_loader_end > 1, "Your posture trajectory does not contain enough points");
-            for (auto& n : rnv) {
-                std::cout << n << std::endl;
-            }
-            std::cout << it_loader_end << std::endl;
-
-            auto map = traj_loader->task_refs_vec();
-
-            for (auto& it : map) {
-                // Do stuff
-                std::cout << it.first << std::endl;
-                std::cout << it.second.size() << std::endl;
-            }
+            IWBC_ASSERT(it_loader_end > 0, "Your posture trajectory does not contain enough points");
         }
 
-        while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done() && it_loader < it_loader_end) {
+        while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
 
             if (vm["damage"].as<bool>()) {
                 try {
                     if (simu->scheduler().current_time() == 0.0) {
-                        robot_damages.cut("leg_left_1_link");
+                        robot_damages.cut(vm["cut"].as<std::string>());
                         active_dofs_controllable = robot_damages.active_dofs_controllable();
                         active_dofs = robot_damages.active_dofs();
                     }
@@ -392,21 +384,23 @@ int main(int argc, char* argv[])
                 sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
 
                 timer.begin("solver");
-                behavior->update(sensor_data);
+                if (vm["loader"].as<std::string>().empty())
+                    behavior->update(sensor_data);
                 auto q = controller->q(false);
                 timer.end("solver");
 
                 auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
                 timer.begin("cmd");
+                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
 
                 if (vm["damage"].as<bool>()) {
                     IWBC_ASSERT((traj_loader->task_ref_vec("q", it_loader).size() - 7) == active_dofs_controllable.size(), "Loader: your recording should match active_dofs_controllable");
-                    auto q_tsid = traj_loader->task_ref_vec("q", it_loader);
-                    q_no_mimic = q_tsid.tail(q_tsid.size() - 1);
-                    it_loader++;
+                    Eigen::VectorXd q_tsid = traj_loader->task_ref_vec("q", it_loader);
+                    q_damaged.resize(q_tsid.size() - 7);
+                    q_damaged = q_tsid.tail(q_damaged.size());
+                    if (it_loader < it_loader_end - 1)
+                        it_loader++;
                 }
-
-                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
 
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, active_dofs_controllable);
@@ -420,7 +414,13 @@ int main(int argc, char* argv[])
                 if (ghost) {
                     Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                     translate_ghost(0) -= 1;
-                    ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
+                    if (!vm["loader"].as<std::string>().empty()) {
+                        ghost->set_positions(q_damaged, active_dofs_controllable);
+                        translate_ghost(2) += 1.5;
+                    }
+                    else {
+                        ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
+                    }
                     ghost->set_positions(q.head(6) + translate_ghost, floating_base);
                 }
             }
