@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         ("save_traj,S", po::value<std::vector<std::string>>()->multitoken(), "save the trajectory in dir <dir> for references <refs>: -S traj1 rh lh com")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
             "log the trajectory of a dart body [with urdf names] or timing or CoM or cost, example: -l timing -l com -l lf -l cost_com -l cost_lf")
-        ("loader, L", po::value<std::string>()->default_value(""), "load external position commands")
+        ("loader, L", po::value<std::string>()->default_value(""), "load external joint position commands")
         ;
         // clang-format on
         po::variables_map vm;
@@ -393,8 +393,8 @@ int main(int argc, char* argv[])
                 timer.begin("cmd");
                 auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
 
-                if (vm["damage"].as<bool>()) {
-                    IWBC_ASSERT((traj_loader->task_ref_vec("q", it_loader).size() - 7) == active_dofs_controllable.size(), "Loader: your recording should match active_dofs_controllable");
+                if (!vm["loader"].as<std::string>().empty()) {
+                    IWBC_ASSERT((traj_loader->task_ref_vec("q", it_loader).size() - 7) == active_dofs_controllable.size(), "Loader: your recording should match active_dofs_controllable ", traj_loader->task_ref_vec("q", it_loader).size() - 7, "!=", active_dofs_controllable.size());
                     Eigen::VectorXd q_tsid = traj_loader->task_ref_vec("q", it_loader);
                     q_damaged.resize(q_tsid.size() - 7);
                     q_damaged = q_tsid.tail(q_damaged.size());

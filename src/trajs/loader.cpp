@@ -8,27 +8,6 @@
 namespace inria_wbc {
     namespace trajs {
 
-        static std::vector<Eigen::Vector3d> load_vector3d(const std::string& path)
-        {
-            static constexpr int cols = 3;
-            std::ifstream ifs(path.c_str());
-            IWBC_ASSERT(ifs.good(), std::string("Error when loading trajectory:") + path);
-            // load all the values (treat \n as space here, so no info on column)
-            std::vector<double> data = std::vector<double>{
-                std::istream_iterator<double>(ifs),
-                std::istream_iterator<double>()};
-            // ensure that all the lines are full
-            assert(data.size() % cols == 0);
-            // copy to the matrix
-            int rows = data.size() / cols;
-            std::vector<Eigen::Vector3d> res(rows);
-            for (int i = 0; i < rows; i++) {
-                for (int j = 0; j < cols; j++)
-                    res[i](j) = data[i * cols + j];
-            }
-            return res;
-        }
-
         static std::vector<pinocchio::SE3> load_se3(const std::string& path)
         {
             static constexpr int cols = 3 + 9;
@@ -102,7 +81,7 @@ namespace inria_wbc {
                         IWBC_ASSERT(_task_refs[task].size() == _task_refs.begin()->second.size(), std::string("wrong number of rows in") + filename);
                     }
                     else {
-                        _com_refs = load_vector3d(filename);
+                        _com_refs = load_vector(filename, 3);
                     }
                 }
             }
