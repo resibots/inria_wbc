@@ -30,9 +30,13 @@ namespace inria_wbc {
                 _robot->skeleton()->disableSelfCollisionCheck();
                 return _collision_names;
             }
-            void update()
+            void remove_frames()
             {
                 _collision_group->removeAllShapeFrames();
+            }
+
+            void add_frames()
+            {
                 _collision_group->addShapeFramesOf(_robot->skeleton().get());
             }
 

@@ -64,7 +64,7 @@ namespace inria_wbc {
                 _damage_list.push_back(cut_damage);
             }
 
-            void motor_damage(const std::string& joint_name, const int& damage_type)
+            void motor_damage(const std::string& joint_name, int damage_type)
             {
                 if (_robot->joint_map().find(joint_name) == _robot->joint_map().end())
                     IWBC_ERROR("motor_damage ", joint_name, " not in the robot joint map");

@@ -294,12 +294,14 @@ int main(int argc, char* argv[])
 
             if (vm["damage"].as<bool>()) {
                 try {
+
                     if (simu->scheduler().current_time() == 0.0) {
+                        collision_detector.remove_frames();
                         robot_damages.cut(vm["cut"].as<std::string>());
+                        collision_detector.add_frames();
                         active_dofs_controllable = robot_damages.active_dofs_controllable();
                         active_dofs = robot_damages.active_dofs();
                     }
-                    collision_detector.update();
                 }
                 catch (std::exception& e) {
                     std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
