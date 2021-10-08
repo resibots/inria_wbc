@@ -299,6 +299,7 @@ int main(int argc, char* argv[])
                         active_dofs_controllable = robot_damages.active_dofs_controllable();
                         active_dofs = robot_damages.active_dofs();
                     }
+                    collision_detector.update();
                 }
                 catch (std::exception& e) {
                     std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
