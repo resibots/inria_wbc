@@ -42,6 +42,7 @@ namespace inria_wbc {
             // we do not return the velocity for now
             const tsid::math::Vector3 get_com_ref() { return com_task()->getReference().pos; }
             const tsid::trajectories::TrajectorySample get_full_com_ref() { return com_task()->getReference(); }
+            const tsid::trajectories::TrajectorySample get_full_momentum_ref() { return momentum_task()->getReference(); }
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(to_sample(ref)); }
             void set_com_ref(const tsid::trajectories::TrajectorySample& sample) { com_task()->setReference(sample); }
             void set_momentum_ref(const tsid::trajectories::TrajectorySample& sample) { momentum_task()->setReference(sample); }

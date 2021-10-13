@@ -13,6 +13,15 @@
 namespace inria_wbc {
     namespace stabilizer {
 
+        void momentum_imu_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
+            const Eigen::Vector3d& imu_angular_vel,
+            const Eigen::Vector3d& model_angular_vel,
+            const tsid::trajectories::TrajectorySample& momentum_ref,
+            tsid::trajectories::TrajectorySample& momentum_sample);
+
         Eigen::Vector2d com_to_zmp(const tsid::trajectories::TrajectorySample& com_ref);
         tsid::trajectories::TrajectorySample data_to_sample(const tsid::InverseDynamicsFormulationAccForce::Data& data);
 

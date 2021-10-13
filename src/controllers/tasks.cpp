@@ -302,8 +302,7 @@ namespace inria_wbc {
             auto radius = IWBC_CHECK(node["radius"].as<double>());
 
             std::unordered_map<std::string, double> avoided;
-            for (const auto& a : IWBC_CHECK(node["avoided"]))
-            {
+            for (const auto& a : IWBC_CHECK(node["avoided"])) {
                 IWBC_ASSERT(robot->model().existFrame(a.first.as<std::string>()), "Frame ", a.first.as<std::string>(), " in ", task_name, " does not exists.");
                 avoided[a.first.as<std::string>()] = a.second.as<double>();
             }

@@ -159,6 +159,7 @@ namespace inria_wbc {
             YAML::Node s = IWBC_CHECK(YAML::LoadFile(stab_path));
             _activate_zmp = IWBC_CHECK(s["activate_zmp"].as<bool>());
             _torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());
+            _use_momentum = IWBC_CHECK(s["use_momentum"].as<bool>());
 
             //set the _torso_max_roll in the bounds for safety
             auto names = robot_->model().names;
@@ -186,6 +187,8 @@ namespace inria_wbc {
             _zmp_p.resize(6);
             _zmp_d.resize(6);
             _zmp_w.resize(6);
+            _momentum_p.resize(3);
+            _momentum_d.resize(3);
 
             _com_gains.setZero();
             _ankle_gains.setZero();
@@ -193,6 +196,8 @@ namespace inria_wbc {
             _zmp_p.setZero();
             _zmp_d.setZero();
             _zmp_w.setZero();
+            _momentum_p.setZero(3);
+            _momentum_d.setZero(3);
 
             IWBC_ASSERT(IWBC_CHECK(s["com"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the com stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the ankle stabilizer");
@@ -200,6 +205,8 @@ namespace inria_wbc {
             IWBC_ASSERT(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the zmp stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the zmp stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in w for the zmp stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).size() == 3, "you need 3 coefficient in p for the momentum stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).size() == 3, "you need 3 coefficient in d for the momentum stabilizer");
 
             _com_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["com"].as<std::vector<double>>()).data(), _com_gains.size());
             _ankle_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).data(), _ankle_gains.size());
@@ -207,6 +214,8 @@ namespace inria_wbc {
             _zmp_p = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).data(), _zmp_p.size());
             _zmp_d = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).data(), _zmp_d.size());
             _zmp_w = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).data(), _zmp_w.size());
+            _momentum_p = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).data(), _momentum_p.size());
+            _momentum_d = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).data(), _momentum_d.size());
 
             auto history = s["filter_size"].as<int>();
             _cop_estimator.set_history_size(history);
@@ -221,6 +230,9 @@ namespace inria_wbc {
             _lf_torque_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
             _rf_torque_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
 
+            _imu_angular_vel_filtered.setZero();
+            _imu_angular_vel_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //angular vel data of size 3
+
             if (verbose_) {
                 std::cout << "Stabilizer:" << _use_stabilizer << std::endl;
                 std::cout << "com:" << _com_gains.transpose() << std::endl;
@@ -230,6 +242,9 @@ namespace inria_wbc {
                 std::cout << "zmp_p:" << _zmp_p.transpose() << std::endl;
                 std::cout << "zmp_d:" << _zmp_d.transpose() << std::endl;
                 std::cout << "zmp_w:" << _zmp_w.transpose() << std::endl;
+                std::cout << "momentum:" << _use_momentum << std::endl;
+                std::cout << "momentum_p:" << _momentum_p.transpose() << std::endl;
+                std::cout << "momentum_d:" << _momentum_d.transpose() << std::endl;
             }
         }
 
@@ -238,6 +253,7 @@ namespace inria_wbc {
             std::map<std::string, tsid::trajectories::TrajectorySample> contact_sample_ref;
             std::map<std::string, pinocchio::SE3> contact_se3_ref;
             std::map<std::string, Eigen::Matrix<double, 6, 1>> contact_force_ref;
+            tsid::trajectories::TrajectorySample momentum_ref;
 
             auto ac = activated_contacts_;
             for (auto& contact_name : ac) {
@@ -252,11 +268,14 @@ namespace inria_wbc {
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
+            if (_use_momentum)
+                momentum_ref = get_full_momentum_ref();
 
             if (_use_stabilizer) {
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
                 IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the RF torque");
                 IWBC_ASSERT(sensor_data.find("velocity") != sensor_data.end(), "the stabilizer needs the velocity");
+                IWBC_ASSERT(sensor_data.find("imu_vel") != sensor_data.end(), "the stabilizer imu needs angular velocity");
 
                 // estimate the CoP / ZMP
                 bool cop_ok = _cop_estimator.update(com_ref.pos.head(2),
@@ -283,8 +302,11 @@ namespace inria_wbc {
                     _rf_force_filtered.setZero();
                 }
 
+                _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
+
                 tsid::trajectories::TrajectorySample lf_se3_sample, lf_contact_sample, rf_se3_sample, rf_contact_sample;
                 tsid::trajectories::TrajectorySample com_sample, torso_sample;
+                tsid::trajectories::TrajectorySample momentum_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
                 // com_admittance
@@ -296,6 +318,11 @@ namespace inria_wbc {
                     set_com_ref(com_sample);
                 }
 
+                if (_use_momentum) {
+                    auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
+                    stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                    set_momentum_ref(momentum_sample);
+                }
                 //zmp admittance
                 if (cop_ok
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
@@ -395,6 +422,8 @@ namespace inria_wbc {
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
+                if (_use_momentum)
+                    set_momentum_ref(momentum_ref);
 
                 for (auto& contact_name : ac) {
                     contact(contact_name)->setReference(contact_sample_ref[contact_name]);

@@ -38,6 +38,10 @@ posture:
     weight: 1.75
     kp: 10.0
     ref: inria_start
+momentum:
+    type: momentum
+    weight: 1000.0
+    kp: 30.0
 bounds:
     type: bounds
     weight: 10000

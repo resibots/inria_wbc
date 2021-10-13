@@ -58,6 +58,41 @@ namespace inria_wbc {
             se3_sample.acc = aref_m;
         }
 
+        void momentum_imu_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
+            const Eigen::Vector3d& imu_angular_vel,
+            const Eigen::Vector3d& model_angular_vel,
+            const tsid::trajectories::TrajectorySample& momentum_ref,
+            tsid::trajectories::TrajectorySample& momentum_sample)
+        {
+            IWBC_ASSERT("you need 3 coefficients in p for momentum admittance", p.size() == 3);
+            IWBC_ASSERT("you need 3 coefficients in d for momentum admittance", d.size() == 3);
+
+            Eigen::Vector3d vel_error = p.array() * (model_angular_vel - imu_angular_vel).array();
+            Eigen::Vector3d acc_error = d.array() * (model_angular_vel - imu_angular_vel).array();
+
+            Eigen::VectorXd vel_ref = momentum_ref.vel - Eigen::Vector3d(vel_error(1), vel_error(0), vel_error(2));
+            Eigen::VectorXd acc_ref = momentum_ref.acc - Eigen::Vector3d(acc_error(1), acc_error(0), acc_error(2));
+
+            float max = 5;
+
+            for (int i = 0; i < vel_ref.size(); i++) {
+                if (vel_ref[i] > max)
+                    vel_ref[i] = max;
+                if (acc_ref[i] > max)
+                    acc_ref[i] = max;
+                if (vel_ref[i] < -max)
+                    vel_ref[i] = -max;
+                if (acc_ref[i] < -max)
+                    acc_ref[i] = -max;
+            }
+            momentum_sample = momentum_ref;
+            momentum_sample.vel = vel_ref;
+            momentum_sample.acc = acc_ref / dt;
+        }
+
         void com_imu_admittance(
             double dt,
             const Eigen::VectorXd& p,
