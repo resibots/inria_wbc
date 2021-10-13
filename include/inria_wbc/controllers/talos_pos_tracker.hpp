@@ -76,9 +76,6 @@ namespace inria_wbc {
             std::vector<int> _torque_collision_joints_ids;
             Eigen::VectorXd _torque_collision_threshold;
 
-            // true if we close the loop with actuator position/vel
-            // and floating base position
-            bool _closed_loop = false;
         };
 
     } // namespace controllers

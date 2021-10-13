@@ -45,7 +45,8 @@ namespace inria_wbc {
             std::shared_ptr<tsid::robots::RobotWrapper>, // robot
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>, // tsid
             std::string, //the name of the task
-            YAML::Node // the node to parse
+            YAML::Node, // the task node to parse
+            YAML::Node // the controller node to parse
             >;
         template <typename T>
         using RegisterYAML = FactoryYAML::AutoRegister<T>;
@@ -54,7 +55,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
             const std::shared_ptr<tsid::robots::RobotWrapper>& robot,
             const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node);
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node);
     } // namespace tasks
 } // namespace inria_wbc
 
