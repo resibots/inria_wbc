@@ -60,6 +60,8 @@ namespace inria_wbc {
             // for external optimizers: we exclude the bound task for safety
             size_t num_task_weights() const;
             void update_task_weights(const std::vector<double>& new_weights);
+
+            void parse_stabilizer(const YAML::Node& config);
            
         protected:
             virtual void parse_tasks(const std::string&);

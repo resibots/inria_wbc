@@ -144,6 +144,9 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_stabilizer(const YAML::Node& config)
         {
+
+            PosTracker::parse_stabilizer(config);
+
             auto c = IWBC_CHECK(config["stabilizer"]);
             _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
 
@@ -160,6 +163,9 @@ namespace inria_wbc {
             _activate_zmp = IWBC_CHECK(s["activate_zmp"].as<bool>());
             _torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());
             _use_momentum = IWBC_CHECK(s["use_momentum"].as<bool>());
+
+            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
+                _use_momentum = false;
 
             //set the _torso_max_roll in the bounds for safety
             auto names = robot_->model().names;
