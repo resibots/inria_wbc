@@ -320,15 +320,16 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
                     && !std::isnan(_cop_estimator.cop_filtered()(1))) {
 
-                    stabilizer::com_admittance(dt_, _com_gains, _cop_estimator.cop_filtered(), model_current_com, com_ref, com_sample);
-                    set_com_ref(com_sample);
+                    stabilizer::momentum_com_admittance(dt_, _com_gains, _cop_estimator.cop_filtered(), model_current_com, momentum_ref, momentum_sample);
+                    // set_momentum_ref(momentum_sample);
+                    // set_com_ref(com_sample);
                 }
 
-                if (_use_momentum) {
-                    auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
-                    stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
-                    set_momentum_ref(momentum_sample);
-                }
+                // if (_use_momentum) {
+                //     auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
+                //     stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                //     set_momentum_ref(momentum_sample);
+                // }
                 //zmp admittance
                 if (cop_ok
                     && !std::isnan(_cop_estimator.cop_filtered()(0))

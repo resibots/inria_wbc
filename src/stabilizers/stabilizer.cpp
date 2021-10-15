@@ -58,6 +58,36 @@ namespace inria_wbc {
             se3_sample.acc = aref_m;
         }
 
+        void momentum_com_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::Vector2d& cop_filtered,
+            const tsid::trajectories::TrajectorySample& model_current_com,
+            const tsid::trajectories::TrajectorySample& momentum_ref,
+            tsid::trajectories::TrajectorySample& momentum_sample)
+        {
+            IWBC_ASSERT("you need 6 coefficient in p for com admittance", p.size() == 6);
+
+            if (std::abs(cop_filtered(0)) >= 10 && std::abs(cop_filtered(1)) >= 10)
+                IWBC_ERROR("com_admittance : something is wrong with input cop_filtered, check sensor measurment: ", std::abs(cop_filtered(0)), " ", std::abs(cop_filtered(1)));
+
+            Eigen::Vector2d ref = com_to_zmp(model_current_com); //because this is the target
+            Eigen::Vector2d cor = ref.head(2) - cop_filtered;
+
+            Eigen::Vector2d error = p.segment(0, 2).array() * cor.array();
+            Eigen::VectorXd ref_m = momentum_ref.pos - Eigen::Vector3d(error(1), error(0), 0);
+
+            error = p.segment(2, 2).array() * cor.array();
+            Eigen::VectorXd vref_m = momentum_ref.vel - (Eigen::Vector3d(error(1), error(0), 0) / dt);
+
+            // error = p.segment(4, 2).array() * cor.array();
+            // Eigen::VectorXd aref_m = momentum_ref.acc - (Eigen::Vector3d(error(1), error(0), 0) / (dt * dt));
+
+            momentum_sample = momentum_ref;
+            momentum_sample.vel = ref_m;
+            momentum_sample.acc = vref_m;
+        }
+
         void momentum_imu_admittance(
             double dt,
             const Eigen::VectorXd& p,

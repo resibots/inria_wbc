@@ -31,7 +31,7 @@ namespace inria_wbc {
                 return it->second;
             }
             std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> bound_task() { return task<tsid::tasks::TaskJointPosVelAccBounds>("bounds"); }
-            std::shared_ptr<tsid::tasks::TaskAMEquality> momentum_task() { return task<tsid::tasks::TaskAMEquality>("momentum"); }
+            std::shared_ptr<tsid::tasks::TaskMEquality> momentum_task() { return task<tsid::tasks::TaskMEquality>("momentum"); }
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return task<tsid::tasks::TaskComEquality>("com"); }
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
 

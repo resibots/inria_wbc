@@ -13,6 +13,14 @@
 namespace inria_wbc {
     namespace stabilizer {
 
+        void momentum_com_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::Vector2d& cop_filtered,
+            const tsid::trajectories::TrajectorySample& model_current_com,
+            const tsid::trajectories::TrajectorySample& momentum_ref,
+            tsid::trajectories::TrajectorySample& momentum_sample);
+
         void momentum_imu_admittance(
             double dt,
             const Eigen::VectorXd& p,

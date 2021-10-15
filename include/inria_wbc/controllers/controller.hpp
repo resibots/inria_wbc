@@ -17,6 +17,7 @@
 #include <tsid/robots/robot-wrapper.hpp>
 #include <tsid/tasks/task-actuation-bounds.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
+#include <tsid/tasks/task-momentum-equality.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
