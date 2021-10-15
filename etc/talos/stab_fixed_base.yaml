@@ -8,5 +8,5 @@ zmp_w: [0, 0, 0, 0, 0, 0]
 zmp_d: [0, 0, 0, 0, 0, 0]
 zmp_p: [0, 0, 0, 0, 0, 0] 
 use_momentum: false
-momentum_p: [0, 0, 0]
-momentum_d: [0, 0, 0]
+momentum_p: [0, 0, 0, 0, 0, 0]
+momentum_d: [0, 0, 0, 0, 0, 0]

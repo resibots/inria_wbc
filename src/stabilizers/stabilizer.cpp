@@ -58,36 +58,53 @@ namespace inria_wbc {
             se3_sample.acc = aref_m;
         }
 
+        //computes momentum according to cop, problem is that the robot doesn't go back to initial position after perturbation
+        //because momentum task is actually controlling velocity and acceleration and not moment position ?
+        //angular momentum vel is found to compensate for cop disturbance and then torso position doesn't go back to normal
         void momentum_com_admittance(
             double dt,
             const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
             const Eigen::Vector2d& cop_filtered,
             const tsid::trajectories::TrajectorySample& model_current_com,
             const tsid::trajectories::TrajectorySample& momentum_ref,
             tsid::trajectories::TrajectorySample& momentum_sample)
         {
-            IWBC_ASSERT("you need 6 coefficient in p for com admittance", p.size() == 6);
+            IWBC_ASSERT("you need 6 coefficient in p for com momentum admittance", p.size() == 6);
+            IWBC_ASSERT("you need 6 coefficient in d for com momentum admittance", d.size() == 6);
 
             if (std::abs(cop_filtered(0)) >= 10 && std::abs(cop_filtered(1)) >= 10)
                 IWBC_ERROR("com_admittance : something is wrong with input cop_filtered, check sensor measurment: ", std::abs(cop_filtered(0)), " ", std::abs(cop_filtered(1)));
 
             Eigen::Vector2d ref = com_to_zmp(model_current_com); //because this is the target
             Eigen::Vector2d cor = ref.head(2) - cop_filtered;
+            Eigen::VectorXd vec(6);
 
-            Eigen::Vector2d error = p.segment(0, 2).array() * cor.array();
-            Eigen::VectorXd ref_m = momentum_ref.pos - Eigen::Vector3d(error(1), error(0), 0);
+            vec << p(0) * cor(0), p(1) * cor(1), 0, p(2) * cor(1), p(3) * cor(0), 0;
+            Eigen::VectorXd vref_m = momentum_ref.pos - vec;
 
-            error = p.segment(2, 2).array() * cor.array();
-            Eigen::VectorXd vref_m = momentum_ref.vel - (Eigen::Vector3d(error(1), error(0), 0) / dt);
+            vec << d(0) * cor(0), d(1) * cor(1), 0, d(2) * cor(1), d(3) * cor(0), 0;
+            Eigen::VectorXd aref_m = momentum_ref.vel - vec / dt;
 
-            // error = p.segment(4, 2).array() * cor.array();
-            // Eigen::VectorXd aref_m = momentum_ref.acc - (Eigen::Vector3d(error(1), error(0), 0) / (dt * dt));
+            float max = 5;
+
+            for (int i = 0; i < vref_m.size(); i++) {
+                if (vref_m[i] > max)
+                    vref_m[i] = max;
+                if (aref_m[i] > max)
+                    aref_m[i] = max;
+                if (vref_m[i] < -max)
+                    vref_m[i] = -max;
+                if (aref_m[i] < -max)
+                    aref_m[i] = -max;
+            }
 
             momentum_sample = momentum_ref;
-            momentum_sample.vel = ref_m;
-            momentum_sample.acc = vref_m;
+            momentum_sample.vel = vref_m;
+            momentum_sample.acc = aref_m;
         }
-
+        
+        //computes momentum based on imu angular velocity and model imu_link angular velocity 
         void momentum_imu_admittance(
             double dt,
             const Eigen::VectorXd& p,
@@ -97,14 +114,15 @@ namespace inria_wbc {
             const tsid::trajectories::TrajectorySample& momentum_ref,
             tsid::trajectories::TrajectorySample& momentum_sample)
         {
-            IWBC_ASSERT("you need 3 coefficients in p for momentum admittance", p.size() == 3);
-            IWBC_ASSERT("you need 3 coefficients in d for momentum admittance", d.size() == 3);
+            IWBC_ASSERT("you need 6 coefficients in p for momentum admittance", p.size() == 6);
+            IWBC_ASSERT("you need 6 coefficients in d for momentum admittance", d.size() == 6);
 
-            Eigen::Vector3d vel_error = p.array() * (model_angular_vel - imu_angular_vel).array();
-            Eigen::Vector3d acc_error = d.array() * (model_angular_vel - imu_angular_vel).array();
+            Eigen::Vector3d error = (model_angular_vel - imu_angular_vel);
 
-            Eigen::VectorXd vel_ref = momentum_ref.vel - Eigen::Vector3d(vel_error(1), vel_error(0), vel_error(2));
-            Eigen::VectorXd acc_ref = momentum_ref.acc - Eigen::Vector3d(acc_error(1), acc_error(0), acc_error(2));
+            Eigen::VectorXd vec(6);
+            vec << error(0), error(1), error(2), error(1), error(0), error(2);
+            Eigen::VectorXd vel_ref = momentum_ref.vel.array() - p.array() * vec.array();
+            Eigen::VectorXd acc_ref = momentum_ref.acc.array() - d.array() * vec.array();
 
             float max = 5;
 

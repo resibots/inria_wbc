@@ -264,7 +264,6 @@ namespace inria_wbc {
             if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
                 if (tasks_.find("momentum") != tasks_.end())
                     tsid_->removeTask("momentum", 0.0);
-
         }
     } // namespace controllers
 } // namespace inria_wbc

@@ -16,6 +16,7 @@ namespace inria_wbc {
         void momentum_com_admittance(
             double dt,
             const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
             const Eigen::Vector2d& cop_filtered,
             const tsid::trajectories::TrajectorySample& model_current_com,
             const tsid::trajectories::TrajectorySample& momentum_ref,

@@ -148,24 +148,12 @@ namespace tsid
     {
       // Compute errors
       // Get momentum jacobian
-      std::cout << "1" << std::endl;
       const Matrix6x & J_am = m_robot.momentumJacobian(data);
-            std::cout << "1" << std::endl;
-
       m_L = J_am * v;
-      std::cout << "1" << std::endl;
-
       m_L_error = m_L - m_ref.vel;
-      std::cout << "1" << std::endl;
-
       m_dL_des = - m_Kp.cwiseProduct(m_L_error) + m_ref.acc;
-      std::cout << "1" << std::endl;
 
-      std::cout << m_drift.size() << std::endl;
-      std::cout << m_robot.linearMomentumTimeVariation(data).size() << std::endl;
-      std::cout << m_robot.angularMomentumTimeVariation(data).size() << std::endl;
-      m_drift.head(3) = m_robot.linearMomentumTimeVariation(data);
-      pinocchio::computeCentroidalMomentumTimeVariation(m_robot.model(), const_cast<Data&>(data)).linear();
+      m_drift.head(3) = pinocchio::computeCentroidalMomentumTimeVariation(m_robot.model(), const_cast<Data&>(data)).linear();
       m_drift.tail(3) = m_robot.angularMomentumTimeVariation(data);
 
       int idx = 0;

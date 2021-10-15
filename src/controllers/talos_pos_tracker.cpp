@@ -193,8 +193,8 @@ namespace inria_wbc {
             _zmp_p.resize(6);
             _zmp_d.resize(6);
             _zmp_w.resize(6);
-            _momentum_p.resize(3);
-            _momentum_d.resize(3);
+            _momentum_p.resize(6);
+            _momentum_d.resize(6);
 
             _com_gains.setZero();
             _ankle_gains.setZero();
@@ -202,8 +202,8 @@ namespace inria_wbc {
             _zmp_p.setZero();
             _zmp_d.setZero();
             _zmp_w.setZero();
-            _momentum_p.setZero(3);
-            _momentum_d.setZero(3);
+            _momentum_p.setZero();
+            _momentum_d.setZero();
 
             IWBC_ASSERT(IWBC_CHECK(s["com"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the com stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the ankle stabilizer");
@@ -211,8 +211,8 @@ namespace inria_wbc {
             IWBC_ASSERT(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the zmp stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the zmp stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in w for the zmp stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).size() == 3, "you need 3 coefficient in p for the momentum stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).size() == 3, "you need 3 coefficient in d for the momentum stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the momentum stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the momentum stabilizer");
 
             _com_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["com"].as<std::vector<double>>()).data(), _com_gains.size());
             _ankle_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).data(), _ankle_gains.size());
@@ -320,16 +320,19 @@ namespace inria_wbc {
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
                     && !std::isnan(_cop_estimator.cop_filtered()(1))) {
 
-                    stabilizer::momentum_com_admittance(dt_, _com_gains, _cop_estimator.cop_filtered(), model_current_com, momentum_ref, momentum_sample);
-                    // set_momentum_ref(momentum_sample);
-                    // set_com_ref(com_sample);
+                    stabilizer::com_admittance(dt_, _com_gains, _cop_estimator.cop_filtered(), model_current_com, com_ref, com_sample);
+                    set_com_ref(com_sample);
                 }
 
                 // if (_use_momentum) {
-                //     auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
-                //     stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                //     stabilizer::momentum_com_admittance(dt_, _momentum_p, _momentum_d, _cop_estimator.cop_filtered(), model_current_com, momentum_ref, momentum_sample);
                 //     set_momentum_ref(momentum_sample);
                 // }
+                if (_use_momentum) {
+                    auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
+                    stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                    set_momentum_ref(momentum_sample);
+                }
                 //zmp admittance
                 if (cop_ok
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
