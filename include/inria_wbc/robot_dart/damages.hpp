@@ -2,9 +2,12 @@
 #define IWBC_ROBORT_DART_DAMAGES_HPP_
 
 #include <inria_wbc/exceptions.hpp>
+
 #include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/sensor/sensor.hpp>
+
+#include <dart/dynamics/BodyNode.hpp>
 
 namespace inria_wbc {
     namespace robot_dart {
