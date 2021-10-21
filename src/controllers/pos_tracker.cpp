@@ -95,6 +95,7 @@ namespace inria_wbc {
                 std::cout << "position tracker initializer" << std::endl;
             }
         }
+ 
 
         void PosTracker::parse_tasks(const std::string& path)
         {
