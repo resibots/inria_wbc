@@ -1,6 +1,7 @@
 
 set(EXAMPLE_LIST
 	talos.cpp
+    talos_load_external.cpp
     franka.cpp
 )
 

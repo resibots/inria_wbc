@@ -10,6 +10,8 @@
 namespace inria_wbc {
     namespace estimators {
         // computes the CoP with the FT sensors + a filter
+         static constexpr float FMIN = 30;
+         
         class Cop {
         public:
             Cop(double sample_time = 0.001, size_t history_size = 5)
@@ -44,7 +46,6 @@ namespace inria_wbc {
             const float& fmin() { return FMIN; }
 
         protected:
-            static constexpr float FMIN = 30;
             double _sample_time;
             size_t _history_size;
 
