@@ -71,7 +71,6 @@ int main(int argc, char* argv[])
         ("save_traj,S", po::value<std::vector<std::string>>()->multitoken(), "save the trajectory in dir <dir> for references <refs>: -S traj1 rh lh com")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
             "log the trajectory of a dart body [with urdf names] or timing or CoM or cost, example: -l timing -l com -l lf -l cost_com -l cost_lf")
-        ("loader, L", po::value<std::string>()->default_value(""), "load external joint position commands")
         ;
         // clang-format on
         po::variables_map vm;
@@ -278,18 +277,6 @@ int main(int argc, char* argv[])
 
         Eigen::VectorXd activated_joints = Eigen::VectorXd::Zero(active_dofs.size());
 
-        std::shared_ptr<inria_wbc::trajs::Loader> traj_loader;
-        int it_loader = 0;
-        int it_loader_end = 0;
-        if (!vm["loader"].as<std::string>().empty()) {
-            auto traj_path = vm["loader"].as<std::string>();
-            traj_loader = std::make_shared<inria_wbc::trajs::Loader>(traj_path);
-            auto rnv = traj_loader->ref_names_vec();
-            IWBC_ASSERT(std::find(rnv.begin(), rnv.end(), "q") != rnv.end(), "You need to give a posture to the trajectory loader");
-            it_loader_end = traj_loader->size_vec();
-            IWBC_ASSERT(it_loader_end > 0, "Your posture trajectory does not contain enough points");
-        }
-
         while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
 
             if (vm["damage"].as<bool>()) {
@@ -390,23 +377,13 @@ int main(int argc, char* argv[])
                 sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
 
                 timer.begin("solver");
-                if (vm["loader"].as<std::string>().empty())
-                    behavior->update(sensor_data);
+                behavior->update(sensor_data);
                 auto q = controller->q(false);
                 timer.end("solver");
 
                 auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
                 timer.begin("cmd");
                 auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
-
-                if (!vm["loader"].as<std::string>().empty()) {
-                    IWBC_ASSERT((traj_loader->task_ref_vec("q", it_loader).size() - 7) == active_dofs_controllable.size(), "Loader: your recording should match active_dofs_controllable ", traj_loader->task_ref_vec("q", it_loader).size() - 7, "!=", active_dofs_controllable.size());
-                    Eigen::VectorXd q_tsid = traj_loader->task_ref_vec("q", it_loader);
-                    q_damaged.resize(q_tsid.size() - 7);
-                    q_damaged = q_tsid.tail(q_damaged.size());
-                    if (it_loader < it_loader_end - 1)
-                        it_loader++;
-                }
 
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, active_dofs_controllable);
@@ -420,13 +397,7 @@ int main(int argc, char* argv[])
                 if (ghost) {
                     Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                     translate_ghost(0) -= 1;
-                    if (!vm["loader"].as<std::string>().empty()) {
-                        ghost->set_positions(q_damaged, active_dofs_controllable);
-                        translate_ghost(2) += 1.5;
-                    }
-                    else {
-                        ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
-                    }
+                    ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
                     ghost->set_positions(q.head(6) + translate_ghost, floating_base);
                 }
             }

@@ -68,7 +68,8 @@ namespace inria_wbc {
             const Eigen::Vector2d& cop_filtered,
             const tsid::trajectories::TrajectorySample& model_current_com,
             const tsid::trajectories::TrajectorySample& momentum_ref,
-            tsid::trajectories::TrajectorySample& momentum_sample)
+            tsid::trajectories::TrajectorySample& momentum_sample,
+            float max_ref)
         {
             IWBC_ASSERT("you need 6 coefficient in p for com momentum admittance", p.size() == 6);
             IWBC_ASSERT("you need 6 coefficient in d for com momentum admittance", d.size() == 6);
@@ -86,17 +87,15 @@ namespace inria_wbc {
             vec << d(0) * cor(0), d(1) * cor(1), 0, d(2) * cor(1), d(3) * cor(0), 0;
             Eigen::VectorXd aref_m = momentum_ref.vel - vec / dt;
 
-            float max = 5;
-
             for (int i = 0; i < vref_m.size(); i++) {
-                if (vref_m[i] > max)
-                    vref_m[i] = max;
-                if (aref_m[i] > max)
-                    aref_m[i] = max;
-                if (vref_m[i] < -max)
-                    vref_m[i] = -max;
-                if (aref_m[i] < -max)
-                    aref_m[i] = -max;
+                if (vref_m[i] > max_ref)
+                    vref_m[i] = max_ref;
+                if (aref_m[i] > max_ref)
+                    aref_m[i] = max_ref;
+                if (vref_m[i] < -max_ref)
+                    vref_m[i] = -max_ref;
+                if (aref_m[i] < -max_ref)
+                    aref_m[i] = -max_ref;
             }
 
             momentum_sample = momentum_ref;
@@ -112,7 +111,8 @@ namespace inria_wbc {
             const Eigen::Vector3d& imu_angular_vel,
             const Eigen::Vector3d& model_angular_vel,
             const tsid::trajectories::TrajectorySample& momentum_ref,
-            tsid::trajectories::TrajectorySample& momentum_sample)
+            tsid::trajectories::TrajectorySample& momentum_sample,
+            float max_ref)
         {
             IWBC_ASSERT("you need 6 coefficients in p for momentum admittance", p.size() == 6);
             IWBC_ASSERT("you need 6 coefficients in d for momentum admittance", d.size() == 6);
@@ -124,17 +124,15 @@ namespace inria_wbc {
             Eigen::VectorXd vel_ref = momentum_ref.vel.array() - p.array() * vec.array();
             Eigen::VectorXd acc_ref = momentum_ref.acc.array() - d.array() * vec.array();
 
-            float max = 5;
-
             for (int i = 0; i < vel_ref.size(); i++) {
-                if (vel_ref[i] > max)
-                    vel_ref[i] = max;
-                if (acc_ref[i] > max)
-                    acc_ref[i] = max;
-                if (vel_ref[i] < -max)
-                    vel_ref[i] = -max;
-                if (acc_ref[i] < -max)
-                    acc_ref[i] = -max;
+                if (vel_ref[i] > max_ref)
+                    vel_ref[i] = max_ref;
+                if (acc_ref[i] > max_ref)
+                    acc_ref[i] = max_ref;
+                if (vel_ref[i] < -max_ref)
+                    vel_ref[i] = -max_ref;
+                if (acc_ref[i] < -max_ref)
+                    acc_ref[i] = -max_ref;
             }
             momentum_sample = momentum_ref;
             momentum_sample.vel = vel_ref;

@@ -20,7 +20,8 @@ namespace inria_wbc {
             const Eigen::Vector2d& cop_filtered,
             const tsid::trajectories::TrajectorySample& model_current_com,
             const tsid::trajectories::TrajectorySample& momentum_ref,
-            tsid::trajectories::TrajectorySample& momentum_sample);
+            tsid::trajectories::TrajectorySample& momentum_sample,
+            float max_ref = 5);
 
         void momentum_imu_admittance(
             double dt,
@@ -29,7 +30,8 @@ namespace inria_wbc {
             const Eigen::Vector3d& imu_angular_vel,
             const Eigen::Vector3d& model_angular_vel,
             const tsid::trajectories::TrajectorySample& momentum_ref,
-            tsid::trajectories::TrajectorySample& momentum_sample);
+            tsid::trajectories::TrajectorySample& momentum_sample,
+            float max_ref = 5);
 
         Eigen::Vector2d com_to_zmp(const tsid::trajectories::TrajectorySample& com_ref);
         tsid::trajectories::TrajectorySample data_to_sample(const tsid::InverseDynamicsFormulationAccForce::Data& data);
