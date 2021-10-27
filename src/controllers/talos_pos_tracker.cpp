@@ -259,7 +259,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(sensor_data.find("velocity") != sensor_data.end(), "the stabilizer needs the velocity");
 
                 // estimate the CoP / ZMP
-                bool cop_ok = _cop_estimator.update(com_ref.pos.head(2),
+                std::vector<bool> cop_ok = _cop_estimator.update(com_ref.pos.head(2),
                     model_joint_pos("leg_left_6_joint").translation(),
                     model_joint_pos("leg_right_6_joint").translation(),
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
@@ -288,16 +288,15 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
                 // com_admittance
-                if (cop_ok
+                if (cop_ok[0]
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
                     && !std::isnan(_cop_estimator.cop_filtered()(1))) {
 
                     stabilizer::com_admittance(dt_, _com_gains, _cop_estimator.cop_filtered(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                 }
-
                 //zmp admittance
-                if (cop_ok
+                if (cop_ok[0]
                     && !std::isnan(_cop_estimator.cop_filtered()(0))
                     && !std::isnan(_cop_estimator.cop_filtered()(1))
                     && _activate_zmp) {
@@ -314,7 +313,7 @@ namespace inria_wbc {
                 }
 
                 // left ankle_admittance
-                if (cop_ok
+                if (cop_ok[1]
                     && !std::isnan(_cop_estimator.lcop_filtered()(0))
                     && !std::isnan(_cop_estimator.lcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
@@ -325,7 +324,7 @@ namespace inria_wbc {
                 }
 
                 //right ankle_admittance
-                if (cop_ok
+                if (cop_ok[2]
                     && !std::isnan(_cop_estimator.rcop_filtered()(0))
                     && !std::isnan(_cop_estimator.rcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {

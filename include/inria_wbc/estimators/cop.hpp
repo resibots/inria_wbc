@@ -4,14 +4,13 @@
 
 #include <Eigen/Core>
 #include <algorithm>
-#include <deque>
 #include <vector>
-
+#include <inria_wbc/estimators/filtering.hpp>
 namespace inria_wbc {
     namespace estimators {
         // computes the CoP with the FT sensors + a filter
-         static constexpr float FMIN = 30;
-         
+        static constexpr float FMIN = 30;
+
         class Cop {
         public:
             Cop(double sample_time = 0.001, size_t history_size = 5)
@@ -24,15 +23,25 @@ namespace inria_wbc {
                 _cop_raw.setZero();
                 _lcop_raw.setZero();
                 _rcop_raw.setZero();
+                _cop_filter = std::make_shared<estimators::MovingAverageFilter>(2, history_size); //cop data of size 2
+                _lcop_filter = std::make_shared<estimators::MovingAverageFilter>(2, history_size); //cop data of size 2
+                _rcop_filter = std::make_shared<estimators::MovingAverageFilter>(2, history_size); //cop data of size 2
             }
 
             // returns the filtered CoP
-            bool update(
+            std::vector<bool> update(
                 const Eigen::Vector2d& ref,
                 const Eigen::Vector3d& lf_pos, const Eigen::Vector3d& rf_pos,
                 const Eigen::Vector3d& lf_torque, const Eigen::Vector3d& lf_force,
                 const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force);
-            void set_history_size(size_t h) { _history_size = h; }
+
+            void set_history_size(size_t h)
+            {
+                _history_size = h;
+                _cop_filter->set_window_size(h);
+                _lcop_filter->set_window_size(h);
+                _rcop_filter->set_window_size(h);
+            }
             size_t history_size() const { return _history_size; }
             void set_sample_time(size_t t) { _sample_time = t; }
             // estimates of cop
@@ -51,12 +60,15 @@ namespace inria_wbc {
 
             Eigen::Vector2d _cop_raw, _lcop_raw, _rcop_raw; // last computed CoP
             Eigen::Vector2d _cop_filtered, _lcop_filtered, _rcop_filtered; // filtered CoP
-            std::deque<Eigen::Vector2d> _cop_buffer, _lcop_buffer, _rcop_buffer; // previous values of cop
+            estimators::Filter::Ptr _cop_filter, _lcop_filter, _rcop_filter; // filters
 
-            std::vector<Eigen::Vector2d> _compute_cop(
-                const Eigen::Vector3d& lf_pos, const Eigen::Vector3d& rf_pos,
+            Eigen::Vector2d _compute_cop(const Eigen::Vector3d& lf_pos, const Eigen::Vector3d& rf_pos,
+                const Eigen::Vector2d& lcop_raw, const Eigen::Vector2d& rcop_raw,
                 const Eigen::Vector3d& lf_torque, const Eigen::Vector3d& lf_force,
                 const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force);
+
+            Eigen::Vector2d _compute_foot_cop(const Eigen::Vector3d& foot_pos,
+                const Eigen::Vector3d& torque, const Eigen::Vector3d& force);
         };
     } // namespace estimators
 } // namespace inria_wbc
