@@ -37,11 +37,11 @@ namespace inria_wbc {
                 _cop_raw = _compute_cop(lf_pos, rf_pos, _lcop_raw, _rcop_raw, lf_torque, lf_force, rf_torque, rf_force);
                 _cop_filtered = _cop_filter->filter(_cop_raw);
             }
-            else {
-                _cop_raw.setZero();
-                _cop_filtered.setZero();
-                _cop_filter->reset();
-            }
+            // else {
+            //     _cop_raw.setZero();
+            //     _cop_filtered.setZero();
+            //     _cop_filter->reset();
+            // }
 
             return {_cop_filter->data_ready(), _lcop_filter->data_ready(), _rcop_filter->data_ready()};
         }

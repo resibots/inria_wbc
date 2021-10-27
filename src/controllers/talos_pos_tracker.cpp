@@ -313,7 +313,7 @@ namespace inria_wbc {
                 }
 
                 // left ankle_admittance
-                if (cop_ok[1]
+                if (cop_ok[0]
                     && !std::isnan(_cop_estimator.lcop_filtered()(0))
                     && !std::isnan(_cop_estimator.lcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
@@ -324,7 +324,7 @@ namespace inria_wbc {
                 }
 
                 //right ankle_admittance
-                if (cop_ok[2]
+                if (cop_ok[0]
                     && !std::isnan(_cop_estimator.rcop_filtered()(0))
                     && !std::isnan(_cop_estimator.rcop_filtered()(1))
                     && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
