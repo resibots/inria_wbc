@@ -19,6 +19,8 @@ namespace inria_wbc {
                 controller_->set_behavior_type(behavior_type_);
 
                 auto com_final = com_init;
+                com_final(0) = -0.0244301;
+                com_final(1) = 0;
                 com_final(2) -= motion_size_;
 
                 trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_final, controller_->dt(), trajectory_duration_));

@@ -2,6 +2,8 @@
 set(EXAMPLE_LIST
 	talos.cpp
     franka.cpp
+    icub.cpp
+    icub2.cpp
 )
 
 

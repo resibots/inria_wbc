@@ -26,6 +26,7 @@ namespace inria_wbc {
                 int step_ = 1;
                 bool loop_;
                 std::shared_ptr<trajs::Loader> traj_loader_;
+                double scale_ = 1;
             };
         } // namespace generic
     } // namespace behaviors

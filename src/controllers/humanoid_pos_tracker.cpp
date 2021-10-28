@@ -96,24 +96,6 @@ namespace inria_wbc {
             _activate_zmp = IWBC_CHECK(s["activate_zmp"].as<bool>());
             _torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());
 
-            //set the _torso_max_roll in the bounds for safety
-            auto names = robot_->model().names;
-            names.erase(names.begin(), names.begin() + names.size() - robot_->na());
-            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
-            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
-            std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
-
-            for (auto& n : to_limit) {
-                IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
-                auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
-
-                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
-
-                q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _torso_max_roll;
-                q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _torso_max_roll;
-            }
-
-            bound_task()->setPositionBounds(q_lb, q_ub);
 
             //get stabilizers gains
             _com_gains.resize(6);

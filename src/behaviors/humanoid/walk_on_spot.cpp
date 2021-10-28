@@ -35,7 +35,7 @@ namespace inria_wbc {
                     States::LIFT_DOWN_RF,
                     States::MOVE_COM_RIGHT};
 
-                auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+                auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_);
                 assert(controller);
                 auto translate_up = [](const pinocchio::SE3& p, double v) {
                     auto p2 = p;
@@ -44,12 +44,15 @@ namespace inria_wbc {
                 };
                 // set the waypoints for the feet
                 Eigen::VectorXd high = (Eigen::VectorXd(3) << 0, step_height_, 0).finished();
-                auto lf_low = controller->model_joint_pos("leg_left_6_joint");
+                //auto lf_low = controller->model_joint_pos("leg_left_6_joint");
+                
+                auto lf_low = controller->get_se3_ref("lf");
                 auto lf_low_stop = lf_low;
                 lf_low_stop.translation()[2] += stop_height_;
                 auto lf_high = translate_up(lf_low, step_height_);
 
-                auto rf_low = controller->model_joint_pos("leg_right_6_joint");
+                //auto rf_low = controller->model_joint_pos("leg_right_6_joint");
+                auto rf_low = controller->get_se3_ref("rf");
                 auto rf_low_stop = rf_low;
                 rf_low_stop.translation()[2] += stop_height_;
                 auto rf_high = translate_up(rf_low, step_height_);
@@ -115,7 +118,7 @@ namespace inria_wbc {
 
             void WalkOnSpot::update(const controllers::SensorData& sensor_data)
             {
-                auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+                auto controller = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_);
 
                 // add and remove contacts
                 if (time_ == 0 && state_ == States::LIFT_UP_LF)

@@ -19,6 +19,7 @@ set(INRIA_WBC_SOURCES
                             src/controllers/controller.cpp
                             src/controllers/pos_tracker.cpp
                             src/controllers/tasks.cpp
+                            src/controllers/humanoid_pos_tracker.cpp
                             src/controllers/talos_pos_tracker.cpp
                             src/trajs/saver.cpp
                             src/trajs/loader.cpp
