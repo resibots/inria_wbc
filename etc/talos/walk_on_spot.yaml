@@ -3,5 +3,3 @@ BEHAVIOR:
   traj_com_duration: 5
   traj_foot_duration: 5
   step_height: 0.1
-  stop_duration: 0.7
-  stop_height: 0.015
