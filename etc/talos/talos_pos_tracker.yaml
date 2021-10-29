@@ -27,7 +27,7 @@ CONTROLLER:
                      "gripper_right_fingertip_3_joint",
                      "gripper_right_motor_single_joint"]
   stabilizer:
-    activated: false
+    activated: true
     params_ss: stab_single_support.yaml
     params_ds: stab_double_support.yaml
     params_fixed_base: stab_fixed_base.yaml

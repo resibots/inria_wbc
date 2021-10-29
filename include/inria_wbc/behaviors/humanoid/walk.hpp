@@ -54,7 +54,9 @@ namespace inria_wbc {
                     LIFT_UP_RF = 4,
                     LIFT_DOWN_RF = 5,
                     MOVE_COM_RIGHT = 6,
-                    LIFT_UP_LF = 7
+                    LIFT_UP_LF = 7,
+                    LIFT_DOWN_LF_FINAL = 8,
+                    MOVE_COM_CENTER_FINAL = 9
                 };
                 std::vector<States> cycle_;
             };

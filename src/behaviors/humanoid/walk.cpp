@@ -14,6 +14,9 @@ namespace inria_wbc {
                 step_length_ = IWBC_CHECK(c["step_length"].as<float>());
                 num_of_cycles_ = IWBC_CHECK(c["num_of_cycles"].as<int>());
 
+                if (num_of_cycles_ <= 0)
+                    IWBC_ERROR("num_of_cycles needs to be more than 0");
+
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
 
@@ -42,6 +45,9 @@ namespace inria_wbc {
                         cycle_.push_back(c);
                     }
                 }
+
+                cycle_.push_back(States::LIFT_DOWN_LF_FINAL);
+                cycle_.push_back(States::MOVE_COM_CENTER_FINAL);
 
                 auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
                 assert(controller);
@@ -88,17 +94,14 @@ namespace inria_wbc {
                         break;
                     case States::LIFT_DOWN_LF:
                         diff = rf_low.translation()(0) - lf_low.translation()(0);
-                        // lf_low.translation()(0) = rf_low.translation()(0);
                         lf_low = translate(lf_low, diff + step_length_, 0);
                         lh_forward = translate(lh_init, diff + step_length_, 0);
-                        rh_forward = translate(rh_init, diff + step_length_, 0);
                         _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_foot_duration_));
                         _lf_trajs.push_back(trajectory_handler::compute_traj(lf_high, lf_low, dt_, traj_foot_duration_));
                         _com_trajs.push_back(trajectory_handler::constant_traj(com_rf, dt_, traj_foot_duration_));
                         _lh_trajs.push_back(trajectory_handler::compute_traj(lh_init, lh_forward, dt_, traj_com_duration_));
-                        _rh_trajs.push_back(trajectory_handler::compute_traj(rh_init, rh_forward, dt_, traj_com_duration_));
+                        _rh_trajs.push_back(trajectory_handler::constant_traj(rh_init, dt_, traj_com_duration_));
                         lh_init = lh_forward;
-                        rh_init = rh_forward;
                         break;
                     case States::MOVE_COM_LEFT:
                         com_lf(0) = lf_low.translation()(0);
@@ -118,11 +121,13 @@ namespace inria_wbc {
                         break;
                     case States::LIFT_DOWN_RF:
                         rf_low = translate(rf_low, 2 * step_length_, 0);
+                        rh_forward = translate(rh_init, 2 * step_length_, 0);
                         _rf_trajs.push_back(trajectory_handler::compute_traj(rf_high, rf_low, dt_, traj_foot_duration_));
                         _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_foot_duration_));
                         _com_trajs.push_back(trajectory_handler::constant_traj(com_lf, dt_, traj_foot_duration_));
                         _lh_trajs.push_back(trajectory_handler::constant_traj(lh_init, dt_, traj_com_duration_));
-                        _rh_trajs.push_back(trajectory_handler::constant_traj(rh_init, dt_, traj_com_duration_));
+                        _rh_trajs.push_back(trajectory_handler::compute_traj(rh_init, rh_forward, dt_, traj_com_duration_));
+                        rh_init = rh_forward;
                         break;
                     case States::MOVE_COM_RIGHT:
                         com_rf(0) = rf_low.translation()(0);
@@ -139,6 +144,23 @@ namespace inria_wbc {
                         _com_trajs.push_back(trajectory_handler::constant_traj(com_rf, dt_, traj_foot_duration_));
                         _lh_trajs.push_back(trajectory_handler::constant_traj(lh_init, dt_, traj_com_duration_));
                         _rh_trajs.push_back(trajectory_handler::constant_traj(rh_init, dt_, traj_com_duration_));
+                        break;
+                    case States::LIFT_DOWN_LF_FINAL:
+                        lf_low = translate(lf_low, step_length_, 0);
+                        lh_forward = translate(lh_init, step_length_, 0);
+                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_foot_duration_));
+                        _lf_trajs.push_back(trajectory_handler::compute_traj(lf_high, lf_low, dt_, traj_foot_duration_));
+                        _com_trajs.push_back(trajectory_handler::constant_traj(com_rf, dt_, traj_foot_duration_));
+                        _lh_trajs.push_back(trajectory_handler::compute_traj(lh_init, lh_forward, dt_, traj_com_duration_));
+                        _rh_trajs.push_back(trajectory_handler::constant_traj(rh_init, dt_, traj_com_duration_));
+                        break;
+                    case States::MOVE_COM_CENTER_FINAL:
+                        com_init.head(2) = (rf_low.translation().head(2) + lf_low.translation().head(2)) / 2.0;
+                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_com_duration_));
+                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_com_duration_));
+                        _com_trajs.push_back(trajectory_handler::compute_traj(com_rf, com_init, dt_, traj_com_duration_));
+                        _lh_trajs.push_back(trajectory_handler::constant_traj(lh_forward, dt_, traj_com_duration_));
+                        _rh_trajs.push_back(trajectory_handler::constant_traj(rh_forward, dt_, traj_com_duration_));
                         break;
                     default:
                         assert(0 && "unknown state");
@@ -162,7 +184,7 @@ namespace inria_wbc {
                         controller->remove_contact("contact_lfoot");
                     if (time_ == 0 && state_ == States::LIFT_UP_RF)
                         controller->remove_contact("contact_rfoot");
-                    if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_LF)
+                    if (time_ == _com_trajs[_current_traj].size() - 1 && (state_ == States::LIFT_DOWN_LF || state_ == LIFT_DOWN_LF_FINAL))
                         controller->add_contact("contact_lfoot");
                     if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_RF)
                         controller->add_contact("contact_rfoot");
@@ -178,21 +200,6 @@ namespace inria_wbc {
                     controller->set_contact_se3_ref(_rf_trajs[_current_traj][time_], "contact_rfoot");
                     controller->set_se3_ref(_lh_trajs[_current_traj][time_], "lh");
                     controller->set_se3_ref(_rh_trajs[_current_traj][time_], "rh");
-                    if (time_ == 0) {
-                        std::cout << "state " << state_ << " curr_traj " << _current_traj << std::endl;
-                        std::cout << "INIT " << std::endl;
-                        std::cout << "lh " << _lh_trajs[_current_traj][time_].translation().transpose() << std::endl;
-                        std::cout << "rh " << _rh_trajs[_current_traj][time_].translation().transpose() << std::endl;
-                        std::cout << "lf " << _lf_trajs[_current_traj][time_].translation().transpose() << std::endl;
-                        std::cout << "rf " << _rf_trajs[_current_traj][time_].translation().transpose() << std::endl;
-                        std::cout << "com " << _com_trajs[_current_traj][time_].transpose() << std::endl;
-                        std::cout << "DEST " << std::endl;
-                        std::cout << "lh " << _lh_trajs[_current_traj].back().translation().transpose() << std::endl;
-                        std::cout << "rh " << _rh_trajs[_current_traj].back().translation().transpose() << std::endl;
-                        std::cout << "lf " << _lf_trajs[_current_traj].back().translation().transpose() << std::endl;
-                        std::cout << "rf " << _rf_trajs[_current_traj].back().translation().transpose() << std::endl;
-                        std::cout << "com " << _com_trajs[_current_traj].back().transpose() << std::endl;
-                    }
                 }
 
                 controller_->update(sensor_data);
