@@ -13,7 +13,7 @@ namespace inria_wbc {
             const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force)
         {
             // if we are in the air, returns false
-            if (lf_force.norm() < FMIN && rf_force.norm() < FMIN)
+            if (lf_force.norm() < fmin() && rf_force.norm() < fmin())
                 return false;
             auto cop_data = _compute_cop(lf_pos, rf_pos, lf_torque, lf_force, rf_torque, rf_force);
             _lcop_raw = cop_data[0];

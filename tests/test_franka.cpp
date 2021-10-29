@@ -178,9 +178,9 @@ void test_behavior(utest::test_t test,
 
             auto t1_cmd = high_resolution_clock::now();
             if (actuator_type == "velocity" || actuator_type == "servo")
-                cmd = inria_wbc::robot_dart::compute_velocities(robot, q, cst::dt);
+                cmd = inria_wbc::robot_dart::compute_velocities(robot, q, cst::dt, controller->all_dofs(false));
             else if (actuator_type == "spd")
-                cmd = inria_wbc::robot_dart::compute_spd(robot, q, cst::dt);
+                cmd = inria_wbc::robot_dart::compute_spd(robot, q, cst::dt, controller->all_dofs(false));
             else // torque
                 cmd = controller->tau(false);
 

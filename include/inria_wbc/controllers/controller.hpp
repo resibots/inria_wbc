@@ -58,6 +58,7 @@ namespace inria_wbc {
             std::vector<std::string> controllable_dofs(bool filter_mimics = true) const;
             // Order of the floating base in q_ according to dart naming convention
             std::vector<std::string> floating_base_dofs() const;
+            const std::vector<std::string>& mimic_names() const { return mimic_dof_names_; }
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
             std::vector<std::string> activated_contacts() { return activated_contacts_; };
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces() { return activated_contacts_forces_; };
@@ -110,7 +111,7 @@ namespace inria_wbc {
 
             const std::vector<int>& non_mimic_indexes() const { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmd) const { return utils::slice_vec(cmd, non_mimic_indexes_); }
-
+            
             Eigen::VectorXd tau(bool filter_mimics = true) const;
             Eigen::VectorXd ddq(bool filter_mimics = true) const;
             Eigen::VectorXd dq(bool filter_mimics = true) const;
