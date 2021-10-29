@@ -1,7 +1,13 @@
 #ifndef IWBC_TRAJECTORY_HANDLER_HPP
 #define IWBC_TRAJECTORY_HANDLER_HPP
+
+#include <vector>
 #include <cassert>
 #define assertm(exp, msg) assert(((void)msg, exp))
+
+#include <Eigen/Dense>
+#include <pinocchio/multibody/data.hpp>
+
 namespace trajectory_handler {
 
     inline Eigen::VectorXd minimum_jerk_polynom(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
