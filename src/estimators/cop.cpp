@@ -1,3 +1,4 @@
+#include <boost/optional.hpp>
 #include <cmath>
 #include <inria_wbc/estimators/cop.hpp>
 #include <iostream>
@@ -6,44 +7,64 @@
 namespace inria_wbc {
     namespace estimators {
 
-        std::vector<bool> Cop::update(
+        std::vector<boost::optional<Eigen::Vector2d>> Cop::update(
             const Eigen::Vector2d& ref,
             const Eigen::Vector3d& lf_pos, const Eigen::Vector3d& rf_pos,
             const Eigen::Vector3d& lf_torque, const Eigen::Vector3d& lf_force,
-            const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force)
+            const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force, bool memory)
         {
-
-            if (lf_force.norm() > fmin()) {
-                _lcop_raw = _compute_foot_cop(lf_pos, lf_torque, lf_force);
-                _lcop_filtered = _lcop_filter->filter(_lcop_raw);
+            Eigen::Vector2d zero = Eigen::Vector2d::Zero();
+            
+            if (-lf_force(2) > fmin()) {
+                _lcop_raw = boost::optional<Eigen::Vector2d>{_compute_foot_cop(lf_pos, lf_torque, lf_force)};
+                _lcop_filtered = boost::optional<Eigen::Vector2d>{_lcop_filter->filter(_lcop_raw.value())};
             }
             else {
-                _lcop_raw.setZero();
-                _lcop_filtered.setZero();
+                _lcop_raw = boost::none;
+                _lcop_filtered = boost::none;
                 _lcop_filter->reset();
             }
 
-            if (rf_force.norm() > fmin()) {
+            if (-rf_force(2) > fmin()) {
                 _rcop_raw = _compute_foot_cop(rf_pos, rf_torque, rf_force);
-                _rcop_filtered = _rcop_filter->filter(_rcop_raw);
+                _rcop_filtered = _rcop_filter->filter(_rcop_raw.value());
             }
             else {
-                _rcop_raw.setZero();
-                _rcop_filtered.setZero();
+                _rcop_raw = boost::none;
+                _rcop_filtered = boost::none;
                 _rcop_filter->reset();
             }
 
-            if (lf_force.norm() > fmin() && rf_force.norm() > fmin()) {
-                _cop_raw = _compute_cop(lf_pos, rf_pos, _lcop_raw, _rcop_raw, lf_torque, lf_force, rf_torque, rf_force);
-                _cop_filtered = _cop_filter->filter(_cop_raw);
+            if (-lf_force(2) > fmin() && -rf_force(2) > fmin() && _lcop_raw && _rcop_raw) {
+                _cop_raw = _compute_cop(lf_pos, rf_pos, _lcop_raw.value(), _rcop_raw.value(), lf_torque, lf_force, rf_torque, rf_force);
+                _cop_filtered = _cop_filter->filter(_cop_raw.value());
             }
-            // else {
-            //     _cop_raw.setZero();
-            //     _cop_filtered.setZero();
-            //     _cop_filter->reset();
-            // }
+            else if (!memory) {
+                _cop_raw = boost::none;
+                _cop_filtered = boost::none;
+                _cop_filter->reset();
+            }
 
-            return {_cop_filter->data_ready(), _lcop_filter->data_ready(), _rcop_filter->data_ready()};
+
+            if (!_cop_filter->data_ready())
+                _cop_filtered = boost::none;
+            if (!_lcop_filter->data_ready())
+                _lcop_filtered = boost::none;
+            if (!_rcop_filter->data_ready())
+                _rcop_filtered = boost::none;
+
+            check_nan(_cop_filtered);
+            check_nan(_lcop_filtered);
+            check_nan(_rcop_filtered);
+
+            return {_cop_filtered, _lcop_filtered, _rcop_filtered};
+        } // namespace estimators
+
+        void Cop::check_nan(boost::optional<Eigen::Vector2d>& cop)
+        {
+            if (cop)
+                if (std::isnan(cop.value()(0)) || std::isnan(cop.value()(1)))
+                    cop = boost::none;
         }
 
         // Intro to humanoid robotics (Kajita et al.), p80, 3.26

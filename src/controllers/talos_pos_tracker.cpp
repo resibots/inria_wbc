@@ -259,7 +259,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(sensor_data.find("velocity") != sensor_data.end(), "the stabilizer needs the velocity");
 
                 // estimate the CoP / ZMP
-                std::vector<bool> cop_ok = _cop_estimator.update(com_ref.pos.head(2),
+                auto cops = _cop_estimator.update(com_ref.pos.head(2),
                     model_joint_pos("leg_left_6_joint").translation(),
                     model_joint_pos("leg_right_6_joint").translation(),
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
@@ -288,23 +288,16 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
                 // com_admittance
-                if (cop_ok[0]
-                    && !std::isnan(_cop_estimator.cop_filtered()(0))
-                    && !std::isnan(_cop_estimator.cop_filtered()(1))) {
-
-                    stabilizer::com_admittance(dt_, _com_gains, _cop_estimator.cop_filtered(), model_current_com, com_ref, com_sample);
+                if (cops[0]) {
+                    stabilizer::com_admittance(dt_, _com_gains, cops[0].value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                 }
                 //zmp admittance
-                if (cop_ok[0]
-                    && !std::isnan(_cop_estimator.cop_filtered()(0))
-                    && !std::isnan(_cop_estimator.cop_filtered()(1))
-                    && _activate_zmp) {
+                if (cops[0] && _activate_zmp) {
 
                     double M = pinocchio_total_model_mass();
                     Eigen::Matrix<double, 6, 1> left_fref, right_fref;
-
-                    stabilizer::zmp_distributor_admittance(dt_, _zmp_p, _zmp_d, M, contact_se3_ref, ac, _cop_estimator.cop_filtered(), model_current_com, left_fref, right_fref);
+                    stabilizer::zmp_distributor_admittance(dt_, _zmp_p, _zmp_d, M, contact_se3_ref, ac, cops[0].value(), model_current_com, left_fref, right_fref);
 
                     contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
                     contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
@@ -313,23 +306,16 @@ namespace inria_wbc {
                 }
 
                 // left ankle_admittance
-                if (cop_ok[0]
-                    && !std::isnan(_cop_estimator.lcop_filtered()(0))
-                    && !std::isnan(_cop_estimator.lcop_filtered()(1))
-                    && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
+                if (cops[1] && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, _cop_estimator.lcop_filtered(), model_joint_pos("leg_left_6_joint"), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _ankle_gains, cops[1].value(), model_joint_pos("leg_left_6_joint"), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     contact("contact_lfoot")->setReference(lf_contact_sample);
                 }
 
                 //right ankle_admittance
-                if (cop_ok[0]
-                    && !std::isnan(_cop_estimator.rcop_filtered()(0))
-                    && !std::isnan(_cop_estimator.rcop_filtered()(1))
-                    && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
-
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, _cop_estimator.rcop_filtered(), model_joint_pos("leg_right_6_joint"), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
+                if (cops[2] && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
+                    stabilizer::ankle_admittance(dt_, _ankle_gains, cops[2].value(), model_joint_pos("leg_right_6_joint"), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     contact("contact_rfoot")->setReference(rf_contact_sample);
                 }

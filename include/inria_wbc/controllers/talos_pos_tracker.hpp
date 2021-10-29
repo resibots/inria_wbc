@@ -5,7 +5,7 @@
 #include <inria_wbc/estimators/cop.hpp>
 #include <inria_wbc/estimators/filtering.hpp>
 #include <inria_wbc/safety/torque_collision_detection.hpp>
-
+#include <boost/optional.hpp>
 namespace inria_wbc {
     namespace controllers {
 
@@ -19,10 +19,6 @@ namespace inria_wbc {
             virtual ~TalosPosTracker(){};
 
             virtual void update(const SensorData& sensor_data = {}) override;
-            virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); }
-            virtual const Eigen::Vector2d& lcop() const override { return _cop_estimator.lcop_filtered(); }
-            virtual const Eigen::Vector2d& rcop() const override { return _cop_estimator.rcop_filtered(); }
-            virtual const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
 
             virtual const Eigen::Vector3d& lf_force_filtered() const override { return _lf_force_filtered; }
             virtual const Eigen::Vector3d& rf_force_filtered() const override { return _rf_force_filtered; }
@@ -35,6 +31,38 @@ namespace inria_wbc {
             void set_closed_loop(bool b) { _closed_loop = b; }
 
             void parse_stabilizer(const YAML::Node& config);
+
+            virtual const Eigen::Vector2d& cop() const override
+            {
+                if (_cop_estimator.cop())
+                    return _cop_estimator.cop().value();
+                else
+                    return Eigen::Vector2d::Constant(1000);
+            }
+
+            virtual const Eigen::Vector2d& lcop() const override
+            {
+                if (_cop_estimator.lcop_filtered())
+                    return _cop_estimator.lcop_filtered().value();
+                else
+                    return Eigen::Vector2d::Constant(1000);
+            }
+
+            virtual const Eigen::Vector2d& rcop() const override
+            {
+                if (_cop_estimator.rcop_filtered())
+                    return _cop_estimator.rcop_filtered().value();
+                else
+                    return Eigen::Vector2d::Constant(1000);
+            }
+
+            virtual const Eigen::Vector2d& cop_raw() const override
+            {
+                if (_cop_estimator.cop_raw())
+                    return _cop_estimator.cop_raw().value();
+                else
+                    return Eigen::Vector2d::Constant(1000);
+            }
 
         protected:
             virtual void parse_configuration(const YAML::Node& config);
@@ -75,7 +103,6 @@ namespace inria_wbc {
             std::vector<std::string> _torque_collision_joints;
             std::vector<int> _torque_collision_joints_ids;
             Eigen::VectorXd _torque_collision_threshold;
-
         };
 
     } // namespace controllers
