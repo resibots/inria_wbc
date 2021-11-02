@@ -456,10 +456,6 @@ int main(int argc, char* argv[])
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
-                else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << " "
-                                << controller->lcop().transpose() << " "
-                                << controller->rcop().transpose() << " " << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "ft")
@@ -472,6 +468,24 @@ int main(int argc, char* argv[])
                                 << controller->rf_force_filtered().transpose() << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
+                else if (x.first == "cop") { // the cop according to controller
+                    if (controller->cop())
+                        (*x.second) << controller->cop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
+                else if (x.first == "lcop") { // the cop according to controller
+                    if (controller->lcop())
+                        (*x.second) << controller->lcop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
+                else if (x.first == "rcop") { // the cop according to controller
+                    if (controller->rcop())
+                        (*x.second) << controller->rcop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
                 else
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }

@@ -1,11 +1,11 @@
 #ifndef IWBC_TALOS_POS_TRACKER_HPP
 #define IWBC_TALOS_POS_TRACKER_HPP
 
+#include <boost/optional.hpp>
 #include <inria_wbc/controllers/pos_tracker.hpp>
 #include <inria_wbc/estimators/cop.hpp>
 #include <inria_wbc/estimators/filtering.hpp>
 #include <inria_wbc/safety/torque_collision_detection.hpp>
-#include <boost/optional.hpp>
 namespace inria_wbc {
     namespace controllers {
 
@@ -32,37 +32,10 @@ namespace inria_wbc {
 
             void parse_stabilizer(const YAML::Node& config);
 
-            virtual const Eigen::Vector2d& cop() const override
-            {
-                if (_cop_estimator.cop())
-                    return _cop_estimator.cop().value();
-                else
-                    return Eigen::Vector2d::Constant(1000);
-            }
-
-            virtual const Eigen::Vector2d& lcop() const override
-            {
-                if (_cop_estimator.lcop_filtered())
-                    return _cop_estimator.lcop_filtered().value();
-                else
-                    return Eigen::Vector2d::Constant(1000);
-            }
-
-            virtual const Eigen::Vector2d& rcop() const override
-            {
-                if (_cop_estimator.rcop_filtered())
-                    return _cop_estimator.rcop_filtered().value();
-                else
-                    return Eigen::Vector2d::Constant(1000);
-            }
-
-            virtual const Eigen::Vector2d& cop_raw() const override
-            {
-                if (_cop_estimator.cop_raw())
-                    return _cop_estimator.cop_raw().value();
-                else
-                    return Eigen::Vector2d::Constant(1000);
-            }
+            virtual const boost::optional<Eigen::Vector2d>& cop() const override { return _cop_estimator.cop(); }
+            virtual const boost::optional<Eigen::Vector2d>& lcop() const override { return _cop_estimator.lcop_filtered(); }
+            virtual const boost::optional<Eigen::Vector2d>& rcop() const override { return _cop_estimator.rcop_filtered(); }
+            virtual const boost::optional<Eigen::Vector2d>& cop_raw() const override { return _cop_estimator.cop_raw(); }
 
         protected:
             virtual void parse_configuration(const YAML::Node& config);
