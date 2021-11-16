@@ -8,7 +8,9 @@
 #include <boost/optional.hpp>
 namespace inria_wbc {
     namespace controllers {
-
+        namespace cst {
+            static const Eigen::Vector2d V2_1000 = Eigen::Vector2d::Constant(1000);
+        }
         class TalosPosTracker : public PosTracker {
         public:
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -37,7 +39,7 @@ namespace inria_wbc {
                 if (_cop_estimator.cop())
                     return _cop_estimator.cop().value();
                 else
-                    return Eigen::Vector2d::Constant(1000);
+                    return cst::V2_1000;
             }
 
             virtual const Eigen::Vector2d& lcop() const override
@@ -45,7 +47,7 @@ namespace inria_wbc {
                 if (_cop_estimator.lcop_filtered())
                     return _cop_estimator.lcop_filtered().value();
                 else
-                    return Eigen::Vector2d::Constant(1000);
+                    return cst::V2_1000;
             }
 
             virtual const Eigen::Vector2d& rcop() const override
@@ -53,7 +55,7 @@ namespace inria_wbc {
                 if (_cop_estimator.rcop_filtered())
                     return _cop_estimator.rcop_filtered().value();
                 else
-                    return Eigen::Vector2d::Constant(1000);
+                    return cst::V2_1000;
             }
 
             virtual const Eigen::Vector2d& cop_raw() const override
@@ -61,7 +63,7 @@ namespace inria_wbc {
                 if (_cop_estimator.cop_raw())
                     return _cop_estimator.cop_raw().value();
                 else
-                    return Eigen::Vector2d::Constant(1000);
+                    return cst::V2_1000;
             }
 
         protected:

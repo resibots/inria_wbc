@@ -1,7 +1,7 @@
 BEHAVIOR:
   name: humanoid::walk
-  traj_com_duration: 1
-  traj_foot_duration: 1
-  step_height: 0.1
-  step_length: 0.2
+  traj_com_duration: 1.0
+  traj_foot_duration: 0.25
+  step_height: 0.05
+  step_length: 0.25
   num_of_cycles: 10
