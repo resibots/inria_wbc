@@ -139,6 +139,7 @@ namespace inria_wbc {
             _torque_collision_filter->reset();
             _collision_detected = false;
         }
+        
 
     } // namespace controllers
 } // namespace inria_wbc

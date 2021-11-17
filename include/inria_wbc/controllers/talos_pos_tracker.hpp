@@ -21,6 +21,41 @@ namespace inria_wbc {
             const safety::TorqueCollisionDetection& torque_collision_detector() const { return _torque_collision_detection; }
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
+
+            bool closed_loop() const { return _closed_loop; }
+            void set_closed_loop(bool b) { _closed_loop = b; }
+
+            virtual const Eigen::Vector2d& cop() const override
+            {
+                if (_cop_estimator.cop())
+                    return _cop_estimator.cop().value();
+                else
+                    return cst::V2_1000;
+            }
+
+            virtual const Eigen::Vector2d& lcop() const override
+            {
+                if (_cop_estimator.lcop_filtered())
+                    return _cop_estimator.lcop_filtered().value();
+                else
+                    return cst::V2_1000;
+            }
+
+            virtual const Eigen::Vector2d& rcop() const override
+            {
+                if (_cop_estimator.rcop_filtered())
+                    return _cop_estimator.rcop_filtered().value();
+                else
+                    return cst::V2_1000;
+            }
+
+            virtual const Eigen::Vector2d& cop_raw() const override
+            {
+                if (_cop_estimator.cop_raw())
+                    return _cop_estimator.cop_raw().value();
+                else
+                    return cst::V2_1000;
+            }
         protected:
             //torque collision
             void parse_torque_safety(const YAML::Node& config);
