@@ -162,6 +162,13 @@ namespace inria_wbc {
             task->setReference(sample);
         }
 
+        void PosTracker::set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name)
+        {
+            auto c = contact(contact_name);
+            auto sample = to_sample(ref);
+            c->setReference(sample);
+        }
+
         void PosTracker::set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name)
         {
             auto task = se3_task(task_name);
