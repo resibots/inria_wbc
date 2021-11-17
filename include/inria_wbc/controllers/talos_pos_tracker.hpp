@@ -8,7 +8,6 @@
 #include <inria_wbc/safety/torque_collision_detection.hpp>
 namespace inria_wbc {
     namespace controllers {
-
         class TalosPosTracker : public PosTracker {
         public:
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -30,7 +29,7 @@ namespace inria_wbc {
             bool closed_loop() const { return _closed_loop; }
             void set_closed_loop(bool b) { _closed_loop = b; }
 
-            void parse_stabilizer(const YAML::Node& config);
+            void parse_stabilizer(const YAML::Node& config) override;
 
             virtual const boost::optional<Eigen::Vector2d>& cop() const override { return _cop_estimator.cop(); }
             virtual const boost::optional<Eigen::Vector2d>& lcop() const override { return _cop_estimator.lcop_filtered(); }
