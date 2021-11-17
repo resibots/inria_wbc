@@ -14,6 +14,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(h_controller->has_task("rf"), "Walk: an rf task is required (right foot)");
                 IWBC_ASSERT(h_controller->has_task("lh"), "Walk: an lh task is required (left hand)");
                 IWBC_ASSERT(h_controller->has_task("rh"), "Walk: an rh task is required (right hand)");
+                IWBC_ASSERT(h_controller->has_task("com"), "Walk: a com task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "Walk: a contact_lfoot task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "Walk: a contact_rfoot task is required");
 

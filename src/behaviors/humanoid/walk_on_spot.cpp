@@ -12,8 +12,10 @@ namespace inria_wbc {
                 IWBC_ASSERT(h_controller != NULL, "Walk on spot: the controllers needs to be a HumanoidPosTracker (or related)!");
                 IWBC_ASSERT(h_controller->has_task("lf"), "Walk on spot: an lf task is required (left foot)");
                 IWBC_ASSERT(h_controller->has_task("rf"), "Walk on spot: an rf task is required (right foot)");
+                IWBC_ASSERT(h_controller->has_task("com"), "Walk: a com task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "Walk on spot: a contact_lfoot task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "Walk on spot: a contact_rfoot task is required");
+                IWBC_ASSERT(h_controller->com_task(), "Walk on spot: a com task is required");
 
                 // load parameters
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
