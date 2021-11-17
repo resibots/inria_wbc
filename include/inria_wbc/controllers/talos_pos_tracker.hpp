@@ -32,7 +32,7 @@ namespace inria_wbc {
             bool closed_loop() const { return _closed_loop; }
             void set_closed_loop(bool b) { _closed_loop = b; }
 
-            void parse_stabilizer(const YAML::Node& config);
+            void parse_stabilizer(const YAML::Node& config) override;
 
             virtual const Eigen::Vector2d& cop() const override
             {

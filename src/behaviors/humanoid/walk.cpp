@@ -7,6 +7,17 @@ namespace inria_wbc {
 
             Walk::Walk(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config)
             {
+                  // check that the controller is compatible
+                auto h_controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+                IWBC_ASSERT(h_controller != NULL, "Walk: the controllers needs to be a HumanoidPosTracker (or related)!");
+                IWBC_ASSERT(h_controller->has_task("lf"), "Walk: an lf task is required (left foot)");
+                IWBC_ASSERT(h_controller->has_task("rf"), "Walk: an rf task is required (right foot)");
+                IWBC_ASSERT(h_controller->has_task("lh"), "Walk: an lh task is required (left hand)");
+                IWBC_ASSERT(h_controller->has_task("rh"), "Walk: an rh task is required (right hand)");
+                IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "Walk: a contact_lfoot task is required");
+                IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "Walk: a contact_rfoot task is required");
+
+                // load the parameters
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
                 traj_com_duration_ = IWBC_CHECK(c["traj_com_duration"].as<float>());
                 traj_foot_duration_ = IWBC_CHECK(c["traj_foot_duration"].as<float>());
