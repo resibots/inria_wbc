@@ -8,7 +8,9 @@
 
 namespace inria_wbc {
     namespace controllers {
-
+        namespace cst {
+            static const Eigen::Vector2d V2_1000 = Eigen::Vector2d::Constant(1000);
+        }
         // this is a pos-tracker with stabilization
         class HumanoidPosTracker : public PosTracker {
         public:
@@ -20,17 +22,43 @@ namespace inria_wbc {
             virtual ~HumanoidPosTracker(){};
 
             virtual void update(const SensorData& sensor_data = {}) override;
-            virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); }
-            virtual const Eigen::Vector2d& lcop() const override { return _cop_estimator.lcop_filtered(); }
-            virtual const Eigen::Vector2d& rcop() const override { return _cop_estimator.rcop_filtered(); }
-            virtual const Eigen::Vector2d& cop_raw() const override { return _cop_estimator.cop_raw(); }
 
+            virtual const Eigen::Vector2d& cop() const override
+            {
+                if (_cop_estimator.cop())
+                    return _cop_estimator.cop().value();
+                else
+                    return cst::V2_1000;
+            }
+
+            virtual const Eigen::Vector2d& lcop() const override
+            {
+                if (_cop_estimator.lcop_filtered())
+                    return _cop_estimator.lcop_filtered().value();
+                else
+                    return cst::V2_1000;
+            }
+
+            virtual const Eigen::Vector2d& rcop() const override
+            {
+                if (_cop_estimator.rcop_filtered())
+                    return _cop_estimator.rcop_filtered().value();
+                else
+                    return cst::V2_1000;
+            }
+
+            virtual const Eigen::Vector2d& cop_raw() const override
+            {
+                if (_cop_estimator.cop_raw())
+                    return _cop_estimator.cop_raw().value();
+                else
+                    return cst::V2_1000;
+            }
             virtual const Eigen::Vector3d& lf_force_filtered() const override { return _lf_force_filtered; }
             virtual const Eigen::Vector3d& rf_force_filtered() const override { return _rf_force_filtered; }
 
             bool closed_loop() const { return _closed_loop; }
             void set_closed_loop(bool b) { _closed_loop = b; }
-
 
         protected:
             void init_com();

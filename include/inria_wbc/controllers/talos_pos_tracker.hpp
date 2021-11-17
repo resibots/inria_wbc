@@ -3,10 +3,9 @@
 
 #include <inria_wbc/controllers/humanoid_pos_tracker.hpp>
 #include <inria_wbc/safety/torque_collision_detection.hpp>
-
+#include <boost/optional.hpp>
 namespace inria_wbc {
     namespace controllers {
-
         // we add the torque safety
         class TalosPosTracker : public HumanoidPosTracker {
         public:
@@ -16,13 +15,12 @@ namespace inria_wbc {
             TalosPosTracker& operator=(const TalosPosTracker& o) const = delete;
             virtual ~TalosPosTracker(){};
 
-            virtual void update(const SensorData& sensor_data);
-            
+            virtual void update(const SensorData& sensor_data = {}) override;
+
             const std::vector<std::string>& torque_sensor_joints() const { return _torque_collision_joints; }
             const safety::TorqueCollisionDetection& torque_collision_detector() const { return _torque_collision_detection; }
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
-
         protected:
             //torque collision
             void parse_torque_safety(const YAML::Node& config);

@@ -1,6 +1,8 @@
 #ifndef IWBC_ESTIMATOR_FILTERING_HPP
 #define IWBC_ESTIMATOR_FILTERING_HPP
 
+#include <iostream>
+
 #include <vector>
 #include <memory>
 #include <Eigen/Dense>
@@ -55,7 +57,25 @@ public:
         return _filtered;
     };
 
-    
+    void set_window_size(int wsize) 
+    {   
+        if(wsize != _wsize)
+        {
+
+            Eigen::MatrixXd tmp_buffer = Eigen::MatrixXd::Zero(_nvar, wsize);
+            
+            if(wsize > _wsize)
+                tmp_buffer.leftCols(_wsize) = _buffer;
+            
+            if(wsize < _wsize)
+                tmp_buffer = _buffer.rightCols(wsize);
+            
+            _buffer.resize(_nvar, wsize);
+            _buffer = tmp_buffer;
+            _wsize = wsize;        
+        }
+    }
+
     virtual void reset()
     {
         _buffer.resize(_nvar, _wsize);

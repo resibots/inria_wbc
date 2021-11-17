@@ -47,6 +47,7 @@ namespace inria_wbc {
             void set_com_ref(const tsid::trajectories::TrajectorySample& sample) { com_task()->setReference(sample); }
             void set_momentum_ref(const tsid::trajectories::TrajectorySample& sample) { momentum_task()->setReference(sample); }
             void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
+            void set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name);
             void set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name);
 
             void remove_contact(const std::string& contact_name);

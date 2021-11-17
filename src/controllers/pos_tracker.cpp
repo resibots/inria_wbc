@@ -62,6 +62,7 @@ namespace inria_wbc {
                 Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                 Eigen::AngleAxisd aaxis(quat);
                 q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
+                q_tsid_.segment(3, 4) << quat.normalized().coeffs();
             }
             else {
                 q0_ = q_tsid_;
@@ -160,6 +161,13 @@ namespace inria_wbc {
             auto task = se3_task(task_name);
             auto sample = to_sample(ref);
             task->setReference(sample);
+        }
+
+        void PosTracker::set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name)
+        {
+            auto c = contact(contact_name);
+            auto sample = to_sample(ref);
+            c->setReference(sample);
         }
 
         void PosTracker::set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name)

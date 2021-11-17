@@ -58,6 +58,7 @@ namespace inria_wbc {
             std::vector<std::string> controllable_dofs(bool filter_mimics = true) const;
             // Order of the floating base in q_ according to dart naming convention
             std::vector<std::string> floating_base_dofs() const;
+            const std::vector<std::string>& mimic_names() const { return mimic_dof_names_; }
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
             std::vector<std::string> activated_contacts() { return activated_contacts_; };
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces() { return activated_contacts_forces_; };
@@ -110,7 +111,7 @@ namespace inria_wbc {
 
             const std::vector<int>& non_mimic_indexes() const { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmd) const { return utils::slice_vec(cmd, non_mimic_indexes_); }
-
+            
             Eigen::VectorXd tau(bool filter_mimics = true) const;
             Eigen::VectorXd ddq(bool filter_mimics = true) const;
             Eigen::VectorXd dq(bool filter_mimics = true) const;
@@ -133,14 +134,14 @@ namespace inria_wbc {
             {
                 assert(tsid_);
                 assert(robot_);
-                assert(robot_->model().existJointName(joint_name));
+                IWBC_ASSERT(robot_->model().existJointName(joint_name), "[", joint_name, "] (joint) does not exist!");
                 return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             }
             pinocchio::SE3 model_frame_pos(const std::string& frame_name) const
             {
                 assert(tsid_);
                 assert(robot_);
-                assert(robot_->model().existFrame(frame_name));
+                IWBC_ASSERT(robot_->model().existFrame(frame_name), "[", frame_name, "] (frame) does not exist!");
                 return robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
             }
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
