@@ -15,7 +15,6 @@ namespace inria_wbc {
                 IWBC_ASSERT(h_controller->has_task("com"), "Walk: a com task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "Walk on spot: a contact_lfoot task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "Walk on spot: a contact_rfoot task is required");
-                IWBC_ASSERT(h_controller->com_task(), "Walk on spot: a com task is required");
 
                 // load parameters
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
