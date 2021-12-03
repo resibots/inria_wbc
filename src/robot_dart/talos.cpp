@@ -358,14 +358,13 @@ int main(int argc, char* argv[])
                 // 0 for joints that are not in active_dofs_controllable
                 Eigen::VectorXd positions = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
                 Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
-                for (size_t i = 0; i < controllable_dofs.size(); ++i) {
-                    auto name = controllable_dofs[i];
+                for (size_t i = 0; i < controller->controllable_dofs(false).size(); ++i) {
+                    auto name = controller->controllable_dofs(false)[i];
                     if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0) {
                         positions(i) = robot->positions({name})[0];
                         velocities(i) = robot->velocities({name})[0];
                     }
                 }
-
                 sensor_data["positions"] = positions;
                 sensor_data["joints_torque"] = tq_sensors;
                 sensor_data["joint_velocities"] = velocities;
@@ -387,8 +386,10 @@ int main(int argc, char* argv[])
                 else if (vm["actuators"].as<std::string>() == "spd") {
                     cmd = inria_wbc::robot_dart::compute_spd(robot, q_damaged, 1. / sim_freq, active_dofs_controllable, false);
                 }
-                else // torque
-                    cmd = controller->tau(false);
+                else { // torque
+                    Eigen::VectorXd cmd_no_mimic = controller->filter_cmd(controller->tau(false)).tail(ncontrollable);
+                    cmd = inria_wbc::robot_dart::filter_cmd(cmd_no_mimic, controllable_dofs, active_dofs_controllable);
+                }
                 timer.end("cmd");
 
                 if (ghost) {
