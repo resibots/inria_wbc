@@ -1,3 +1,4 @@
+
 #include <algorithm>
 #include <boost/program_options.hpp>
 #include <chrono>
@@ -6,8 +7,6 @@
 #include <signal.h>
 
 #include <dart/dynamics/BodyNode.hpp>
-#include <dart/constraint/ConstraintSolver.hpp>
-#include <dart/collision/CollisionObject.hpp>
 
 #include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot.hpp>
@@ -15,6 +14,7 @@
 #include <robot_dart/sensor/force_torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
 #include <robot_dart/sensor/torque.hpp>
+#include <robot_dart/robots/icub.hpp>
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
@@ -23,16 +23,14 @@
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
+#include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
-#include "inria_wbc/robot_dart/damages.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "inria_wbc/robot_dart/utils.hpp"
-#include "inria_wbc/trajs/loader.hpp"
-#include "inria_wbc/trajs/saver.hpp"
-#include "inria_wbc/utils/timer.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
+#include "inria_wbc/utils/timer.hpp"
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -54,8 +52,6 @@ int main(int argc, char* argv[])
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
         ("controller,c", po::value<std::string>()->default_value("../etc/talos/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_pos_tracker.yaml]")
-        ("cut", po::value<std::string>()->default_value("leg_left_1_link"), "joint to cut it damage option is enabled")
-        ("damage", po::value<bool>()->default_value(false), "damage talos")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("fast,f", "fast (simplified) Talos [default: false]")
@@ -68,7 +64,7 @@ int main(int argc, char* argv[])
         ("height", po::value<bool>()->default_value(false), "print total feet force data to adjust height in config")
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
-        ("norm_force,n", po::value<float>()->default_value(-150) , "push norm force value")
+        ("norm_force,n", po::value<float>()->default_value(-15) , "push norm force value")
         ("verbose,v", "verbose mode (controller)")
         ("save_traj,S", po::value<std::vector<std::string>>()->multitoken(), "save the trajectory in dir <dir> for references <refs>: -S traj1 rh lh com")
         ("log,l", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>(),""), 
@@ -127,12 +123,8 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT DART ROBOT //////////////////////////////////////
         std::srand(std::time(NULL));
-        // std::vector<std::pair<std::string, std::string>> packages = {{"talos_data", "/home/pal/talos_data"}};
-        // std::string urdf = vm.count("fast") ? "talos/talos_fast.urdf" : "talos/talos.urdf";
-        // urdf = "/home/pal/talos_data/example-robot-data/robots/talos_data/robots/talos_full_v2.urdf";
-        std::vector<std::pair<std::string, std::string>> packages = {{"talos_description", "talos/talos_description"}};
-        std::string urdf = vm.count("fast") ? "talos/talos_fast.urdf" : "talos/talos.urdf";
-        auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
+        auto robot = std::make_shared<robot_dart::robots::ICub>();
+        //robot->set_color_mode("aspect");
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
         if (vm["actuators"].as<std::string>() == "spd")
             robot->set_actuator_types("torque");
@@ -140,8 +132,8 @@ int main(int argc, char* argv[])
             robot->set_actuator_types(vm["actuators"].as<std::string>());
 
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
-        auto simu = std::make_shared<robot_dart::RobotDARTSimu>(dt);
-        simu->set_collision_detector(vm["collision"].as<std::string>());
+        robot_dart::RobotDARTSimu simu(dt);
+        simu.set_collision_detector(vm["collision"].as<std::string>());
 
 #ifdef GRAPHIC
         robot_dart::gui::magnum::GraphicsConfiguration configuration;
@@ -155,20 +147,22 @@ int main(int argc, char* argv[])
         }
 
         auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(configuration);
-        simu->set_graphics(graphics);
+        simu.set_graphics(graphics);
         graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
         if (vm.count("mp4"))
             graphics->record_video(vm["mp4"].as<std::string>());
 #endif
-        simu->add_robot(robot);
-        auto floor = simu->add_checkerboard_floor();
+        simu.add_robot(robot);
+       auto floor = simu.add_checkerboard_floor();
+       //auto floor = simu.add_floor();
 
         ///// CONTROLLER
         auto controller_path = vm["controller"].as<std::string>();
         auto controller_config = IWBC_CHECK(YAML::LoadFile(controller_path));
         // do some modifications according to command-line options
-        controller_config["CONTROLLER"]["base_path"] = "../etc/talos"; // we assume that we run in ./build
+        controller_config["CONTROLLER"]["base_path"] = "../etc/icub"; // we assume that we run in ./build
         controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
+        std::cout << "URDF:" << robot->model_filename() << std::endl;
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();
@@ -199,6 +193,7 @@ int main(int argc, char* argv[])
         floating_base.resize(6);
 
         auto controllable_dofs = controller->controllable_dofs();
+        std::cout<<"q0.size():"<<controller->q0().transpose()<<std::endl;
         robot->set_positions(controller->q0(), all_dofs);
 
         uint ncontrollable = controllable_dofs.size();
@@ -209,56 +204,25 @@ int main(int argc, char* argv[])
                 ofs << c << std::endl;
         }
 
-        // add sensors to the robot
-        auto ft_sensor_left = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq);
-        auto ft_sensor_right = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq);
-        robot_dart::sensor::IMUConfig imu_config;
-        imu_config.body = robot->body_node("imu_link"); // choose which body the sensor is attached to
-        imu_config.frequency = control_freq; // update rate of the sensor
-        auto imu = simu->add_sensor<robot_dart::sensor::IMU>(imu_config);
+       
 
         //////////////////// START SIMULATION //////////////////////////////////////
-        simu->set_control_freq(control_freq); // default = 1000 Hz
+        simu.set_control_freq(control_freq); // default = 1000 Hz
 
         std::shared_ptr<robot_dart::Robot> ghost;
         if (vm.count("ghost") || vm.count("collisions")) {
-            ghost = robot->clone_ghost();
+            ghost = robot->clone_ghost("ghost", {0.3, 0.3, 0.3, 1.0});
             ghost->skeleton()->setPosition(4, -1.57);
             ghost->skeleton()->setPosition(5, 1.1);
-            simu->add_robot(ghost);
+            simu.add_robot(ghost);
+             // fix a bug...
+            robot->set_color_mode("material");
         }
 
-        // self-collision shapes
-        std::vector<std::shared_ptr<robot_dart::Robot>> self_collision_spheres;
-        if (vm.count("collisions")) {
-            auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
-            for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
-                auto pos = task_self_collision->avoided_frames_positions()[i];
-                auto tf = Eigen::Isometry3d(Eigen::Translation3d(pos[0], pos[1], pos[2]));
-                double r0 = task_self_collision->avoided_frames_r0s()[i];
-                auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0 * 2, r0 * 2, r0 * 2), tf, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
-                sphere->set_color_mode("aspect");
-                self_collision_spheres.push_back(sphere);
-                simu->add_visual_robot(self_collision_spheres.back());
-            }
-        }
-        std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
-
-        auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
-        for (const auto& joint : talos_tracker_controller->torque_sensor_joints()) {
-            torque_sensors.push_back(simu->add_sensor<robot_dart::sensor::Torque>(robot, joint, control_freq));
-            std::cerr << "Add joint torque sensor:  " << joint << std::endl;
-        }
-
-        // reading from sensors
-        Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
-
+       
         // create the collision detectors (useful only if --check_self_collisions)
-        inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
-        std::map<std::string, std::string> filter_body_names_pairs;
-        filter_body_names_pairs["leg_right_6_link"] = "BodyNode";
-        filter_body_names_pairs["leg_left_6_link"] = "BodyNode";
-        inria_wbc::robot_dart::ExternalCollisionDetector floor_collision_detector(robot, floor, filter_body_names_pairs);
+     //   std::map<std::string, std::string> filter_body_names_pairs;
+      //  inria_wbc::robot_dart::ExternalCollisionDetector floor_collision_detector(robot, floor, filter_body_names_pairs);
 
         using namespace std::chrono;
         // to save trajectories
@@ -271,124 +235,39 @@ int main(int argc, char* argv[])
         }
         // the main loop
         Eigen::VectorXd cmd;
-        inria_wbc::controllers::SensorData sensor_data;
         inria_wbc::utils::Timer timer;
-        auto active_dofs_controllable = controllable_dofs; // undamaged case
-        auto active_dofs = controller->all_dofs(false); // false here: no filter at all
-        inria_wbc::robot_dart::RobotDamages robot_damages(robot, simu, active_dofs_controllable, active_dofs);
-
-        Eigen::VectorXd activated_joints = Eigen::VectorXd::Zero(active_dofs.size());
-
-        while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
-
-            if (vm["damage"].as<bool>()) {
-                try {
-
-                    if (simu->scheduler().current_time() == 0.0) {
-                        collision_detector.remove_frames();
-                        robot_damages.cut(vm["cut"].as<std::string>());
-                        collision_detector.add_frames();
-                        active_dofs_controllable = robot_damages.active_dofs_controllable();
-                        active_dofs = robot_damages.active_dofs();
-                    }
-                }
-                catch (std::exception& e) {
-                    std::cout << red << bold << "Error (exception): " << rst << e.what() << std::endl;
-                }
-            }
-
-            if (vm.count("check_self_collisions")) {
-                IWBC_ASSERT(!vm.count("fast"), "=> check_self_collisions is not compatible with --fast!");
-                auto collision_list = collision_detector.collide();
-                if (!collision_list.empty())
-                    std::cout << " ------ SELF Collisions ------ " << std::endl;
-                for (auto& s : collision_list)
-                    std::cout << s << std::endl;
-            }
-
-            if (vm.count("check_fall")) {
-                auto head_z_diff = std::abs(controller->model_frame_pos("head_1_link").translation()(2) - robot->body_pose("head_1_link").translation()(2));
-                std::vector<std::string> floor_collision_list;
-                if (head_z_diff > 0.75)
-                    floor_collision_list.push_back("head_1_link");
-                if (!vm.count("fast")) {
-                    auto list2 = floor_collision_detector.collide();
-                    floor_collision_list.insert(floor_collision_list.end(), list2.begin(), list2.end());
-                }
-                if (!floor_collision_list.empty())
-                    std::cout << " ------ FLOOR Collisions ------ " << std::endl;
-                for (auto& s : floor_collision_list)
-                    std::cout << s << std::endl;
-            }
-
-            // get actual torque from sensors
-            for (size_t i = 0; i < torque_sensors.size(); ++i)
-                if (torque_sensors[i]->active())
-                    tq_sensors(i) = torque_sensors[i]->torques()(0, 0);
-                else
-                    tq_sensors(i) = 0;
-
-            if (vm["height"].as<bool>() && ft_sensor_left->active() && ft_sensor_right->active())
-                std::cout << controller->t() << "  floating base height: " << controller->q(false)[2] << " - total feet force: " << ft_sensor_right->force().norm() + ft_sensor_left->force().norm() << std::endl;
-
+        while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             // step the command
-            if (simu->schedule(simu->control_freq())) {
+            if (simu.schedule(simu.control_freq())) {
 
                 // update the sensors
+                inria_wbc::controllers::SensorData sensor_data;
                 // left foot
-                if (ft_sensor_left->active()) {
-                    sensor_data["lf_torque"] = ft_sensor_left->torque();
-                    sensor_data["lf_force"] = ft_sensor_left->force();
-                }
-                else {
-                    sensor_data["lf_torque"] = Eigen::VectorXd::Constant(3, 1e-8);
-                    sensor_data["lf_force"] = Eigen::VectorXd::Constant(3, 1e-8);
-                }
-                // right foot
-                if (ft_sensor_right->active()) {
-                    sensor_data["rf_torque"] = ft_sensor_right->torque();
-                    sensor_data["rf_force"] = ft_sensor_right->force();
-                }
-                else {
-                    sensor_data["rf_torque"] = Eigen::VectorXd::Constant(3, 1e-8);
-                    sensor_data["rf_force"] = Eigen::VectorXd::Constant(3, 1e-8);
-                }
-                // accelerometer
-                sensor_data["acceleration"] = imu->linear_acceleration();
+                sensor_data["lf_torque"] = robot->ft_foot_left().torque();
+                sensor_data["lf_force"] = robot->ft_foot_left().force();
+                // // right foot
+                sensor_data["rf_torque"] = robot->ft_foot_right().torque();
+                sensor_data["rf_force"] = robot->ft_foot_right().force();
+                // // accelerometer
+                sensor_data["acceleration"] = robot->imu().linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
-                // joint positions / velocities (excluding floating base)
-                // 0 for joints that are not in active_dofs_controllable
-                Eigen::VectorXd positions = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
-                Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
-                for (size_t i = 0; i < controllable_dofs.size(); ++i) {
-                    auto name = controllable_dofs[i];
-                    if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0) {
-                        positions(i) = robot->positions({name})[0];
-                        velocities(i) = robot->velocities({name})[0];
-                    }
-                }
-
-                sensor_data["positions"] = positions;
-                sensor_data["joints_torque"] = tq_sensors;
-                sensor_data["joint_velocities"] = velocities;
+                // // joint positions (excluding floating base)
+                sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
+                // joint torque sensors
                 // floating base (perfect: no noise in the estimate)
                 sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
                 sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
 
                 timer.begin("solver");
                 behavior->update(sensor_data);
-                auto q = controller->q(false);
+                auto q = controller->q(false);       
                 timer.end("solver");
 
-                auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
                 timer.begin("cmd");
-                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
-
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
-                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, active_dofs_controllable);
-                else if (vm["actuators"].as<std::string>() == "spd") {
-                    cmd = inria_wbc::robot_dart::compute_spd(robot, q_damaged, 1. / sim_freq, active_dofs_controllable, false);
-                }
+                    cmd = inria_wbc::robot_dart::compute_velocities(robot, q, 1. / control_freq, controller->all_dofs(false));
+                else if (vm["actuators"].as<std::string>() == "spd")
+                    cmd = inria_wbc::robot_dart::compute_spd(robot, q, 1. / sim_freq, controller->all_dofs(false));
                 else // torque
                     cmd = controller->tau(false);
                 timer.end("cmd");
@@ -401,26 +280,6 @@ int main(int argc, char* argv[])
                 }
             }
 
-            if (simu->schedule(simu->graphics_freq()) && vm.count("collisions")) {
-                auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
-                auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
-                for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
-                    auto cp = self_collision_spheres[i]->base_pose();
-                    cp.translation() = task_self_collision->avoided_frames_positions()[i];
-                    cp.translation()[0] -= 1; // move to the ghost
-                    self_collision_spheres[i]->set_base_pose(cp);
-                    auto bd = self_collision_spheres[i]->skeleton()->getBodyNodes()[0];
-                    auto visual = bd->getShapeNodesWith<dart::dynamics::VisualAspect>()[0];
-                    visual->getShape()->setDataVariance(dart::dynamics::Shape::DYNAMIC_COLOR);
-                    bool c = task_self_collision->collision(i);
-                    if (c) {
-                        visual->getVisualAspect()->setRGBA(dart::Color::Red(1.0));
-                    }
-                    else {
-                        visual->getVisualAspect()->setRGBA(dart::Color::Green(1.0));
-                    }
-                }
-            }
 
             // push the robot
             bool push = false;
@@ -428,12 +287,11 @@ int main(int argc, char* argv[])
                 auto pv = vm["push"].as<std::vector<float>>();
                 auto pforce = vm["norm_force"].as<float>();
                 for (auto& p : pv) {
-                    if (simu->scheduler().current_time() > p && simu->scheduler().current_time() < p + 0.5) {
-                        robot->set_external_force("base_link", Eigen::Vector3d(0, pforce, 0));
-                        // robot->set_external_force("base_link", Eigen::Vector3d(pforce, 0, 0));
+                    if (simu.scheduler().current_time() > p && simu.scheduler().current_time() < p + 0.5) {
+                        robot->set_external_force("chest", Eigen::Vector3d(0, pforce, 0));
                         push = true;
                     }
-                    if (simu->scheduler().current_time() > p + 0.25)
+                    if (simu.scheduler().current_time() > p + 0.25)
                         robot->clear_external_forces();
                 }
             }
@@ -441,32 +299,16 @@ int main(int argc, char* argv[])
             // step the simulation
             {
                 timer.begin("sim");
-                robot->set_commands(cmd, active_dofs_controllable);
-                simu->step_world();
+                robot->set_commands(controller->filter_cmd(cmd).tail(ncontrollable), controllable_dofs);
+                simu.step_world();
                 timer.end("sim");
-                auto col = simu->world()->getConstraintSolver()->getLastCollisionResult();
-                size_t nc = col.getNumContacts();
-                size_t contact_count = 0;
-                for (size_t i = 0; i < nc; i++) {
-                    auto& ct = col.getContact(i);
-                    auto f1 = ct.collisionObject1->getShapeFrame();
-                    auto f2 = ct.collisionObject2->getShapeFrame();
-                    std::string name1, name2;
-                    if (f1->isShapeNode())
-                        name1 = f1->asShapeNode()->getBodyNodePtr()->getName();
-                    if (f1->isShapeNode())
-                        name2 = f1->asShapeNode()->getBodyNodePtr()->getName();
-                    std::cout << "contact:" << name1<< " -- " << name2 << std::endl;
-                }
-
             }
-
             if (traj_saver)
                 traj_saver->update();
             // log if needed
             for (auto& x : log_files) {
                 if (x.first == "timing")
-                    timer.report(*x.second, simu->scheduler().current_time());
+                    timer.report(*x.second, simu.scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
                 else if (x.first == "com") // the real com
@@ -479,14 +321,6 @@ int main(int argc, char* argv[])
                                 << controller->rcop().transpose() << " " << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
-                else if (x.first == "ft")
-                    (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
-                                << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
-                else if (x.first == "force") // the cop according to controller
-                    (*x.second) << ft_sensor_left->force().transpose() << " "
-                                << controller->lf_force_filtered().transpose() << " "
-                                << ft_sensor_right->force().transpose() << " "
-                                << controller->rf_force_filtered().transpose() << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
                 else
@@ -500,13 +334,13 @@ int main(int argc, char* argv[])
             if (timer.iteration() == 100) {
                 std::ostringstream oss;
 #ifdef GRAPHIC // to avoid the warning
-                oss.precision(3);
-                timer.report(oss, simu->scheduler().current_time(), -1, '\n');
-                if (!vm.count("mp4"))
-                    simu->set_text_panel(oss.str());
+               oss.precision(3);
+               timer.report(oss, simu.scheduler().current_time(), -1, '\n');
+               if (!vm.count("mp4"))
+                   simu.set_text_panel(oss.str());
 #endif
             }
-            timer.report(simu->scheduler().current_time(), 100);
+            timer.report(simu.scheduler().current_time(), 100);
         }
     }
     catch (YAML::RepresentationException& e) {
