@@ -486,7 +486,7 @@ int main(int argc, char* argv[])
                     else
                         (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
                 }
-                else
+                else if (robot->body_node(x.first) != nullptr)
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }
             if (vm.count("srdf")) {
