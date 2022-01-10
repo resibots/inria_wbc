@@ -71,10 +71,8 @@ namespace inria_wbc {
         // see also: https://github.com/stack-of-tasks/sot-dynamic-pinocchio/blob/master/src/zmp-from-forces.cpp
         Eigen::Vector2d Cop::_compute_cop(const Eigen::Vector3d& lf_pos, const Eigen::Vector3d& rf_pos,
             const Eigen::Vector2d& lcop_raw, const Eigen::Vector2d& rcop_raw,
-            const Eigen::Vector3d& lf_torque, const Eigen::Vector3d& lf_force,
-            const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force)
+            const Eigen::Vector3d& lf_force, const Eigen::Vector3d& rf_force)
         {
-
             double Fz_ratio_l = lf_force(2) / (lf_force(2) + rf_force(2));
             double Fz_ratio_r = rf_force(2) / (lf_force(2) + rf_force(2));
 

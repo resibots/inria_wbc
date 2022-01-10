@@ -55,7 +55,7 @@ namespace inria_wbc {
             const boost::optional<Eigen::Vector2d>& rcop_raw() const { return _rcop_raw; }
 
             void check_nan(boost::optional<Eigen::Vector2d>& cop);
-            const float& fmin() { return FMIN; }
+            constexpr float fmin() { return FMIN; }
 
         protected:
             double _sample_time;
@@ -67,8 +67,7 @@ namespace inria_wbc {
 
             Eigen::Vector2d _compute_cop(const Eigen::Vector3d& lf_pos, const Eigen::Vector3d& rf_pos,
                 const Eigen::Vector2d& lcop_raw, const Eigen::Vector2d& rcop_raw,
-                const Eigen::Vector3d& lf_torque, const Eigen::Vector3d& lf_force,
-                const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force);
+                const Eigen::Vector3d& lf_force, const Eigen::Vector3d& rf_force);
 
             Eigen::Vector2d _compute_foot_cop(const Eigen::Vector3d& foot_pos,
                 const Eigen::Vector3d& torque, const Eigen::Vector3d& force);
