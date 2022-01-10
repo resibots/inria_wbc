@@ -35,9 +35,12 @@ namespace inria_wbc {
                 _cop_raw = _compute_cop(lf_pos, rf_pos, _lcop_raw.value(), _rcop_raw.value(), lf_force, rf_force);
                 _cop_filtered = _cop_filter->filter(_cop_raw.value());
             }
-            else if (!memory) {
+            else if (memory) {
                 _cop_raw = boost::none;
                 _cop_filtered = boost::none;
+            }
+            else {
+                _cop_raw = boost::none;
                 _cop_filter->reset();
             }
 
