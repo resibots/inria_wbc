@@ -1,14 +1,13 @@
 #ifndef IWBC_TALOS_POS_TRACKER_HPP
 #define IWBC_TALOS_POS_TRACKER_HPP
 
+#include <boost/optional.hpp>
 #include <inria_wbc/controllers/pos_tracker.hpp>
 #include <inria_wbc/estimators/cop.hpp>
 #include <inria_wbc/estimators/filtering.hpp>
 #include <inria_wbc/safety/torque_collision_detection.hpp>
-
 namespace inria_wbc {
     namespace controllers {
-
         class TalosPosTracker : public PosTracker {
         public:
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -19,10 +18,6 @@ namespace inria_wbc {
             virtual ~TalosPosTracker(){};
 
             virtual void update(const SensorData& sensor_data = {}) override;
-            virtual const Eigen::Vector2d& cop() const override { return _cop_estimator.cop(); }
-            virtual const Eigen::Vector2d& lcop() const override { return _cop_estimator.lcop_filtered(); }
-            virtual const Eigen::Vector2d& rcop() const override { return _cop_estimator.rcop_filtered(); }
-            virtual const Eigen::Vector2d& cop_raw() const { return _cop_estimator.cop_raw(); }
 
             virtual const Eigen::Vector3d& lf_force_filtered() const override { return _lf_force_filtered; }
             virtual const Eigen::Vector3d& rf_force_filtered() const override { return _rf_force_filtered; }
@@ -34,7 +29,12 @@ namespace inria_wbc {
             bool closed_loop() const { return _closed_loop; }
             void set_closed_loop(bool b) { _closed_loop = b; }
 
-            void parse_stabilizer(const YAML::Node& config);
+            void parse_stabilizer(const YAML::Node& config) override;
+
+            virtual const boost::optional<Eigen::Vector2d>& cop() const override { return _cop_estimator.cop(); }
+            virtual const boost::optional<Eigen::Vector2d>& lcop() const override { return _cop_estimator.lcop_filtered(); }
+            virtual const boost::optional<Eigen::Vector2d>& rcop() const override { return _cop_estimator.rcop_filtered(); }
+            virtual const boost::optional<Eigen::Vector2d>& cop_raw() const override { return _cop_estimator.cop_raw(); }
 
         protected:
             virtual void parse_configuration(const YAML::Node& config);

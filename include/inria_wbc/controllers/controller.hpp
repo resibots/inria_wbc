@@ -28,6 +28,7 @@
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
 
+#include <boost/optional.hpp>
 #include <boost/variant.hpp>
 
 namespace inria_wbc {
@@ -49,7 +50,6 @@ namespace inria_wbc {
             Controller& operator=(const Controller& o) = delete;
             virtual ~Controller(){};
 
-
             // path where the files are stored (everything should be relative to this)
             const std::string& base_path() const { return base_path_; }
 
@@ -63,30 +63,30 @@ namespace inria_wbc {
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
             std::vector<std::string> activated_contacts() { return activated_contacts_; };
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces() { return activated_contacts_forces_; };
-            virtual const Eigen::Vector2d& cop() const
+            virtual const boost::optional<Eigen::Vector2d>& cop() const
             {
-                static Eigen::Vector2d tmp;
+                static boost::optional<Eigen::Vector2d> tmp = boost::none;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
 
-            virtual const Eigen::Vector2d& cop_raw() const
+            virtual const boost::optional<Eigen::Vector2d>& cop_raw() const
             {
-                static Eigen::Vector2d tmp;
+                static boost::optional<Eigen::Vector2d> tmp = boost::none;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
 
-            virtual const Eigen::Vector2d& lcop() const
+            virtual const boost::optional<Eigen::Vector2d>& lcop() const
             {
-                static Eigen::Vector2d tmp;
+                static boost::optional<Eigen::Vector2d> tmp = boost::none;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
 
-            virtual const Eigen::Vector2d& rcop() const
+            virtual const boost::optional<Eigen::Vector2d>& rcop() const
             {
-                static Eigen::Vector2d tmp;
+                static boost::optional<Eigen::Vector2d> tmp = boost::none;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
@@ -112,7 +112,7 @@ namespace inria_wbc {
 
             const std::vector<int>& non_mimic_indexes() const { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmd) const { return utils::slice_vec(cmd, non_mimic_indexes_); }
-            
+
             Eigen::VectorXd tau(bool filter_mimics = true) const;
             Eigen::VectorXd ddq(bool filter_mimics = true) const;
             Eigen::VectorXd dq(bool filter_mimics = true) const;

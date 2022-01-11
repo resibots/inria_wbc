@@ -361,14 +361,13 @@ int main(int argc, char* argv[])
                 // 0 for joints that are not in active_dofs_controllable
                 Eigen::VectorXd positions = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
                 Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
-                for (size_t i = 0; i < controllable_dofs.size(); ++i) {
-                    auto name = controllable_dofs[i];
+                for (size_t i = 0; i < controller->controllable_dofs(false).size(); ++i) {
+                    auto name = controller->controllable_dofs(false)[i];
                     if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0) {
                         positions(i) = robot->positions({name})[0];
                         velocities(i) = robot->velocities({name})[0];
                     }
                 }
-
                 sensor_data["positions"] = positions;
                 sensor_data["joints_torque"] = tq_sensors;
                 sensor_data["joint_velocities"] = velocities;
@@ -390,8 +389,10 @@ int main(int argc, char* argv[])
                 else if (vm["actuators"].as<std::string>() == "spd") {
                     cmd = inria_wbc::robot_dart::compute_spd(robot, q_damaged, 1. / sim_freq, active_dofs_controllable, false);
                 }
-                else // torque
-                    cmd = controller->tau(false);
+                else { // torque
+                    Eigen::VectorXd cmd_no_mimic = controller->filter_cmd(controller->tau(false)).tail(ncontrollable);
+                    cmd = inria_wbc::robot_dart::filter_cmd(cmd_no_mimic, controllable_dofs, active_dofs_controllable);
+                }
                 timer.end("cmd");
 
                 if (ghost) {
@@ -459,10 +460,6 @@ int main(int argc, char* argv[])
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
-                else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << " "
-                                << controller->lcop().transpose() << " "
-                                << controller->rcop().transpose() << " " << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "ft")
@@ -488,12 +485,29 @@ int main(int argc, char* argv[])
                 else if (x.first == "momentum") {
                     auto bodies = robot->body_names();
                     Eigen::Vector3d angular_momentum = Eigen::Vector3d::Zero();
-                    for (auto& b : bodies) {
+                    for (auto& b : bodies)
                         angular_momentum += robot->body_node(b)->getAngularMomentum(robot->com());
-                    }
                     (*x.second) << -angular_momentum.transpose() << std::endl;
                 }
-                else
+                else if (x.first == "cop") { // the cop according to controller
+                    if (controller->cop())
+                        (*x.second) << controller->cop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
+                else if (x.first == "lcop") { // the cop according to controller
+                    if (controller->lcop())
+                        (*x.second) << controller->lcop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
+                else if (x.first == "rcop") { // the cop according to controller
+                    if (controller->rcop())
+                        (*x.second) << controller->rcop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
+                else if (robot->body_node(x.first) != nullptr)
                     (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
             }
             if (vm.count("srdf")) {
