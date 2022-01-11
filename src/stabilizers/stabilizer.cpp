@@ -221,7 +221,7 @@ namespace inria_wbc {
         void foot_force_difference_admittance(
             double dt,
             double Mg,
-            Eigen::VectorXd p_ffda,
+            const Eigen::VectorXd& p_ffda,
             double lf_normal_force,
             double rf_normal_force,
             const Eigen::Vector3d& lf_sensor_force,
@@ -422,7 +422,7 @@ namespace inria_wbc {
         }
 
         Eigen::Vector3d closest_point_on_line(
-            const Eigen::Vector3d point,
+            const Eigen::Vector3d& point,
             const std::pair<Eigen::Vector3d, Eigen::Vector3d>& line)
         {
 

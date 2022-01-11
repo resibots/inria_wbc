@@ -68,7 +68,7 @@ namespace inria_wbc {
         void foot_force_difference_admittance(
             double dt, // controller dt
             double Mg, // Mass of the robot * gravity
-            Eigen::VectorXd p_ffda, // 3d proportional gains
+            const Eigen::VectorXd& p_ffda, // 3d proportional gains
             double lf_normal_force, // normal left foot force from tsid solution (~= current model normal force)
             double rf_normal_force, // normal right foot force from tsid solution (~= current model normal force)
             const Eigen::Vector3d& lf_force, //measured left foot force vector
@@ -106,7 +106,7 @@ namespace inria_wbc {
             Eigen::Matrix<double, 6, 1>& right_fref); //output right foot forces + torques command
 
         Eigen::Vector3d closest_point_on_line(
-            const Eigen::Vector3d point,
+            const Eigen::Vector3d& point,
             const std::pair<Eigen::Vector3d, Eigen::Vector3d>& line);
 
         /***************** Not used for now ******************************/
