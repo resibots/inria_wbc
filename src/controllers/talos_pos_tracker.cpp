@@ -287,17 +287,17 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample com_sample, torso_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
+                const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
                 // com_admittance
-                if (cops[0]) {
-                    stabilizer::com_admittance(dt_, _com_gains, cops[0].value(), model_current_com, com_ref, com_sample);
+                if (valid_cop) {
+                    stabilizer::com_admittance(dt_, _com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                 }
                 //zmp admittance
-                if (cops[0] && _activate_zmp) {
-
+                if (valid_cop && _activate_zmp) {
                     double M = pinocchio_total_model_mass();
                     Eigen::Matrix<double, 6, 1> left_fref, right_fref;
-                    stabilizer::zmp_distributor_admittance(dt_, _zmp_p, _zmp_d, M, contact_se3_ref, ac, cops[0].value(), model_current_com, left_fref, right_fref);
+                    stabilizer::zmp_distributor_admittance(dt_, _zmp_p, _zmp_d, M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
 
                     contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
                     contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
