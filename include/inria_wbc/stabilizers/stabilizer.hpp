@@ -13,6 +13,8 @@
 namespace inria_wbc {
     namespace stabilizer {
 
+        // creates a momentum in the direction where there is some com error
+        // hence if you push the robot, the momentum will go against that push
         void momentum_com_admittance(
             double dt,
             const Eigen::VectorXd& p,
@@ -23,6 +25,8 @@ namespace inria_wbc {
             tsid::trajectories::TrajectorySample& momentum_sample,
             float max_ref = 5);
 
+        // creates a momentum to keep the torso in the correct orientation
+        // if the imu data velocity goes in one direction we create a momentum to put back the torso where it should be
         void momentum_imu_admittance(
             double dt,
             const Eigen::VectorXd& p,
