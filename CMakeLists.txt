@@ -32,6 +32,7 @@ set(INRIA_WBC_SOURCES
                             src/stabilizers/stabilizer.cpp
                             src/estimators/cop.cpp
                             src/tsid/task-self-collision.cpp
+                            src/tsid/task-momentum-equality.cpp
 )
 
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})

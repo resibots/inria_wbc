@@ -33,7 +33,7 @@ namespace inria_wbc {
             bool has_task(const std::string& str) const { return tasks_.find(str) != tasks_.end();}
             bool has_contact(const std::string& str) const { return contacts_.find(str) != contacts_.end(); }
             std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> bound_task() { return task<tsid::tasks::TaskJointPosVelAccBounds>("bounds"); }
-            std::shared_ptr<tsid::tasks::TaskAMEquality> momentum_task() { return task<tsid::tasks::TaskAMEquality>("momentum"); }
+            std::shared_ptr<tsid::tasks::TaskMEquality> momentum_task() { return task<tsid::tasks::TaskMEquality>("momentum"); }
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return task<tsid::tasks::TaskComEquality>("com"); }
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
 
@@ -44,6 +44,7 @@ namespace inria_wbc {
             // we do not return the velocity for now
             const tsid::math::Vector3 get_com_ref() { return com_task()->getReference().pos; }
             const tsid::trajectories::TrajectorySample get_full_com_ref() { return com_task()->getReference(); }
+            const tsid::trajectories::TrajectorySample get_full_momentum_ref() { return momentum_task()->getReference(); }
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(to_sample(ref)); }
             void set_com_ref(const tsid::trajectories::TrajectorySample& sample) { com_task()->setReference(sample); }
             void set_momentum_ref(const tsid::trajectories::TrajectorySample& sample) { momentum_task()->setReference(sample); }
@@ -62,6 +63,8 @@ namespace inria_wbc {
             // for external optimizers: we exclude the bound task for safety
             size_t num_task_weights() const;
             void update_task_weights(const std::vector<double>& new_weights);
+
+            void parse_stabilizer(const YAML::Node& config);
            
         protected:
             virtual void parse_tasks(const std::string&);

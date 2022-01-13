@@ -5,6 +5,7 @@
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
+#include <tsid/tasks/task-momentum-equality.hpp>
 #include <tsid/tasks/task-se3-equality.hpp>
 
 #include "inria_wbc/controllers/tasks.hpp"
@@ -128,20 +129,26 @@ namespace inria_wbc {
             double kp = node["kp"].as<double>();
             auto weight = node["weight"].as<double>();
 
+            auto mask_str = IWBC_CHECK(node["mask"].as<std::string>());
+            IWBC_ASSERT(mask_str.size() == 6, "Momentum mask needs to be 6D (angular_x, angular_y, angular_z, linear_x, linear_y, linear_z), here:", mask_str);
+            auto mask = convert_mask<6>(mask_str);
+
             // create the task
-            auto task = std::make_shared<tsid::tasks::TaskAMEquality>(task_name, *robot);
-            task->Kp(kp * Vector::Ones(3));
+            auto task = std::make_shared<tsid::tasks::TaskMEquality>(task_name, *robot);
+            task->Kp(kp * Vector::Ones(6));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
+            task->setMask(mask);
 
             // set the reference
-            task->setReference(to_sample(Eigen::Vector3d(0, 0, 0)));
+            Eigen::VectorXd ref = Eigen::VectorXd::Zero(6);
+            task->setReference(to_sample(ref));
 
             // add to TSID
             tsid->addMotionTask(*task, weight, 1);
 
             return task;
         }
-        RegisterYAML<tsid::tasks::TaskAMEquality> __register_momentum_equality("momentum", make_momentum);
+        RegisterYAML<tsid::tasks::TaskMEquality> __register_linear_momentum_equality("momentum", make_momentum);
 
         ////// COP task //////
         std::shared_ptr<tsid::tasks::TaskBase> make_cop(
@@ -302,8 +309,7 @@ namespace inria_wbc {
             auto radius = IWBC_CHECK(node["radius"].as<double>());
 
             std::unordered_map<std::string, double> avoided;
-            for (const auto& a : IWBC_CHECK(node["avoided"]))
-            {
+            for (const auto& a : IWBC_CHECK(node["avoided"])) {
                 IWBC_ASSERT(robot->model().existFrame(a.first.as<std::string>()), "Frame ", a.first.as<std::string>(), " in ", task_name, " does not exists.");
                 avoided[a.first.as<std::string>()] = a.second.as<double>();
             }

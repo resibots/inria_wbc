@@ -352,7 +352,10 @@ int main(int argc, char* argv[])
                     sensor_data["rf_force"] = Eigen::VectorXd::Constant(3, 1e-8);
                 }
                 // accelerometer
-                sensor_data["acceleration"] = imu->linear_acceleration();
+
+                sensor_data["imu_pos"] = imu->angular_position_vec();
+                sensor_data["imu_vel"] = imu->angular_velocity();
+                sensor_data["imu_acc"] = imu->linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
                 // joint positions / velocities (excluding floating base)
                 // 0 for joints that are not in active_dofs_controllable
@@ -467,8 +470,25 @@ int main(int argc, char* argv[])
                                 << controller->lf_force_filtered().transpose() << " "
                                 << ft_sensor_right->force().transpose() << " "
                                 << controller->rf_force_filtered().transpose() << std::endl;
-                else if (x.first == "momentum") // the momentum according to pinocchio
+                else if (x.first == "controller_momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
+                else if (x.first == "imu") // the momentum according to pinocchio
+                    (*x.second) << imu->angular_position_vec().transpose() << " "
+                                << imu->angular_velocity().transpose() << " "
+                                << imu->linear_acceleration().transpose() << std::endl;
+                else if (x.first == "controller_imu") // the momentum according to pinocchio
+                    (*x.second) << controller->robot()->framePosition(controller->tsid()->data(), controller->robot()->model().getFrameId("imu_link")).translation().transpose() << " "
+                                << controller->robot()->frameVelocityWorldOriented(controller->tsid()->data(), controller->robot()->model().getFrameId("imu_link")).angular().transpose() << " "
+                                << controller->robot()->frameAccelerationWorldOriented(controller->tsid()->data(), controller->robot()->model().getFrameId("imu_link")).linear().transpose() << std::endl;
+                else if (x.first == "com_vel")
+                    (*x.second) << robot->skeleton()->getCOMSpatialVelocity().head(3).transpose() << std::endl;
+                else if (x.first == "momentum") {
+                    auto bodies = robot->body_names();
+                    Eigen::Vector3d angular_momentum = Eigen::Vector3d::Zero();
+                    for (auto& b : bodies)
+                        angular_momentum += robot->body_node(b)->getAngularMomentum(robot->com());
+                    (*x.second) << -angular_momentum.transpose() << std::endl;
+                }
                 else if (x.first == "cop") { // the cop according to controller
                     if (controller->cop())
                         (*x.second) << controller->cop().value().transpose() << std::endl;

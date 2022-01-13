@@ -48,11 +48,13 @@ namespace inria_wbc {
             Eigen::Vector3d _rf_force_filtered;
             Eigen::Vector3d _lf_torque_filtered;
             Eigen::Vector3d _rf_torque_filtered;
+            Eigen::Vector3d _imu_angular_vel_filtered;
 
             estimators::Filter::Ptr _lf_force_filter;
             estimators::Filter::Ptr _rf_force_filter;
             estimators::Filter::Ptr _lf_torque_filter;
             estimators::Filter::Ptr _rf_torque_filter;
+            estimators::Filter::Ptr _imu_angular_vel_filter;
 
             //stabilisation parameters
             bool _use_stabilizer = true;
@@ -66,6 +68,10 @@ namespace inria_wbc {
             Eigen::VectorXd _zmp_p;
             Eigen::VectorXd _zmp_d;
             Eigen::VectorXd _zmp_w;
+
+            bool _use_momentum = false;
+            Eigen::VectorXd _momentum_p;
+            Eigen::VectorXd _momentum_d;
 
             //torque collision
             bool _use_torque_collision_detection;

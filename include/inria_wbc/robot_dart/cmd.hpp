@@ -12,8 +12,8 @@ namespace inria_wbc {
             Eigen::VectorXd q = robot->positions(joints);
             Eigen::VectorXd dq = robot->velocities(joints);
 
-            float stiffness = 10000;
-            float damping = 100;
+            float stiffness = 10000 / (dt * 1000); //tuned for 1000hz and then scaled for other freq
+            float damping = 100 / (dt * 1000);
             int ndofs = joints.size();
             Eigen::MatrixXd Kp = Eigen::MatrixXd::Identity(ndofs, ndofs);
             Eigen::MatrixXd Kd = Eigen::MatrixXd::Identity(ndofs, ndofs);

@@ -58,6 +58,87 @@ namespace inria_wbc {
             se3_sample.acc = aref_m;
         }
 
+        //computes momentum according to cop, problem is that the robot doesn't go back to initial position after perturbation
+        //because momentum task is actually controlling velocity and acceleration and not moment position ?
+        //angular momentum vel is found to compensate for cop disturbance and then torso position doesn't go back to normal
+        void momentum_com_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
+            const Eigen::Vector2d& cop_filtered,
+            const tsid::trajectories::TrajectorySample& model_current_com,
+            const tsid::trajectories::TrajectorySample& momentum_ref,
+            tsid::trajectories::TrajectorySample& momentum_sample,
+            float max_ref)
+        {
+            IWBC_ASSERT("you need 6 coefficient in p for com momentum admittance", p.size() == 6);
+            IWBC_ASSERT("you need 6 coefficient in d for com momentum admittance", d.size() == 6);
+
+            if (std::abs(cop_filtered(0)) >= 10 && std::abs(cop_filtered(1)) >= 10)
+                IWBC_ERROR("com_admittance : something is wrong with input cop_filtered, check sensor measurment: ", std::abs(cop_filtered(0)), " ", std::abs(cop_filtered(1)));
+
+            Eigen::Vector2d ref = com_to_zmp(model_current_com); //because this is the target
+            Eigen::Vector2d cor = ref.head(2) - cop_filtered;
+            Eigen::VectorXd vec(6);
+
+            vec << p(0) * cor(0), p(1) * cor(1), 0, p(2) * cor(1), p(3) * cor(0), 0;
+            Eigen::VectorXd vref_m = momentum_ref.pos - vec;
+
+            vec << d(0) * cor(0), d(1) * cor(1), 0, d(2) * cor(1), d(3) * cor(0), 0;
+            Eigen::VectorXd aref_m = momentum_ref.vel - vec / dt;
+
+            for (int i = 0; i < vref_m.size(); i++) {
+                if (vref_m[i] > max_ref)
+                    vref_m[i] = max_ref;
+                if (aref_m[i] > max_ref)
+                    aref_m[i] = max_ref;
+                if (vref_m[i] < -max_ref)
+                    vref_m[i] = -max_ref;
+                if (aref_m[i] < -max_ref)
+                    aref_m[i] = -max_ref;
+            }
+
+            momentum_sample = momentum_ref;
+            momentum_sample.vel = vref_m;
+            momentum_sample.acc = aref_m;
+        }
+        
+        //computes momentum based on imu angular velocity and model imu_link angular velocity 
+        void momentum_imu_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
+            const Eigen::Vector3d& imu_angular_vel,
+            const Eigen::Vector3d& model_angular_vel,
+            const tsid::trajectories::TrajectorySample& momentum_ref,
+            tsid::trajectories::TrajectorySample& momentum_sample,
+            float max_ref)
+        {
+            IWBC_ASSERT("you need 6 coefficients in p for momentum admittance", p.size() == 6);
+            IWBC_ASSERT("you need 6 coefficients in d for momentum admittance", d.size() == 6);
+
+            Eigen::Vector3d error = (model_angular_vel - imu_angular_vel);
+
+            Eigen::VectorXd vec(6);
+            vec << error(0), error(1), error(2), error(1), error(0), error(2);
+            Eigen::VectorXd vel_ref = momentum_ref.vel.array() - p.array() * vec.array();
+            Eigen::VectorXd acc_ref = momentum_ref.acc.array() - d.array() * vec.array();
+
+            for (int i = 0; i < vel_ref.size(); i++) {
+                if (vel_ref[i] > max_ref)
+                    vel_ref[i] = max_ref;
+                if (acc_ref[i] > max_ref)
+                    acc_ref[i] = max_ref;
+                if (vel_ref[i] < -max_ref)
+                    vel_ref[i] = -max_ref;
+                if (acc_ref[i] < -max_ref)
+                    acc_ref[i] = -max_ref;
+            }
+            momentum_sample = momentum_ref;
+            momentum_sample.vel = vel_ref;
+            momentum_sample.acc = acc_ref / dt;
+        }
+
         void com_imu_admittance(
             double dt,
             const Eigen::VectorXd& p,
@@ -140,7 +221,7 @@ namespace inria_wbc {
         void foot_force_difference_admittance(
             double dt,
             double Mg,
-            Eigen::VectorXd p_ffda,
+            const Eigen::VectorXd& p_ffda,
             double lf_normal_force,
             double rf_normal_force,
             const Eigen::Vector3d& lf_sensor_force,
@@ -341,7 +422,7 @@ namespace inria_wbc {
         }
 
         Eigen::Vector3d closest_point_on_line(
-            const Eigen::Vector3d point,
+            const Eigen::Vector3d& point,
             const std::pair<Eigen::Vector3d, Eigen::Vector3d>& line)
         {
 
