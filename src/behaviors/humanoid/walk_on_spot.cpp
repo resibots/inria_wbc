@@ -120,13 +120,25 @@ namespace inria_wbc {
 
                 // add and remove contacts
                 if (time_ == 0 && state_ == States::LIFT_UP_LF)
+                {
+                    controller->set_behavior_type(controllers::behavior_types::SINGLE_SUPPORT);
                     controller->remove_contact("contact_lfoot");
+                }
                 if (time_ == 0 && state_ == States::LIFT_UP_RF)
+                {
+                    controller->set_behavior_type(controllers::behavior_types::SINGLE_SUPPORT);
                     controller->remove_contact("contact_rfoot");
+                }
                 if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_LF)
+                {
+                    controller->set_behavior_type(controllers::behavior_types::DOUBLE_SUPPORT);
                     controller->add_contact("contact_lfoot");
+                }
                 if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_RF)
+                {
+                    controller->set_behavior_type(controllers::behavior_types::DOUBLE_SUPPORT);
                     controller->add_contact("contact_rfoot");
+                }
 
                 assert(time_ < _com_trajs[_current_traj].size());
                 assert(time_ < _rf_trajs[_current_traj].size());
