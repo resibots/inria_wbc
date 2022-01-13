@@ -256,6 +256,7 @@ namespace inria_wbc {
 
         void TalosPosTracker::update(const SensorData& sensor_data)
         {
+            // keep track of previous references to set them back after stabilization
             std::map<std::string, tsid::trajectories::TrajectorySample> contact_sample_ref;
             std::map<std::string, pinocchio::SE3> contact_se3_ref;
             std::map<std::string, Eigen::Matrix<double, 6, 1>> contact_force_ref;
@@ -270,6 +271,7 @@ namespace inria_wbc {
                 contact_sample_ref[contact_name] = contact(contact_name)->getMotionTask().getReference();
                 contact_force_ref[contact_name] = contact(contact_name)->getForceReference();
             }
+
             auto com_ref = com_task()->getReference();
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
@@ -308,19 +310,14 @@ namespace inria_wbc {
                     _rf_force_filtered.setZero();
                 }
 
-                _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
-
                 tsid::trajectories::TrajectorySample lf_se3_sample, lf_contact_sample, rf_se3_sample, rf_contact_sample;
                 tsid::trajectories::TrajectorySample com_sample, torso_sample;
                 tsid::trajectories::TrajectorySample momentum_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
-                // momentum based stabilization
-                // if (_use_momentum) {
-                //     stabilizer::momentum_com_admittance(dt_, _momentum_p, _momentum_d, _cop_estimator.cop_filtered(), model_current_com, momentum_ref, momentum_sample);
-                //     set_momentum_ref(momentum_sample);
-                // }
                 if (_use_momentum) {
+                    _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
+
                     auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
                     stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
                     set_momentum_ref(momentum_sample);
