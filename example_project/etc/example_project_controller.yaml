@@ -1,6 +1,6 @@
 CONTROLLER:
   name: ex-controller
-  base_path: "/home/pal/inria_wbc/etc"
+  base_path: "/home/pal/inria_wbc/example_project/etc"
   tasks: tasks_example.yaml
   urdf: talos.urdf
   configurations: talos_configurations.srdf 
