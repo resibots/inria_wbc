@@ -2,7 +2,7 @@ CONTROLLER:
   name: humanoid-pos-tracker
   base_path: /home/pal/inria_wbc/etc/icub
   tasks: tasks.yaml
-  urdf: talos.urdf
+  urdf: icub.urdf
   configurations: configurations.srdf 
   ref_config: inria_start
   frames: frames.yaml
@@ -15,3 +15,8 @@ CONTROLLER:
   closed_loop: false
   verbose: true
   mimic_dof_names : []
+  stabilizer:
+    activated: false
+    params_ss: stab_single_support.yaml
+    params_ds: stab_double_support.yaml
+    params_fixed_base: stab_fixed_base.yaml

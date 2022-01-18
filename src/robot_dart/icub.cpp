@@ -45,13 +45,13 @@ int main(int argc, char* argv[])
         // clang-format off
         desc.add_options()
         ("actuators,a", po::value<std::string>()->default_value("spd"), "actuator model torque/velocity/servo/spd  [default:spd]")
-        ("behavior,b", po::value<std::string>()->default_value("../etc/talos/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_squat.yaml]")
+        ("behavior,b", po::value<std::string>()->default_value("../etc/icub/squat.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/icub/squat.yaml]")
         ("big_window,w", "use a big window (nicer but slower) [default:false]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
         ("check_fall", "check if the robot has fallen (print if a collision)")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
-        ("controller,c", po::value<std::string>()->default_value("../etc/talos/talos_pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/talos/talos_pos_tracker.yaml]")
+        ("controller,c", po::value<std::string>()->default_value("../etc/icub/pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/icub/pos_tracker.yaml]")
         ("duration,d", po::value<int>()->default_value(20), "duration in seconds [20]")
         ("enforce_position,e", po::value<bool>()->default_value(true), "enforce the positions of the URDF [default:true]")
         ("fast,f", "fast (simplified) Talos [default: false]")
@@ -204,7 +204,20 @@ int main(int argc, char* argv[])
                 ofs << c << std::endl;
         }
 
-       
+        // self-collision shapes
+        std::vector<std::shared_ptr<robot_dart::Robot>> self_collision_spheres;
+        if (vm.count("collisions")) {
+            auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
+            for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+                auto pos = task_self_collision->avoided_frames_positions()[i];
+                auto tf = Eigen::Isometry3d(Eigen::Translation3d(pos[0], pos[1], pos[2]));
+                double r0 = task_self_collision->avoided_frames_r0s()[i];
+                auto sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(r0 * 2, r0 * 2, r0 * 2), tf, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5), "self-collision-" + std::to_string(i));
+                sphere->set_color_mode("aspect");
+                self_collision_spheres.push_back(sphere);
+                simu.add_visual_robot(self_collision_spheres.back());
+            }
+        }
 
         //////////////////// START SIMULATION //////////////////////////////////////
         simu.set_control_freq(control_freq); // default = 1000 Hz
@@ -277,6 +290,27 @@ int main(int argc, char* argv[])
                     translate_ghost(0) -= 1;
                     ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
                     ghost->set_positions(q.head(6) + translate_ghost, floating_base);
+                }
+            }
+
+            if (simu.schedule(simu.graphics_freq()) && vm.count("collisions")) {
+                auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
+                auto task_self_collision = controller_pos->task<tsid::tasks::TaskSelfCollision>(vm["collisions"].as<std::string>());
+                for (size_t i = 0; i < task_self_collision->avoided_frames_positions().size(); ++i) {
+                    auto cp = self_collision_spheres[i]->base_pose();
+                    cp.translation() = task_self_collision->avoided_frames_positions()[i];
+                    cp.translation()[0] -= 1; // move to the ghost
+                    self_collision_spheres[i]->set_base_pose(cp);
+                    auto bd = self_collision_spheres[i]->skeleton()->getBodyNodes()[0];
+                    auto visual = bd->getShapeNodesWith<dart::dynamics::VisualAspect>()[0];
+                    visual->getShape()->setDataVariance(dart::dynamics::Shape::DYNAMIC_COLOR);
+                    bool c = task_self_collision->collision(i);
+                    if (c) {
+                        visual->getVisualAspect()->setRGBA(dart::Color::Red(1.0));
+                    }
+                    else {
+                        visual->getVisualAspect()->setRGBA(dart::Color::Green(1.0));
+                    }
                 }
             }
 
