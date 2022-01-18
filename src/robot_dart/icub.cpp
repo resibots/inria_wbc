@@ -262,7 +262,9 @@ int main(int argc, char* argv[])
                 sensor_data["rf_torque"] = robot->ft_foot_right().torque();
                 sensor_data["rf_force"] = robot->ft_foot_right().force();
                 // // accelerometer
-                sensor_data["acceleration"] = robot->imu().linear_acceleration();
+                sensor_data["imu_pos"] = robot->imu().angular_position_vec();
+                sensor_data["imu_vel"] = robot->imu().angular_velocity();
+                sensor_data["imu_acc"] = robot->imu().linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
                 // // joint positions (excluding floating base)
                 sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
@@ -349,10 +351,13 @@ int main(int argc, char* argv[])
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
-                else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << " "
-                                << controller->lcop().transpose() << " "
-                                << controller->rcop().transpose() << " " << std::endl;
+                else if (x.first == "cop") { // the cop according to controller
+                    Eigen::MatrixXd missing_cst = Eigen::Vector2d::Constant(1000).transpose();
+                    (*x.second) 
+                        << (controller->cop() ? controller->cop().value().transpose() : missing_cst) << " "
+                        << (controller->lcop() ? controller->lcop().value().transpose() : missing_cst) << " "
+                        << (controller->rcop() ? controller->rcop().value().transpose() : missing_cst) << " " << std::endl;
+                }
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "momentum") // the momentum according to pinocchio

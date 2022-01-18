@@ -16,7 +16,7 @@ CONTROLLER:
   verbose: true
   mimic_dof_names : []
   stabilizer:
-    activated: false
+    activated: true
     params_ss: stab_single_support.yaml
     params_ds: stab_double_support.yaml
     params_fixed_base: stab_fixed_base.yaml

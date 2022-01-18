@@ -132,13 +132,12 @@ namespace inria_wbc {
                     "we need the joint positions in closed loop mode!");
                 IWBC_ASSERT(sensor_data.find("joint_velocities") != sensor_data.end(),
                     "we need the joint velocities in closed loop mode!");
-                    Eigen::VectorXd q_tsid(q_tsid_.size()), dq(v_tsid_.size());
+                Eigen::VectorXd q_tsid(q_tsid_.size()), dq(v_tsid_.size());
 
                 auto pos = sensor_data.at("positions");
                 auto vel = sensor_data.at("joint_velocities");
 
-                if (floating_base_)
-                {
+                if (floating_base_) {
                     IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(),
                         "we need the floating base position in closed loop mode!");
                     IWBC_ASSERT(sensor_data.find("floating_base_velocity") != sensor_data.end(),
@@ -158,8 +157,7 @@ namespace inria_wbc {
 
                     _solve(q_tsid, dq);
                 }
-                else
-                {
+                else {
                     IWBC_ASSERT(vel.size() == v_tsid_.size(),
                         "Joint velocities do not have the correct size:", vel.size(), " vs (expected)", v_tsid_.size());
                     IWBC_ASSERT(pos.size() == q_tsid_.size(),
@@ -168,11 +166,9 @@ namespace inria_wbc {
                     _solve(pos, vel);
                 }
             }
-            else
-            {
-                _solve(); 
+            else {
+                _solve();
             }
-            
         };
 
         std::vector<int> Controller::get_non_mimics_indexes() const

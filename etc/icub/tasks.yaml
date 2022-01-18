@@ -27,6 +27,11 @@ com:
     weight: 3000.0
     kp: 50.0
     mask: 111
+momentum: #!!!!!WARNING IS DISZBLED FOR SINGLE SUPPORT cf parse_stabiliser !!!!!!!!!!!
+    type: momentum
+    weight: 1000.0
+    kp: 30.0
+    mask: 000110
 posture:
     type: posture
     weight: 0.05

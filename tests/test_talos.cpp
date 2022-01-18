@@ -196,12 +196,15 @@ void test_behavior(utest::test_t test,
         sensor_data["lf_force"] = ft_sensor_left->force();
         sensor_data["rf_torque"] = ft_sensor_right->torque();
         sensor_data["rf_force"] = ft_sensor_right->force();
-        sensor_data["acceleration"] = imu->linear_acceleration();
         sensor_data["velocity"] = robot->com_velocity().tail<3>();
         sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
         sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
         sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
         sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
+        sensor_data["imu_pos"] = imu->angular_position_vec();
+        sensor_data["imu_vel"] = imu->angular_velocity();
+        sensor_data["imu_acc"] = imu->linear_acceleration();
+
         // command
         if (simu.schedule(simu.control_freq())) {
             auto t1_solver = high_resolution_clock::now();

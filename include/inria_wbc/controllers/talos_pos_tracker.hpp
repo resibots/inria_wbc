@@ -3,7 +3,6 @@
 
 #include <inria_wbc/controllers/humanoid_pos_tracker.hpp>
 #include <inria_wbc/safety/torque_collision_detection.hpp>
-#include <boost/optional.hpp>
 namespace inria_wbc {
     namespace controllers {
         // we add the torque safety
@@ -25,42 +24,12 @@ namespace inria_wbc {
             bool closed_loop() const { return _closed_loop; }
             void set_closed_loop(bool b) { _closed_loop = b; }
 
-            virtual const Eigen::Vector2d& cop() const override
-            {
-                if (_cop_estimator.cop())
-                    return _cop_estimator.cop().value();
-                else
-                    return cst::V2_1000;
-            }
-
-            virtual const Eigen::Vector2d& lcop() const override
-            {
-                if (_cop_estimator.lcop_filtered())
-                    return _cop_estimator.lcop_filtered().value();
-                else
-                    return cst::V2_1000;
-            }
-
-            virtual const Eigen::Vector2d& rcop() const override
-            {
-                if (_cop_estimator.rcop_filtered())
-                    return _cop_estimator.rcop_filtered().value();
-                else
-                    return cst::V2_1000;
-            }
-
-            virtual const Eigen::Vector2d& cop_raw() const override
-            {
-                if (_cop_estimator.cop_raw())
-                    return _cop_estimator.cop_raw().value();
-                else
-                    return cst::V2_1000;
-            }
         protected:
             //torque collision
             void parse_torque_safety(const YAML::Node& config);
             void parse_collision_thresholds(const std::string& config_path);
 
+            //torque collision
             bool _use_torque_collision_detection;
             bool _collision_detected = false;
             safety::TorqueCollisionDetection _torque_collision_detection;

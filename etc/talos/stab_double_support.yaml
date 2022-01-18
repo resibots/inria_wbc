@@ -7,3 +7,6 @@ activate_zmp: true
 zmp_w: [1, 1, 1, 2, 2, 2]
 zmp_d: [0, 0, 0.0005, 0.0001, 0.002, 0]
 zmp_p: [0, 0, 2, 10.0, 10.0, 0]
+use_momentum: true
+momentum_p: [0, 0, 0, -20, -20, 0]
+momentum_d: [0, 0, 0, -0.01, -0.01, 0]

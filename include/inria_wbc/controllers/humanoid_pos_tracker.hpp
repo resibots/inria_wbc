@@ -23,37 +23,11 @@ namespace inria_wbc {
 
             virtual void update(const SensorData& sensor_data = {}) override;
 
-            virtual const Eigen::Vector2d& cop() const override
-            {
-                if (_cop_estimator.cop())
-                    return _cop_estimator.cop().value();
-                else
-                    return cst::V2_1000;
-            }
+            virtual const boost::optional<Eigen::Vector2d>& cop() const override { return _cop_estimator.cop(); }
+            virtual const boost::optional<Eigen::Vector2d>& lcop() const override { return _cop_estimator.lcop_filtered(); }
+            virtual const boost::optional<Eigen::Vector2d>& rcop() const override { return _cop_estimator.rcop_filtered(); }
+            virtual const boost::optional<Eigen::Vector2d>& cop_raw() const override { return _cop_estimator.cop_raw(); }
 
-            virtual const Eigen::Vector2d& lcop() const override
-            {
-                if (_cop_estimator.lcop_filtered())
-                    return _cop_estimator.lcop_filtered().value();
-                else
-                    return cst::V2_1000;
-            }
-
-            virtual const Eigen::Vector2d& rcop() const override
-            {
-                if (_cop_estimator.rcop_filtered())
-                    return _cop_estimator.rcop_filtered().value();
-                else
-                    return cst::V2_1000;
-            }
-
-            virtual const Eigen::Vector2d& cop_raw() const override
-            {
-                if (_cop_estimator.cop_raw())
-                    return _cop_estimator.cop_raw().value();
-                else
-                    return cst::V2_1000;
-            }
             virtual const Eigen::Vector3d& lf_force_filtered() const override { return _lf_force_filtered; }
             virtual const Eigen::Vector3d& rf_force_filtered() const override { return _rf_force_filtered; }
 
@@ -71,11 +45,13 @@ namespace inria_wbc {
             Eigen::Vector3d _rf_force_filtered;
             Eigen::Vector3d _lf_torque_filtered;
             Eigen::Vector3d _rf_torque_filtered;
+            Eigen::Vector3d _imu_angular_vel_filtered;
 
             estimators::Filter::Ptr _lf_force_filter;
             estimators::Filter::Ptr _rf_force_filter;
             estimators::Filter::Ptr _lf_torque_filter;
             estimators::Filter::Ptr _rf_torque_filter;
+            estimators::Filter::Ptr _imu_angular_vel_filter;
 
             //stabilisation parameters
             bool _use_stabilizer = true;
@@ -89,6 +65,10 @@ namespace inria_wbc {
             Eigen::VectorXd _zmp_p;
             Eigen::VectorXd _zmp_d;
             Eigen::VectorXd _zmp_w;
+
+            bool _use_momentum = false;
+            Eigen::VectorXd _momentum_p;
+            Eigen::VectorXd _momentum_d;
         };
 
     } // namespace controllers
