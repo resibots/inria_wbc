@@ -145,85 +145,23 @@ namespace inria_wbc {
         void TalosPosTracker::parse_stabilizer(const YAML::Node& config)
         {
 
-            PosTracker::parse_stabilizer(config);
-
             auto c = IWBC_CHECK(config["stabilizer"]);
             _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
 
             std::string stab_path;
             auto path = IWBC_CHECK(config["base_path"].as<std::string>());
-            if (behavior_type_ == behavior_types::FIXED_BASE)
-                stab_path = IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>());
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
-                stab_path = IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>());
-            if (behavior_type_ == behavior_types::DOUBLE_SUPPORT)
-                stab_path = IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>());
+            _sconf_map[behavior_types::FIXED_BASE] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>()));
+            _sconf_map[behavior_types::SINGLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>()));
+            _sconf_map[behavior_types::DOUBLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>()));
 
-            YAML::Node s = IWBC_CHECK(YAML::LoadFile(stab_path));
-            _activate_zmp = IWBC_CHECK(s["activate_zmp"].as<bool>());
-            _torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());
-            _use_momentum = IWBC_CHECK(s["use_momentum"].as<bool>());
-
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
-                _use_momentum = false;
-
-            //set the _torso_max_roll in the bounds for safety
-            auto names = robot_->model().names;
-            names.erase(names.begin(), names.begin() + names.size() - robot_->na());
-            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
-            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
-            std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
-
-            for (auto& n : to_limit) {
-                IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
-                auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
-
-                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
-
-                q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _torso_max_roll;
-                q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _torso_max_roll;
+            if (verbose_) {
+                for (auto& c : _sconf_map) {
+                    std::cout << c.first << std::endl;
+                    std::cout << c.second << std::endl;
+                }
             }
 
-            bound_task()->setPositionBounds(q_lb, q_ub);
-
-            //get stabilizers gains
-            _com_gains.resize(6);
-            _ankle_gains.resize(6);
-            _ffda_gains.resize(3);
-            _zmp_p.resize(6);
-            _zmp_d.resize(6);
-            _zmp_w.resize(6);
-            _momentum_p.resize(6);
-            _momentum_d.resize(6);
-
-            _com_gains.setZero();
-            _ankle_gains.setZero();
-            _ffda_gains.setZero();
-            _zmp_p.setZero();
-            _zmp_d.setZero();
-            _zmp_w.setZero();
-            _momentum_p.setZero();
-            _momentum_d.setZero();
-
-            IWBC_ASSERT(IWBC_CHECK(s["com"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the com stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the ankle stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["ffda"].as<std::vector<double>>()).size() == 3, "you need 6 coefficient in p for the ffda stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the zmp stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the zmp stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in w for the zmp stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the momentum stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the momentum stabilizer");
-
-            _com_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["com"].as<std::vector<double>>()).data(), _com_gains.size());
-            _ankle_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).data(), _ankle_gains.size());
-            _ffda_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ffda"].as<std::vector<double>>()).data(), _ffda_gains.size());
-            _zmp_p = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).data(), _zmp_p.size());
-            _zmp_d = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).data(), _zmp_d.size());
-            _zmp_w = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).data(), _zmp_w.size());
-            _momentum_p = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).data(), _momentum_p.size());
-            _momentum_d = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).data(), _momentum_d.size());
-
-            auto history = s["filter_size"].as<int>();
+            auto history = _sconf_map[behavior_type_].filter_size;
             _cop_estimator.set_history_size(history);
 
             _lf_force_filtered.setZero();
@@ -238,20 +176,44 @@ namespace inria_wbc {
 
             _imu_angular_vel_filtered.setZero();
             _imu_angular_vel_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //angular vel data of size 3
+        }
 
-            if (verbose_) {
-                std::cout << "Stabilizer:" << _use_stabilizer << std::endl;
-                std::cout << "com:" << _com_gains.transpose() << std::endl;
-                std::cout << "ankle:" << _ankle_gains.transpose() << std::endl;
-                std::cout << "ffda:" << _ffda_gains.transpose() << std::endl;
-                std::cout << "Zmp:" << _activate_zmp << std::endl;
-                std::cout << "zmp_p:" << _zmp_p.transpose() << std::endl;
-                std::cout << "zmp_d:" << _zmp_d.transpose() << std::endl;
-                std::cout << "zmp_w:" << _zmp_w.transpose() << std::endl;
-                std::cout << "momentum:" << _use_momentum << std::endl;
-                std::cout << "momentum_p:" << _momentum_p.transpose() << std::endl;
-                std::cout << "momentum_d:" << _momentum_d.transpose() << std::endl;
+        void TalosPosTracker::set_behavior_type(const std::string& bt)
+        {
+            Controller::set_behavior_type(bt);
+
+            if (behavior_type_ == behavior_types::SINGLE_SUPPORT) {
+                _is_ss = true;
+                if (tasks_.find("momentum") != tasks_.end())
+                    tsid_->removeTask("momentum", 0.0);
             }
+
+            //set the _torso_max_roll in the bounds for safety
+            auto names = robot_->model().names;
+            names.erase(names.begin(), names.begin() + names.size() - robot_->na());
+            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
+            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
+            std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
+
+            for (auto& n : to_limit) {
+                IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
+                auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
+
+                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
+
+                q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _sconf_map[behavior_type_].torso_max_roll;
+                q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _sconf_map[behavior_type_].torso_max_roll;
+
+                bound_task()->setPositionBounds(q_lb, q_ub);
+            }
+
+            auto history = _sconf_map[behavior_type_].filter_size;
+            _cop_estimator.set_history_size(history);
+            _lf_force_filter->set_window_size(history);
+            _rf_force_filter->set_window_size(history);
+            _lf_torque_filter->set_window_size(history);
+            _rf_torque_filter->set_window_size(history);
+            _imu_angular_vel_filter->set_window_size(history);
         }
 
         void TalosPosTracker::update(const SensorData& sensor_data)
@@ -276,7 +238,7 @@ namespace inria_wbc {
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
-            if (_use_momentum)
+            if (_sconf_map[behavior_type_].use_momentum && !_is_ss)
                 momentum_ref = get_full_momentum_ref();
 
             if (_use_stabilizer) {
@@ -315,29 +277,29 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample momentum_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
-                if (_use_momentum) {
+                if (_sconf_map[behavior_type_].use_momentum && !_is_ss) {
                     _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
 
                     auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
-                    stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                    stabilizer::momentum_imu_admittance(dt_, _sconf_map[behavior_type_].momentum_p, _sconf_map[behavior_type_].momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
                     set_momentum_ref(momentum_sample);
                 }
 
                 const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
                 // com_admittance
                 if (valid_cop) {
-                    stabilizer::com_admittance(dt_, _com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
+                    stabilizer::com_admittance(dt_, _sconf_map[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                 }
 
                 //zmp admittance
-                if (valid_cop && _activate_zmp) {
+                if (valid_cop && _sconf_map[behavior_type_].use_zmp) {
                     double M = pinocchio_total_model_mass();
                     Eigen::Matrix<double, 6, 1> left_fref, right_fref;
-                    stabilizer::zmp_distributor_admittance(dt_, _zmp_p, _zmp_d, M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
+                    stabilizer::zmp_distributor_admittance(dt_, _sconf_map[behavior_type_].zmp_p, _sconf_map[behavior_type_].zmp_d, M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
 
-                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
-                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
+                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_sconf_map[behavior_type_].zmp_w);
+                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_sconf_map[behavior_type_].zmp_w);
                     contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
                     contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
                 }
@@ -345,14 +307,14 @@ namespace inria_wbc {
                 // left ankle_admittance
                 if (cops[1] && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, cops[1].value(), model_joint_pos("leg_left_6_joint"), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _sconf_map[behavior_type_].ankle_gains, cops[1].value(), model_joint_pos("leg_left_6_joint"), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     contact("contact_lfoot")->setReference(lf_contact_sample);
                 }
 
                 //right ankle_admittance
                 if (cops[2] && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, cops[2].value(), model_joint_pos("leg_right_6_joint"), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _sconf_map[behavior_type_].ankle_gains, cops[2].value(), model_joint_pos("leg_right_6_joint"), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     contact("contact_rfoot")->setReference(rf_contact_sample);
                 }
@@ -368,7 +330,7 @@ namespace inria_wbc {
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
                     double M = pinocchio_total_model_mass();
 
-                    stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
+                    stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _sconf_map[behavior_type_].ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
             }
@@ -417,7 +379,7 @@ namespace inria_wbc {
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
-                if (_use_momentum)
+                if (_sconf_map[behavior_type_].use_momentum && !_is_ss)
                     set_momentum_ref(momentum_ref);
 
                 for (auto& contact_name : ac) {

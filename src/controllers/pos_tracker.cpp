@@ -85,7 +85,7 @@ namespace inria_wbc {
 
             auto task_file = IWBC_CHECK(c["tasks"].as<std::string>());
             auto p = path / boost::filesystem::path(task_file);
-            parse_tasks(p.string());
+            parse_tasks(p.string(), config);
 
             if (verbose_) {
                 std::cout << "--------- Solver size info ---------" << std::endl;
@@ -97,7 +97,7 @@ namespace inria_wbc {
             }
         }
 
-        void PosTracker::parse_tasks(const std::string& path)
+        void PosTracker::parse_tasks(const std::string& path, const YAML::Node& config)
         {
             int task_count = 0;
             if (verbose_)
@@ -108,14 +108,14 @@ namespace inria_wbc {
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
                 if (type == "contact") {
                     // the task is added to tsid by make_contact
-                    auto task = tasks::make_contact_task(robot_, tsid_, name, it->second, config_);
+                    auto task = tasks::make_contact_task(robot_, tsid_, name, it->second, config);
                     contacts_[name] = task;
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
                 else {
                     // the task is added automatically to TSID by the factory
-                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config_);
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config);
                     tasks_[name] = task;
                 }
                 if (verbose_)
@@ -266,11 +266,12 @@ namespace inria_wbc {
             }
         }
 
-        void PosTracker::parse_stabilizer(const YAML::Node& config)
-        {
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
-                if (tasks_.find("momentum") != tasks_.end())
-                    tsid_->removeTask("momentum", 0.0);
-        }
+        // void PosTracker::set_behavior_type(const std::string& bt)
+        // {
+        //     Controller::set_behavior_type(bt);
+        //     if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
+        //         if (tasks_.find("momentum") != tasks_.end())
+        //             tsid_->removeTask("momentum", 0.0);
+        // }
     } // namespace controllers
 } // namespace inria_wbc

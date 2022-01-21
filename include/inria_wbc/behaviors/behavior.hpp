@@ -10,8 +10,7 @@ namespace inria_wbc {
         public:
             using controller_ptr_t = std::shared_ptr<inria_wbc::controllers::Controller>;
             Behavior(const controller_ptr_t& controller, const YAML::Node& config) : 
-                controller_(controller),
-                config_(config)
+                controller_(controller)
                 { IWBC_ASSERT(controller, "Invalid controller pointer"); };
             virtual ~Behavior() {}
             virtual void update(const controllers::SensorData& sensor_data = {}) = 0;
@@ -21,7 +20,6 @@ namespace inria_wbc {
 
         protected:
             std::shared_ptr<inria_wbc::controllers::Controller> controller_;
-            const YAML::Node& config_;
             std::string behavior_type_;
         };
         using Factory = utils::Factory<Behavior, Behavior::controller_ptr_t, const YAML::Node&>;

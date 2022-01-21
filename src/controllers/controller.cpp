@@ -57,7 +57,7 @@ namespace inria_wbc {
         const std::string behavior_types::SINGLE_SUPPORT = "single_support";
         const std::string behavior_types::DOUBLE_SUPPORT = "double_support";
 
-        Controller::Controller(const YAML::Node& config) : config_(config)
+        Controller::Controller(const YAML::Node& config)
         {
             auto c = IWBC_CHECK(config["CONTROLLER"]);
             base_path_ = IWBC_CHECK(c["base_path"].as<std::string>());
@@ -342,7 +342,7 @@ namespace inria_wbc {
             return filter_mimics ? slice_vec(q0_, non_mimic_indexes_) : q0_;
         }
 
-        void Controller::save_configuration(const std::string config_name, const std::string robot_name) const
+        void Controller::save_configuration(const std::string& config_name, const std::string& robot_name) const
         {
             std::ofstream config(config_name);
             config << "<?xml version=\"1.0\" ?>" << std::endl;
@@ -376,12 +376,11 @@ namespace inria_wbc {
             return mass;
         }
 
-        void Controller::set_behavior_type(std::string bt)
+        void Controller::set_behavior_type(const std::string& bt)
         {
             if (bt != behavior_types::FIXED_BASE && bt != behavior_types::SINGLE_SUPPORT && bt != behavior_types::DOUBLE_SUPPORT)
                 IWBC_ERROR("behavior type is either behavior_types::FIXED_BASE , behavior_types::SINGLE_SUPPORT or behavior_types::DOUBLE_SUPPORT ");
             behavior_type_ = bt;
-            parse_stabilizer(config_["CONTROLLER"]);
         }
 
     } // namespace controllers
