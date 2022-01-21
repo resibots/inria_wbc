@@ -56,7 +56,7 @@ namespace inria_wbc {
 
                 _torque_collision_joints = {
                     "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint",
-                    "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
+                    "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", // "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
                     "torso_1_joint", "torso_2_joint",
                     "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
                     "arm_right_1_joint", "arm_right_2_joint", "arm_right_3_joint", "arm_right_4_joint"};
@@ -69,7 +69,7 @@ namespace inria_wbc {
 
                 _torque_collision_threshold.resize(_torque_collision_joints.size());
                 _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
-                    3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                    3.5e+05, 3.9e+05, 2.9e+05,// 4.4e+05, 5.7e+05, 2.4e+05,
                     1e+01, 1e+01,
                     1e+01, 1e+01, 1e+01, 1e+01,
                     1e+01, 1e+01, 1e+01, 1e+01;
@@ -120,15 +120,18 @@ namespace inria_wbc {
                 // check that we have one task for each foot and that they are in contact
                 if (tasks_.find("lf") != tasks_.end() && tasks_.find("rf") != tasks_.end() && contacts_.find("contact_lfoot") != contacts_.end() && contacts_.find("contact_rfoot") != contacts_.end()) {
                     com_final.head(2) = (this->get_se3_ref("lf").translation().head(2) + this->get_se3_ref("rf").translation().head(2)) / 2;
-                    if ((this->com() - com_final).norm() > 0.01) // 1 cm
-                        IWBC_ERROR("Wrong starting configuration: the CoM needs to be between the two feet with less than 1cm difference, but the distance is ", (this->com() - com_final).norm());
+                    // tim
+                    //if ((this->com() - com_final).norm() > 0.01) // 1 cm
+                    //    IWBC_ERROR("Wrong starting configuration: the CoM needs to be between the two feet with less than 1cm difference, but the distance is ", (this->com() - com_final).norm());
 
                     this->set_com_ref(com_final);
                     if (verbose_)
                         std::cout << "Taking initial com reference in the middle of the support polygon" << std::endl;
                 }
                 else {
-                    IWBC_ERROR("init_com: contact_rfoot or contact_lfoot or lf or rf is missing, cannot compute initial com reference");
+                    // tim
+                    //IWBC_ERROR("init_com: contact_rfoot or contact_lfoot or lf or rf is missing, cannot compute initial com reference");
+                    // (need to load com ref ? )
                 }
 
                 if (verbose_) {
@@ -171,7 +174,8 @@ namespace inria_wbc {
                 IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
                 auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
 
-                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
+                // tim 
+                //IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
 
                 q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _torso_max_roll;
                 q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _torso_max_roll;
@@ -250,7 +254,8 @@ namespace inria_wbc {
             }
             auto com_ref = com_task()->getReference();
             auto left_ankle_ref = get_full_se3_ref("lf");
-            auto right_ankle_ref = get_full_se3_ref("rf");
+            // tim
+            //auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
 
             if (_use_stabilizer) {
@@ -360,6 +365,7 @@ namespace inria_wbc {
             }
 
             if (_closed_loop) {
+                
                 IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(),
                     "we need the floating base position in closed loop mode!");
                 IWBC_ASSERT(sensor_data.find("floating_base_velocity") != sensor_data.end(),
@@ -384,6 +390,44 @@ namespace inria_wbc {
                 dq << fb_vel, vel;
 
                 _solve(q_tsid, dq);
+                
+               /*
+                IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(),
+                    "we need the floating base position in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("floating_base_velocity") != sensor_data.end(),
+                    "we need the floating base velocity in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("positions") != sensor_data.end(),
+                    "we need the joint positions in closed loop mode!");
+                IWBC_ASSERT(sensor_data.find("joint_velocities") != sensor_data.end(),
+                    "we need the joint velocities in closed loop mode!");
+
+                Eigen::VectorXd q_tsid(q_tsid_.size()), dq(v_tsid_.size());
+                auto pos = sensor_data.at("positions");
+                auto vel = sensor_data.at("joint_velocities");
+                auto fb_pos = sensor_data.at("floating_base_position");
+                auto fb_vel = sensor_data.at("floating_base_velocity");
+
+                IWBC_ASSERT(vel.size() + fb_vel.size() == v_tsid_.size(),
+                    "Joint velocities do not have the correct size:", vel.size() + fb_vel.size(), " vs (expected)", v_tsid_.size());
+                IWBC_ASSERT(pos.size() + fb_pos.size() == q_tsid_.size(),
+                    "Joint positions do not have the correct size:", pos.size() + fb_pos.size(), " vs (expected)", q_tsid_.size());
+
+                q_tsid << fb_pos, pos;
+                dq << fb_vel, vel;
+
+                Eigen::VectorXd q_both(q_tsid_.size()), v_both(v_tsid_.size());
+                q_both = q_tsid_;
+                v_both = v_tsid_;
+                
+                uint tsid_start = 34;  // arm_right_1
+                uint dart_start = 22; 
+
+                for (uint i=0; i<7; i++){
+                    q_both[1 + i + tsid_start] = pos(dart_start + i);
+                    v_both[i + tsid_start] = vel(dart_start + i);
+                    std::cout << i + tsid_start << " " << q_tsid_[ i + tsid_start + 1] << " " << q_both[i + tsid_start + 1] << " " << v_tsid_[i+ tsid_start] << " " << v_both[i+ tsid_start] << std::endl; 
+                }
+                _solve(q_both, v_both );*/
             }
             else {
                 _solve();
@@ -393,7 +437,8 @@ namespace inria_wbc {
             if (_use_stabilizer) {
                 set_com_ref(com_ref);
                 set_se3_ref(left_ankle_ref, "lf");
-                set_se3_ref(right_ankle_ref, "rf");
+                // tim
+                //set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
 
                 for (auto& contact_name : ac) {

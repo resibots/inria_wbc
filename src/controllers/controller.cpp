@@ -155,7 +155,6 @@ namespace inria_wbc {
 
                     q_tsid << fb_pos, pos;
                     dq << fb_vel, vel;
-
                     _solve(q_tsid, dq);
                 }
                 else
