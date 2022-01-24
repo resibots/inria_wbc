@@ -159,6 +159,7 @@ namespace inria_wbc {
                     std::cout << c.first << std::endl;
                     std::cout << c.second << std::endl;
                 }
+                std::cout << "using " << behavior_type_ << std::endl;
             }
 
             auto history = _sconf_map[behavior_type_].filter_size;
@@ -182,42 +183,47 @@ namespace inria_wbc {
         {
             Controller::set_behavior_type(bt);
 
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT) {
-                _is_ss = true;
+            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
                 if (tasks_.find("momentum") != tasks_.end())
                     tsid_->removeTask("momentum", 0.0);
-            }
 
-            //set the _torso_max_roll in the bounds for safety
-            auto names = robot_->model().names;
-            names.erase(names.begin(), names.begin() + names.size() - robot_->na());
-            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
-            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
-            std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
+            if (_sconf_map.find(behavior_type_) != _sconf_map.end()) {
+                //set the _torso_max_roll in the bounds for safety
+                auto names = robot_->model().names;
+                names.erase(names.begin(), names.begin() + names.size() - robot_->na());
+                auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
+                auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
+                std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
 
-            for (auto& n : to_limit) {
-                IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
-                auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
+                for (auto& n : to_limit) {
+                    IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
+                    auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
 
-                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
+                    IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
 
-                q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _sconf_map[behavior_type_].torso_max_roll;
-                q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _sconf_map[behavior_type_].torso_max_roll;
-
+                    q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _sconf_map[behavior_type_].torso_max_roll;
+                    q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _sconf_map[behavior_type_].torso_max_roll;
+                }
                 bound_task()->setPositionBounds(q_lb, q_ub);
-            }
 
-            auto history = _sconf_map[behavior_type_].filter_size;
-            _cop_estimator.set_history_size(history);
-            _lf_force_filter->set_window_size(history);
-            _rf_force_filter->set_window_size(history);
-            _lf_torque_filter->set_window_size(history);
-            _rf_torque_filter->set_window_size(history);
-            _imu_angular_vel_filter->set_window_size(history);
+                auto history = _sconf_map[behavior_type_].filter_size;
+                _cop_estimator.set_history_size(history);
+                _lf_force_filter->set_window_size(history);
+                _rf_force_filter->set_window_size(history);
+                _lf_torque_filter->set_window_size(history);
+                _rf_torque_filter->set_window_size(history);
+                _imu_angular_vel_filter->set_window_size(history);
+            }
+            else {
+                IWBC_ERROR("_sconf_map does not have ", behavior_type_);
+            }
         }
 
         void TalosPosTracker::update(const SensorData& sensor_data)
         {
+            if (_sconf_map.find(behavior_type_) == _sconf_map.end())
+                IWBC_ERROR("_sconf_map does not have ", behavior_type_);
+
             // keep track of previous references to set them back after stabilization
             std::map<std::string, tsid::trajectories::TrajectorySample> contact_sample_ref;
             std::map<std::string, pinocchio::SE3> contact_se3_ref;
@@ -238,7 +244,7 @@ namespace inria_wbc {
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
-            if (_sconf_map[behavior_type_].use_momentum && !_is_ss)
+            if (_sconf_map[behavior_type_].use_momentum && tasks_.find("momentum") != tasks_.end())
                 momentum_ref = get_full_momentum_ref();
 
             if (_use_stabilizer) {
@@ -277,7 +283,7 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample momentum_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
-                if (_sconf_map[behavior_type_].use_momentum && !_is_ss) {
+                if (_sconf_map[behavior_type_].use_momentum && tasks_.find("momentum") != tasks_.end()) {
                     _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
 
                     auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
@@ -379,7 +385,7 @@ namespace inria_wbc {
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
-                if (_sconf_map[behavior_type_].use_momentum && !_is_ss)
+                if (_sconf_map[behavior_type_].use_momentum && tasks_.find("momentum") != tasks_.end())
                     set_momentum_ref(momentum_ref);
 
                 for (auto& contact_name : ac) {

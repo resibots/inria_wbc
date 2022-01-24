@@ -5,6 +5,7 @@
 #include <Eigen/Dense>
 #include <iostream>
 #include <string>
+#include <yaml-cpp/yaml.h>
 
 namespace inria_wbc {
     namespace stabilizer {

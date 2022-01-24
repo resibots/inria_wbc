@@ -1,12 +1,12 @@
 #ifndef IWBC_TALOS_POS_TRACKER_HPP
 #define IWBC_TALOS_POS_TRACKER_HPP
 
+#include "inria_wbc/stabilizers/stabilizer_conf.hpp"
 #include <boost/optional.hpp>
 #include <inria_wbc/controllers/pos_tracker.hpp>
 #include <inria_wbc/estimators/cop.hpp>
 #include <inria_wbc/estimators/filtering.hpp>
 #include <inria_wbc/safety/torque_collision_detection.hpp>
-#include "inria_wbc/stabilizers/stabilizer_conf.hpp"
 namespace inria_wbc {
     namespace controllers {
         class TalosPosTracker : public PosTracker {
@@ -61,7 +61,6 @@ namespace inria_wbc {
             //stabilisation parameters
             std::map<std::string, inria_wbc::stabilizer::StabConfig> _sconf_map;
             bool _use_stabilizer = false;
-            bool _is_ss = false;
 
             //torque collision
             bool _use_torque_collision_detection;

@@ -381,6 +381,8 @@ namespace inria_wbc {
             if (bt != behavior_types::FIXED_BASE && bt != behavior_types::SINGLE_SUPPORT && bt != behavior_types::DOUBLE_SUPPORT)
                 IWBC_ERROR("behavior type is either behavior_types::FIXED_BASE , behavior_types::SINGLE_SUPPORT or behavior_types::DOUBLE_SUPPORT ");
             behavior_type_ = bt;
+            if (verbose_)
+                std::cout << "using " << bt << std::endl;
         }
 
     } // namespace controllers
