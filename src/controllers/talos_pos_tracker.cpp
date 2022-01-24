@@ -183,9 +183,11 @@ namespace inria_wbc {
         {
             Controller::set_behavior_type(bt);
 
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
+            if (behavior_type_ == behavior_types::SINGLE_SUPPORT) {
+                _is_ss = true;
                 if (tasks_.find("momentum") != tasks_.end())
                     tsid_->removeTask("momentum", 0.0);
+            }
 
             if (_sconf_map.find(behavior_type_) != _sconf_map.end()) {
                 //set the _torso_max_roll in the bounds for safety
@@ -244,7 +246,7 @@ namespace inria_wbc {
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
-            if (_sconf_map[behavior_type_].use_momentum && tasks_.find("momentum") != tasks_.end())
+            if (_sconf_map[behavior_type_].use_momentum && !_is_ss)
                 momentum_ref = get_full_momentum_ref();
 
             if (_use_stabilizer) {
@@ -283,7 +285,7 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample momentum_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
-                if (_sconf_map[behavior_type_].use_momentum && tasks_.find("momentum") != tasks_.end()) {
+                if (_sconf_map[behavior_type_].use_momentum && !_is_ss) {
                     _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
 
                     auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
@@ -385,7 +387,7 @@ namespace inria_wbc {
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
-                if (_sconf_map[behavior_type_].use_momentum && tasks_.find("momentum") != tasks_.end())
+                if (_sconf_map[behavior_type_].use_momentum && !_is_ss)
                     set_momentum_ref(momentum_ref);
 
                 for (auto& contact_name : ac) {

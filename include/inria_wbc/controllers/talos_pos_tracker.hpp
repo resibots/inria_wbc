@@ -61,6 +61,7 @@ namespace inria_wbc {
             //stabilisation parameters
             std::map<std::string, inria_wbc::stabilizer::StabConfig> _sconf_map;
             bool _use_stabilizer = false;
+            bool _is_ss = false;
 
             //torque collision
             bool _use_torque_collision_detection;

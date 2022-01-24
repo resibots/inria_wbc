@@ -17,11 +17,11 @@
 #include <tsid/robots/robot-wrapper.hpp>
 #include <tsid/tasks/task-actuation-bounds.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
-#include <tsid/tasks/task-momentum-equality.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
+#include <tsid/tasks/task-momentum-equality.hpp>
 #include <tsid/tasks/task-se3-equality.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
 
@@ -155,7 +155,7 @@ namespace inria_wbc {
             bool verbose() const { return verbose_; }
 
             void save_configuration(const std::string& config_name, const std::string& robot_name = "robot") const;
-            void set_behavior_type(const std::string& bt);
+            virtual void set_behavior_type(const std::string& bt);
             const std::string& behavior_type() const { return behavior_type_; }
             const std::string& urdf() const { return urdf_; }
             const std::string& floating_base_joint_name() const { return floating_base_joint_name_; }
