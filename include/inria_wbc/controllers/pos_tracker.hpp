@@ -60,7 +60,7 @@ namespace inria_wbc {
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
             // therefore you can re-add it later by using its name
             void remove_task(const std::string& task_name, double transition_duration = 0.0);
-
+            void set_task_weight(const std::string& task_name, double w) { tsid_->updateTaskWeight(task_name, w); }
             // for external optimizers: we exclude the bound task for safety
             size_t num_task_weights() const;
             void update_task_weights(const std::vector<double>& new_weights);
