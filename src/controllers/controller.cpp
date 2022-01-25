@@ -63,6 +63,7 @@ namespace inria_wbc {
             base_path_ = IWBC_CHECK(c["base_path"].as<std::string>());
             auto floating_base_joint_name = IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
             auto urdf = IWBC_CHECK(c["urdf"].as<std::string>());
+            urdf_ = urdf;
             dt_ = IWBC_CHECK(c["dt"].as<double>());
             mimic_dof_names_ = IWBC_CHECK(c["mimic_dof_names"].as<std::vector<std::string>>());
             verbose_ = IWBC_CHECK(c["verbose"].as<bool>());
