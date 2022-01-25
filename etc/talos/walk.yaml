@@ -5,3 +5,5 @@ BEHAVIOR:
   step_height: 0.1
   step_length: 0.2
   num_of_cycles: 10
+  customize_task_weights:
+    momentum: 0.0

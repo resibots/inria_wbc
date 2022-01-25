@@ -22,6 +22,7 @@ set(INRIA_WBC_SOURCES
                             src/controllers/talos_pos_tracker.cpp
                             src/trajs/saver.cpp
                             src/trajs/loader.cpp
+                            src/behaviors/behavior.cpp
                             src/behaviors/generic/cartesian.cpp
                             src/behaviors/generic/cartesian_traj.cpp
                             src/behaviors/humanoid/squat.cpp

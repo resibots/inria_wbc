@@ -1,6 +1,7 @@
 #ifndef IWBC_TALOS_POS_TRACKER_HPP
 #define IWBC_TALOS_POS_TRACKER_HPP
 
+#include "inria_wbc/stabilizers/stabilizer_conf.hpp"
 #include <boost/optional.hpp>
 #include <inria_wbc/controllers/pos_tracker.hpp>
 #include <inria_wbc/estimators/cop.hpp>
@@ -29,7 +30,8 @@ namespace inria_wbc {
             bool closed_loop() const { return _closed_loop; }
             void set_closed_loop(bool b) { _closed_loop = b; }
 
-            void parse_stabilizer(const YAML::Node& config) override;
+            void parse_stabilizer(const YAML::Node& config);
+            void set_behavior_type(const std::string& bt);
 
             virtual const boost::optional<Eigen::Vector2d>& cop() const override { return _cop_estimator.cop(); }
             virtual const boost::optional<Eigen::Vector2d>& lcop() const override { return _cop_estimator.lcop_filtered(); }
@@ -57,21 +59,9 @@ namespace inria_wbc {
             estimators::Filter::Ptr _imu_angular_vel_filter;
 
             //stabilisation parameters
-            bool _use_stabilizer = true;
-            double _torso_max_roll = 0.25;
-
-            Eigen::VectorXd _com_gains;
-            Eigen::VectorXd _ankle_gains;
-            Eigen::VectorXd _ffda_gains;
-
-            bool _activate_zmp = false;
-            Eigen::VectorXd _zmp_p;
-            Eigen::VectorXd _zmp_d;
-            Eigen::VectorXd _zmp_w;
-
-            bool _use_momentum = false;
-            Eigen::VectorXd _momentum_p;
-            Eigen::VectorXd _momentum_d;
+            std::map<std::string, inria_wbc::stabilizer::StabConfig> _stabilizer_configs;
+            bool _use_stabilizer = false;
+            bool _is_ss = false;
 
             //torque collision
             bool _use_torque_collision_detection;
