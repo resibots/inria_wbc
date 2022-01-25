@@ -9,6 +9,7 @@ CONTROLLER:
   floating_base_joint_name: ""
   floating_base: true
   dt: 0.001
+  torso_max_roll: 0.25 #to prevent leg collision
   # by default we do not close the loop on the floating base
   # because it's not required in position control
   # and our robot does not have a very good estimator yet

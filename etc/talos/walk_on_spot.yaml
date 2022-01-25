@@ -3,3 +3,5 @@ BEHAVIOR:
   traj_com_duration: 1
   traj_foot_duration: 1
   step_height: 0.1
+  customize_task_weights:
+    momentum: 0.0

@@ -13,7 +13,6 @@ namespace inria_wbc {
         //Optional struct to gather stabilizers configuration
         struct StabConfig {
             int filter_size;
-            float torso_max_roll;
             Eigen::VectorXd com_gains;
             Eigen::VectorXd ankle_gains;
             Eigen::VectorXd ffda_gains;
@@ -30,7 +29,6 @@ namespace inria_wbc {
         {
             os << "StabConfig" << std::endl;
             os << "filter_size: " << s.filter_size << std::endl;
-            os << "torso_max_roll: " << s.torso_max_roll << std::endl;
             os << "com_gains: " << s.com_gains.transpose() << std::endl;
             os << "ankle_gains: " << s.ankle_gains.transpose() << std::endl;
             os << "ffda_gains: " << s.ffda_gains.transpose() << std::endl;
@@ -87,7 +85,6 @@ namespace inria_wbc {
             sconf.momentum_d = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).data(), sconf.momentum_d.size());
 
             sconf.use_zmp = IWBC_CHECK(s["use_zmp"].as<bool>());
-            sconf.torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());
             sconf.use_momentum = IWBC_CHECK(s["use_momentum"].as<bool>());
             sconf.filter_size = IWBC_CHECK(s["filter_size"].as<int>());
 

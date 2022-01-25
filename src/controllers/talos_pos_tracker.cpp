@@ -45,6 +45,29 @@ namespace inria_wbc {
 
         void TalosPosTracker::parse_configuration(const YAML::Node& config)
         {
+
+            //set the _torso_max_roll in the bounds for safety
+            auto names = robot_->model().names;
+            names.erase(names.begin(), names.begin() + names.size() - robot_->na());
+            auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
+            auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
+            std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
+
+            float torso_max_roll = IWBC_CHECK(config["torso_max_roll"].as<float>());
+            for (auto& n : to_limit) {
+                IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
+                auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
+
+                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
+
+                q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - torso_max_roll;
+                q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + torso_max_roll;
+            }
+            bound_task()->setPositionBounds(q_lb, q_ub);
+
+            if (verbose_)
+                std::cout << "torso_max_toll " << torso_max_roll << std::endl;
+
             parse_stabilizer(config);
 
             // init collision detection
@@ -183,31 +206,10 @@ namespace inria_wbc {
         {
             Controller::set_behavior_type(bt);
 
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT) {
+            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
                 _is_ss = true;
-                if (tasks_.find("momentum") != tasks_.end())
-                    tsid_->removeTask("momentum", 0.0);
-            }
 
             if (_sconf_map.find(behavior_type_) != _sconf_map.end()) {
-                //set the _torso_max_roll in the bounds for safety
-                auto names = robot_->model().names;
-                names.erase(names.begin(), names.begin() + names.size() - robot_->na());
-                auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
-                auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
-                std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
-
-                for (auto& n : to_limit) {
-                    IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
-                    auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
-
-                    IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
-
-                    q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _sconf_map[behavior_type_].torso_max_roll;
-                    q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _sconf_map[behavior_type_].torso_max_roll;
-                }
-                bound_task()->setPositionBounds(q_lb, q_ub);
-
                 auto history = _sconf_map[behavior_type_].filter_size;
                 _cop_estimator.set_history_size(history);
                 _lf_force_filter->set_window_size(history);
