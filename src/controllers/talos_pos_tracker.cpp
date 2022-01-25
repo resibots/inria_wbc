@@ -173,19 +173,19 @@ namespace inria_wbc {
 
             std::string stab_path;
             auto path = IWBC_CHECK(config["base_path"].as<std::string>());
-            _sconf_map[behavior_types::FIXED_BASE] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>()));
-            _sconf_map[behavior_types::SINGLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>()));
-            _sconf_map[behavior_types::DOUBLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>()));
+            _stabilizer_configs[behavior_types::FIXED_BASE] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>()));
+            _stabilizer_configs[behavior_types::SINGLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>()));
+            _stabilizer_configs[behavior_types::DOUBLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>()));
 
             if (verbose_) {
-                for (auto& c : _sconf_map) {
+                for (auto& c : _stabilizer_configs) {
                     std::cout << c.first << std::endl;
                     std::cout << c.second << std::endl;
                 }
                 std::cout << "using " << behavior_type_ << std::endl;
             }
 
-            auto history = _sconf_map[behavior_type_].filter_size;
+            auto history = _stabilizer_configs[behavior_type_].filter_size;
             _cop_estimator.set_history_size(history);
 
             _lf_force_filtered.setZero();
@@ -206,8 +206,8 @@ namespace inria_wbc {
         {
             Controller::set_behavior_type(bt);
 
-            if (_sconf_map.find(behavior_type_) != _sconf_map.end()) {
-                auto history = _sconf_map[behavior_type_].filter_size;
+            if (_stabilizer_configs.find(behavior_type_) != _stabilizer_configs.end()) {
+                auto history = _stabilizer_configs[behavior_type_].filter_size;
                 _cop_estimator.set_history_size(history);
                 _lf_force_filter->set_window_size(history);
                 _rf_force_filter->set_window_size(history);
@@ -216,14 +216,14 @@ namespace inria_wbc {
                 _imu_angular_vel_filter->set_window_size(history);
             }
             else {
-                IWBC_ERROR("_sconf_map does not have ", behavior_type_);
+                IWBC_ERROR("_stabilizer_configs does not have ", behavior_type_);
             }
         }
 
         void TalosPosTracker::update(const SensorData& sensor_data)
         {
-            if (_sconf_map.find(behavior_type_) == _sconf_map.end())
-                IWBC_ERROR("_sconf_map does not have ", behavior_type_);
+            if (_stabilizer_configs.find(behavior_type_) == _stabilizer_configs.end())
+                IWBC_ERROR("_stabilizer_configs does not have ", behavior_type_);
 
             // keep track of previous references to set them back after stabilization
             std::map<std::string, tsid::trajectories::TrajectorySample> contact_sample_ref;
@@ -246,7 +246,7 @@ namespace inria_wbc {
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
 
-            if (_sconf_map[behavior_type_].use_momentum)
+            if (_stabilizer_configs[behavior_type_].use_momentum)
                 momentum_ref = get_full_momentum_ref();
 
             if (_use_stabilizer) {
@@ -285,29 +285,29 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample momentum_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
-                if (_sconf_map[behavior_type_].use_momentum) {
+                if (_stabilizer_configs[behavior_type_].use_momentum) {
                     _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
 
                     auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
-                    stabilizer::momentum_imu_admittance(dt_, _sconf_map[behavior_type_].momentum_p, _sconf_map[behavior_type_].momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                    stabilizer::momentum_imu_admittance(dt_, _stabilizer_configs[behavior_type_].momentum_p, _stabilizer_configs[behavior_type_].momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
                     set_momentum_ref(momentum_sample);
                 }
 
                 const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
                 // com_admittance
                 if (valid_cop) {
-                    stabilizer::com_admittance(dt_, _sconf_map[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
+                    stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                 }
 
                 //zmp admittance
-                if (valid_cop && _sconf_map[behavior_type_].use_zmp) {
+                if (valid_cop && _stabilizer_configs[behavior_type_].use_zmp) {
                     double M = pinocchio_total_model_mass();
                     Eigen::Matrix<double, 6, 1> left_fref, right_fref;
-                    stabilizer::zmp_distributor_admittance(dt_, _sconf_map[behavior_type_].zmp_p, _sconf_map[behavior_type_].zmp_d, M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
+                    stabilizer::zmp_distributor_admittance(dt_, _stabilizer_configs[behavior_type_].zmp_p, _stabilizer_configs[behavior_type_].zmp_d, M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
 
-                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_sconf_map[behavior_type_].zmp_w);
-                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_sconf_map[behavior_type_].zmp_w);
+                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
+                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
                     contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
                     contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
                 }
@@ -315,14 +315,14 @@ namespace inria_wbc {
                 // left ankle_admittance
                 if (cops[1] && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, _sconf_map[behavior_type_].ankle_gains, cops[1].value(), model_joint_pos("leg_left_6_joint"), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[1].value(), model_joint_pos("leg_left_6_joint"), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     contact("contact_lfoot")->setReference(lf_contact_sample);
                 }
 
                 //right ankle_admittance
                 if (cops[2] && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
-                    stabilizer::ankle_admittance(dt_, _sconf_map[behavior_type_].ankle_gains, cops[2].value(), model_joint_pos("leg_right_6_joint"), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[2].value(), model_joint_pos("leg_right_6_joint"), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     contact("contact_rfoot")->setReference(rf_contact_sample);
                 }
@@ -338,7 +338,7 @@ namespace inria_wbc {
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
                     double M = pinocchio_total_model_mass();
 
-                    stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _sconf_map[behavior_type_].ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
+                    stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _stabilizer_configs[behavior_type_].ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
             }
@@ -387,7 +387,7 @@ namespace inria_wbc {
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
-                if (_sconf_map[behavior_type_].use_momentum)
+                if (_stabilizer_configs[behavior_type_].use_momentum)
                     set_momentum_ref(momentum_ref);
 
                 for (auto& contact_name : ac) {

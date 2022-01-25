@@ -59,7 +59,7 @@ namespace inria_wbc {
             estimators::Filter::Ptr _imu_angular_vel_filter;
 
             //stabilisation parameters
-            std::map<std::string, inria_wbc::stabilizer::StabConfig> _sconf_map;
+            std::map<std::string, inria_wbc::stabilizer::StabConfig> _stabilizer_configs;
             bool _use_stabilizer = false;
             bool _is_ss = false;
 
