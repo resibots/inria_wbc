@@ -11,8 +11,8 @@
         <joint name="arm_2_joint" value="0.78539816339" />
         <joint name="arm_3_joint" value="0.0" />
         <joint name="arm_4_joint" value="1.57079632679" />
-        <joint name="arm_5_joint" value="0.0" />
-        <joint name="arm_6_joint" value="0.0" />
+        <joint name="arm_5_joint" value="1.57079632679" />
+        <joint name="arm_6_joint" value="0.78539816339" />
         <joint name="arm_7_joint" value="0.0" />
         <joint name="gripper_finger_joint" value="0.0" />
     </group_state>
