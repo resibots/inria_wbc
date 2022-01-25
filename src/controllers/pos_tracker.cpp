@@ -117,6 +117,7 @@ namespace inria_wbc {
                     // the task is added automatically to TSID by the factory
                     auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config);
                     tasks_[name] = task;
+                    activated_tasks_.push_back(name);
                 }
                 if (verbose_)
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
@@ -243,6 +244,7 @@ namespace inria_wbc {
             IWBC_ASSERT(tasks_.find(task_name) != tasks_.end(), "Trying to remove an unknown task:", task_name);
             bool res = tsid_->removeTask(task_name, transition_duration);
             IWBC_ASSERT(res, "Cannot remove an unknown task: ", task_name);
+            activated_tasks_.erase(std::remove(activated_tasks_.begin(), activated_tasks_.end(), task_name), activated_tasks_.end());
         }
 
         size_t PosTracker::num_task_weights() const

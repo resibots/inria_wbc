@@ -70,6 +70,7 @@ namespace inria_wbc {
             virtual void parse_frames(const std::string&);
             // the list of all the tasks
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>> tasks_;
+            std::vector<std::string> activated_tasks_;
             // contacts are not tasks in tsid
             std::unordered_map<std::string, std::shared_ptr<tsid::contacts::Contact6dExt>> contacts_;
 

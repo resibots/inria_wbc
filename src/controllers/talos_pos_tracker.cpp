@@ -206,9 +206,6 @@ namespace inria_wbc {
         {
             Controller::set_behavior_type(bt);
 
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
-                _is_ss = true;
-
             if (_sconf_map.find(behavior_type_) != _sconf_map.end()) {
                 auto history = _sconf_map[behavior_type_].filter_size;
                 _cop_estimator.set_history_size(history);
@@ -248,7 +245,8 @@ namespace inria_wbc {
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
-            if (_sconf_map[behavior_type_].use_momentum && !_is_ss)
+
+            if (_sconf_map[behavior_type_].use_momentum)
                 momentum_ref = get_full_momentum_ref();
 
             if (_use_stabilizer) {
@@ -287,7 +285,7 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample momentum_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
-                if (_sconf_map[behavior_type_].use_momentum && !_is_ss) {
+                if (_sconf_map[behavior_type_].use_momentum) {
                     _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
 
                     auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
@@ -389,7 +387,7 @@ namespace inria_wbc {
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
-                if (_sconf_map[behavior_type_].use_momentum && !_is_ss)
+                if (_sconf_map[behavior_type_].use_momentum)
                     set_momentum_ref(momentum_ref);
 
                 for (auto& contact_name : ac) {
