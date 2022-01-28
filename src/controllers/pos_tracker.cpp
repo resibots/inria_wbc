@@ -151,7 +151,7 @@ namespace inria_wbc {
         {
             auto task = se3_task(task_name);
             pinocchio::SE3 se3;
-            auto pos = task->getReference().pos;
+            auto pos = task->getReference().getValue();
             tsid::math::vectorToSE3(pos, se3);
             return se3;
         }
