@@ -1,0 +1,13 @@
+refs:
+  #run with ./talos_load_external_graphics  -d 50  --damage true --cut leg_left_4_link -a servo -f
+  # posture: 
+  #   q: q_one_knee.csv
+  #   size: 36
+  #run with ./talos_load_external_graphics  -d 50  --damage true --cut leg_left_1_link -a servo -f
+  # posture:
+  #   q: q_one_leg.csv
+  #   size: 33
+  #run with ./talos_load_external_graphics  -d 50   -a servo -f
+  posture:
+    q: taichi.csv
+    size: 39

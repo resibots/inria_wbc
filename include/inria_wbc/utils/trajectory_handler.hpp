@@ -1,8 +1,10 @@
 #ifndef IWBC_TRAJECTORY_HANDLER_HPP
 #define IWBC_TRAJECTORY_HANDLER_HPP
 
-#include <vector>
+#include <pinocchio/spatial/se3.hpp>
+#include <Eigen/Core>
 #include <cassert>
+#include <vector>
 #define assertm(exp, msg) assert(((void)msg, exp))
 
 #include <Eigen/Dense>

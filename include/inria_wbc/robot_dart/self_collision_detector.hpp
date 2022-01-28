@@ -30,6 +30,15 @@ namespace inria_wbc {
                 _robot->skeleton()->disableSelfCollisionCheck();
                 return _collision_names;
             }
+            void remove_frames()
+            {
+                _collision_group->removeAllShapeFrames();
+            }
+
+            void add_frames()
+            {
+                _collision_group->addShapeFramesOf(_robot->skeleton().get());
+            }
 
         protected:
             std::shared_ptr<::robot_dart::Robot> _robot;

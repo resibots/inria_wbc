@@ -62,6 +62,7 @@ namespace inria_wbc {
                 Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                 Eigen::AngleAxisd aaxis(quat);
                 q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
+                q_tsid_.segment(3, 4) << quat.normalized().coeffs();
             }
             else {
                 q0_ = q_tsid_;
@@ -84,7 +85,7 @@ namespace inria_wbc {
 
             auto task_file = IWBC_CHECK(c["tasks"].as<std::string>());
             auto p = path / boost::filesystem::path(task_file);
-            parse_tasks(p.string());
+            parse_tasks(p.string(), config);
 
             if (verbose_) {
                 std::cout << "--------- Solver size info ---------" << std::endl;
@@ -96,7 +97,7 @@ namespace inria_wbc {
             }
         }
 
-        void PosTracker::parse_tasks(const std::string& path)
+        void PosTracker::parse_tasks(const std::string& path, const YAML::Node& config)
         {
             int task_count = 0;
             if (verbose_)
@@ -107,15 +108,16 @@ namespace inria_wbc {
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
                 if (type == "contact") {
                     // the task is added to tsid by make_contact
-                    auto task = tasks::make_contact_task(robot_, tsid_, name, it->second, config_);
+                    auto task = tasks::make_contact_task(robot_, tsid_, name, it->second, config);
                     contacts_[name] = task;
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
                 else {
                     // the task is added automatically to TSID by the factory
-                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config_);
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config);
                     tasks_[name] = task;
+                    activated_tasks_.push_back(name);
                 }
                 if (verbose_)
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
@@ -159,6 +161,13 @@ namespace inria_wbc {
             auto task = se3_task(task_name);
             auto sample = to_sample(ref);
             task->setReference(sample);
+        }
+
+        void PosTracker::set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name)
+        {
+            auto c = contact(contact_name);
+            auto sample = to_sample(ref);
+            c->setReference(sample);
         }
 
         void PosTracker::set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name)
@@ -235,6 +244,7 @@ namespace inria_wbc {
             IWBC_ASSERT(tasks_.find(task_name) != tasks_.end(), "Trying to remove an unknown task:", task_name);
             bool res = tsid_->removeTask(task_name, transition_duration);
             IWBC_ASSERT(res, "Cannot remove an unknown task: ", task_name);
+            activated_tasks_.erase(std::remove(activated_tasks_.begin(), activated_tasks_.end(), task_name), activated_tasks_.end());
         }
 
         size_t PosTracker::num_task_weights() const
