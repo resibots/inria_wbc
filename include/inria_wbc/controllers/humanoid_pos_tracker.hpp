@@ -37,6 +37,7 @@ namespace inria_wbc {
         protected:
             void init_com();
             void parse_stabilizer(const YAML::Node& config) override;
+            std::string stab_path(const YAML::Node& config);
 
             //sensor estimation & filtering
             estimators::Cop _cop_estimator;
@@ -65,10 +66,6 @@ namespace inria_wbc {
             Eigen::VectorXd _zmp_p;
             Eigen::VectorXd _zmp_d;
             Eigen::VectorXd _zmp_w;
-
-            bool _use_momentum = false;
-            Eigen::VectorXd _momentum_p;
-            Eigen::VectorXd _momentum_d;
         };
 
     } // namespace controllers

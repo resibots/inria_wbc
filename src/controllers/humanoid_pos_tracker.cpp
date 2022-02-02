@@ -78,28 +78,28 @@ namespace inria_wbc {
             }
         }
 
+        std::string HumanoidPosTracker::stab_path(const YAML::Node& config) {
+            auto c = IWBC_CHECK(config["stabilizer"]);
+            auto path = IWBC_CHECK(config["base_path"].as<std::string>());
+            if (behavior_type_ == behavior_types::FIXED_BASE)
+                return IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>());
+            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
+                return IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>());
+            if (behavior_type_ == behavior_types::DOUBLE_SUPPORT)
+                return IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>());
+            IWBC_ERROR("Unrecognized behavior type (single/double support)");
+            return "";
+        }
+
         void HumanoidPosTracker::parse_stabilizer(const YAML::Node& config)
         {
             auto c = IWBC_CHECK(config["stabilizer"]);
             _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
 
-            std::string stab_path;
-            auto path = IWBC_CHECK(config["base_path"].as<std::string>());
-            if (behavior_type_ == behavior_types::FIXED_BASE)
-                stab_path = IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>());
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
-                stab_path = IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>());
-            if (behavior_type_ == behavior_types::DOUBLE_SUPPORT)
-                stab_path = IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>());
-
-            YAML::Node s = IWBC_CHECK(YAML::LoadFile(stab_path));
+            // get the right parameters for the stabilizer, depending on the behavior type
+            YAML::Node s = IWBC_CHECK(YAML::LoadFile(stab_path(config)));
             _activate_zmp = IWBC_CHECK(s["activate_zmp"].as<bool>());
-            _torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());
-            
-            _use_momentum = IWBC_CHECK(s["use_momentum"].as<bool>());
-
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
-                _use_momentum = false;
+            _torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());            
 
             //get stabilizers gains
             _com_gains.resize(6);
@@ -108,17 +108,13 @@ namespace inria_wbc {
             _zmp_p.resize(6);
             _zmp_d.resize(6);
             _zmp_w.resize(6);
-            _momentum_p.resize(6);
-            _momentum_d.resize(6);
-
+          
             _com_gains.setZero();
             _ankle_gains.setZero();
             _ffda_gains.setZero();
             _zmp_p.setZero();
             _zmp_d.setZero();
             _zmp_w.setZero();
-            _momentum_p.setZero();
-            _momentum_d.setZero();
 
             IWBC_ASSERT(IWBC_CHECK(s["com"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the com stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the ankle stabilizer");
@@ -126,8 +122,7 @@ namespace inria_wbc {
             IWBC_ASSERT(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the zmp stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the zmp stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in w for the zmp stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the momentum stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the momentum stabilizer");
+          
 
             _com_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["com"].as<std::vector<double>>()).data(), _com_gains.size());
             _ankle_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).data(), _ankle_gains.size());
@@ -135,9 +130,7 @@ namespace inria_wbc {
             _zmp_p = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).data(), _zmp_p.size());
             _zmp_d = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).data(), _zmp_d.size());
             _zmp_w = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).data(), _zmp_w.size());
-            _momentum_p = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).data(), _momentum_p.size());
-            _momentum_d = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).data(), _momentum_d.size());
-
+          
             auto history = s["filter_size"].as<int>();
             _cop_estimator.set_history_size(history);
 
@@ -162,10 +155,7 @@ namespace inria_wbc {
                 std::cout << "Zmp:" << _activate_zmp << std::endl;
                 std::cout << "zmp_p:" << _zmp_p.transpose() << std::endl;
                 std::cout << "zmp_d:" << _zmp_d.transpose() << std::endl;
-                std::cout << "zmp_w:" << _zmp_w.transpose() << std::endl;
-                std::cout << "momentum:" << _use_momentum << std::endl;
-                std::cout << "momentum_p:" << _momentum_p.transpose() << std::endl;
-                std::cout << "momentum_d:" << _momentum_d.transpose() << std::endl;
+                std::cout << "zmp_w:" << _zmp_w.transpose() << std::endl;               
             }
         }
 
@@ -175,7 +165,6 @@ namespace inria_wbc {
             std::map<std::string, tsid::trajectories::TrajectorySample> contact_sample_ref;
             std::map<std::string, pinocchio::SE3> contact_se3_ref;
             std::map<std::string, Eigen::Matrix<double, 6, 1>> contact_force_ref;
-            tsid::trajectories::TrajectorySample momentum_ref;
 
             auto ac = activated_contacts_;
             for (auto& contact_name : ac) {
@@ -190,9 +179,7 @@ namespace inria_wbc {
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
-            if (_use_momentum)
-                momentum_ref = get_full_momentum_ref();
-
+            
             if (_use_stabilizer) {
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
                 IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the RF torque");
@@ -231,17 +218,9 @@ namespace inria_wbc {
 
                 tsid::trajectories::TrajectorySample lf_se3_sample, lf_contact_sample, rf_se3_sample, rf_contact_sample;
                 tsid::trajectories::TrajectorySample com_sample, torso_sample;
-                tsid::trajectories::TrajectorySample momentum_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
-                if (_use_momentum) {
-                    _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
-
-                    auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
-                    stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
-                    set_momentum_ref(momentum_sample);
-                }
-
+               
                 const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
                 // com_admittance
                 if (valid_cop) {
@@ -328,9 +307,7 @@ namespace inria_wbc {
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
-                if (_use_momentum)
-                    set_momentum_ref(momentum_ref);
-                    
+                                  
                 for (auto& contact_name : ac) {
                     contact(contact_name)->setReference(contact_sample_ref[contact_name]);
                     contact(contact_name)->Contact6d::setForceReference(contact_force_ref[contact_name]);

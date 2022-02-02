@@ -37,6 +37,7 @@ namespace inria_wbc {
         TalosPosTracker::TalosPosTracker(const YAML::Node& config) : HumanoidPosTracker(config)
         {
             parse_torque_safety(config["CONTROLLER"]);
+            parse_momentum_stab(config["CONTROLLER"]);
 
             //set the _torso_max_roll in the bounds for safety (for the stabilizer)
             auto names = robot_->model().names;
@@ -56,6 +57,34 @@ namespace inria_wbc {
             }
 
             bound_task()->setPositionBounds(q_lb, q_ub);
+        }
+
+        void TalosPosTracker::parse_momentum_stab(const YAML::Node& config)
+        {
+
+
+            auto c = IWBC_CHECK(config["stabilizer"]);
+            YAML::Node s = IWBC_CHECK(YAML::LoadFile( stab_path(config)));
+
+            _use_momentum = IWBC_CHECK(s["use_momentum"].as<bool>());
+            if (behavior_type_ == behavior_types::SINGLE_SUPPORT) {
+                _use_momentum = false;
+                std::cout << "WARNING: Disabling momentum stabilizer because the behavior is single-support!" << std::endl;
+            }
+
+            IWBC_ASSERT(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the momentum stabilizer");
+            IWBC_ASSERT(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the momentum stabilizer");
+            _momentum_p.resize(6);
+            _momentum_d.resize(6);
+            _momentum_p.setZero();
+            _momentum_d.setZero();
+            _momentum_p = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).data(), _momentum_p.size());
+            _momentum_d = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).data(), _momentum_d.size());
+            if (verbose_) {
+                std::cout << "momentum:" << _use_momentum << std::endl;
+                std::cout << "momentum_p:" << _momentum_p.transpose() << std::endl;
+                std::cout << "momentum_d:" << _momentum_d.transpose() << std::endl;
+            }
         }
 
         void TalosPosTracker::parse_torque_safety(const YAML::Node& config)
@@ -130,7 +159,25 @@ namespace inria_wbc {
                 auto tsid_tau = utils::slice_vec(this->tau(), _torque_collision_joints_ids);
                 _collision_detected = (false == _torque_collision_detection.check(tsid_tau, sensor_data.at("joints_torque")));
             }
+
+            tsid::trajectories::TrajectorySample momentum_ref;
+            if (_use_momentum)
+                momentum_ref = get_full_momentum_ref();
+
+            if (_use_momentum) {
+                tsid::trajectories::TrajectorySample momentum_sample;
+                _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
+
+                auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
+                stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                set_momentum_ref(momentum_sample);
+            }
+
             HumanoidPosTracker::update(sensor_data);
+            if (_use_stabilizer) {
+                if (_use_momentum)
+                    set_momentum_ref(momentum_ref);
+            }
         }
 
         void TalosPosTracker::clear_collision_detection()
@@ -139,7 +186,6 @@ namespace inria_wbc {
             _torque_collision_filter->reset();
             _collision_detected = false;
         }
-        
 
     } // namespace controllers
 } // namespace inria_wbc

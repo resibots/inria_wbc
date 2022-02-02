@@ -37,6 +37,12 @@ namespace inria_wbc {
             std::vector<std::string> _torque_collision_joints;
             std::vector<int> _torque_collision_joints_ids;
             Eigen::VectorXd _torque_collision_threshold;
+
+            // momentum stabilizer (Talos only)
+            void parse_momentum_stab(const YAML::Node& config);
+            bool _use_momentum = false;
+            Eigen::VectorXd _momentum_p;
+            Eigen::VectorXd _momentum_d;
         };
 
     } // namespace controllers
