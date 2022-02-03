@@ -43,7 +43,7 @@ namespace trajectory_handler {
         assertm(x0.size() == xf.size(), "minimum_jerk_polynom x0 and xf should have the same size");
         double td = t / trajectory_duration;
         double td_pow_2 = td * td;
-        Eigen::VectorXd xt = (xf - x0) * (30 * td * td * td_pow_2 - 60 * td * td_pow_2  + 30 * td_pow_2);
+        Eigen::VectorXd xt = (xf - x0) * (30 * td * td * td_pow_2 - 60 * td * td_pow_2  + 30 * td_pow_2) / trajectory_duration;
         return xt;
     }
 
@@ -53,7 +53,7 @@ namespace trajectory_handler {
     {
         assertm(x0.size() == xf.size(), "minimum_jerk_polynom x0 and xf should have the same size");
         double td = t / trajectory_duration;
-        Eigen::VectorXd xt = (xf - x0) * (120 * td * td * td - 120 * td * td  + 60 * td);
+        Eigen::VectorXd xt = (xf - x0) * (120 * td * td * td - 180 * td * td  + 60 * td) / std::pow(trajectory_duration, 2.0);
         return xt;
     }
 
