@@ -87,6 +87,36 @@ namespace inria_wbc {
             auto p = path / boost::filesystem::path(task_file);
             parse_tasks(p.string(), config);
 
+            ///////////// check if joint range of motion has to be reduced //////////////////////////
+            if(c["joint_range_reduction"])
+            {
+                double reduction_rads = IWBC_CHECK(c["joint_range_reduction"].as<double>()) / 180 * M_PI;
+
+                auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
+                auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
+
+                if(verbose_)
+                    std::cout << "joints' range of motion reduced by: " << reduction_rads << " rads" << std::endl;
+
+                for(size_t i=0; i < robot_->na(); ++i)
+                {
+                    if(q_ub[i] - q_lb[i] < 2 * reduction_rads)
+                        IWBC_ERROR("Joint range reduction: reduction cannot be greater than actual range of motion");
+
+                    if(verbose_)
+                        std::cout << "change bounds for joint " << pinocchio_joint_names()[i+2] 
+                            << " from (" << q_lb[i] <<  "," << q_ub[i] << ") ";
+                    
+                    q_lb[i] += reduction_rads;
+                    q_ub[i] -= reduction_rads;
+
+                    if(verbose_)
+                        std::cout << "to (" << q_lb[i] <<  "," << q_ub[i] << ")" << std::endl;
+                }
+
+                bound_task()->setPositionBounds(q_lb, q_ub);
+            }
+
             if (verbose_) {
                 std::cout << "--------- Solver size info ---------" << std::endl;
                 std::cout << "total number of variable (acceleration + contact-force) : " << tsid_->nVar() << std::endl;
