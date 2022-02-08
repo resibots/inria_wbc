@@ -96,7 +96,9 @@ namespace inria_wbc {
                 auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
 
                 if(verbose_)
-                    std::cout << "joints' range of motion reduced by: " << reduction_rads << " rads" << std::endl;
+                    std::cout << "Joints' range of motion reduced by: " << reduction_rads << " rads" << std::endl;
+
+                auto q = q0_.tail(robot_->na());
 
                 for(size_t i=0; i < robot_->na(); ++i)
                 {
@@ -111,7 +113,10 @@ namespace inria_wbc {
                     q_ub[i] -= reduction_rads;
 
                     if(verbose_)
-                        std::cout << "to (" << q_lb[i] <<  "," << q_ub[i] << ")" << std::endl;
+                        std::cout << "to (" << q_lb[i] <<  "," << q_ub[i] << "). q=" << q[i] << std::endl;
+
+                    if(q[i] < q_lb[i] || q[i] > q_ub[i])
+                        IWBC_ERROR("Joint range reduction(", pinocchio_joint_names()[i+2], "): q0 falls outside reduced joit space.");
                 }
 
                 bound_task()->setPositionBounds(q_lb, q_ub);
