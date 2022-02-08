@@ -13,7 +13,7 @@ namespace inria_wbc {
             const Eigen::Vector3d& lf_torque, const Eigen::Vector3d& lf_force,
             const Eigen::Vector3d& rf_torque, const Eigen::Vector3d& rf_force, bool memory)
         {            
-            if (-lf_force(2) > fmin()) {
+            if (lf_force(2) > fmin()) {
                 _lcop_raw = _compute_foot_cop(lf_pos, lf_torque, lf_force);
                 _lcop_filtered = _lcop_filter->filter(_lcop_raw.value());
             }
@@ -22,7 +22,7 @@ namespace inria_wbc {
                 _lcop_filter->reset();
             }
 
-            if (-rf_force(2) > fmin()) {
+            if (rf_force(2) > fmin()) {
                 _rcop_raw = _compute_foot_cop(rf_pos, rf_torque, rf_force);
                 _rcop_filtered = _rcop_filter->filter(_rcop_raw.value());
             }
