@@ -91,12 +91,14 @@ namespace inria_wbc {
             if(c["joint_range_reduction"])
             {
                 double reduction_rads = IWBC_CHECK(c["joint_range_reduction"].as<double>()) / 180 * M_PI;
+                if(reduction_rads < 0)
+                    IWBC_ERROR("Joint range reduction: reduction must be positive.");
 
                 auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
                 auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
 
                 if(verbose_)
-                    std::cout << "Joints' range of motion reduced by: " << reduction_rads << " rads" << std::endl;
+                    std::cout << "Joints' range of motion reduced by: " << reduction_rads << " rads." << std::endl;
 
                 auto q = q0_.tail(robot_->na());
 
@@ -106,7 +108,7 @@ namespace inria_wbc {
                         IWBC_ERROR("Joint range reduction: reduction cannot be greater than actual range of motion");
 
                     if(verbose_)
-                        std::cout << "change bounds for joint " << pinocchio_joint_names()[i+2] 
+                        std::cout << "change bounds for " << pinocchio_joint_names()[i+2] 
                             << " from (" << q_lb[i] <<  "," << q_ub[i] << ") ";
                     
                     q_lb[i] += reduction_rads;
