@@ -1,5 +1,5 @@
-#ifndef IWBC_TRAJECTORY_HANDLER_HPP
-#define IWBC_TRAJECTORY_HANDLER_HPP
+#ifndef IWBC_TRAJS_GENERATOR_HPP
+#define IWBC_TRAJS_GENERATOR_HPP
 
 #include <pinocchio/spatial/se3.hpp>
 #include <Eigen/Core>
@@ -10,23 +10,24 @@
 #include <Eigen/Dense>
 #include <pinocchio/multibody/data.hpp>
 
-namespace trajectory_handler {
+namespace inria_wbc {
+namespace trajs {
 
-    namespace order
+    namespace d_order
     {
         constexpr uint16_t ZERO = 0;
         constexpr uint16_t FIRST = 1;
         constexpr uint16_t SECOND = 2;
     }
 
-    template <uint16_t d_order>
+    template <uint16_t DO>
     Eigen::VectorXd minimum_jerk_polynom(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
     {
-       IWBC_ERROR("minimum_jerk_polynom is not implemented for " + std::to_string(d_order) + " derivative order.");
+       IWBC_ERROR("minimum_jerk_polynom is not implemented for " + std::to_string(DO) + " derivative order.");
     }
 
     template <>
-    inline Eigen::VectorXd minimum_jerk_polynom<order::ZERO>(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
+    inline Eigen::VectorXd minimum_jerk_polynom<d_order::ZERO>(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
     {
         assertm(x0.size() == xf.size(), "minimum_jerk_polynom x0 and xf should have the same size");
         double td = t / trajectory_duration;
@@ -38,7 +39,7 @@ namespace trajectory_handler {
 
     // first order derivative value of minimum jerk polynom at time t
     template <>
-    inline Eigen::VectorXd minimum_jerk_polynom<order::FIRST>(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
+    inline Eigen::VectorXd minimum_jerk_polynom<d_order::FIRST>(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
     {
         assertm(x0.size() == xf.size(), "minimum_jerk_polynom x0 and xf should have the same size");
         double td = t / trajectory_duration;
@@ -49,7 +50,7 @@ namespace trajectory_handler {
 
     // second order derivative value of minimum jerk polynom at time t
     template <>
-    inline Eigen::VectorXd minimum_jerk_polynom<order::SECOND>(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
+    inline Eigen::VectorXd minimum_jerk_polynom<d_order::SECOND>(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
     {
         assertm(x0.size() == xf.size(), "minimum_jerk_polynom x0 and xf should have the same size");
         double td = t / trajectory_duration;
@@ -59,15 +60,15 @@ namespace trajectory_handler {
 
     inline Eigen::VectorXd minimum_jerk_polynom(const Eigen::VectorXd& x0, const Eigen::VectorXd& xf, double t, double trajectory_duration)
     {
-        return minimum_jerk_polynom<order::ZERO>(x0, xf, t, trajectory_duration);
+        return minimum_jerk_polynom<d_order::ZERO>(x0, xf, t, trajectory_duration);
     }
 
 
-    template <uint16_t ORDER = order::ZERO>
-    inline std::vector<Eigen::VectorXd> compute_traj(const Eigen::VectorXd& start, const Eigen::VectorXd& dest, double dt, double trajectory_duration)
+    template <uint16_t ORDER = d_order::ZERO>
+    inline std::vector<Eigen::VectorXd> min_jerk_trajectory(const Eigen::VectorXd& start, const Eigen::VectorXd& dest, double dt, double trajectory_duration)
     {
-        if(ORDER > order::SECOND)
-            IWBC_ERROR("compute_traj is not implemented for derivative of order " + std::to_string(ORDER) + ".");
+        if(ORDER > d_order::SECOND)
+            IWBC_ERROR("min_jerk_trajectory is not implemented for derivative of order " + std::to_string(ORDER) + ".");
         
         uint n_steps = std::floor(trajectory_duration / dt);
         std::vector<Eigen::VectorXd> trajectory(n_steps);
@@ -76,40 +77,11 @@ namespace trajectory_handler {
         return trajectory;
     }
 
-    // inline std::vector<pinocchio::SE3> compute_traj(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration)
-    // {
-    //     Eigen::Vector3d pos_start, pos_dest, pos_xt;
-    //     pos_start = start.translation();
-    //     pos_dest = dest.translation();
-    //     Eigen::Quaterniond quat_start(start.rotation());
-    //     Eigen::Quaterniond quat_dest(dest.rotation());
-
-    //     // Interpolate time as min jerk to use in slerp routine (otherwise slerp gives constant angular velocity result)
-    //     Eigen::VectorXd t_start(1), t_dest(1), t_xt(1);
-    //     t_start << 0.;
-    //     t_dest << 1.;
-
-    //     uint n_steps = std::floor(trajectory_duration / dt);
-    //     std::vector<pinocchio::SE3> trajectory;
-
-    //     for (uint i = 0; i < n_steps; i++) {
-    //         // Min jerk trajectory for translation
-    //         pos_xt = minimum_jerk_polynom(pos_start, pos_dest, dt * i, trajectory_duration);
-    //         t_xt = minimum_jerk_polynom(t_start, t_dest, dt * i, trajectory_duration);
-    //         // Slerp interpolation for quaternion
-    //         Eigen::Quaterniond quat_xt = quat_start.slerp(t_xt(0), quat_dest);
-    //         pinocchio::SE3 xt = pinocchio::SE3(quat_xt, pos_xt);
-    //         trajectory.push_back(xt);
-    //     }
-    //     return trajectory;
-    // }
-
-
     template<uint16_t ORDER>
-    inline std::vector<Eigen::VectorXd> compute_traj(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration)
+    inline std::vector<Eigen::VectorXd> min_jerk_trajectory(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration)
     {
-        if(ORDER > order::SECOND || ORDER < order::FIRST)
-            IWBC_ERROR("compute_traj is not implemented for derivative of order " + std::to_string(ORDER) + ".");
+        if(ORDER > d_order::SECOND || ORDER < d_order::FIRST)
+            IWBC_ERROR("min_jerk_trajectory is not implemented for derivative of order " + std::to_string(ORDER) + ".");
 
         Eigen::Vector3d pos_start, pos_dest, pos_d_xt;
         pos_start = start.translation();
@@ -142,7 +114,7 @@ namespace trajectory_handler {
         return trajectory;
     }
 
-    inline std::vector<pinocchio::SE3> compute_traj(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration)
+    inline std::vector<pinocchio::SE3> min_jerk_trajectory(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration)
     {
         Eigen::Vector3d pos_start, pos_dest, pos_xt;
         pos_start = start.translation();
@@ -183,5 +155,7 @@ namespace trajectory_handler {
         return trajectory;
     }
 
-} // namespace trajectory_handler
+} // namespace trajs
+} // namespace inria_wbc
+
 #endif

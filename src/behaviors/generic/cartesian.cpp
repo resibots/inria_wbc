@@ -9,8 +9,6 @@ namespace inria_wbc {
                                                                                                  traj_selector_(0)
             {
 
-                namespace trh = trajectory_handler;
-
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
                 trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
                 behavior_type_ = this->behavior_type();
@@ -45,15 +43,15 @@ namespace inria_wbc {
                     std::vector<std::vector<Eigen::VectorXd>> trajectory_d;
                     std::vector<std::vector<Eigen::VectorXd>> trajectory_dd;
 
-                    trajectory.push_back(trh::compute_traj(task_init, task_final, controller_->dt(), trajectory_duration_));
-                    trajectory_d.push_back(trh::compute_traj<trh::order::FIRST>(task_init, task_final, controller_->dt(), trajectory_duration_));
-                    trajectory_dd.push_back(trh::compute_traj<trh::order::SECOND>(task_init, task_final, controller_->dt(), trajectory_duration_));
+                    trajectory.push_back(trajs::min_jerk_trajectory(task_init, task_final, controller_->dt(), trajectory_duration_));
+                    trajectory_d.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(task_init, task_final, controller_->dt(), trajectory_duration_));
+                    trajectory_dd.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(task_init, task_final, controller_->dt(), trajectory_duration_));
 
                     if (loop_)
                     {
-                        trajectory.push_back(trh::compute_traj(task_final, task_init, controller_->dt(), trajectory_duration_));
-                        trajectory_d.push_back(trh::compute_traj<trh::order::FIRST>(task_final, task_init, controller_->dt(), trajectory_duration_));
-                        trajectory_dd.push_back(trh::compute_traj<trh::order::SECOND>(task_final, task_init, controller_->dt(), trajectory_duration_));
+                        trajectory.push_back(trajs::min_jerk_trajectory(task_final, task_init, controller_->dt(), trajectory_duration_));
+                        trajectory_d.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(task_final, task_init, controller_->dt(), trajectory_duration_));
+                        trajectory_dd.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(task_final, task_init, controller_->dt(), trajectory_duration_));
                     }
 
                     trajectories_.push_back(trajectory);

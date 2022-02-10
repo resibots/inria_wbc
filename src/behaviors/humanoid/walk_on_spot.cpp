@@ -71,39 +71,39 @@ namespace inria_wbc {
                 for (auto c : cycle_) {
                     switch (c) {
                     case States::INIT:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajectory_handler::compute_traj(com_init, com_rf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_com_duration_));
+                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_com_duration_));
+                        _com_trajs.push_back(trajs::min_jerk_trajectory(com_init, com_rf, dt_, traj_com_duration_));
                         break;
                     case States::LIFT_UP_LF:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajectory_handler::compute_traj(lf_low, lf_high, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajectory_handler::constant_traj(com_rf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_foot_duration_));
+                        _lf_trajs.push_back(trajs::min_jerk_trajectory(lf_low, lf_high, dt_, traj_foot_duration_));
+                        _com_trajs.push_back(trajs::constant_traj(com_rf, dt_, traj_foot_duration_));
                         break;
                     case States::LIFT_DOWN_LF:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajectory_handler::compute_traj(lf_high, lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajectory_handler::constant_traj(com_rf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_foot_duration_));
+                        _lf_trajs.push_back(trajs::min_jerk_trajectory(lf_high, lf_low, dt_, traj_foot_duration_));
+                        _com_trajs.push_back(trajs::constant_traj(com_rf, dt_, traj_foot_duration_));
                         break;
                     case States::MOVE_COM_LEFT:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajectory_handler::compute_traj(com_rf, com_lf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_com_duration_));
+                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_com_duration_));
+                        _com_trajs.push_back(trajs::min_jerk_trajectory(com_rf, com_lf, dt_, traj_com_duration_));
                         break;
                     case States::LIFT_UP_RF:
-                        _rf_trajs.push_back(trajectory_handler::compute_traj(rf_low, rf_high, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajectory_handler::constant_traj(com_lf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(trajs::min_jerk_trajectory(rf_low, rf_high, dt_, traj_foot_duration_));
+                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_foot_duration_));
+                        _com_trajs.push_back(trajs::constant_traj(com_lf, dt_, traj_foot_duration_));
                         break;
                     case States::LIFT_DOWN_RF:
-                        _rf_trajs.push_back(trajectory_handler::compute_traj(rf_high, rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajectory_handler::constant_traj(com_lf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(trajs::min_jerk_trajectory(rf_high, rf_low, dt_, traj_foot_duration_));
+                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_foot_duration_));
+                        _com_trajs.push_back(trajs::constant_traj(com_lf, dt_, traj_foot_duration_));
                         break;
                     case States::MOVE_COM_RIGHT:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajectory_handler::compute_traj(com_lf, com_rf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_com_duration_));
+                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_com_duration_));
+                        _com_trajs.push_back(trajs::min_jerk_trajectory(com_lf, com_rf, dt_, traj_com_duration_));
                         break;
                     default:
                         assert(0 && "unknown state");
