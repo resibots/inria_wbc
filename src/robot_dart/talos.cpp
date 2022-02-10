@@ -507,8 +507,22 @@ int main(int argc, char* argv[])
                     else
                         (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
                 }
-                else if (robot->body_node(x.first) != nullptr)
-                    (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
+                else if (x.first.find("task_") != std::string::npos) // e.g. task_lh
+                {
+                    auto ref = controller_pos->se3_task(x.first.substr(strlen("task_")))->getReference();
+                    (*x.second) << ref.getValue().transpose() << " "
+                        << ref.getDerivative().transpose() << " "
+                        << ref.getSecondDerivative().transpose() << std::endl;
+                }
+                else if (robot->body_node(x.first) != nullptr) {
+                    pinocchio::SE3 frame;
+                    frame.rotation() = robot->body_pose(x.first).rotation();
+                    frame.translation() = robot->body_pose(x.first).translation();
+
+                    Eigen::VectorXd vec(12);
+                    tsid::math::SE3ToVector(frame, vec);
+                    (*x.second) << vec.transpose() << std::endl;
+                }
             }
             if (vm.count("srdf")) {
                 auto conf = vm["srdf"].as<float>();
