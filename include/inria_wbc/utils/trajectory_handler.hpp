@@ -135,7 +135,7 @@ namespace trajectory_handler {
             ang_d_xt = minimum_jerk_polynom<ORDER>(ang_start, ang_dest, dt * i, trajectory_duration);
 
             d_vec.head<3>() = pos_d_xt;
-            d_vec.tail<3>() = (ang_d_xt(0) * rot_axis);
+            d_vec.tail<3>() = start.rotation() * (ang_d_xt(0) * rot_axis);
 
             trajectory.push_back(d_vec);
         }

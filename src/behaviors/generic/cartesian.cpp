@@ -75,8 +75,8 @@ namespace inria_wbc {
 
                         tsid::trajectories::TrajectorySample sample_ref(12,6);
                         sample_ref.setValue(ref_vec);
-                        // sample_ref.setDerivative( trajectories_d_[i][traj_selector_][time_] );
-                        // sample_ref.setSecondDerivative( trajectories_dd_[i][traj_selector_][time_] );
+                        sample_ref.setDerivative( trajectories_d_[i][traj_selector_][time_] );
+                        sample_ref.setSecondDerivative( trajectories_dd_[i][traj_selector_][time_] );
 
                         std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref, task_names_[i]);
                     }
