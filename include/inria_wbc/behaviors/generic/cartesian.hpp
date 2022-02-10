@@ -25,10 +25,12 @@ namespace inria_wbc {
                 int time_ = 0;
                 int traj_selector_ = 0;
                 std::vector<std::vector<std::vector<pinocchio::SE3>>> trajectories_;
-                float trajectory_duration_; //will be changed if specified in yaml
+                std::vector<std::vector<std::vector<Eigen::VectorXd>>> trajectories_d_;
+                std::vector<std::vector<std::vector<Eigen::VectorXd>>> trajectories_dd_;
+
+                float trajectory_duration_; // from YAML
                 std::vector<std::string> task_names_; // from YAML
-                std::vector<Eigen::Vector3d> relative_targets_; // form YAML
-                bool loop_;
+                bool loop_; // from YAML
             };
         } // namespace generic
     } // namespace behaviors
