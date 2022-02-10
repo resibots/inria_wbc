@@ -118,7 +118,7 @@ namespace inria_wbc {
                         std::cout << "to (" << q_lb[i] <<  "," << q_ub[i] << "). q=" << q[i] << std::endl;
 
                     if(q[i] < q_lb[i] || q[i] > q_ub[i])
-                        IWBC_ERROR("Joint range reduction(", pinocchio_joint_names()[i+2], "): q0 falls outside reduced joit space.");
+                        IWBC_ERROR("Joint range reduction(", pinocchio_joint_names()[i+2], "): q0 falls outside reduced joint space.");
                 }
 
                 bound_task()->setPositionBounds(q_lb, q_ub);

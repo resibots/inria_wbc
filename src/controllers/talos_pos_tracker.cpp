@@ -53,12 +53,13 @@ namespace inria_wbc {
             auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
             std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
 
-            float torso_max_roll = IWBC_CHECK(config["torso_max_roll"].as<float>());
+            float torso_max_roll = IWBC_CHECK(config["torso_max_roll"].as<float>()) / 180 * M_PI;
             for (auto& n : to_limit) {
                 IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
                 auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
 
-                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
+                if (!(q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]))
+                    IWBC_ERROR("Error in bounds, the torso limits are not viable");
 
                 q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - torso_max_roll;
                 q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + torso_max_roll;
