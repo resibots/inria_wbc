@@ -56,11 +56,33 @@ namespace tsid {
             const ConstraintBase& getConstraint() const;
 
             void setReference(TrajectorySample& ref);
+            void setReference(const SE3& ref);
             const TrajectorySample& getReference() const;
+
+            /** Return the desired task acceleration (after applying the specified mask).
+       *  The value is expressed in local frame is the local_frame flag is true,
+       *  otherwise it is expressed in a local world-oriented frame.
+      */
             const Vector& getDesiredAcceleration() const;
+
+            /** Return the task acceleration (after applying the specified mask).
+       *  The value is expressed in local frame is the local_frame flag is true,
+       *  otherwise it is expressed in a local world-oriented frame.
+      */
             Vector getAcceleration(ConstRefVector dv) const;
+
             virtual void setMask(math::ConstRefVector mask);
+
+            /** Return the position tracking error (after applying the specified mask).
+       *  The error is expressed in local frame is the local_frame flag is true,
+       *  otherwise it is expressed in a local world-oriented frame.
+      */
             const Vector& position_error() const;
+
+            /** Return the velocity tracking error (after applying the specified mask).
+       *  The error is expressed in local frame is the local_frame flag is true,
+       *  otherwise it is expressed in a local world-oriented frame.
+      */
             const Vector& velocity_error() const;
 
             const Vector& position() const;
@@ -74,6 +96,14 @@ namespace tsid {
             void Kd(ConstRefVector Kp);
 
             Index frame_id() const;
+
+            /**
+       * @brief Specifies if the jacobian and desired acceloration should be
+       * expressed in the local frame or the local world-oriented frame.
+       *
+       * @param local_frame If true, represent jacobian and acceloration in the
+       *   local frame. If false, represent them in the local world-oriented frame.
+       */
             void useLocalFrame(bool local_frame);
 
         protected:
