@@ -32,6 +32,76 @@ namespace inria_wbc {
                 _generate_trajectories();
             }
 
+            std::vector<tsid::trajectories::TrajectorySample> WalkOnSpot::_to_sample_trajectory(
+                const std::vector<pinocchio::SE3>& traj) const
+            {
+                Eigen::VectorXd pos_vec(12);
+                std::vector<tsid::trajectories::TrajectorySample> sample_trajectory;
+                for(int i=0; i < traj.size(); ++i)
+                {
+                    tsid::math::SE3ToVector(traj[i], pos_vec);
+                    tsid::trajectories::TrajectorySample sample(12,6);
+                    sample.setValue(pos_vec);
+                    sample_trajectory.push_back(sample);
+                }
+                return sample_trajectory;
+            }
+
+            std::vector<tsid::trajectories::TrajectorySample> WalkOnSpot::_to_sample_trajectory(
+                const std::vector<pinocchio::SE3>& traj, const std::vector<Eigen::VectorXd>& vels, 
+                const std::vector<Eigen::VectorXd>& accs) const
+            {
+                Eigen::VectorXd pos_vec(12);
+                std::vector<tsid::trajectories::TrajectorySample> sample_trajectory;
+                for(int i=0; i < traj.size(); ++i)
+                {
+                    tsid::math::SE3ToVector(traj[i], pos_vec);
+
+                    tsid::trajectories::TrajectorySample sample(12,6);
+                    sample.setValue(pos_vec);
+                    sample.setDerivative(vels[i]);
+                    sample.setSecondDerivative(accs[i]);
+
+                    sample_trajectory.push_back(sample);
+                }
+
+                return sample_trajectory;
+            }
+
+            std::vector<tsid::trajectories::TrajectorySample> WalkOnSpot::_to_sample_trajectory(
+                const std::vector<Eigen::VectorXd>& traj) const
+            {
+                size_t dofs = traj[0].size();
+                std::vector<tsid::trajectories::TrajectorySample> sample_trajectory;
+                for(int i=0; i < traj.size(); ++i)
+                {
+                    tsid::trajectories::TrajectorySample sample(dofs, dofs);
+                    sample.setValue(traj[i]);
+                    sample_trajectory.push_back(sample);
+                }
+                return sample_trajectory;
+            }
+
+            std::vector<tsid::trajectories::TrajectorySample> WalkOnSpot::_to_sample_trajectory(
+                const std::vector<Eigen::VectorXd>& traj, const std::vector<Eigen::VectorXd>& vels, 
+                const std::vector<Eigen::VectorXd>& accs) const
+            {
+                size_t dofs = traj[0].size();
+
+                std::vector<tsid::trajectories::TrajectorySample> sample_trajectory;
+                for(int i=0; i < traj.size(); ++i)
+                {
+                    tsid::trajectories::TrajectorySample sample(dofs, dofs);
+                    sample.setValue(traj[i]);
+                    sample.setDerivative(vels[i]);
+                    sample.setSecondDerivative(accs[i]);
+
+                    sample_trajectory.push_back(sample);
+                }
+
+                return sample_trajectory;
+            }
+
             void WalkOnSpot::_generate_trajectories()
             {
                 cycle_ = {
@@ -71,39 +141,81 @@ namespace inria_wbc {
                 for (auto c : cycle_) {
                     switch (c) {
                     case States::INIT:
-                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajs::min_jerk_trajectory(com_init, com_rf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_com_duration_)));
+                        _lf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
+                        _com_trajs.push_back(
+                            _to_sample_trajectory(
+                                trajs::min_jerk_trajectory(com_init, com_rf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_init, com_rf, dt_, traj_com_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_init, com_rf, dt_, traj_com_duration_)
+                            */)
+                        );
                         break;
                     case States::LIFT_UP_LF:
-                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajs::min_jerk_trajectory(lf_low, lf_high, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajs::constant_traj(com_rf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_foot_duration_)));
+                        _lf_trajs.push_back(
+                            _to_sample_trajectory(
+                                trajs::min_jerk_trajectory(lf_low, lf_high, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lf_low, lf_high, dt_, traj_foot_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lf_low, lf_high, dt_, traj_foot_duration_)
+                            */)
+                        );
+                        _com_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(com_rf, dt_, traj_foot_duration_)));
                         break;
                     case States::LIFT_DOWN_LF:
-                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajs::min_jerk_trajectory(lf_high, lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajs::constant_traj(com_rf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_foot_duration_)));
+                        _lf_trajs.push_back(
+                            _to_sample_trajectory(
+                                trajs::min_jerk_trajectory(lf_high, lf_low, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lf_high, lf_low, dt_, traj_foot_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lf_high, lf_low, dt_, traj_foot_duration_)
+                            */)
+                        );
+                        _com_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(com_rf, dt_, traj_foot_duration_)));
                         break;
                     case States::MOVE_COM_LEFT:
-                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajs::min_jerk_trajectory(com_rf, com_lf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_com_duration_)));
+                        _lf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
+                        _com_trajs.push_back(
+                            _to_sample_trajectory(
+                                trajs::min_jerk_trajectory(com_rf, com_lf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_rf, com_lf, dt_, traj_com_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_rf, com_lf, dt_, traj_com_duration_)
+                            */)
+                        );
                         break;
                     case States::LIFT_UP_RF:
-                        _rf_trajs.push_back(trajs::min_jerk_trajectory(rf_low, rf_high, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajs::constant_traj(com_lf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(
+                            _to_sample_trajectory(
+                                trajs::min_jerk_trajectory(rf_low, rf_high, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rf_low, rf_high, dt_, traj_foot_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rf_low, rf_high, dt_, traj_foot_duration_)
+                            */)
+                        );
+                        _lf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_foot_duration_)));
+                        _com_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(com_lf, dt_, traj_foot_duration_)));
                         break;
                     case States::LIFT_DOWN_RF:
-                        _rf_trajs.push_back(trajs::min_jerk_trajectory(rf_high, rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajs::constant_traj(com_lf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(
+                            _to_sample_trajectory(
+                                trajs::min_jerk_trajectory(rf_high, rf_low, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rf_high, rf_low, dt_, traj_foot_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rf_high, rf_low, dt_, traj_foot_duration_)
+                            */)
+                        );
+                        _lf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_foot_duration_)));
+                        _com_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(com_lf, dt_, traj_foot_duration_)));
                         break;
                     case States::MOVE_COM_RIGHT:
-                        _rf_trajs.push_back(trajs::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajs::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajs::min_jerk_trajectory(com_lf, com_rf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_com_duration_)));
+                        _lf_trajs.push_back(_to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
+                        _com_trajs.push_back(
+                            _to_sample_trajectory(
+                                trajs::min_jerk_trajectory(com_lf, com_rf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_lf, com_rf, dt_, traj_com_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_lf, com_rf, dt_, traj_com_duration_)
+                            */)
+                        );
                         break;
                     default:
                         assert(0 && "unknown state");
@@ -112,6 +224,14 @@ namespace inria_wbc {
                 assert(_rf_trajs.size() == cycle_.size());
                 assert(_lf_trajs.size() == cycle_.size());
                 assert(_com_trajs.size() == cycle_.size());
+            }
+
+            pinocchio::SE3 WalkOnSpot::se3_from_sample(const tsid::trajectories::TrajectorySample& sample) const
+            {
+                pinocchio::SE3 se3;
+                se3.translation() = sample.getValue().head<3>();
+                se3.rotation() = Eigen::Matrix3d::Map(sample.getValue().data()+3);
+                return se3;
             }
 
             void WalkOnSpot::update(const controllers::SensorData& sensor_data)
@@ -144,11 +264,14 @@ namespace inria_wbc {
                 assert(time_ < _rf_trajs[_current_traj].size());
                 assert(time_ < _lf_trajs[_current_traj].size());
 
+                pinocchio::SE3 lf_se3 = se3_from_sample(_lf_trajs[_current_traj][time_]);
+                pinocchio::SE3 rf_se3 = se3_from_sample(_rf_trajs[_current_traj][time_]);
+
                 controller->set_com_ref(_com_trajs[_current_traj][time_]);
                 controller->set_se3_ref(_lf_trajs[_current_traj][time_], "lf");
                 controller->set_se3_ref(_rf_trajs[_current_traj][time_], "rf");
-                controller->set_contact_se3_ref(_lf_trajs[_current_traj][time_], "contact_lfoot");
-                controller->set_contact_se3_ref(_rf_trajs[_current_traj][time_], "contact_rfoot");
+                controller->set_contact_se3_ref(lf_se3, "contact_lfoot");
+                controller->set_contact_se3_ref(rf_se3, "contact_rfoot");
 
                 controller_->update(sensor_data);
                 time_++;

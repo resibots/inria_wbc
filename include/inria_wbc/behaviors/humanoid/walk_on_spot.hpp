@@ -22,7 +22,19 @@ namespace inria_wbc {
                 std::string behavior_type() const override { return controllers::behavior_types::SINGLE_SUPPORT; };
 
             private:
+
                 void _generate_trajectories();
+
+                std::vector<tsid::trajectories::TrajectorySample> _to_sample_trajectory(const std::vector<pinocchio::SE3>& traj, 
+                    const std::vector<Eigen::VectorXd>& vels, const std::vector<Eigen::VectorXd>& accs) const;
+                std::vector<tsid::trajectories::TrajectorySample> _to_sample_trajectory(const std::vector<Eigen::VectorXd>& traj, 
+                    const std::vector<Eigen::VectorXd>& vels, const std::vector<Eigen::VectorXd>& accs) const;
+                std::vector<tsid::trajectories::TrajectorySample> _to_sample_trajectory(const std::vector<pinocchio::SE3>& traj) const;
+                std::vector<tsid::trajectories::TrajectorySample> _to_sample_trajectory(const std::vector<Eigen::VectorXd>& traj) const;
+
+
+                pinocchio::SE3 se3_from_sample(const tsid::trajectories::TrajectorySample& sample) const;
+
                 int time_ = 0;
                 float dt_;
                 int _current_traj = 0;
@@ -30,12 +42,14 @@ namespace inria_wbc {
                 pinocchio::SE3 _last_lf;
                 pinocchio::SE3 _last_rf;
 
-                std::vector<std::vector<Eigen::VectorXd>> _com_trajs;
-                std::vector<std::vector<pinocchio::SE3>> _lf_trajs;
-                std::vector<std::vector<pinocchio::SE3>> _rf_trajs;
+                std::vector<std::vector<tsid::trajectories::TrajectorySample>> _com_trajs;
+                std::vector<std::vector<tsid::trajectories::TrajectorySample>> _lf_trajs;
+                std::vector<std::vector<tsid::trajectories::TrajectorySample>> _rf_trajs;
+
                 float traj_com_duration_ = 3; //will be changed if specified in yaml
                 float traj_foot_duration_ = 3; //will be changed if specified in yaml
                 float step_height_ = 0.1;
+
                 // State machine stats for walking on the spot cycle
                 int state_ = -1;
                 enum States {
