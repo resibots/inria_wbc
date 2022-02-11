@@ -283,8 +283,8 @@ void test_behavior(utest::test_t test,
             floor_collision_map[s] = true;
 
         // compute the CoM error
-        error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
-        error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
+        error_com_dart += (robot->com() - p_controller->com_task()->getReference().getValue()).norm();
+        error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().getValue()).norm();
 
         // tracking information
         for (auto& t : se3_tasks) {

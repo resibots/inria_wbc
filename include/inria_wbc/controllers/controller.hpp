@@ -214,9 +214,9 @@ namespace inria_wbc {
         inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
         {
             tsid::trajectories::TrajectorySample sample;
-            sample.pos = ref;
-            sample.vel.setZero(ref.size());
-            sample.acc.setZero(ref.size());
+            sample.setValue(ref);
+            sample.setDerivative(Eigen::VectorXd::Zero(ref.size()));
+            sample.setSecondDerivative(Eigen::VectorXd::Zero(ref.size()));
             return sample;
         }
 
@@ -224,7 +224,11 @@ namespace inria_wbc {
         {
             tsid::trajectories::TrajectorySample sample;
             sample.resize(12, 6);
-            tsid::math::SE3ToVector(ref, sample.pos);
+
+            Eigen::VectorXd ref_vec(12);
+            tsid::math::SE3ToVector(ref, ref_vec);
+            sample.setValue(ref_vec);
+            
             return sample;
         }
 
