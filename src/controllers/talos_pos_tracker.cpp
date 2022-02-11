@@ -235,7 +235,7 @@ namespace inria_wbc {
             auto ac = activated_contacts_;
             for (auto& contact_name : ac) {
                 pinocchio::SE3 se3;
-                auto contact_pos = contact(contact_name)->getMotionTask().getReference().pos;
+                auto contact_pos = contact(contact_name)->getMotionTask().getReference().getValue();
                 tsid::math::vectorToSE3(contact_pos, se3);
                 contact_se3_ref[contact_name] = se3;
                 contact_sample_ref[contact_name] = contact(contact_name)->getMotionTask().getReference();
@@ -257,7 +257,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(sensor_data.find("imu_vel") != sensor_data.end(), "the stabilizer imu needs angular velocity");
 
                 // estimate the CoP / ZMP
-                auto cops = _cop_estimator.update(com_ref.pos.head(2),
+                auto cops = _cop_estimator.update(com_ref.getValue().head(2),
                     model_joint_pos("leg_left_6_joint").translation(),
                     model_joint_pos("leg_right_6_joint").translation(),
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),

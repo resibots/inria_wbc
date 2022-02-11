@@ -20,18 +20,19 @@ namespace inria_wbc {
 
     inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
     {
-        tsid::trajectories::TrajectorySample sample;
-        sample.pos = ref;
-        sample.vel.setZero(ref.size());
-        sample.acc.setZero(ref.size());
+        tsid::trajectories::TrajectorySample sample(ref.size());
+        sample.setValue(ref);
         return sample;
     }
 
     inline tsid::trajectories::TrajectorySample to_sample(const pinocchio::SE3& ref)
     {
-        tsid::trajectories::TrajectorySample sample;
-        sample.resize(12, 6);
-        tsid::math::SE3ToVector(ref, sample.pos);
+        tsid::trajectories::TrajectorySample sample(12, 6);
+
+        Eigen::VectorXd ref_vec(12);
+        tsid::math::SE3ToVector(ref, ref_vec);
+        sample.setValue(ref_vec);
+
         return sample;
     }
 
