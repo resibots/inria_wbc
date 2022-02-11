@@ -37,6 +37,11 @@
 #include <tsid/utils/statistics.hpp>
 #include <tsid/utils/stop-watch.hpp>
 
+#ifdef WBC_HAS_UTHEQUE
+// easy search for an URDF
+#include <utheque/utheque.hpp>
+#endif
+
 #include "inria_wbc/controllers/controller.hpp"
 #include "inria_wbc/exceptions.hpp"
 
@@ -63,7 +68,12 @@ namespace inria_wbc {
             base_path_ = IWBC_CHECK(c["base_path"].as<std::string>());
             auto floating_base_joint_name = IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
             auto urdf = IWBC_CHECK(c["urdf"].as<std::string>());
+#ifdef WBC_HAS_UTHEQUE
+            urdf_ = utheque::path(urdf);
+#else
             urdf_ = urdf;
+            #warning Utheque (URDF library) not found during cmake configuration
+#endif
             dt_ = IWBC_CHECK(c["dt"].as<double>());
             mimic_dof_names_ = IWBC_CHECK(c["mimic_dof_names"].as<std::vector<std::string>>());
             verbose_ = IWBC_CHECK(c["verbose"].as<bool>());
