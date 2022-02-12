@@ -9,6 +9,14 @@
 namespace inria_wbc {
     namespace trajs {
 
+        inline pinocchio::SE3 se3_from_sample(const tsid::trajectories::TrajectorySample& sample)
+        {
+            pinocchio::SE3 se3;
+            se3.translation() = sample.getValue().head<3>();
+            se3.rotation() = Eigen::Matrix3d::Map(sample.getValue().data()+3);
+            return se3;
+        }
+
         inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
         {
             tsid::trajectories::TrajectorySample sample(ref.size(), ref.size());
@@ -51,7 +59,7 @@ namespace inria_wbc {
             return sample;
         }
 
-        std::vector<tsid::trajectories::TrajectorySample> to_sample_trajectory(
+        inline std::vector<tsid::trajectories::TrajectorySample> to_sample_trajectory(
             const std::vector<pinocchio::SE3>& traj)
         {
             std::vector<tsid::trajectories::TrajectorySample> sample_trajectory;
@@ -60,7 +68,7 @@ namespace inria_wbc {
             return sample_trajectory;
         }
 
-        std::vector<tsid::trajectories::TrajectorySample> to_sample_trajectory(
+        inline std::vector<tsid::trajectories::TrajectorySample> to_sample_trajectory(
             const std::vector<pinocchio::SE3>& traj, const std::vector<Eigen::VectorXd>& vels, 
             const std::vector<Eigen::VectorXd>& accs)
         {
@@ -70,7 +78,7 @@ namespace inria_wbc {
             return sample_trajectory;
         }
 
-        std::vector<tsid::trajectories::TrajectorySample> to_sample_trajectory(
+        inline std::vector<tsid::trajectories::TrajectorySample> to_sample_trajectory(
             const std::vector<Eigen::VectorXd>& traj)
         {
             std::vector<tsid::trajectories::TrajectorySample> sample_trajectory;
@@ -79,7 +87,7 @@ namespace inria_wbc {
             return sample_trajectory;
         }
 
-        std::vector<tsid::trajectories::TrajectorySample> to_sample_trajectory(
+        inline std::vector<tsid::trajectories::TrajectorySample> to_sample_trajectory(
             const std::vector<Eigen::VectorXd>& traj, const std::vector<Eigen::VectorXd>& vels, 
             const std::vector<Eigen::VectorXd>& accs)
         {
@@ -87,14 +95,6 @@ namespace inria_wbc {
             for(int i=0; i < traj.size(); ++i)
                 sample_trajectory.push_back(to_sample(traj[i], vels[i], accs[i]));
             return sample_trajectory;
-        }
-
-        pinocchio::SE3 se3_from_sample(const tsid::trajectories::TrajectorySample& sample)
-        {
-            pinocchio::SE3 se3;
-            se3.translation() = sample.getValue().head<3>();
-            se3.rotation() = Eigen::Matrix3d::Map(sample.getValue().data()+3);
-            return se3;
         }
 
     } // namespace trajs
