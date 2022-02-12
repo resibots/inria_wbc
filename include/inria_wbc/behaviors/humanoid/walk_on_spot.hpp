@@ -25,16 +25,6 @@ namespace inria_wbc {
 
                 void _generate_trajectories();
 
-                std::vector<tsid::trajectories::TrajectorySample> _to_sample_trajectory(const std::vector<pinocchio::SE3>& traj, 
-                    const std::vector<Eigen::VectorXd>& vels, const std::vector<Eigen::VectorXd>& accs) const;
-                std::vector<tsid::trajectories::TrajectorySample> _to_sample_trajectory(const std::vector<Eigen::VectorXd>& traj, 
-                    const std::vector<Eigen::VectorXd>& vels, const std::vector<Eigen::VectorXd>& accs) const;
-                std::vector<tsid::trajectories::TrajectorySample> _to_sample_trajectory(const std::vector<pinocchio::SE3>& traj) const;
-                std::vector<tsid::trajectories::TrajectorySample> _to_sample_trajectory(const std::vector<Eigen::VectorXd>& traj) const;
-
-
-                pinocchio::SE3 se3_from_sample(const tsid::trajectories::TrajectorySample& sample) const;
-
                 int time_ = 0;
                 float dt_;
                 int _current_traj = 0;

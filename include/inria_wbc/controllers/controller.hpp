@@ -211,23 +211,6 @@ namespace inria_wbc {
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
         };
 
-        inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.pos = ref;
-            sample.vel.setZero(ref.size());
-            sample.acc.setZero(ref.size());
-            return sample;
-        }
-
-        inline tsid::trajectories::TrajectorySample to_sample(const pinocchio::SE3& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.resize(12, 6);
-            tsid::math::SE3ToVector(ref, sample.pos);
-            return sample;
-        }
-
         using Factory = utils::Factory<Controller, YAML::Node>;
         template <typename T>
         using Register = Factory::AutoRegister<T>;
