@@ -305,7 +305,7 @@ namespace inria_wbc {
             double kp = IWBC_CHECK(node["kp"].as<double>());
             auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
             auto weight = IWBC_CHECK(node["weight"].as<double>());
-            auto p = IWBC_CHECK(node["p"].as<double>());
+            auto margin = IWBC_CHECK(node["margin"].as<double>());
             auto radius = IWBC_CHECK(node["radius"].as<double>());
 
             std::unordered_map<std::string, double> avoided;
@@ -317,7 +317,7 @@ namespace inria_wbc {
             // create the task
             assert(tsid);
             assert(robot);
-            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, p);
+            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, margin);
             task->Kp(kp);
             task->Kd(2.0 * sqrt(task->Kp()));
 

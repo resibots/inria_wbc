@@ -14,6 +14,7 @@
 // tsid If not, see
 // <http://www.gnu.org/licenses/>.
 //
+#undef NDEBUG
 
 //#define DEBUG_POS_AVOIDANCE
 #include <cmath>
@@ -32,12 +33,12 @@ namespace tsid {
             const std::string& tracked_frame_name,
             const std::unordered_map<std::string, double>& avoided_frames_names,
             double radius,
-            double p)
+            double margin)
             : TaskMotion(name, robot),
               m_tracked_frame_name(tracked_frame_name),
               m_avoided_frames_names(avoided_frames_names),
               m_radius(radius),
-              m_p(p),
+              m_margin(margin),
               m_constraint(name, 1, robot.nv()),
               m_Js(avoided_frames_names.size()),
               m_avoided_frames_positions(avoided_frames_names.size())
@@ -75,6 +76,9 @@ namespace tsid {
             return m_tracked_frame_id;
         }
 
+        inline double sqr(double x) { return x * x; }
+        inline double cube(double x) { return x * x * x;}
+
         const ConstraintBase& TaskSelfCollision::compute(const double,
             ConstRefVector q,
             ConstRefVector v,
@@ -88,8 +92,11 @@ namespace tsid {
             //a_frame = m_robot.frameAccelerationWorldOriented(data, m_tracked_frame_id);
             m_robot.frameClassicAcceleration(data, m_tracked_frame_id, a_frame);
             //a_frame = data.a[m_tracked_frame_id];
-
             auto pos = oMi.translation();
+            assert(!std::isnan(pos[0]));
+            assert(!std::isnan(pos[1]));
+            assert(!std::isnan(pos[2]));
+
             m_drift = a_frame.linear();
             m_robot.frameJacobianWorld(data, m_tracked_frame_id, m_J);
             //m_robot.frameJacobianLocal(data, m_tracked_frame_id, m_J);
@@ -107,14 +114,17 @@ namespace tsid {
 
                 // distance with tracked frame
                 const Vector3& pos2 = m_avoided_frames_positions[i];
+                assert(!std::isnan(pos2[0]));
+                assert(!std::isnan(pos2[1]));
+                assert(!std::isnan(pos2[2]));
+
                 Vector3 diff = pos - pos2;
                 double square_norm = diff.dot(diff);
                 double norm = sqrt(square_norm);
                 double r = m_avoided_frames_r0s[i];
 
                 double eps = 1e-9; // we consider that we influence if above eps
-                double p = m_p;
-                double a = (r + m_radius); // * pow(-log(eps), -1.0 / p); //about 0.5;
+                double a = (r + m_radius);// * pow(-log(eps), -1.0 / p); //about 0.5;
 
                 // if in the influence zone
                 if (norm <= a) {
@@ -131,9 +141,26 @@ namespace tsid {
                     auto J = J1 - m_Js[i].block(0, 0, 3, m_robot.nv());
                     Eigen::Vector3d drift = m_drift - a_frame.linear();
 
-                    m_C(0, 0) = exp(-pow(norm / a, p));
-                    m_grad_C = -(p / pow(a, p) * pow(norm, p - 2)) * exp(-pow(norm / a, p)) * diff;
-                    m_Hessian_C = exp(-pow(norm / a, p)) * ((p * p / pow(a, 2 * p) * pow(norm, 2 * p - 4) - p * (p - 2) / pow(a, p) * pow(norm, p - 4)) * diff * diff.transpose() - (p / pow(a, p) * pow(norm, p - 2)) * I);
+                    // m_C(0, 0) = exp(-pow(norm / a, p));
+                    // m_grad_C = -(p / pow(a, p) * pow(norm, p - 2)) * exp(-pow(norm / a, p)) * diff;
+                    // m_Hessian_C = exp(-pow(norm / a, p)) * ((p * p / pow(a, 2 * p) * pow(norm, 2 * p - 4) - p * (p - 2) / pow(a, p) * pow(norm, p - 4)) * diff * diff.transpose() - (p / pow(a, p) * pow(norm, p - 2)) * I);
+
+                    double k = -log(1e-5) / m_margin; 
+                    // std::cout<<"k:"<<k<<std::endl; 
+                    // std::cout<<"norm:"<<norm<<"  a:"<<a<< std::endl;                  
+                    double e_p =  exp(k * (norm - a)); // exponential part of C
+                    assert(!std::isnan(e_p));
+                    m_C(0, 0) = 1. / (1. + e_p); // sigmoid
+                    // std::cout<<"m_c:"<<m_C(0,0)<<std::endl;
+                    assert(!std::isnan(m_C(0, 0)));
+
+                    m_grad_C = - k *  e_p / (norm * sqr(e_p + 1.)) * diff; // gradient
+                    double h = 2 * sqr(k) * sqr(e_p) / (square_norm * cube(e_p + 1.)) 
+                        - sqr(k) * e_p / (square_norm * sqr(e_p + 1.)) 
+                        - k * e_p / (pow(norm, 1.5) * sqr(e_p + 1));  
+                    m_Hessian_C = h *  diff * diff.transpose() - k * e_p / (norm * sqr(e_p + 1.)) * I;
+                    
+
 
                     // A
                     m_A += m_grad_C.transpose() * J;
