@@ -67,17 +67,20 @@ namespace inria_wbc {
             auto c = IWBC_CHECK(config["CONTROLLER"]);
             base_path_ = IWBC_CHECK(c["base_path"].as<std::string>());
             auto floating_base_joint_name = IWBC_CHECK(c["floating_base_joint_name"].as<std::string>());
-            auto urdf = IWBC_CHECK(c["urdf"].as<std::string>());
-#ifdef WBC_HAS_UTHEQUE
-            urdf_ = utheque::path(urdf);
-#else
-            urdf_ = urdf;
-            #warning Utheque (URDF library) not found during cmake configuration
-#endif
+
             dt_ = IWBC_CHECK(c["dt"].as<double>());
             mimic_dof_names_ = IWBC_CHECK(c["mimic_dof_names"].as<std::vector<std::string>>());
             verbose_ = IWBC_CHECK(c["verbose"].as<bool>());
 
+            auto urdf = IWBC_CHECK(c["urdf"].as<std::string>());
+#ifdef WBC_HAS_UTHEQUE
+            urdf_ = utheque::path(urdf, verbose_);
+#else
+            urdf_ = urdf;
+#warning Utheque (URDF library) not found during cmake configuration
+#endif
+            if (verbose_)
+                std::cout << "controller urdf " << urdf_ << std::endl;
             // closed loop
             _closed_loop = IWBC_CHECK(c["closed_loop"].as<bool>());
 
@@ -87,17 +90,17 @@ namespace inria_wbc {
             if (floating_base_) {
                 if (!floating_base_joint_name.empty()) {
                     fb_joint_name_ = floating_base_joint_name; //floating base joint already in urdf
-                    pinocchio::urdf::buildModel(urdf, robot_model, verbose_);
+                    pinocchio::urdf::buildModel(urdf_, robot_model, verbose_);
                 }
                 else {
-                    pinocchio::urdf::buildModel(urdf, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
+                    pinocchio::urdf::buildModel(urdf_, pinocchio::JointModelFreeFlyer(), robot_model, verbose_);
                     fb_joint_name_ = "root_joint";
                 }
                 robot_ = std::make_shared<RobotWrapper>(robot_model, verbose_);
             }
             else {
                 fb_joint_name_ = "";
-                robot_ = std::make_shared<RobotWrapper>(urdf, std::vector<std::string>(), verbose_); //this overloaded constructor allows to to not have a f_base
+                robot_ = std::make_shared<RobotWrapper>(urdf_, std::vector<std::string>(), verbose_); //this overloaded constructor allows to to not have a f_base
             }
 
             if (verbose_) {
