@@ -16,7 +16,6 @@
 //
 #undef NDEBUG
 
-//#define DEBUG_POS_AVOIDANCE
 #include <cmath>
 
 #include "tsid/robots/robot-wrapper.hpp"
@@ -141,29 +140,59 @@ namespace tsid {
                     auto J = J1 - m_Js[i].block(0, 0, 3, m_robot.nv());
                     Eigen::Vector3d drift = m_drift - a_frame.linear();
 
+                    // old function
                     // m_C(0, 0) = exp(-pow(norm / a, p));
                     // m_grad_C = -(p / pow(a, p) * pow(norm, p - 2)) * exp(-pow(norm / a, p)) * diff;
                     // m_Hessian_C = exp(-pow(norm / a, p)) * ((p * p / pow(a, 2 * p) * pow(norm, 2 * p - 4) - p * (p - 2) / pow(a, p) * pow(norm, p - 4)) * diff * diff.transpose() - (p / pow(a, p) * pow(norm, p - 2)) * I);
 
-                    double k = -log(1e-5) / m_margin; 
-                    // std::cout<<"k:"<<k<<std::endl; 
-                    // std::cout<<"norm:"<<norm<<"  a:"<<a<< std::endl;                  
-                    double e_p =  exp(k * (norm - a)); // exponential part of C
-                    assert(!std::isnan(e_p));
-                    m_C(0, 0) = 1. / (1. + e_p); // sigmoid
-                    // std::cout<<"m_c:"<<m_C(0,0)<<std::endl;
-                    assert(!std::isnan(m_C(0, 0)));
 
-                    m_grad_C = - k *  e_p / (norm * sqr(e_p + 1.)) * diff; // gradient
-                    double h = 2 * sqr(k) * sqr(e_p) / (square_norm * cube(e_p + 1.)) 
-                        - sqr(k) * e_p / (square_norm * sqr(e_p + 1.)) 
-                        - k * e_p / (pow(norm, 1.5) * sqr(e_p + 1));  
-                    m_Hessian_C = h *  diff * diff.transpose() - k * e_p / (norm * sqr(e_p + 1.)) * I;
-                    
+                    /// sigmoid
+                    // double k = -log(1e-5) / m_margin; 
+                    // double e_p =  exp(k * (norm - a)); // exponential part of C
+                    // m_C(0, 0) = 1. / (1. + e_p); // sigmoid
+                    // m_grad_C = - k *  e_p / (norm * sqr(e_p + 1.)) * diff; // gradient
+                    // double h = 2 * sqr(k) * sqr(e_p) / (square_norm * cube(e_p + 1.)) 
+                    //     - sqr(k) * e_p / (square_norm * sqr(e_p + 1.)) 
+                    //     - k * e_p / (pow(norm, 1.5) * sqr(e_p + 1));  
+                    // m_Hessian_C = 0.1 * h *  diff * diff.transpose() - k * e_p / (norm * sqr(e_p + 1.)) * I;
+
+                    /// 5PL
+                    double m = 0.2;
+                    double k = -log(pow(-1e-5 +1., -1. / m) - 1.) / m_margin;//-log(1e-5) / m_margin;
+                    double s_p = - 1. / k * log(-1 + pow(2, 1. / m));
+                    double x = k * (norm -a + s_p);
+                    double e_p = exp(-x);
+                    m_C(0, 0) = 1. - pow(1 + e_p, -m);
+                    //std::cout<<"c(m_margin)):"<<1 - pow(1+exp(-k*(m_margin-s_p)), -m) <<std::endl;
+                    m_grad_C = -1. / norm * k * m * e_p * pow(e_p + 1, -m - 1) * diff;
+                    double h = 
+                      1. / square_norm * sqr(k) * (- m - 1.) * m * exp(-2 * x) * pow(e_p + 1, -m-2)
+                    + 1. / square_norm * sqr(k) * m * e_p * pow(e_p + 1, -m-1)
+                    + 1. / pow(norm, 1.5) * k * m * e_p * pow(e_p + 1, -m-1);
+                    m_Hessian_C = h * diff * diff.transpose() - 1. / norm * k * m * e_p * pow(e_p + 1, -m-1) * I;
+                     
+                    /// leaky exp(-x)
+                    //double k = -log(1e-5) / m_margin;
+                    // if (norm > a) {
+                        // double c_p = exp(-k * (norm - a));
+                        // m_C(0, 0) = c_p;
+                        // std::cout<<"cp exp:"<<c_p<<std::endl;
+                        // m_grad_C = -k / norm * c_p * diff;
+                        // m_Hessian_C = (sqr(k) * c_p / square_norm + k * c_p / pow(square_norm, 1.5)) * diff * diff.transpose() - k * c_p / norm * I;
+                    // }
+                    // else
+                    // {
+                    //     m_C(0, 0) = -k * (norm - a);
+                    //     m_grad_C = -k / norm * diff;
+                    //     std::cout<<"cp lin:"<<m_C(0,0)<<std::endl;
+                    //     m_Hessian_C = (sqr(k) / square_norm + k / pow(square_norm, 1.5)) * diff * diff.transpose() - k / norm * I;
+                    // }
 
 
                     // A
                     m_A += m_grad_C.transpose() * J;
+                    m_Kd = 250.;//2*K_p^2
+                    m_Kp = 50;
                     // B (note: m_drift = dJ(q)*dq)
                     m_B += -((m_Hessian_C * J * v).transpose() * J * v + m_grad_C.transpose() * (-drift + m_Kd * J * v) + m_Kp * m_C);
                 } // else 0 for everything
