@@ -26,7 +26,7 @@ rf:
     type: se3
     tracked: leg_right_6_joint
     weight: 1000.0
-    kp: 30.0
+    kp: 30.0     
     mask: 111111
 com:
     type: com
@@ -76,11 +76,11 @@ self_collision-left:
     type: self-collision
     tracked: gripper_left_joint
     radius: 0.1
-    avoided:
+    avoided: 
         gripper_right_joint: 0.1
         arm_right_5_joint: 0.05
         v_leg_right_3: 0.15
-        v_leg_left_3: 0.15
+        v_leg_left_3: 0.15        
         torso_2_joint: 0.1
         base_link: 0.15
         v_base_link_left: 0.115
@@ -96,11 +96,11 @@ self_collision-right:
     type: self-collision
     tracked: gripper_right_joint
     radius: 0.1
-    avoided:
+    avoided: 
         gripper_left_joint: 0.1
         arm_left_5_joint: 0.05
         v_leg_right_3: 0.15
-        v_leg_left_3: 0.15
+        v_leg_left_3: 0.15        
         torso_2_joint: 0.1
         base_link: 0.15
         v_base_link_left: 0.115
