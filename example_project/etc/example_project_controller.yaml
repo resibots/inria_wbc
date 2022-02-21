@@ -2,7 +2,7 @@ CONTROLLER:
   name: ex-controller
   base_path: "/home/pal/inria_wbc/example_project/etc"
   tasks: tasks_example.yaml
-  urdf: /home/pal/install/share/utheque/talos/talos.urdf
+  urdf: talos/talos.urdf
   configurations: talos_configurations.srdf 
   ref_config: inria_start
   frames: frames_example.yaml

@@ -8,6 +8,7 @@ include(CMakeFindDependencyMacro)
 find_dependency(tsid)
 find_dependency(pinocchio)
 find_dependency(yaml-cpp)
+find_package(Utheque)
 
 find_dependency(Boost OPTIONAL_COMPONENTS stacktrace_basic)
 
