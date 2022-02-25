@@ -4,7 +4,7 @@ CONTROLLER:
   tasks: tasks.yaml
   frames: frames.yaml
   urdf: tiago_steel.urdf
-  configurations: configurations.srdf 
+  configurations: configurations-elbow-down.srdf 
   closed_loop: false
   ref_config: start
   floating_base: false
