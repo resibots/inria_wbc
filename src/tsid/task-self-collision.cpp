@@ -32,12 +32,14 @@ namespace tsid {
             const std::string& tracked_frame_name,
             const std::unordered_map<std::string, double>& avoided_frames_names,
             double radius,
-            double margin)
+            double margin,
+            double m)
             : TaskMotion(name, robot),
               m_tracked_frame_name(tracked_frame_name),
               m_avoided_frames_names(avoided_frames_names),
               m_radius(radius),
               m_margin(margin),
+              m_m(m),
               m_constraint(name, 1, robot.nv()),
               m_Js(avoided_frames_names.size()),
               m_avoided_frames_positions(avoided_frames_names.size())
@@ -157,13 +159,12 @@ namespace tsid {
                     // m_Hessian_C = 0.1 * h *  diff * diff.transpose() - k * e_p / (norm * sqr(e_p + 1.)) * I;
 
                     /// 5PL
-                    double m = 0.2;
-                    double k = -log(pow(-1e-5 +1., -1. / m) - 1.) / m_margin;//-log(1e-5) / m_margin;
+                    double m = m_m; // e.g. 0.2
+                    double k = -log(pow(-1e-5 +1., -1. / m) - 1.) / m_margin;
                     double s_p = - 1. / k * log(-1 + pow(2, 1. / m));
                     double x = k * (norm -a + s_p);
                     double e_p = exp(-x);
                     m_C(0, 0) = 1. - pow(1 + e_p, -m);
-                    //std::cout<<"c(m_margin)):"<<1 - pow(1+exp(-k*(m_margin-s_p)), -m) <<std::endl;
                     m_grad_C = -1. / norm * k * m * e_p * pow(e_p + 1, -m - 1) * diff;
                     double h = 
                       1. / square_norm * sqr(k) * (- m - 1.) * m * exp(-2 * x) * pow(e_p + 1, -m-2)

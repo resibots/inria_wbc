@@ -58,7 +58,8 @@ namespace tsid {
                 const std::string& frameName,
                 const std::unordered_map<std::string, double>& frames,
                 double radius,
-                double margin);
+                double margin,
+                double m);
             virtual ~TaskSelfCollision() {}
 
             int dim() const;
@@ -101,6 +102,7 @@ namespace tsid {
 
             double m_margin; // zone of influece
             double m_radius; // radius around the body
+            double m_m = 0.2;// exponent of the asymetric sigmoid, smaller = more asymetric 
             ConstraintEquality m_constraint;
 
             Vector3 m_drift;
