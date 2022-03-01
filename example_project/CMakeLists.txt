@@ -22,7 +22,9 @@ set(@PROJECT_NAME@_SOURCES
 )
 
 set(EXAMPLE_LIST 
-    src/robot_dart/test_controller.cpp
+    src/robot_dart/talos.cpp
+    src/robot_dart/tutorial_0.cpp
+    src/robot_dart/tutorial_1.cpp
 )
 
 add_library(@project_name@ SHARED ${@PROJECT_NAME@_SOURCES})

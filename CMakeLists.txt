@@ -12,6 +12,7 @@ option(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "compile robot-dart example with grap
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(Utheque)
 find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
 
 
@@ -20,14 +21,20 @@ set(INRIA_WBC_SOURCES
                             src/controllers/pos_tracker.cpp
                             src/controllers/tasks.cpp
                             src/controllers/talos_pos_tracker.cpp
+                            src/trajs/saver.cpp
+                            src/trajs/loader.cpp
+                            src/behaviors/behavior.cpp
                             src/behaviors/generic/cartesian.cpp
+                            src/behaviors/generic/cartesian_traj.cpp
                             src/behaviors/humanoid/squat.cpp
                             src/behaviors/humanoid/walk_on_spot.cpp
+                            src/behaviors/humanoid/walk.cpp
                             src/behaviors/humanoid/clapping.cpp
                             src/safety/torque_collision_detection.cpp
                             src/stabilizers/stabilizer.cpp
                             src/estimators/cop.cpp
                             src/tsid/task-self-collision.cpp
+                            src/tsid/task-momentum-equality.cpp
 )
 
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})
@@ -37,11 +44,15 @@ IF(APPLE)
 endif()
 target_compile_features(inria_wbc PUBLIC cxx_std_14)
 
+if (Utheque_FOUND)
+  target_compile_definitions(inria_wbc PUBLIC WBC_HAS_UTHEQUE)
+endif()
 
 target_link_libraries(inria_wbc PUBLIC 
 			pinocchio::pinocchio
 			tsid::tsid
-			${YAML_CPP_LIBRARIES})
+			${YAML_CPP_LIBRARIES}
+      Utheque)
 
 if(Boost_stacktrace_basic_FOUND)
   target_compile_definitions(inria_wbc PUBLIC IWBC_USE_STACKTRACE=1 BOOST_STACKTRACE_DYN_LINK=1) #force to not use header library but shared

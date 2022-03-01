@@ -196,12 +196,15 @@ void test_behavior(utest::test_t test,
         sensor_data["lf_force"] = ft_sensor_left->force();
         sensor_data["rf_torque"] = ft_sensor_right->torque();
         sensor_data["rf_force"] = ft_sensor_right->force();
-        sensor_data["acceleration"] = imu->linear_acceleration();
         sensor_data["velocity"] = robot->com_velocity().tail<3>();
         sensor_data["positions"] = robot->positions(controller->controllable_dofs(false));
         sensor_data["joint_velocities"] = robot->velocities(controller->controllable_dofs(false));
         sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());
         sensor_data["floating_base_velocity"] = inria_wbc::robot_dart::floating_base_vel(robot->velocities());
+        sensor_data["imu_pos"] = imu->angular_position_vec();
+        sensor_data["imu_vel"] = imu->angular_velocity();
+        sensor_data["imu_acc"] = imu->linear_acceleration();
+
         // command
         if (simu.schedule(simu.control_freq())) {
             auto t1_solver = high_resolution_clock::now();
@@ -212,9 +215,9 @@ void test_behavior(utest::test_t test,
 
             auto t1_cmd = high_resolution_clock::now();
             if (actuator_type == "velocity" || actuator_type == "servo")
-                cmd = inria_wbc::robot_dart::compute_velocities(robot, q, cst::dt);
+                cmd = inria_wbc::robot_dart::compute_velocities(robot, q, cst::dt, controller->all_dofs(false));
             else if (actuator_type == "spd")
-                cmd = inria_wbc::robot_dart::compute_spd(robot, q, cst::dt);
+                cmd = inria_wbc::robot_dart::compute_spd(robot, q, cst::dt, controller->all_dofs(false));
             else // torque
                 cmd = controller->tau(false);
 
@@ -280,8 +283,8 @@ void test_behavior(utest::test_t test,
             floor_collision_map[s] = true;
 
         // compute the CoM error
-        error_com_dart += (robot->com() - p_controller->com_task()->getReference().pos).norm();
-        error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().pos).norm();
+        error_com_dart += (robot->com() - p_controller->com_task()->getReference().getValue()).norm();
+        error_com_tsid += (p_controller->com() - p_controller->com_task()->getReference().getValue()).norm();
 
         // tracking information
         for (auto& t : se3_tasks) {

@@ -30,6 +30,19 @@
 namespace tsid {
     namespace tasks {
 
+
+        /// \begin{eqnarray}
+        ///     D_p &=& p - p_0 \textrm{     \emph{(3D-vectors)}}\\
+        ///     N_p &=& ||D_p|| = ||p - p_0|| = \sqrt{(x-a)^2 + (y-b)^2 + (z-c)^2}\\
+        ///     E_p &=& \exp(k (N_p-d))\\
+        ///     c(p) &=& \frac{1}{1 + E_p}\\
+        ///     \nabla c(p) &=& - \frac{k E_p}{N_p (1 + E_p)^2} D_p\\
+        ///     \mathcal{H}c(p)&=& \left(\frac{2 k^2 E_p^2}{N^2 (E_p+1)^3}
+        ///     - \frac{k^2 E_p}{N^2 (E_p+1)^2}
+        ///     - \frac{k E_p}{N^{3/2} (E_p+1)^2 }\right)
+        ///     D_p D_p^T 
+        ///     - \frac{k E_p}{N_p (E_P+1)^2} I
+        /// \end{eqnarray}
         class TaskSelfCollision : public TaskMotion {
         public:
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -45,7 +58,8 @@ namespace tsid {
                 const std::string& frameName,
                 const std::unordered_map<std::string, double>& frames,
                 double radius,
-                double p);
+                double margin,
+                double m);
             virtual ~TaskSelfCollision() {}
 
             int dim() const;
@@ -86,8 +100,9 @@ namespace tsid {
             Vector3 m_grad_C;
             Eigen::Matrix<double, 3, 3> m_Hessian_C;
 
-            double m_p;
-            double m_radius;
+            double m_margin; // zone of influece
+            double m_radius; // radius around the body
+            double m_m = 0.2;// exponent of the asymetric sigmoid, smaller = more asymetric 
             ConstraintEquality m_constraint;
 
             Vector3 m_drift;

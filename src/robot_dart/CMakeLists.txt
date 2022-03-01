@@ -1,8 +1,11 @@
 
 set(EXAMPLE_LIST
 	talos.cpp
+    talos_load_external.cpp
     franka.cpp
     tiago.cpp
+    tutorial_0.cpp
+    tutorial_1.cpp
 )
 
 
@@ -15,14 +18,14 @@ function(compile_examples)
         set_target_properties(${EXAMPLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
         target_compile_definitions(${EXAMPLE_NAME} PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
         target_compile_features(${EXAMPLE_NAME} PUBLIC cxx_std_14)
-        target_link_libraries(${EXAMPLE_NAME} PUBLIC inria_wbc Boost::program_options RobotDART::Simu)
+        target_link_libraries(${EXAMPLE_NAME} PUBLIC inria_wbc Boost::program_options RobotDART::Simu Utheque)
         if(RobotDART_Magnum_FOUND)
             message("COMPILING EXAMPLE ${EXAMPLE_NAME}_graphics")
             add_executable(${EXAMPLE_NAME}_graphics ${EXAMPLE})
             set_target_properties(${EXAMPLE_NAME}_graphics PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
             target_compile_definitions(${EXAMPLE_NAME}_graphics PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
             target_compile_features(${EXAMPLE_NAME}_graphics PUBLIC cxx_std_14)
-            target_link_libraries(${EXAMPLE_NAME}_graphics PUBLIC inria_wbc RobotDART::Magnum RobotDART::Simu Boost::program_options)
+            target_link_libraries(${EXAMPLE_NAME}_graphics PUBLIC inria_wbc RobotDART::Magnum RobotDART::Simu Boost::program_options Utheque)
         endif()
     endforeach()
 endfunction()

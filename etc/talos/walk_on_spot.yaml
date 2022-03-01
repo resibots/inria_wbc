@@ -1,7 +1,7 @@
 BEHAVIOR:
   name: humanoid::walk-on-spot
-  traj_com_duration: 5
-  traj_foot_duration: 5
+  traj_com_duration: 1
+  traj_foot_duration: 1
   step_height: 0.1
-  stop_duration: 0.7
-  stop_height: 0.015
+  customize_task_weights:
+    momentum: 0.0

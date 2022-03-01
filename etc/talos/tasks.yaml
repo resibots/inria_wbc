@@ -38,6 +38,11 @@ posture:
     weight: 1.75
     kp: 10.0
     ref: inria_start
+momentum: #!!!!!WARNING IS DISZBLED FOR SINGLE SUPPORT cf parse_stabiliser !!!!!!!!!!!
+    type: momentum
+    weight: 1000.0
+    kp: 30.0
+    mask: 000110
 bounds:
     type: bounds
     weight: 10000
@@ -69,10 +74,10 @@ contact_rfoot:
     normal: [0, 0, 1]
 self_collision-left:
     type: self-collision
-    tracked: gripper_left_joint
-    radius: 0.1
+    tracked: v_left_gripper
+    radius: 0.12
     avoided: 
-        gripper_right_joint: 0.1
+        v_right_gripper: 0.12
         arm_right_5_joint: 0.05
         v_leg_right_3: 0.15
         v_leg_left_3: 0.15        
@@ -84,15 +89,17 @@ self_collision-left:
         leg_left_1_joint: 0.15
         leg_right_4_joint: 0.1
         leg_left_4_joint: 0.1
-    weight: 500
-    kp: 700.0
-    p: 3
+    weight: 2000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
 self_collision-right:
     type: self-collision
-    tracked: gripper_right_joint
-    radius: 0.1
+    tracked: v_right_gripper
+    radius: 0.12
     avoided: 
-        gripper_left_joint: 0.1
+        v_left_gripper: 0.12
         arm_left_5_joint: 0.05
         v_leg_right_3: 0.15
         v_leg_left_3: 0.15        
@@ -104,10 +111,12 @@ self_collision-right:
         leg_left_1_joint: 0.15
         leg_right_4_joint: 0.1
         leg_left_4_joint: 0.1
-    weight: 500
-    kp: 700.0
-    p: 3
-self_collision-arm-right:
+    weight: 2000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-elbow-right:
     type: self-collision
     tracked: arm_right_4_joint
     radius: 0.15
@@ -115,10 +124,12 @@ self_collision-arm-right:
         base_link: 0.15
         v_base_link_left: 0.115
         v_base_link_right: 0.115
-    weight: 10
-    kp: 10.0
-    p: 3
-self_collision-arm-left:
+    weight: 1000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-elbow-left:
     type: self-collision
     tracked: arm_left_4_joint
     radius: 0.15
@@ -126,6 +137,34 @@ self_collision-arm-left:
         base_link: 0.15
         v_base_link_left: 0.115
         v_base_link_right: 0.115
-    weight: 10
-    kp: 10.0
-    p: 3
+    weight: 1000
+    kp: 150.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-wrist-right:
+    type: self-collision
+    tracked: arm_right_5_joint
+    radius: 0.10
+    avoided:
+        base_link: 0.15
+        v_base_link_left: 0.115
+        v_base_link_right: 0.115
+    weight: 1000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-wrist-left:
+    type: self-collision
+    tracked: arm_left_5_joint
+    radius: 0.10
+    avoided:
+        base_link: 0.15
+        v_base_link_left: 0.115
+        v_base_link_right: 0.115
+    weight: 1000
+    kp: 150.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2

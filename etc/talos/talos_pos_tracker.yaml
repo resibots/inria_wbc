@@ -2,13 +2,15 @@ CONTROLLER:
   name: talos-pos-tracker
   base_path: /home/pal/inria_wbc/etc/talos
   tasks: tasks.yaml
-  urdf: talos.urdf
+  urdf: talos/talos.urdf
   configurations: configurations.srdf 
   ref_config: inria_start
   frames: frames.yaml
   floating_base_joint_name: ""
   floating_base: true
   dt: 0.001
+  # joint_range_reduction: 2.0 # reduce joint range of motion (degrees for upper and lower bound)
+  torso_max_roll: 14.32 #to prevent leg collision in degrees
   # by default we do not close the loop on the floating base
   # because it's not required in position control
   # and our robot does not have a very good estimator yet
