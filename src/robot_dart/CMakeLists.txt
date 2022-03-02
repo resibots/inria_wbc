@@ -3,6 +3,8 @@ set(EXAMPLE_LIST
 	talos.cpp
     talos_load_external.cpp
     franka.cpp
+    tutorial_0.cpp
+    tutorial_1.cpp
 )
 
 

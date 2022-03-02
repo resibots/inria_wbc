@@ -44,7 +44,7 @@ namespace inria_wbc {
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
             tsid::trajectories::TrajectorySample get_full_se3_ref(const std::string& task_name) { return se3_task(task_name)->getReference(); }
             // we do not return the velocity for now
-            const tsid::math::Vector3 get_com_ref() { return com_task()->getReference().pos; }
+            const tsid::math::Vector3 get_com_ref() { return com_task()->getReference().getValue(); }
             const tsid::trajectories::TrajectorySample get_full_com_ref() { return com_task()->getReference(); }
             const tsid::trajectories::TrajectorySample get_full_momentum_ref() { return momentum_task()->getReference(); }
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(trajs::to_sample(ref)); }

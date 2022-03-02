@@ -53,12 +53,13 @@ namespace inria_wbc {
             auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
             std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
 
-            float torso_max_roll = IWBC_CHECK(config["torso_max_roll"].as<float>());
+            float torso_max_roll = IWBC_CHECK(config["torso_max_roll"].as<float>()) / 180 * M_PI;
             for (auto& n : to_limit) {
                 IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
                 auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
 
-                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
+                if (!(q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]))
+                    IWBC_ERROR("Error in bounds, the torso limits are not viable");
 
                 q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - torso_max_roll;
                 q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + torso_max_roll;
@@ -234,7 +235,7 @@ namespace inria_wbc {
             auto ac = activated_contacts_;
             for (auto& contact_name : ac) {
                 pinocchio::SE3 se3;
-                auto contact_pos = contact(contact_name)->getMotionTask().getReference().pos;
+                auto contact_pos = contact(contact_name)->getMotionTask().getReference().getValue();
                 tsid::math::vectorToSE3(contact_pos, se3);
                 contact_se3_ref[contact_name] = se3;
                 contact_sample_ref[contact_name] = contact(contact_name)->getMotionTask().getReference();
@@ -256,7 +257,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(sensor_data.find("imu_vel") != sensor_data.end(), "the stabilizer imu needs angular velocity");
 
                 // estimate the CoP / ZMP
-                auto cops = _cop_estimator.update(com_ref.pos.head(2),
+                auto cops = _cop_estimator.update(com_ref.getValue().head(2),
                     model_joint_pos("leg_left_6_joint").translation(),
                     model_joint_pos("leg_right_6_joint").translation(),
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),

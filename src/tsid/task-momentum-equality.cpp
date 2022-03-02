@@ -128,12 +128,12 @@ namespace tsid
     }
     const Vector & TaskMEquality::momentum_ref() const
     {
-      return m_ref.vel;
+      return m_ref.getDerivative();
     }
 
     const Vector & TaskMEquality::dmomentum_ref() const
     {
-      return m_ref.acc;
+      return m_ref.getSecondDerivative();
     }
 
     const ConstraintBase & TaskMEquality::getConstraint() const
@@ -150,8 +150,8 @@ namespace tsid
       // Get momentum jacobian
       const Matrix6x & J_am = m_robot.momentumJacobian(data);
       m_L = J_am * v;
-      m_L_error = m_L - m_ref.vel;
-      m_dL_des = - m_Kp.cwiseProduct(m_L_error) + m_ref.acc;
+      m_L_error = m_L - m_ref.getDerivative();
+      m_dL_des = - m_Kp.cwiseProduct(m_L_error) + m_ref.getSecondDerivative();
 
       m_drift.head(3) = pinocchio::computeCentroidalMomentumTimeVariation(m_robot.model(), const_cast<Data&>(data)).linear();
       m_drift.tail(3) = m_robot.angularMomentumTimeVariation(data);

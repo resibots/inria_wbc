@@ -12,6 +12,7 @@ option(COMPILE_ROBOT_DART_EXAMPLE_GRAPHICS "compile robot-dart example with grap
 find_package(tsid REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(Utheque) # optional
 find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
 
 
@@ -43,11 +44,16 @@ IF(APPLE)
 endif()
 target_compile_features(inria_wbc PUBLIC cxx_std_14)
 
+if (Utheque_FOUND)
+  target_compile_definitions(inria_wbc PUBLIC WBC_HAS_UTHEQUE)
+  set(UTHEQUE_LIB Utheque)
+endif()
 
 target_link_libraries(inria_wbc PUBLIC 
 			pinocchio::pinocchio
 			tsid::tsid
-			${YAML_CPP_LIBRARIES})
+			${YAML_CPP_LIBRARIES}
+      ${UTHEQUE_LIB})
 
 if(Boost_stacktrace_basic_FOUND)
   target_compile_definitions(inria_wbc PUBLIC IWBC_USE_STACKTRACE=1 BOOST_STACKTRACE_DYN_LINK=1) #force to not use header library but shared
