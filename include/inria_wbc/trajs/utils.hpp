@@ -47,7 +47,7 @@ namespace inria_wbc {
             const Eigen::VectorXd& ref_vel, const Eigen::VectorXd& ref_acc)
         {
             IWBC_ASSERT(ref_vel.size() == 6, "velocity reference for SE3 must be a vector 6.");
-            IWBC_ASSERT(ref_vel.size() == 6, "acceleration reference for SE3 must be a vector 6.");
+            IWBC_ASSERT(ref_acc.size() == 6, "acceleration reference for SE3 must be a vector 6.");
 
             Eigen::VectorXd ref_vec(12);
 
