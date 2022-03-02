@@ -55,6 +55,7 @@ namespace tsid {
                 m_Js[i].setZero(6, robot.nv());
 
             for (const auto& it : m_avoided_frames_names) {
+                assert(it.first != m_tracked_frame_name);
                 assert(m_robot.model().existFrame(it.first));
                 m_avoided_frames_ids.push_back(m_robot.model().getFrameId(it.first));
                 m_avoided_frames_r0s.push_back(it.second);
