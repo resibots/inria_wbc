@@ -20,7 +20,7 @@ namespace inria_wbc {
         inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
         {
             tsid::trajectories::TrajectorySample sample(ref.size(), ref.size());
-            sample.pos = ref;
+            sample.setValue(ref);
             return sample;
         }
 
