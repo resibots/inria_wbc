@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2017 CNRS, NYU, MPI Tübingen
+// Copyright (c) 2017-2020 CNRS, NYU, MPI Tübingen, Inria
 //
 // This file is part of tsid
 // tsid is free software: you can redistribute it
@@ -15,12 +15,13 @@
 // <http://www.gnu.org/licenses/>.
 //
 
-#include "tsid/tasks/ex_task.hpp"
 #include "tsid/math/utils.hpp"
 #include "tsid/robots/robot-wrapper.hpp"
+#include "tsid/tasks/ex_task.hpp"
 
 namespace tsid {
     namespace tasks {
+        using namespace std;
         using namespace math;
         using namespace trajectories;
         using namespace pinocchio;
@@ -93,9 +94,22 @@ namespace tsid {
         void ExTask::setReference(TrajectorySample& ref)
         {
             m_ref = ref;
-            vectorToSE3(ref.pos, m_M_ref);
-            m_v_ref = Motion(ref.vel);
-            m_a_ref = Motion(ref.acc);
+            
+            assert(ref.getValue().size() == 12);
+            m_M_ref.translation(ref.getValue().head<3>());
+            m_M_ref.rotation(MapMatrix3(&ref.getValue()(3), 3, 3));
+            
+            m_v_ref = Motion(ref.getDerivative());
+            m_a_ref = Motion(ref.getSecondDerivative());
+        }
+
+        void ExTask::setReference(const SE3& ref)
+        {
+            TrajectorySample s(12, 6);
+            Eigen::VectorXd ref_vec(12);
+            tsid::math::SE3ToVector(ref, ref_vec);
+            s.setValue(ref_vec);
+            setReference(s);
         }
 
         const TrajectorySample& ExTask::getReference() const
@@ -174,7 +188,6 @@ namespace tsid {
             m_robot.frameJacobianLocal(data, m_frame_id, m_J);
 
             errorInSE3(oMi, m_M_ref, m_p_error); // pos err in local frame
-            m_p_error_vec = m_p_error.toVector();
             SE3ToVector(m_M_ref, m_p_ref);
             SE3ToVector(oMi, m_p);
 
@@ -182,23 +195,28 @@ namespace tsid {
             m_wMl.rotation(oMi.rotation());
 
             if (m_local_frame) {
-                m_v_error = v_frame - m_wMl.actInv(m_v_ref); // vel err in local frame
+                m_p_error_vec = m_p_error.toVector();
+                m_v_error = m_wMl.actInv(m_v_ref) - v_frame; // vel err in local frame
 
                 // desired acc in local frame
-                m_a_des = -m_Kp.cwiseProduct(m_p_error_vec)
-                    - m_Kd.cwiseProduct(m_v_error.toVector())
+                m_a_des = m_Kp.cwiseProduct(m_p_error_vec)
+                    + m_Kd.cwiseProduct(m_v_error.toVector())
                     + m_wMl.actInv(m_a_ref).toVector();
             }
             else {
                 m_p_error_vec = m_wMl.toActionMatrix() * // pos err in local world-oriented frame
                     m_p_error.toVector();
-                m_v_error = m_wMl.act(v_frame) - m_v_ref; // vel err in local world-oriented frame
+
+                // cout<<"m_p_error_vec="<<m_p_error_vec.head<3>().transpose()<<endl;
+                // cout<<"oMi-m_M_ref  ="<<-(oMi.translation()-m_M_ref.translation()).transpose()<<endl;
+
+                m_v_error = m_v_ref - m_wMl.act(v_frame); // vel err in local world-oriented frame
 
                 m_drift = m_wMl.act(m_drift);
 
                 // desired acc in local world-oriented frame
-                m_a_des = -m_Kp.cwiseProduct(m_p_error_vec)
-                    - m_Kd.cwiseProduct(m_v_error.toVector())
+                m_a_des = m_Kp.cwiseProduct(m_p_error_vec)
+                    + m_Kd.cwiseProduct(m_v_error.toVector())
                     + m_a_ref.toVector();
 
                 // Use an explicit temporary `m_J_rotated` here to avoid allocations.
@@ -224,6 +242,7 @@ namespace tsid {
 
                 idx += 1;
             }
+
             return m_constraint;
         }
     } // namespace tasks

@@ -208,8 +208,8 @@ int main(int argc, char* argv[])
         }
 
         // add sensors to the robot
-        auto ft_sensor_left = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq);
-        auto ft_sensor_right = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq);
+        auto ft_sensor_left = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq, "parent_to_child");
+        auto ft_sensor_right = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq, "parent_to_child");
         robot_dart::sensor::IMUConfig imu_config;
         imu_config.body = robot->body_node("imu_link"); // choose which body the sensor is attached to
         imu_config.frequency = control_freq; // update rate of the sensor
@@ -352,20 +352,22 @@ int main(int argc, char* argv[])
                     sensor_data["rf_force"] = Eigen::VectorXd::Constant(3, 1e-8);
                 }
                 // accelerometer
-                sensor_data["acceleration"] = imu->linear_acceleration();
+
+                sensor_data["imu_pos"] = imu->angular_position_vec();
+                sensor_data["imu_vel"] = imu->angular_velocity();
+                sensor_data["imu_acc"] = imu->linear_acceleration();
                 sensor_data["velocity"] = robot->com_velocity().tail<3>();
                 // joint positions / velocities (excluding floating base)
                 // 0 for joints that are not in active_dofs_controllable
                 Eigen::VectorXd positions = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
                 Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
-                for (size_t i = 0; i < controllable_dofs.size(); ++i) {
-                    auto name = controllable_dofs[i];
+                for (size_t i = 0; i < controller->controllable_dofs(false).size(); ++i) {
+                    auto name = controller->controllable_dofs(false)[i];
                     if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0) {
                         positions(i) = robot->positions({name})[0];
                         velocities(i) = robot->velocities({name})[0];
                     }
                 }
-
                 sensor_data["positions"] = positions;
                 sensor_data["joints_torque"] = tq_sensors;
                 sensor_data["joint_velocities"] = velocities;
@@ -387,8 +389,10 @@ int main(int argc, char* argv[])
                 else if (vm["actuators"].as<std::string>() == "spd") {
                     cmd = inria_wbc::robot_dart::compute_spd(robot, q_damaged, 1. / sim_freq, active_dofs_controllable, false);
                 }
-                else // torque
-                    cmd = controller->tau(false);
+                else { // torque
+                    Eigen::VectorXd cmd_no_mimic = controller->filter_cmd(controller->tau(false)).tail(ncontrollable);
+                    cmd = inria_wbc::robot_dart::filter_cmd(cmd_no_mimic, controllable_dofs, active_dofs_controllable);
+                }
                 timer.end("cmd");
 
                 if (ghost) {
@@ -452,14 +456,12 @@ int main(int argc, char* argv[])
                     timer.report(*x.second, simu->scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
+                else if (x.first == "tau")
+                    (*x.second) << controller->tau().transpose() << std::endl;
                 else if (x.first == "com") // the real com
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
-                else if (x.first == "cop") // the cop according to controller
-                    (*x.second) << controller->cop().transpose() << " "
-                                << controller->lcop().transpose() << " "
-                                << controller->rcop().transpose() << " " << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "ft")
@@ -470,10 +472,59 @@ int main(int argc, char* argv[])
                                 << controller->lf_force_filtered().transpose() << " "
                                 << ft_sensor_right->force().transpose() << " "
                                 << controller->rf_force_filtered().transpose() << std::endl;
-                else if (x.first == "momentum") // the momentum according to pinocchio
+                else if (x.first == "controller_momentum") // the momentum according to pinocchio
                     (*x.second) << controller->momentum().transpose() << std::endl;
-                else
-                    (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
+                else if (x.first == "imu") // the momentum according to pinocchio
+                    (*x.second) << imu->angular_position_vec().transpose() << " "
+                                << imu->angular_velocity().transpose() << " "
+                                << imu->linear_acceleration().transpose() << std::endl;
+                else if (x.first == "controller_imu") // the momentum according to pinocchio
+                    (*x.second) << controller->robot()->framePosition(controller->tsid()->data(), controller->robot()->model().getFrameId("imu_link")).translation().transpose() << " "
+                                << controller->robot()->frameVelocityWorldOriented(controller->tsid()->data(), controller->robot()->model().getFrameId("imu_link")).angular().transpose() << " "
+                                << controller->robot()->frameAccelerationWorldOriented(controller->tsid()->data(), controller->robot()->model().getFrameId("imu_link")).linear().transpose() << std::endl;
+                else if (x.first == "com_vel")
+                    (*x.second) << robot->skeleton()->getCOMSpatialVelocity().head(3).transpose() << std::endl;
+                else if (x.first == "momentum") {
+                    auto bodies = robot->body_names();
+                    Eigen::Vector3d angular_momentum = Eigen::Vector3d::Zero();
+                    for (auto& b : bodies)
+                        angular_momentum += robot->body_node(b)->getAngularMomentum(robot->com());
+                    (*x.second) << -angular_momentum.transpose() << std::endl;
+                }
+                else if (x.first == "cop") { // the cop according to controller
+                    if (controller->cop())
+                        (*x.second) << controller->cop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
+                else if (x.first == "lcop") { // the cop according to controller
+                    if (controller->lcop())
+                        (*x.second) << controller->lcop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
+                else if (x.first == "rcop") { // the cop according to controller
+                    if (controller->rcop())
+                        (*x.second) << controller->rcop().value().transpose() << std::endl;
+                    else
+                        (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
+                }
+                else if (x.first.find("task_") != std::string::npos) // e.g. task_lh
+                {
+                    auto ref = controller_pos->se3_task(x.first.substr(strlen("task_")))->getReference();
+                    (*x.second) << ref.getValue().transpose() << " "
+                        << ref.getDerivative().transpose() << " "
+                        << ref.getSecondDerivative().transpose() << std::endl;
+                }
+                else if (robot->body_node(x.first) != nullptr) {
+                    pinocchio::SE3 frame;
+                    frame.rotation() = robot->body_pose(x.first).rotation();
+                    frame.translation() = robot->body_pose(x.first).translation();
+
+                    Eigen::VectorXd vec(12);
+                    tsid::math::SE3ToVector(frame, vec);
+                    (*x.second) << vec.transpose() << std::endl;
+                }
             }
             if (vm.count("srdf")) {
                 auto conf = vm["srdf"].as<float>();

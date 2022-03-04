@@ -21,12 +21,14 @@
 #include <tsid/tasks/task-joint-bounds.hpp>
 #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 #include <tsid/tasks/task-joint-posture.hpp>
+#include <tsid/tasks/task-momentum-equality.hpp>
 #include <tsid/tasks/task-se3-equality.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
 
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
 
+#include <boost/optional.hpp>
 #include <boost/variant.hpp>
 
 namespace inria_wbc {
@@ -48,7 +50,6 @@ namespace inria_wbc {
             Controller& operator=(const Controller& o) = delete;
             virtual ~Controller(){};
 
-
             // path where the files are stored (everything should be relative to this)
             const std::string& base_path() const { return base_path_; }
 
@@ -62,30 +63,30 @@ namespace inria_wbc {
             std::vector<std::string> all_dofs(bool filter_mimics = true) const;
             std::vector<std::string> activated_contacts() { return activated_contacts_; };
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces() { return activated_contacts_forces_; };
-            virtual const Eigen::Vector2d& cop() const
+            virtual const boost::optional<Eigen::Vector2d>& cop() const
             {
-                static Eigen::Vector2d tmp;
+                static boost::optional<Eigen::Vector2d> tmp = boost::none;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
 
-            virtual const Eigen::Vector2d& cop_raw() const
+            virtual const boost::optional<Eigen::Vector2d>& cop_raw() const
             {
-                static Eigen::Vector2d tmp;
+                static boost::optional<Eigen::Vector2d> tmp = boost::none;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
 
-            virtual const Eigen::Vector2d& lcop() const
+            virtual const boost::optional<Eigen::Vector2d>& lcop() const
             {
-                static Eigen::Vector2d tmp;
+                static boost::optional<Eigen::Vector2d> tmp = boost::none;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
 
-            virtual const Eigen::Vector2d& rcop() const
+            virtual const boost::optional<Eigen::Vector2d>& rcop() const
             {
-                static Eigen::Vector2d tmp;
+                static boost::optional<Eigen::Vector2d> tmp = boost::none;
                 IWBC_ERROR("No COP estimator in controller.");
                 return tmp;
             }
@@ -111,7 +112,7 @@ namespace inria_wbc {
 
             const std::vector<int>& non_mimic_indexes() const { return non_mimic_indexes_; }
             Eigen::VectorXd filter_cmd(const Eigen::VectorXd& cmd) const { return utils::slice_vec(cmd, non_mimic_indexes_); }
-            
+
             Eigen::VectorXd tau(bool filter_mimics = true) const;
             Eigen::VectorXd ddq(bool filter_mimics = true) const;
             Eigen::VectorXd dq(bool filter_mimics = true) const;
@@ -121,7 +122,6 @@ namespace inria_wbc {
 
             double t() const { return t_; };
             double dt() const { return dt_; };
-            const YAML::Node& config() const { return config_; };
 
             std::shared_ptr<tsid::robots::RobotWrapper> robot() { return robot_; };
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid() { return tsid_; };
@@ -154,14 +154,12 @@ namespace inria_wbc {
             void set_verbose(bool b) { verbose_ = b; }
             bool verbose() const { return verbose_; }
 
-            void save_configuration(const std::string config_name, const std::string robot_name = "robot") const;
-            void set_behavior_type(std::string bt);
-            std::string behavior_type() const { return behavior_type_; }
-            virtual void parse_stabilizer(const YAML::Node& config)
-            {
-                if (verbose_)
-                    std::cout << "There is no stabilizer for this controller" << std::endl;
-            };
+            void save_configuration(const std::string& config_name, const std::string& robot_name = "robot") const;
+            virtual void set_behavior_type(const std::string& bt);
+            const std::string& behavior_type() const { return behavior_type_; }
+            const std::string& urdf() const { return urdf_; }
+            const std::string& floating_base_joint_name() const { return floating_base_joint_name_; }
+
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
@@ -172,12 +170,13 @@ namespace inria_wbc {
             void _solve(const Eigen::VectorXd& q, const Eigen::VectorXd& dq);
             void _solve() { _solve(q_tsid_, v_tsid_); }
 
-            const YAML::Node& config_;
             bool verbose_ = false;
             double t_;
             double dt_;
             bool floating_base_;
             std::string base_path_;
+            std::string urdf_;
+            std::string floating_base_joint_name_;
 
             // true if we close the loop with actuator position/vel
             // and floating base position
@@ -211,23 +210,6 @@ namespace inria_wbc {
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
         };
-
-        inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.pos = ref;
-            sample.vel.setZero(ref.size());
-            sample.acc.setZero(ref.size());
-            return sample;
-        }
-
-        inline tsid::trajectories::TrajectorySample to_sample(const pinocchio::SE3& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.resize(12, 6);
-            tsid::math::SE3ToVector(ref, sample.pos);
-            return sample;
-        }
 
         using Factory = utils::Factory<Controller, YAML::Node>;
         template <typename T>

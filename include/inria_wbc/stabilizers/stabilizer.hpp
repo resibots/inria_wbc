@@ -13,6 +13,30 @@
 namespace inria_wbc {
     namespace stabilizer {
 
+        // creates a momentum in the direction where there is some com error
+        // hence if you push the robot, the momentum will go against that push
+        void momentum_com_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
+            const Eigen::Vector2d& cop_filtered,
+            const tsid::trajectories::TrajectorySample& model_current_com,
+            const tsid::trajectories::TrajectorySample& momentum_ref,
+            tsid::trajectories::TrajectorySample& momentum_sample,
+            float max_ref = 5);
+
+        // creates a momentum to keep the torso in the correct orientation
+        // if the imu data velocity goes in one direction we create a momentum to put back the torso where it should be
+        void momentum_imu_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::VectorXd& d,
+            const Eigen::Vector3d& imu_angular_vel,
+            const Eigen::Vector3d& model_angular_vel,
+            const tsid::trajectories::TrajectorySample& momentum_ref,
+            tsid::trajectories::TrajectorySample& momentum_sample,
+            float max_ref = 5);
+
         Eigen::Vector2d com_to_zmp(const tsid::trajectories::TrajectorySample& com_ref);
         tsid::trajectories::TrajectorySample data_to_sample(const tsid::InverseDynamicsFormulationAccForce::Data& data);
 
@@ -48,7 +72,7 @@ namespace inria_wbc {
         void foot_force_difference_admittance(
             double dt, // controller dt
             double Mg, // Mass of the robot * gravity
-            Eigen::VectorXd p_ffda, // 3d proportional gains
+            const Eigen::VectorXd& p_ffda, // 3d proportional gains
             double lf_normal_force, // normal left foot force from tsid solution (~= current model normal force)
             double rf_normal_force, // normal right foot force from tsid solution (~= current model normal force)
             const Eigen::Vector3d& lf_force, //measured left foot force vector
@@ -86,7 +110,7 @@ namespace inria_wbc {
             Eigen::Matrix<double, 6, 1>& right_fref); //output right foot forces + torques command
 
         Eigen::Vector3d closest_point_on_line(
-            const Eigen::Vector3d point,
+            const Eigen::Vector3d& point,
             const std::pair<Eigen::Vector3d, Eigen::Vector3d>& line);
 
         /***************** Not used for now ******************************/
