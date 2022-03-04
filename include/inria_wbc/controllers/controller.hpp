@@ -211,27 +211,6 @@ namespace inria_wbc {
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
         };
 
-        inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.setValue(ref);
-            sample.setDerivative(Eigen::VectorXd::Zero(ref.size()));
-            sample.setSecondDerivative(Eigen::VectorXd::Zero(ref.size()));
-            return sample;
-        }
-
-        inline tsid::trajectories::TrajectorySample to_sample(const pinocchio::SE3& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.resize(12, 6);
-
-            Eigen::VectorXd ref_vec(12);
-            tsid::math::SE3ToVector(ref, ref_vec);
-            sample.setValue(ref_vec);
-            
-            return sample;
-        }
-
         using Factory = utils::Factory<Controller, YAML::Node>;
         template <typename T>
         using Register = Factory::AutoRegister<T>;
