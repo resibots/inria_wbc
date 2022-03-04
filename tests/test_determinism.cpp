@@ -24,8 +24,6 @@ namespace y = YAML;
 std::pair<std::vector<Eigen::VectorXd>, std::vector<Eigen::VectorXd>> inline test_behavior(
     const std::shared_ptr<inria_wbc::behaviors::Behavior>& behavior, int duration)
 {
-    std::cout << "running...";
-    std::cout.flush();
     auto controller = behavior->controller();
 
     auto all_dofs = controller->all_dofs();
@@ -35,36 +33,32 @@ std::pair<std::vector<Eigen::VectorXd>, std::vector<Eigen::VectorXd>> inline tes
     std::vector<Eigen::VectorXd> cmds, cmds_filtered;
     inria_wbc::controllers::SensorData sensors;
     for (int i = 0; i < duration; ++i) {
-        // std::cout << i << " ";
-        std::cout.flush();
         behavior->update(sensors); // default values for sensors
         auto cmd = controller->q(false);
         cmds.push_back(cmd);
         cmds_filtered.push_back(controller->filter_cmd(cmd).tail(ncontrollable));
     }
-    std::cout << "done" << std::endl;
     return std::make_pair(cmds, cmds_filtered);
 }
 
 template <typename T>
 inline void compare_cmds(utest::test_t test, const T& cmds, const T& cmds2)
 {
-    std::cout << "Comparing commands:";
+    UTEST_INFO(test, "Comparing commands:");
     UTEST_CHECK(test, cmds.first.size() == cmds2.first.size());
     bool error = false;
     for (int i = 0; i < cmds.first.size(); ++i) {
-        // std::cout << i << " ";
-        std::cout.flush();
         if ((cmds.first[i] - cmds2.first[i]).norm() >= 1e-8 || (cmds.second[i] - cmds2.second[i]).norm() >= 1e-8)
             error = true;
     }
     if (error)
         UTEST_ERROR(test, "Error, cmds are not the same")
-    std::cout << "done" << std::endl;
+    UTEST_INFO(test, "Comparison done");
 }
 
 void subtest(utest::test_t test, int nexp, const std::string& controller_path, const std::string& behavior_p, const std::string& urdf)
 {
+    UTEST_INFO(test, "Testing " + behavior_p + " determinism with " + urdf);
     std::vector<std::pair<std::vector<Eigen::VectorXd>, std::vector<Eigen::VectorXd>>> results;
     int duration = 50000;
 
@@ -77,7 +71,7 @@ void subtest(utest::test_t test, int nexp, const std::string& controller_path, c
 
         bool load_rand_yaml = rand() % 2 == 1;
         if (load_rand_yaml) {
-            std::cout << "random yaml order" << std::endl;
+            UTEST_INFO(test, "random yaml order");
             std::string tasks_path = "../../etc/talos/" + IWBC_CHECK(c_config["CONTROLLER"]["tasks"].as<std::string>());
             y::Node randomize = IWBC_CHECK(y::LoadFile(tasks_path));
             std::ofstream fout("../../etc/talos/randomize.yaml");
@@ -107,7 +101,9 @@ void subtest(utest::test_t test, int nexp, const std::string& controller_path, c
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, b_config);
         UTEST_CHECK(test, behavior.get() != 0);
 
+        UTEST_INFO(test, "running behavior start");
         results.push_back(test_behavior(behavior, duration));
+        UTEST_INFO(test, "running behavior end");
     }
 
     for (int i = 0; i < nexp; i++) {
@@ -125,14 +121,12 @@ int main(int argc, char** argv)
     srand(time(NULL));
 
     std::string controller_path = "../../etc/talos/talos_pos_tracker.yaml";
-    std::vector<std::string> behaviors_paths = {"../../etc/talos/arm.yaml", "../../etc/talos/squat.yaml", "../../etc/talos/clapping.yaml", "../../etc/talos/walk_on_spot.yaml"};
+    std::vector<std::string> behaviors_paths = {"../../etc/talos/arm.yaml", "../../etc/talos/squat.yaml"};
     std::vector<std::string> urdfs = {"talos/talos.urdf", "talos/talos_fast.urdf"};
 
     int nexp = 5;
     for (int b = 0; b < behaviors_paths.size(); b++) {
-        std::cout << "Testing " << behaviors_paths[b] << " determinism " << std::endl;
         for (int u = 0; u < urdfs.size(); u++) {
-            std::cout << "with " << urdfs[u] << std::endl;
             auto test = utest::make_test("determinism_" + behaviors_paths[b] + "_" + urdfs[u]);
             UTEST_REGISTER(test_suite, test, subtest(test, nexp, controller_path, behaviors_paths[b], urdfs[u]));
         }
