@@ -23,6 +23,7 @@
 
 #include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/controllers/tasks.hpp"
+#include "inria_wbc/trajs/utils.hpp"
 
 using namespace tsid;
 using namespace tsid::math;
@@ -196,14 +197,14 @@ namespace inria_wbc {
         void PosTracker::set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name)
         {
             auto task = se3_task(task_name);
-            auto sample = to_sample(ref);
+            auto sample = trajs::to_sample(ref);
             task->setReference(sample);
         }
 
         void PosTracker::set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name)
         {
             auto c = contact(contact_name);
-            auto sample = to_sample(ref);
+            auto sample = trajs::to_sample(ref);
             c->setReference(sample);
         }
 

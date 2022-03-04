@@ -9,6 +9,7 @@
 #include <tsid/tasks/task-se3-equality.hpp>
 
 #include "inria_wbc/controllers/tasks.hpp"
+#include "inria_wbc/trajs/utils.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
 using namespace tsid;
@@ -71,7 +72,7 @@ namespace inria_wbc {
                 ref = robot->position(tsid->data(), robot->model().getJointId(tracked));
             else
                 ref = robot->framePosition(tsid->data(), robot->model().getFrameId(tracked));
-            auto sample = to_sample(ref);
+            auto sample = trajs::to_sample(ref);
             task->setReference(sample);
 
             // add the task to TSID (side effect, be careful)
@@ -106,7 +107,7 @@ namespace inria_wbc {
             task->setMask(mask);
 
             // set the reference
-            task->setReference(to_sample(robot->com(tsid->data())));
+            task->setReference(trajs::to_sample(robot->com(tsid->data())));
 
             // add to TSID
             tsid->addMotionTask(*task, weight, 1);
@@ -141,7 +142,7 @@ namespace inria_wbc {
 
             // set the reference
             Eigen::VectorXd ref = Eigen::VectorXd::Zero(6);
-            task->setReference(to_sample(ref));
+            task->setReference(trajs::to_sample(ref));
 
             // add to TSID
             tsid->addMotionTask(*task, weight, 1);
@@ -212,7 +213,7 @@ namespace inria_wbc {
             task->setMask(mask_post);
 
             // set the reference to the current position of the robot
-            task->setReference(to_sample(ref_q.tail(robot->na())));
+            task->setReference(trajs::to_sample(ref_q.tail(robot->na())));
 
             // add the task
             tsid->addMotionTask(*task, weight, 1);

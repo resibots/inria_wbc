@@ -21,8 +21,20 @@ namespace inria_wbc {
                 auto com_final = com_init;
                 com_final(2) -= motion_size_;
 
-                trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_final, controller_->dt(), trajectory_duration_));
-                trajectories_.push_back(trajectory_handler::compute_traj(com_final, com_init, controller_->dt(), trajectory_duration_));
+                trajectories_.push_back(
+                    trajs::to_sample_trajectory(
+                        trajs::min_jerk_trajectory(com_init, com_final, controller_->dt(), trajectory_duration_),
+                        trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_init, com_final, controller_->dt(), trajectory_duration_),
+                        trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_init, com_final, controller_->dt(), trajectory_duration_)
+                    )
+                );
+                trajectories_.push_back(
+                    trajs::to_sample_trajectory(
+                        trajs::min_jerk_trajectory(com_final, com_init, controller_->dt(), trajectory_duration_),
+                        trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_final, com_init, controller_->dt(), trajectory_duration_),
+                        trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_final, com_init, controller_->dt(), trajectory_duration_)
+                    )
+                );
                 current_trajectory_ = trajectories_[traj_selector_];
             }
 

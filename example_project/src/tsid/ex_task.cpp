@@ -94,12 +94,11 @@ namespace tsid {
         void ExTask::setReference(TrajectorySample& ref)
         {
             m_ref = ref;
-            TSID_DISABLE_WARNING_PUSH
-            TSID_DISABLE_WARNING_DEPRECATED
-            assert(ref.pos.size() == 12);
-            m_M_ref.translation(ref.pos.head<3>());
-            m_M_ref.rotation(MapMatrix3(&ref.pos(3), 3, 3));
-            TSID_DISABLE_WARNING_POP
+            
+            assert(ref.getValue().size() == 12);
+            m_M_ref.translation(ref.getValue().head<3>());
+            m_M_ref.rotation(MapMatrix3(&ref.getValue()(3), 3, 3));
+            
             m_v_ref = Motion(ref.getDerivative());
             m_a_ref = Motion(ref.getSecondDerivative());
         }
@@ -107,10 +106,9 @@ namespace tsid {
         void ExTask::setReference(const SE3& ref)
         {
             TrajectorySample s(12, 6);
-            TSID_DISABLE_WARNING_PUSH
-            TSID_DISABLE_WARNING_DEPRECATED
-            tsid::math::SE3ToVector(ref, s.pos);
-            TSID_DISABLE_WARNING_POP
+            Eigen::VectorXd ref_vec(12);
+            tsid::math::SE3ToVector(ref, ref_vec);
+            s.setValue(ref_vec);
             setReference(s);
         }
 
