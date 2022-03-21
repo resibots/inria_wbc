@@ -87,14 +87,13 @@ namespace tsid {
             Data& data)
         {
             // pos & Jacobian of the tracked frame
-            SE3 oMi;
             Motion v_frame;
             Motion a_frame;
-            m_robot.framePosition(data, m_tracked_frame_id, oMi);
+            m_robot.framePosition(data, m_tracked_frame_id, m_tracked_frame_position);
             //a_frame = m_robot.frameAccelerationWorldOriented(data, m_tracked_frame_id);
             m_robot.frameClassicAcceleration(data, m_tracked_frame_id, a_frame);
             //a_frame = data.a[m_tracked_frame_id];
-            auto pos = oMi.translation();
+            auto pos = m_tracked_frame_position.translation();
             assert(!std::isnan(pos[0]));
             assert(!std::isnan(pos[1]));
             assert(!std::isnan(pos[2]));
@@ -109,6 +108,7 @@ namespace tsid {
             m_B = Eigen::MatrixXd::Zero(1, 1);
             std::fill(m_collisions.begin(), m_collisions.end(), false);
 
+            SE3 oMi;
             for (size_t i = 0; i < m_avoided_frames_ids.size(); ++i) {
                 // pos & Jacobian
                 m_robot.framePosition(data, m_avoided_frames_ids[i], oMi);
@@ -193,8 +193,6 @@ namespace tsid {
 
                     // A
                     m_A += m_grad_C.transpose() * J;
-                    m_Kd = 250.;//2*K_p^2
-                    m_Kp = 50;
                     // B (note: m_drift = dJ(q)*dq)
                     m_B += -((m_Hessian_C * J * v).transpose() * J * v + m_grad_C.transpose() * (-drift + m_Kd * J * v) + m_Kp * m_C);
                 } // else 0 for everything

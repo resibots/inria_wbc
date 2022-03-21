@@ -78,6 +78,9 @@ namespace tsid {
             void Kd(const double kd) { m_Kd = kd; }
             Index frame_id() const;
 
+            const pinocchio::SE3& tracked_frame_position() const {
+               return m_tracked_frame_position;
+            }
             const std::vector<Vector3>& avoided_frames_positions() const { return m_avoided_frames_positions; }
             const std::vector<double>& avoided_frames_r0s() const { return m_avoided_frames_r0s; }
             bool collision(int i) const { return m_collisions[i]; }
@@ -110,7 +113,7 @@ namespace tsid {
             std::vector<Matrix6x> m_Js; // jacobian of the other frames
 
             std::vector<Vector3> m_avoided_frames_positions;
-
+            pinocchio::SE3 m_tracked_frame_position;
             std::vector<bool> m_collisions;
 
             Eigen::MatrixXd m_A;
