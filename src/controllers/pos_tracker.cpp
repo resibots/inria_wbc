@@ -14,6 +14,7 @@
 
 #include <tsid/solvers/solver-HQP-base.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
+#include <tsid/solvers/solver-HQP-qpmad.hpp>
 #include <tsid/solvers/solver-HQP-factory.hxx>
 #include <tsid/solvers/utils.hpp>
 #include <tsid/utils/statistics.hpp>
@@ -74,8 +75,19 @@ namespace inria_wbc {
 
             ////////////////////Create an HQP solver /////////////////////////////////////
             using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
-            solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+            // solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_OSQP, "solver-osqp"));
+            solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
+            // solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
             solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
+
+            /*
+            auto qpmad_solver = std::dynamic_pointer_cast<solvers::SolverHQpmad>(solver_);
+            if(qpmad_solver)
+            {
+                qpmad_solver->settings().max_iter_ = 50;
+                qpmad_solver->settings().tolerance_ = 1e-8;
+            }
+            */
 
             ////////////////////Compute Problem Data at init /////////////////////////////
             const uint nv = robot_->nv();

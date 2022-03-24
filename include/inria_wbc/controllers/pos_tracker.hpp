@@ -40,6 +40,7 @@ namespace inria_wbc {
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
 
             double cost(const std::string& task_name) const override { return Controller::cost(task<tsid::tasks::TaskBase>(task_name)); }
+            double objective_value() const { return solver_->getObjectiveValue(); }
 
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
             tsid::trajectories::TrajectorySample get_full_se3_ref(const std::string& task_name) { return se3_task(task_name)->getReference(); }
