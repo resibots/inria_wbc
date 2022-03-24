@@ -7,7 +7,7 @@
 #include <signal.h>
 
 #include <robot_dart/control/pd_control.hpp>
-#include <robot_dart/robot.hpp>
+#include <robot_dart/robots/tiago.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/sensor/force_torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
@@ -105,9 +105,7 @@ int main(int argc, char* argv[])
         //////////////////// INIT DART ROBOT //////////////////////////////////////
         std::srand(std::time(NULL));
 
-        std::vector<std::pair<std::string, std::string>> packages = {{"tiago_description", "tiago/tiago_description"}};
-        std::string urdf = "tiago/tiago_steel.urdf";
-        auto robot = std::make_shared<robot_dart::Robot>(urdf, packages);
+        auto robot = std::make_shared<robot_dart::robots::Tiago>(sim_freq, "tiago/tiago_steel_no_wheel.urdf");
         robot->fix_to_world();
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
         if (vm["actuators"].as<std::string>() == "spd")
@@ -167,12 +165,13 @@ int main(int argc, char* argv[])
 
         auto all_dofs = controller->all_dofs();
         auto controllable_dofs = controller->controllable_dofs();
-        std::cout << "Q0:" << controller->q0().transpose() << std::endl;
+        std::cout << "Q0: " << controller->q0().transpose() << " [" << controller->q0().size()<<"]"<< std::endl;
         robot->set_positions(controller->q0(), all_dofs);
 
         uint ncontrollable = controllable_dofs.size();
 
-        std::cout << "# of controllable DOFS:" << controllable_dofs.size() << std::endl;
+        std::cout << "# of controllable DOFS: " << controllable_dofs.size() << std::endl;
+        std::cout << "# of DOFS: " << all_dofs.size() << std::endl;
 
         if (vm.count("log")) {
             std::ofstream ofs("all_dofs.dat");
