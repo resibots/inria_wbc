@@ -314,15 +314,15 @@ namespace inria_wbc {
             // when not using foot contact horizontal should be false 
             if (!horizontal){
                 // translation
-                contact_ref.translation()[0] = x;
-                contact_ref.translation()[1] = y;
-                contact_ref.translation()[2] = z;
+                contact_ref.translation()[0] += x;
+                contact_ref.translation()[1] += y;
+                contact_ref.translation()[2] += z;
 
                 // rotation 
                 auto euler = contact_ref.rotation().eulerAngles(0, 1, 2);
-                euler[0] = roll;
-                euler[1] = pitch;
-                euler[2] = yaw;
+                euler[0] += roll;
+                euler[1] += pitch;
+                euler[2] += yaw;
                 auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
                 contact_ref.rotation() = q.toRotationMatrix();
             }

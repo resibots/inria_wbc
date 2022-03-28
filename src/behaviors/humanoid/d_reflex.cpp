@@ -32,8 +32,8 @@ namespace inria_wbc {
                     rh_task->Kd(zero);  
 
                     auto lh_task = controller->se3_task("lh"); 
-                    lh_task->Kp(zero); 
-                    lh_task->Kd(zero); 
+                    // lh_task->Kp(zero); 
+                    // lh_task->Kd(zero); 
 
                     controller->add_contact("contact_rhand");
                 }

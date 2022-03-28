@@ -106,19 +106,13 @@ contact_rhand:
     horizontal: false 
     x_cst: false   
     activate_from_the_start: false  
-    x: -0.
-    y: -0.70
-    z: 1.15
-    roll: -1.57
-    pitch: 0.
-    yaw: 0.
-    horizontal: true
-    x_cst: false
-    activate: true
-    x: 0.
-    y: 0.
-    z: 0.
-    roll: 0.
+    # x: 0.05
+    # y: 0.1
+    # z: 0.0
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    roll: 0.0
     pitch: 0.
     yaw: 0.
 self_collision-left:
