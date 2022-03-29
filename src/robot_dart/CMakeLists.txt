@@ -5,6 +5,7 @@ set(EXAMPLE_LIST
     franka.cpp
     tutorial_0.cpp
     tutorial_1.cpp
+    qp_timer_test.cpp
 )
 
 
