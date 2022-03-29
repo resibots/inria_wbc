@@ -1,6 +1,6 @@
 CONTROLLER:
   name: talos-pos-tracker
-  solver: eiquadprog
+  solver: qpmad #eiquadprog
   base_path: /home/pal/inria_wbc/etc/talos
   tasks: tasks.yaml
   urdf: talos/talos.urdf

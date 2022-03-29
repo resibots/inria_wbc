@@ -1,5 +1,6 @@
 CONTROLLER:
   name: talos-pos-tracker
+  solver: qpmad
   base_path: /home/pal/inria_wbc/etc/talos
   tasks: tasks.yaml
   urdf: /home/pal/deployed_ws/share/utheque/talos/talos_fast.urdf
