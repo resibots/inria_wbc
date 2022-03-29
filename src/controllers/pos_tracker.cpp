@@ -38,6 +38,9 @@ namespace inria_wbc {
             // we only care about the CONTROLLER section
             YAML::Node c = IWBC_CHECK(config["CONTROLLER"]);
 
+            // qp solver to be used (eiquadprog or qpmad)
+            solver_to_use_ = IWBC_CHECK(c["solver"].as<std::string>());
+
             // all the file paths are relative to base_path
             auto path = IWBC_CHECK(c["base_path"].as<std::string>());
 
@@ -75,9 +78,16 @@ namespace inria_wbc {
 
             ////////////////////Create an HQP solver /////////////////////////////////////
             using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
-            // solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_OSQP, "solver-osqp"));
-            solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
-            // solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+
+            //solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_OSQP, "solver-osqp"));
+
+            if(solver_to_use_ == "qpmad")
+                solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
+            else if(solver_to_use_ == "eiquadprog")
+                solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+            else
+                IWBC_ERROR("solver in configuration file must be either 'eiquadprog' or 'qpmad'.");
+            
             solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
 
             /*
@@ -139,6 +149,7 @@ namespace inria_wbc {
 
             if (verbose_) {
                 std::cout << "--------- Solver size info ---------" << std::endl;
+                std::cout << "Solver : " << solver_to_use_ << std::endl;
                 std::cout << "total number of variable (acceleration + contact-force) : " << tsid_->nVar() << std::endl;
                 std::cout << "number of equality constraints : " << tsid_->nEq() << std::endl;
                 std::cout << "number of inequality constraints : " << tsid_->nIn() << std::endl;
