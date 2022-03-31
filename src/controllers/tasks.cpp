@@ -8,7 +8,6 @@
 #include <tsid/tasks/task-joint-posture.hpp>
 #include <tsid/tasks/task-momentum-equality.hpp>
 #include <tsid/tasks/task-se3-equality.hpp>
-#include <tsid/tasks/task-joint-posVel-bounds.hpp>
 
 #include "inria_wbc/controllers/tasks.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
