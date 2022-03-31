@@ -70,6 +70,15 @@ namespace inria_wbc {
                 std::cout << "torso_max_toll " << torso_max_roll << std::endl;
 
             parse_stabilizer(config);
+            
+            // parse compliance posture
+            {
+                auto c = IWBC_CHECK(config["compliance_posture"]);
+                _use_compliance_posture = IWBC_CHECK(c["activated"].as<bool>());
+                _compliance_posture_kp = IWBC_CHECK(c["kp"].as<double>());
+
+                IWBC_ASSERT(this()->has_task("compliance_posture"), "talos_pos_tracker compliance_posture task is needed.");
+            }
 
             // init collision detection
             {
@@ -342,6 +351,25 @@ namespace inria_wbc {
                     stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _stabilizer_configs[behavior_type_].ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
+            }
+
+            if(_use_compliance_posture)
+            {
+                IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "compliance_posture task needs torque sensor measurements");
+                
+                Eigen::VectorXd error = Eigen::VectorXd::Zeros(this.tau().size());
+
+                const Eigen::VectorXd& joints_torque = sensor_data.at("joints_torque");
+
+                for(int i=0; i < _torque_collision_joints_ids; ++i)
+                {
+                    auto idx = _torque_collision_joints_ids[i];
+                    error(idx) = joints_torque[i] - this->tau()(idx);
+                }
+                
+                Eigen::VectorXd ref = this()->q() + kp_cp_ * error;
+                
+                task("compliance_posture")->setReference(ref);
             }
 
             if (_use_torque_collision_detection) {

@@ -34,6 +34,9 @@ CONTROLLER:
     params_ss: stab_single_support.yaml
     params_ds: stab_double_support.yaml
     params_fixed_base: stab_fixed_base.yaml
+  compliance_posture:
+    activated: true
+    kp: 0.001
   collision_detection:
     activated: true
     filter_size: 30
