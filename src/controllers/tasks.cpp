@@ -252,6 +252,31 @@ namespace inria_wbc {
         }
         RegisterYAML<tsid::tasks::TaskJointPosVelAccBounds> __register_bounds("bounds", make_bounds);
 
+        ////// Actuation Bounds //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_actuation_bounds(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskActuationBounds>(task_name, *robot);
+            auto tau_max = robot->model().effortLimit.tail(robot->na());
+            task->setBounds(-tau_max, tau_max);
+
+            // add the task
+            tsid->addActuationTask(*task, weight, 0);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskActuationBounds> __register_actuation_bounds("actuation-bounds", make_actuation_bounds);
+
+
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
         std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(

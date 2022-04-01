@@ -456,6 +456,8 @@ int main(int argc, char* argv[])
                     timer.report(*x.second, simu->scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
+                else if (x.first == "tau")
+                    (*x.second) << controller->tau().transpose() << std::endl;
                 else if (x.first == "com") // the real com
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
