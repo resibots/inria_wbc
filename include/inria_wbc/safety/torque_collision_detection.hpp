@@ -50,6 +50,8 @@ public:
 
     std::vector<int> get_invalid_ids() const;
 
+    int get_step_count() const { return _step_count; };
+
     void reset();
 
 protected:

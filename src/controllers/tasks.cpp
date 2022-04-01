@@ -253,7 +253,7 @@ namespace inria_wbc {
         RegisterYAML<tsid::tasks::TaskJointPosVelAccBounds> __register_bounds("bounds", make_bounds);
 
         ////// Actuation Bounds //////
-        std::shared_ptr<tsid::tasks::TaskBase> make_actuationbounds(
+        std::shared_ptr<tsid::tasks::TaskBase> make_actuation_bounds(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
             const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
@@ -274,7 +274,7 @@ namespace inria_wbc {
 
             return task;
         }
-        RegisterYAML<tsid::tasks::TaskActuationBounds> __register_actuationbounds("actuationbounds", make_actuationbounds);
+        RegisterYAML<tsid::tasks::TaskActuationBounds> __register_actuation_bounds("actuation-bounds", make_actuation_bounds);
 
 
         ////// Contacts //////
