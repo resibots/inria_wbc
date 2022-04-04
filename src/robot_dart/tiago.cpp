@@ -106,6 +106,7 @@ int main(int argc, char* argv[])
         std::srand(std::time(NULL));
 
         auto robot = std::make_shared<robot_dart::robots::Tiago>(sim_freq, "tiago/tiago_steel_no_wheel.urdf");
+        robot->skeleton()->setPosition(2, 0.);// so that the model is aligned with the tiago
         robot->fix_to_world();
         robot->set_position_enforced(vm["enforce_position"].as<bool>());
         if (vm["actuators"].as<std::string>() == "spd")
