@@ -70,15 +70,6 @@ namespace inria_wbc {
                 std::cout << "torso_max_toll " << torso_max_roll << std::endl;
 
             parse_stabilizer(config);
-            
-            // parse compliance posture
-            {
-                auto c = IWBC_CHECK(config["compliance_posture"]);
-                _use_compliance_posture = IWBC_CHECK(c["activated"].as<bool>());
-                _compliance_posture_kp = IWBC_CHECK(c["kp"].as<double>());
-
-                IWBC_ASSERT(this()->has_task("compliance_posture"), "talos_pos_tracker compliance_posture task is needed.");
-            }
 
             // init collision detection
             {
@@ -94,7 +85,7 @@ namespace inria_wbc {
                     "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
                     "arm_right_1_joint", "arm_right_2_joint", "arm_right_3_joint", "arm_right_4_joint"};
 
-                auto filtered_dof_names = this->all_dofs(true); // filter out mimics
+                auto filtered_dof_names = this->all_dofs(true); // filter out mimics, include floating base (6dofs)
                 for (const auto& joint : _torque_collision_joints) {
                     auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
                     _torque_collision_joints_ids.push_back(std::distance(filtered_dof_names.begin(), it));
@@ -119,6 +110,43 @@ namespace inria_wbc {
                 _torque_collision_detection = safety::TorqueCollisionDetection(_torque_collision_threshold);
                 _torque_collision_detection.set_max_consecutive_invalid(max_invalid);
                 _torque_collision_detection.set_filter(_torque_collision_filter);
+            }
+
+            // parse compliance posture
+            {
+                auto c = IWBC_CHECK(config["compliance_posture"]);
+                _use_compliance_posture = IWBC_CHECK(c["activated"].as<bool>());
+                _compliance_posture_kp = IWBC_CHECK(c["kp"].as<double>());
+                _compliance_posture_div = IWBC_CHECK(c["div"].as<double>());
+
+                IWBC_ASSERT(_compliance_posture_div >= 0 && _compliance_posture_div <= 1, "compliance_posture div must be in [0,1].");
+                IWBC_ASSERT(this->has_task("compliance_posture"), "talos_pos_tracker compliance_posture task is needed.");
+                
+                auto compliance_posture_task = this->task<tsid::tasks::TaskJointPosture>("compliance_posture");
+                auto filtered_dof_names = this->all_dofs(true); // filter out mimics, include floating base (6dofs)
+                for(auto& str : filtered_dof_names)
+                    std::cerr << "dof: " << str << std::endl;
+                // check mask: create mask from torque collision joints index and execute logic-and with desired one
+                Eigen::VectorXd valid_mask = Eigen::VectorXd::Zero(robot_->na());
+                for(size_t id : _torque_collision_joints_ids)
+                    valid_mask(id-6) = 1; // -6 to not consider floating base
+                    
+                Eigen::VectorXd compliance_mask = compliance_posture_task->getMask();
+                std::cerr << compliance_mask.size() << " " << valid_mask.size() << std::endl;
+                Eigen::VectorXd valid_compliance_mask = compliance_mask.cwiseProduct(valid_mask);
+
+                if(verbose_)
+                    for(int i=0; i < valid_compliance_mask.size(); ++i)
+                        if(valid_compliance_mask(i) == 1)
+                            std::clog << "compliace_posture acting on : " << filtered_dof_names[i+6] << std::endl;
+
+                if(compliance_mask != valid_compliance_mask)
+                {
+                    if(verbose_)
+                        std::clog << "Non valid mask for compliance_posture task" << std::endl
+                            << "Joints without torque sensors have been masked" << std::endl;
+                    compliance_posture_task->setMask(valid_compliance_mask);
+                }
             }
 
             if (verbose_) {
@@ -357,19 +385,24 @@ namespace inria_wbc {
             {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "compliance_posture task needs torque sensor measurements");
                 
-                Eigen::VectorXd error = Eigen::VectorXd::Zeros(this.tau().size());
-
+                Eigen::VectorXd error = Eigen::VectorXd::Zero(this->tau().size());
                 const Eigen::VectorXd& joints_torque = sensor_data.at("joints_torque");
-
-                for(int i=0; i < _torque_collision_joints_ids; ++i)
+                for(int i=0; i < _torque_collision_joints_ids.size(); ++i)
                 {
                     auto idx = _torque_collision_joints_ids[i];
                     error(idx) = joints_torque[i] - this->tau()(idx);
                 }
                 
-                Eigen::VectorXd ref = this()->q() + kp_cp_ * error;
+                Eigen::VectorXd ref = this->q() - _compliance_posture_kp * error; // method 1
+                //Eigen::VectorXd ref = this->q() + _compliance_posture_div * 10000 * (dt_*dt_) * (robot_->mass(tsid_->data()).inverse() * error); // method 2
+                Eigen::VectorXd ref_no_fb = ref.tail(this->q().size() - 6);
+                for(int i=6; i < this->q().size(); ++i)
+                    if(this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask()(i-6) != 1)
+                        ref_no_fb(i-6) = this->q()(i);
                 
-                task("compliance_posture")->setReference(ref);
+                std::cerr << this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask().transpose() << std::endl;
+                std::cerr << (this->q().tail(this->q().size()-6) - ref_no_fb).transpose() << std::endl;
+                this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->setReference(trajs::to_sample(ref_no_fb));
             }
 
             if (_use_torque_collision_detection) {

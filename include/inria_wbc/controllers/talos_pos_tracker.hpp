@@ -63,6 +63,11 @@ namespace inria_wbc {
             bool _use_stabilizer = false;
             bool _is_ss = false;
 
+            bool _use_compliance_posture = false;
+            double _compliance_posture_kp;
+            double _compliance_posture_div;
+
+
             //torque collision
             bool _use_torque_collision_detection;
             bool _collision_detected = false;

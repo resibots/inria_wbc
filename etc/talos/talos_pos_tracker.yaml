@@ -36,7 +36,8 @@ CONTROLLER:
     params_fixed_base: stab_fixed_base.yaml
   compliance_posture:
     activated: true
-    kp: 0.001
+    kp: 0.05
+    div: 1.0
   collision_detection:
     activated: true
     filter_size: 30
