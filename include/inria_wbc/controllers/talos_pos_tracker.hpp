@@ -1,8 +1,13 @@
 #ifndef IWBC_TALOS_POS_TRACKER_HPP
 #define IWBC_TALOS_POS_TRACKER_HPP
 
+#include "inria_wbc/stabilizers/stabilizer_conf.hpp"
+#include <boost/optional.hpp>
 #include <inria_wbc/controllers/humanoid_pos_tracker.hpp>
+#include <inria_wbc/estimators/cop.hpp>
+#include <inria_wbc/estimators/filtering.hpp>
 #include <inria_wbc/safety/torque_collision_detection.hpp>
+
 namespace inria_wbc {
     namespace controllers {
         // we add the torque safety
@@ -21,15 +26,14 @@ namespace inria_wbc {
             bool collision_detected() const { return _collision_detected; }
             void clear_collision_detection();
 
-            bool closed_loop() const { return _closed_loop; }
-            void set_closed_loop(bool b) { _closed_loop = b; }
-
         protected:
+            
+            double _torso_max_roll = 0.25;
+
             //torque collision
             void parse_torque_safety(const YAML::Node& config);
             void parse_collision_thresholds(const std::string& config_path);
 
-            //torque collision
             bool _use_torque_collision_detection;
             bool _collision_detected = false;
             safety::TorqueCollisionDetection _torque_collision_detection;
@@ -38,11 +42,6 @@ namespace inria_wbc {
             std::vector<int> _torque_collision_joints_ids;
             Eigen::VectorXd _torque_collision_threshold;
 
-            // momentum stabilizer (Talos only)
-            void parse_momentum_stab(const YAML::Node& config);
-            bool _use_momentum = false;
-            Eigen::VectorXd _momentum_p;
-            Eigen::VectorXd _momentum_d;
         };
 
     } // namespace controllers

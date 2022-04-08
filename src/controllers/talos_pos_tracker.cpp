@@ -37,7 +37,6 @@ namespace inria_wbc {
         TalosPosTracker::TalosPosTracker(const YAML::Node& config) : HumanoidPosTracker(config)
         {
             parse_torque_safety(config["CONTROLLER"]);
-            parse_momentum_stab(config["CONTROLLER"]);
 
             //set the _torso_max_roll in the bounds for safety (for the stabilizer)
             auto names = robot_->model().names;
@@ -45,7 +44,8 @@ namespace inria_wbc {
             auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
             auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
             std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
-
+            
+            _torso_max_roll = IWBC_CHECK(config["CONTROLLER"]["torso_max_roll"].as<float>()) / 180 * M_PI;
             for (auto& n : to_limit) {
                 IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
                 auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
@@ -57,34 +57,6 @@ namespace inria_wbc {
             }
 
             bound_task()->setPositionBounds(q_lb, q_ub);
-        }
-
-        void TalosPosTracker::parse_momentum_stab(const YAML::Node& config)
-        {
-
-
-            auto c = IWBC_CHECK(config["stabilizer"]);
-            YAML::Node s = IWBC_CHECK(YAML::LoadFile( stab_path(config)));
-
-            _use_momentum = IWBC_CHECK(s["use_momentum"].as<bool>());
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT) {
-                _use_momentum = false;
-                std::cout << "WARNING: Disabling momentum stabilizer because the behavior is single-support!" << std::endl;
-            }
-
-            IWBC_ASSERT(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the momentum stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the momentum stabilizer");
-            _momentum_p.resize(6);
-            _momentum_d.resize(6);
-            _momentum_p.setZero();
-            _momentum_d.setZero();
-            _momentum_p = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_p"].as<std::vector<double>>()).data(), _momentum_p.size());
-            _momentum_d = Eigen::VectorXd::Map(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).data(), _momentum_d.size());
-            if (verbose_) {
-                std::cout << "momentum:" << _use_momentum << std::endl;
-                std::cout << "momentum_p:" << _momentum_p.transpose() << std::endl;
-                std::cout << "momentum_d:" << _momentum_d.transpose() << std::endl;
-            }
         }
 
         void TalosPosTracker::parse_torque_safety(const YAML::Node& config)
@@ -151,7 +123,7 @@ namespace inria_wbc {
         }
 
         void TalosPosTracker::update(const SensorData& sensor_data)
-        {
+        {            
             if (_use_torque_collision_detection) {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "torque collision detection requires torque sensor data");
                 IWBC_ASSERT(sensor_data.at("joints_torque").size() == _torque_collision_joints.size(), "torque sensor data has a wrong size. call torque_sensor_joints() for needed values");
@@ -161,23 +133,21 @@ namespace inria_wbc {
             }
 
             tsid::trajectories::TrajectorySample momentum_ref;
-            if (_use_momentum)
+            if (_use_stabilizer && _stabilizer_configs[behavior_type_].use_momentum) {
                 momentum_ref = get_full_momentum_ref();
 
-            if (_use_momentum) {
                 tsid::trajectories::TrajectorySample momentum_sample;
                 _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
 
                 auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
-                stabilizer::momentum_imu_admittance(dt_, _momentum_p, _momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                stabilizer::momentum_imu_admittance(dt_, _stabilizer_configs[behavior_type_].momentum_p, _stabilizer_configs[behavior_type_].momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
                 set_momentum_ref(momentum_sample);
             }
 
             HumanoidPosTracker::update(sensor_data);
-            if (_use_stabilizer) {
-                if (_use_momentum)
-                    set_momentum_ref(momentum_ref);
-            }
+
+            if (_use_stabilizer && _stabilizer_configs[behavior_type_].use_momentum)
+                set_momentum_ref(momentum_ref);
         }
 
         void TalosPosTracker::clear_collision_detection()

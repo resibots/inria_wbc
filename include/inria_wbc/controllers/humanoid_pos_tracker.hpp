@@ -34,10 +34,12 @@ namespace inria_wbc {
             bool closed_loop() const { return _closed_loop; }
             void set_closed_loop(bool b) { _closed_loop = b; }
 
+            virtual void set_behavior_type(const std::string& bt) override;
+
         protected:
+
             void init_com();
-            void parse_stabilizer(const YAML::Node& config) override;
-            std::string stab_path(const YAML::Node& config);
+            virtual void parse_stabilizer(const YAML::Node& config);
 
             //sensor estimation & filtering
             estimators::Cop _cop_estimator;
@@ -55,17 +57,9 @@ namespace inria_wbc {
             estimators::Filter::Ptr _imu_angular_vel_filter;
 
             //stabilisation parameters
-            bool _use_stabilizer = true;
-            double _torso_max_roll = 0.25;
-
-            Eigen::VectorXd _com_gains;
-            Eigen::VectorXd _ankle_gains;
-            Eigen::VectorXd _ffda_gains;
-
-            bool _activate_zmp = false;
-            Eigen::VectorXd _zmp_p;
-            Eigen::VectorXd _zmp_d;
-            Eigen::VectorXd _zmp_w;
+            std::map<std::string, inria_wbc::stabilizer::StabConfig> _stabilizer_configs;
+            bool _use_stabilizer = false;
+            bool _is_ss = false;
         };
 
     } // namespace controllers

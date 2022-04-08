@@ -210,8 +210,8 @@ int main(int argc, char* argv[])
         }
 
         // add sensors to the robot
-        auto ft_sensor_left = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq);
-        auto ft_sensor_right = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq);
+        auto ft_sensor_left = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq, "parent_to_child");
+        auto ft_sensor_right = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq, "parent_to_child");
         robot_dart::sensor::IMUConfig imu_config;
         imu_config.body = robot->body_node("imu_link"); // choose which body the sensor is attached to
         imu_config.frequency = control_freq; // update rate of the sensor
@@ -382,9 +382,9 @@ int main(int argc, char* argv[])
                 auto q = controller->q(false);
                 timer.end("solver");
 
-                auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
+                Eigen::VectorXd q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
                 timer.begin("cmd");
-                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
+                Eigen::VectorXd q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
 
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, active_dofs_controllable);
@@ -473,6 +473,8 @@ int main(int argc, char* argv[])
                     timer.report(*x.second, simu->scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
+                else if (x.first == "tau")
+                    (*x.second) << controller->tau().transpose() << std::endl;
                 else if (x.first == "com") // the real com
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
@@ -524,8 +526,22 @@ int main(int argc, char* argv[])
                     else
                         (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
                 }
-                else if (robot->body_node(x.first) != nullptr)
-                    (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
+                else if (x.first.find("task_") != std::string::npos) // e.g. task_lh
+                {
+                    auto ref = controller_pos->se3_task(x.first.substr(strlen("task_")))->getReference();
+                    (*x.second) << ref.getValue().transpose() << " "
+                        << ref.getDerivative().transpose() << " "
+                        << ref.getSecondDerivative().transpose() << std::endl;
+                }
+                else if (robot->body_node(x.first) != nullptr) {
+                    pinocchio::SE3 frame;
+                    frame.rotation() = robot->body_pose(x.first).rotation();
+                    frame.translation() = robot->body_pose(x.first).translation();
+
+                    Eigen::VectorXd vec(12);
+                    tsid::math::SE3ToVector(frame, vec);
+                    (*x.second) << vec.transpose() << std::endl;
+                }
             }
             if (vm.count("srdf")) {
                 auto conf = vm["srdf"].as<float>();

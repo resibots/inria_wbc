@@ -208,8 +208,8 @@ int main(int argc, char* argv[])
         }
 
         // add sensors to the robot
-        auto ft_sensor_left = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq);
-        auto ft_sensor_right = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq);
+        auto ft_sensor_left = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_left_6_joint", control_freq, "parent_to_child");
+        auto ft_sensor_right = simu->add_sensor<robot_dart::sensor::ForceTorque>(robot, "leg_right_6_joint", control_freq, "parent_to_child");
         robot_dart::sensor::IMUConfig imu_config;
         imu_config.body = robot->body_node("imu_link"); // choose which body the sensor is attached to
         imu_config.frequency = control_freq; // update rate of the sensor
@@ -240,6 +240,16 @@ int main(int argc, char* argv[])
                 simu->add_visual_robot(self_collision_spheres.back());
             }
         }
+        std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
+
+        auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
+        for (const auto& joint : talos_tracker_controller->torque_sensor_joints()) {
+            torque_sensors.push_back(simu->add_sensor<robot_dart::sensor::Torque>(robot, joint, control_freq));
+            std::cerr << "Add joint torque sensor:  " << joint << std::endl;
+        }
+
+        // reading from sensors
+        Eigen::VectorXd tq_sensors = Eigen::VectorXd::Zero(torque_sensors.size());
 
         // create the collision detectors (useful only if --check_self_collisions)
         inria_wbc::robot_dart::SelfCollisionDetector collision_detector(robot);
@@ -309,6 +319,13 @@ int main(int argc, char* argv[])
                     std::cout << s << std::endl;
             }
 
+            // get actual torque from sensors
+            for (size_t i = 0; i < torque_sensors.size(); ++i)
+                if (torque_sensors[i]->active())
+                    tq_sensors(i) = torque_sensors[i]->torques()(0, 0);
+                else
+                    tq_sensors(i) = 0;
+
             if (vm["height"].as<bool>() && ft_sensor_left->active() && ft_sensor_right->active())
                 std::cout << controller->t() << "  floating base height: " << controller->q(false)[2] << " - total feet force: " << ft_sensor_right->force().norm() + ft_sensor_left->force().norm() << std::endl;
 
@@ -352,6 +369,7 @@ int main(int argc, char* argv[])
                     }
                 }
                 sensor_data["positions"] = positions;
+                sensor_data["joints_torque"] = tq_sensors;
                 sensor_data["joint_velocities"] = velocities;
                 // floating base (perfect: no noise in the estimate)
                 sensor_data["floating_base_position"] = inria_wbc::robot_dart::floating_base_pos(robot->positions());

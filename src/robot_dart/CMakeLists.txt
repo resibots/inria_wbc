@@ -4,6 +4,8 @@ set(EXAMPLE_LIST
     talos_load_external.cpp
     franka.cpp
     icub.cpp
+    tutorial_0.cpp
+    tutorial_1.cpp
 )
 
 

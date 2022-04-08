@@ -18,13 +18,25 @@ namespace inria_wbc {
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
 
-                auto com_final = com_init;
+                Eigen::Vector3d com_final = com_init;
                 com_final(0) = -0.0244301;
                 com_final(1) = 0;
                 com_final(2) -= motion_size_;
 
-                trajectories_.push_back(trajectory_handler::compute_traj(com_init, com_final, controller_->dt(), trajectory_duration_));
-                trajectories_.push_back(trajectory_handler::compute_traj(com_final, com_init, controller_->dt(), trajectory_duration_));
+                trajectories_.push_back(
+                    trajs::to_sample_trajectory(
+                        trajs::min_jerk_trajectory(com_init, com_final, controller_->dt(), trajectory_duration_),
+                        trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_init, com_final, controller_->dt(), trajectory_duration_),
+                        trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_init, com_final, controller_->dt(), trajectory_duration_)
+                    )
+                );
+                trajectories_.push_back(
+                    trajs::to_sample_trajectory(
+                        trajs::min_jerk_trajectory(com_final, com_init, controller_->dt(), trajectory_duration_),
+                        trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_final, com_init, controller_->dt(), trajectory_duration_),
+                        trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_final, com_init, controller_->dt(), trajectory_duration_)
+                    )
+                );
                 current_trajectory_ = trajectories_[traj_selector_];
             }
 
@@ -32,7 +44,7 @@ namespace inria_wbc {
             {
                 auto ref = current_trajectory_[time_];
                 std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(ref);
-
+                
                 controller_->update(sensor_data);
                 time_++;
                 if (time_ == current_trajectory_.size()) {

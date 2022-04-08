@@ -1,6 +1,8 @@
 BEHAVIOR:
   name : generic::cartesian
-  task_names: [lh]
-  relative_targets: [[0, 0, 0.1]]
+  task_names: [lh, rh]
+  relative_targets_pos: [[0, 0, 0.2], [0, 0, 0.2]] # empty sublist for no target es. [[1,2,0], []]
+  relative_targets_rpy: [[0, -0.6, 0.2], [0, -0.6, 0]] # empty sublist for no target es. [[], [3.14,0,0]]
   trajectory_duration: 1
   loop: true
+  

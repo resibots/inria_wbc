@@ -78,60 +78,25 @@ namespace inria_wbc {
             }
         }
 
-        std::string HumanoidPosTracker::stab_path(const YAML::Node& config) {
-            auto c = IWBC_CHECK(config["stabilizer"]);
-            auto path = IWBC_CHECK(config["base_path"].as<std::string>());
-            if (behavior_type_ == behavior_types::FIXED_BASE)
-                return IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>());
-            if (behavior_type_ == behavior_types::SINGLE_SUPPORT)
-                return IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>());
-            if (behavior_type_ == behavior_types::DOUBLE_SUPPORT)
-                return IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>());
-            IWBC_ERROR("Unrecognized behavior type (single/double support)");
-            return "";
-        }
-
         void HumanoidPosTracker::parse_stabilizer(const YAML::Node& config)
         {
             auto c = IWBC_CHECK(config["stabilizer"]);
             _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
+            
+            auto path = IWBC_CHECK(config["base_path"].as<std::string>());
+            _stabilizer_configs[behavior_types::FIXED_BASE] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>()));
+            _stabilizer_configs[behavior_types::SINGLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>()));
+            _stabilizer_configs[behavior_types::DOUBLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>()));
 
-            // get the right parameters for the stabilizer, depending on the behavior type
-            YAML::Node s = IWBC_CHECK(YAML::LoadFile(stab_path(config)));
-            _activate_zmp = IWBC_CHECK(s["activate_zmp"].as<bool>());
-            _torso_max_roll = IWBC_CHECK(s["torso_max_roll"].as<double>());            
+            if (verbose_) {
+                for (auto& c : _stabilizer_configs) {
+                    std::cout << c.first << std::endl;
+                    std::cout << c.second << std::endl;
+                }
+                std::cout << "using " << behavior_type_ << std::endl;
+            }
 
-            //get stabilizers gains
-            _com_gains.resize(6);
-            _ankle_gains.resize(6);
-            _ffda_gains.resize(3);
-            _zmp_p.resize(6);
-            _zmp_d.resize(6);
-            _zmp_w.resize(6);
-          
-            _com_gains.setZero();
-            _ankle_gains.setZero();
-            _ffda_gains.setZero();
-            _zmp_p.setZero();
-            _zmp_d.setZero();
-            _zmp_w.setZero();
-
-            IWBC_ASSERT(IWBC_CHECK(s["com"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the com stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the ankle stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["ffda"].as<std::vector<double>>()).size() == 3, "you need 6 coefficient in p for the ffda stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the zmp stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the zmp stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in w for the zmp stabilizer");
-          
-
-            _com_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["com"].as<std::vector<double>>()).data(), _com_gains.size());
-            _ankle_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).data(), _ankle_gains.size());
-            _ffda_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ffda"].as<std::vector<double>>()).data(), _ffda_gains.size());
-            _zmp_p = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).data(), _zmp_p.size());
-            _zmp_d = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_d"].as<std::vector<double>>()).data(), _zmp_d.size());
-            _zmp_w = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_w"].as<std::vector<double>>()).data(), _zmp_w.size());
-          
-            auto history = s["filter_size"].as<int>();
+            auto history = _stabilizer_configs[behavior_type_].filter_size;
             _cop_estimator.set_history_size(history);
 
             _lf_force_filtered.setZero();
@@ -146,21 +111,31 @@ namespace inria_wbc {
 
             _imu_angular_vel_filtered.setZero();
             _imu_angular_vel_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //angular vel data of size 3
+        
+        }
 
-            if (verbose_) {
-                std::cout << "Stabilizer:" << _use_stabilizer << std::endl;
-                std::cout << "com:" << _com_gains.transpose() << std::endl;
-                std::cout << "ankle:" << _ankle_gains.transpose() << std::endl;
-                std::cout << "ffda:" << _ffda_gains.transpose() << std::endl;
-                std::cout << "Zmp:" << _activate_zmp << std::endl;
-                std::cout << "zmp_p:" << _zmp_p.transpose() << std::endl;
-                std::cout << "zmp_d:" << _zmp_d.transpose() << std::endl;
-                std::cout << "zmp_w:" << _zmp_w.transpose() << std::endl;               
+        void HumanoidPosTracker::set_behavior_type(const std::string& bt)
+        {
+            Controller::set_behavior_type(bt);
+
+            if (_stabilizer_configs.find(behavior_type_) != _stabilizer_configs.end()) {
+                auto history = _stabilizer_configs[behavior_type_].filter_size;
+                _cop_estimator.set_history_size(history);
+                _lf_force_filter->set_window_size(history);
+                _rf_force_filter->set_window_size(history);
+                _lf_torque_filter->set_window_size(history);
+                _rf_torque_filter->set_window_size(history);
+                _imu_angular_vel_filter->set_window_size(history);
+            }
+            else {
+                IWBC_ERROR("_stabilizer_configs does not have ", behavior_type_);
             }
         }
 
         void HumanoidPosTracker::update(const SensorData& sensor_data)
         {
+            if (_stabilizer_configs.find(behavior_type_) == _stabilizer_configs.end())
+                IWBC_ERROR("_stabilizer_configs does not have ", behavior_type_);
 
             std::map<std::string, tsid::trajectories::TrajectorySample> contact_sample_ref;
             std::map<std::string, pinocchio::SE3> contact_se3_ref;
@@ -169,12 +144,13 @@ namespace inria_wbc {
             auto ac = activated_contacts_;
             for (auto& contact_name : ac) {
                 pinocchio::SE3 se3;
-                auto contact_pos = contact(contact_name)->getMotionTask().getReference().pos;
+                auto contact_pos = contact(contact_name)->getMotionTask().getReference().getValue();
                 tsid::math::vectorToSE3(contact_pos, se3);
                 contact_se3_ref[contact_name] = se3;
                 contact_sample_ref[contact_name] = contact(contact_name)->getMotionTask().getReference();
                 contact_force_ref[contact_name] = contact(contact_name)->getForceReference();
             }
+
             auto com_ref = com_task()->getReference();
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
@@ -192,7 +168,7 @@ namespace inria_wbc {
                 auto right_ankle_name = robot_->model().frames[contact("contact_rfoot")->getMotionTask().frame_id()].name;
 
                 // estimate the CoP / ZMP
-                auto cops = _cop_estimator.update(com_ref.pos.head(2),
+                auto cops = _cop_estimator.update(com_ref.getValue().head(2),
                     model_joint_pos(left_ankle_name).translation(),
                     model_joint_pos(right_ankle_name).translation(),
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
@@ -224,18 +200,20 @@ namespace inria_wbc {
                 const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
                 // com_admittance
                 if (valid_cop) {
-                    stabilizer::com_admittance(dt_, _com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
+                    stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                 }
+                
                 //zmp admittance
-                if (valid_cop && _activate_zmp) {
+                if (valid_cop && _stabilizer_configs[behavior_type_].use_zmp) {
 
                     double M = pinocchio_total_model_mass();
                     Eigen::Matrix<double, 6, 1> left_fref, right_fref;
-                    stabilizer::zmp_distributor_admittance(dt_, _zmp_p, _zmp_d, M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
+                    stabilizer::zmp_distributor_admittance(dt_, _stabilizer_configs[behavior_type_].zmp_p, _stabilizer_configs[behavior_type_].zmp_d,
+                        M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
 
-                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
-                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_zmp_w);
+                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
+                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
                     contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
                     contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
                 }
@@ -243,14 +221,16 @@ namespace inria_wbc {
                 // left ankle_admittance
                 if (cops[1] && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, cops[1].value(), model_joint_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[1].value(), 
+                        model_joint_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     contact("contact_lfoot")->setReference(lf_contact_sample);
                 }
 
                 //right ankle_admittance
                 if (cops[2] && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
-                    stabilizer::ankle_admittance(dt_, _ankle_gains, cops[2].value(), model_joint_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
+                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[2].value(), 
+                        model_joint_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     contact("contact_rfoot")->setReference(rf_contact_sample);
                 }
@@ -266,7 +246,8 @@ namespace inria_wbc {
                     double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
                     double M = pinocchio_total_model_mass();
 
-                    stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
+                    stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _stabilizer_configs[behavior_type_].ffda_gains, lf_normal_force,
+                        rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
                     set_se3_ref(torso_sample, "torso");
                 }
             }

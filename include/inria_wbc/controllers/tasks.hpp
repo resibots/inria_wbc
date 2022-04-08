@@ -18,23 +18,6 @@
 
 namespace inria_wbc {
 
-    inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
-    {
-        tsid::trajectories::TrajectorySample sample;
-        sample.pos = ref;
-        sample.vel.setZero(ref.size());
-        sample.acc.setZero(ref.size());
-        return sample;
-    }
-
-    inline tsid::trajectories::TrajectorySample to_sample(const pinocchio::SE3& ref)
-    {
-        tsid::trajectories::TrajectorySample sample;
-        sample.resize(12, 6);
-        tsid::math::SE3ToVector(ref, sample.pos);
-        return sample;
-    }
-
     namespace tasks {
         namespace cst {
             static constexpr double w_force_feet = 1e-3; // regularization force for contacts
