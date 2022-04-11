@@ -24,14 +24,15 @@ namespace inria_wbc {
                     auto ref = traj_loader_->task_ref(task, time_);
                     auto ref_scaled = ref;
                     ref_scaled.translation() = ref.translation() * scale_;
-                    std::cout<<"task:"<<task<<" : " << ref_scaled.translation().transpose()<<std::endl;
+                    if (controller->verbose())
+                        std::cout << "task:" << task << " : " << ref_scaled.translation().transpose() << std::endl;
                     controller->set_se3_ref(ref_scaled, task);
                 }
                 // com
                 if (traj_loader_->has_com_refs()) {
                     auto ref = traj_loader_->com_ref(time_);
                     auto ref_scaled = ref;
-                    ref_scaled= ref * scale_;
+                    ref_scaled = ref * scale_;
                     controller->set_com_ref(ref_scaled);
                 }
                 controller->update(sensor_data);

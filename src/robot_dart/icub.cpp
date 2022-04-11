@@ -11,10 +11,10 @@
 #include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot.hpp>
 #include <robot_dart/robot_dart_simu.hpp>
+#include <robot_dart/robots/icub.hpp>
 #include <robot_dart/sensor/force_torque.hpp>
 #include <robot_dart/sensor/imu.hpp>
 #include <robot_dart/sensor/torque.hpp>
-#include <robot_dart/robots/icub.hpp>
 
 #ifdef GRAPHIC
 #include <robot_dart/gui/magnum/graphics.hpp>
@@ -23,14 +23,14 @@
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
-#include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "inria_wbc/robot_dart/utils.hpp"
-#include "tsid/tasks/task-self-collision.hpp"
+#include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/utils/timer.hpp"
+#include "tsid/tasks/task-self-collision.hpp"
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -153,8 +153,8 @@ int main(int argc, char* argv[])
             graphics->record_video(vm["mp4"].as<std::string>());
 #endif
         simu.add_robot(robot);
-       auto floor = simu.add_checkerboard_floor();
-       //auto floor = simu.add_floor();
+        auto floor = simu.add_checkerboard_floor();
+        //auto floor = simu.add_floor();
 
         ///// CONTROLLER
         auto controller_path = vm["controller"].as<std::string>();
@@ -193,7 +193,8 @@ int main(int argc, char* argv[])
         floating_base.resize(6);
 
         auto controllable_dofs = controller->controllable_dofs();
-        std::cout<<"q0.size():"<<controller->q0().transpose()<<std::endl;
+        if (verbose)
+            std::cout << "q0.size():" << controller->q0().transpose() << std::endl;
         robot->set_positions(controller->q0(), all_dofs);
 
         uint ncontrollable = controllable_dofs.size();
@@ -228,14 +229,13 @@ int main(int argc, char* argv[])
             ghost->skeleton()->setPosition(4, -1.57);
             ghost->skeleton()->setPosition(5, 1.1);
             simu.add_robot(ghost);
-             // fix a bug...
+            // fix a bug...
             robot->set_color_mode("material");
         }
 
-       
         // create the collision detectors (useful only if --check_self_collisions)
-     //   std::map<std::string, std::string> filter_body_names_pairs;
-      //  inria_wbc::robot_dart::ExternalCollisionDetector floor_collision_detector(robot, floor, filter_body_names_pairs);
+        //   std::map<std::string, std::string> filter_body_names_pairs;
+        //  inria_wbc::robot_dart::ExternalCollisionDetector floor_collision_detector(robot, floor, filter_body_names_pairs);
 
         using namespace std::chrono;
         // to save trajectories
@@ -275,7 +275,7 @@ int main(int argc, char* argv[])
 
                 timer.begin("solver");
                 behavior->update(sensor_data);
-                auto q = controller->q(false);       
+                auto q = controller->q(false);
                 timer.end("solver");
 
                 timer.begin("cmd");
@@ -316,7 +316,6 @@ int main(int argc, char* argv[])
                 }
             }
 
-
             // push the robot
             bool push = false;
             if (vm.count("push")) {
@@ -353,7 +352,7 @@ int main(int argc, char* argv[])
                     (*x.second) << controller->com().transpose() << std::endl;
                 else if (x.first == "cop") { // the cop according to controller
                     Eigen::MatrixXd missing_cst = Eigen::Vector2d::Constant(1000).transpose();
-                    (*x.second) 
+                    (*x.second)
                         << (controller->cop() ? controller->cop().value().transpose() : missing_cst) << " "
                         << (controller->lcop() ? controller->lcop().value().transpose() : missing_cst) << " "
                         << (controller->rcop() ? controller->rcop().value().transpose() : missing_cst) << " " << std::endl;
@@ -373,10 +372,10 @@ int main(int argc, char* argv[])
             if (timer.iteration() == 100) {
                 std::ostringstream oss;
 #ifdef GRAPHIC // to avoid the warning
-               oss.precision(3);
-               timer.report(oss, simu.scheduler().current_time(), -1, '\n');
-               if (!vm.count("mp4"))
-                   simu.set_text_panel(oss.str());
+                oss.precision(3);
+                timer.report(oss, simu.scheduler().current_time(), -1, '\n');
+                if (!vm.count("mp4"))
+                    simu.set_text_panel(oss.str());
 #endif
             }
             timer.report(simu.scheduler().current_time(), 100);
