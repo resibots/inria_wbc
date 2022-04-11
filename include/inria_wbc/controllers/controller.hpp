@@ -160,6 +160,7 @@ namespace inria_wbc {
             const std::string& urdf() const { return urdf_; }
             const std::string& floating_base_joint_name() const { return floating_base_joint_name_; }
 
+            const void skip_update();
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
@@ -198,6 +199,12 @@ namespace inria_wbc {
             tsid::math::Vector tau_tsid_; // tsid joint torques
             tsid::math::Vector momentum_; // momentum
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces_; //tsid contact forces of the activated contacts
+
+            std::vector<tsid::math::Vector> q_tsid_prev_; // tsid joint positions at t, t-1, t-2, ..., t-n
+            std::vector<tsid::math::Vector> v_tsid_prev_; // tsid joint velocities at t, t-1, t-2, ..., t-n
+            std::vector<std::shared_ptr<pinocchio::Data>> data_prev_; // pinocchio data at t, t-1, t-2, ..., t-n
+            int buffer_size_ = 10;
+            int counter_ = 0;// will go from 0 to 2 to select t, t-1 or t-2
 
             //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart

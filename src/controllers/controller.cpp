@@ -126,6 +126,8 @@ namespace inria_wbc {
             uint ndofs = robot_->nv(); // na + 6 (floating base), if not f_base only na
 
             v_tsid_ = Vector::Zero(ndofs);
+            v_tsid_prev_ = std::vector<Vector>(buffer_size_, Vector::Zero(ndofs));
+
             a_tsid_ = Vector::Zero(ndofs);
             tau_tsid_ = Vector::Zero(nactuated);
             momentum_ = Vector::Zero(3);
@@ -135,6 +137,10 @@ namespace inria_wbc {
             dq_ = Vector::Zero(ndofs);
             ddq_ = Vector::Zero(ndofs);
             tau_ = Vector::Zero(ndofs);
+
+            q_tsid_ = Vector::Zero(robot_->nq());
+            q_tsid_prev_ = std::vector<Vector>(buffer_size_, Vector::Zero(robot_->nq()));
+            data_prev_ = std::vector<std::shared_ptr<pinocchio::Data>>(buffer_size_, std::make_shared<pinocchio::Data>(robot_->model()));
 
             tsid_joint_names_ = all_dofs(false);
             non_mimic_indexes_ = get_non_mimics_indexes();
@@ -216,6 +222,12 @@ namespace inria_wbc {
             assert(tsid_);
             assert(robot_);
             assert(solver_);
+
+            q_tsid_prev_[counter_ % buffer_size_] = q_tsid_;
+            v_tsid_prev_[counter_ % buffer_size_] = v_tsid_;
+            data_prev_[counter_ % buffer_size_] = std::make_shared<pinocchio::Data>(tsid_->data());
+            counter_++;
+
             const HQPData& HQPData = tsid_->computeProblemData(t_, q, dq);
             momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * dq);
 
@@ -399,6 +411,15 @@ namespace inria_wbc {
             behavior_type_ = bt;
             if (verbose_)
                 std::cout << "using " << bt << std::endl;
+        }
+
+        const void Controller::skip_update()
+        {
+            if (counter_ < buffer_size_)
+                IWBC_ERROR("skip_update has been called too early, less than 3 updates have been done")
+            q_tsid_ = q_tsid_prev_[0];
+            v_tsid_ = v_tsid_prev_[0];
+            tsid_->data() = *data_prev_[0];
         }
 
     } // namespace controllers
