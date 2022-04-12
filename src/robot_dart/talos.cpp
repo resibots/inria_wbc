@@ -402,8 +402,9 @@ int main(int argc, char* argv[])
                 }
                 timer.end("cmd");
 
+
+                Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                 if (ghost) {
-                    Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                     translate_ghost(0) -= 1;
                     ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
                     ghost->set_positions(q.head(6) + translate_ghost, floating_base);
@@ -413,15 +414,13 @@ int main(int argc, char* argv[])
                 if (vm["model_collisions"].as<bool>()) {
                     auto spherical_members = controller->collision_check().spherical_members();
                     auto sphere_color = dart::Color::Green(0.5);
-                    if (is_colliding)
-                        sphere_color = dart::Color::Red(0.5);
 
                     if (init_model_sphere_collisions == false) {
                         spheres = inria_wbc::robot_dart::create_spherical_members(spherical_members, *simu, sphere_color);
                         init_model_sphere_collisions = true;
                     }
                     else {
-                        inria_wbc::robot_dart::update_spherical_members(spherical_members, spheres, sphere_color);
+                        inria_wbc::robot_dart::update_spherical_members(spherical_members, spheres, sphere_color, is_colliding, controller->collision_check().collision_index(), translate_ghost.head(3));
                     }
                 }
             }

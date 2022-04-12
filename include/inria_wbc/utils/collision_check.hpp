@@ -16,7 +16,9 @@ namespace inria_wbc::utils {
         //The position of the sphere is relative to the position of the frame name in the yaml file.
         void load_collision_file(const std::string& collision_file_path, bool verbose = false)
         {
-            if (verbose)
+            verbose_ = verbose;
+
+            if (verbose_)
                 std::cout << "Parsing virtual frame file:" << collision_file_path << std::endl;
             YAML::Node node = IWBC_CHECK(YAML::LoadFile(collision_file_path));
 
@@ -43,10 +45,20 @@ namespace inria_wbc::utils {
             for (auto& it : spherical_members_) {
                 for (auto& it2 : spherical_members_) {
                     if (it.first != it2.first) {
-                        for (auto& sphere : it.second) {
-                            for (auto& sphere2 : it2.second) {
-                                if ((sphere2.first - sphere.first).norm() < (sphere2.second / 2 + sphere.second / 2)) //check that the distance btwn two spheres are more than the sum of the spheres radius
+                        for (int i = 0; i < it.second.size(); i++) {
+                            auto sphere = it.second[i];
+                            for (int j = 0; j < it2.second.size(); j++) {
+                                auto sphere2 = it2.second[j];
+                                if ((sphere2.first - sphere.first).norm() < (sphere2.second / 2 + sphere.second / 2)) { //check that the distance btwn two spheres are more than the sum of the spheres radius
+                                    collision_index_.first = std::make_pair(it.first, i);
+                                    collision_index_.second = std::make_pair(it2.first, j);
+                                    if (verbose_) {
+                                        std::cout << "Collision detected" << std::endl;
+                                        std::cout << it.first << " " << i << std::endl;
+                                        std::cout << it2.first << " " << j << std::endl;
+                                    }
                                     return true;
+                                }
                             }
                         }
                     }
@@ -55,7 +67,8 @@ namespace inria_wbc::utils {
             return false;
         }
 
-        inline std::map<std::string, std::vector<std::pair<Eigen::Vector3d, float>>> spherical_members() { return spherical_members_; };
+        std::map<std::string, std::vector<std::pair<Eigen::Vector3d, float>>> spherical_members() { return spherical_members_; };
+        std::pair<std::pair<std::string, int>, std::pair<std::string, int>> collision_index() { return collision_index_; };
 
     protected:
         //It computes the absolute positions of the collisions spheres
@@ -93,6 +106,8 @@ namespace inria_wbc::utils {
 
         std::map<std::string, std::vector<std::pair<std::string, std::vector<std::vector<float>>>>> collision_data_; //collision data: member name, vector of (link names - sphere data) pairs
         std::map<std::string, std::vector<std::pair<Eigen::Vector3d, float>>> spherical_members_; //position and diameter of the spheres
+        std::pair<std::pair<std::string, int>, std::pair<std::string, int>> collision_index_ = {{"", -1}, {"", -1}};
+        bool verbose_ = false;
     };
 } // namespace inria_wbc::utils
 #endif

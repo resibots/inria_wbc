@@ -292,9 +292,6 @@ namespace inria_wbc {
                     contact(contact_name)->Contact6d::setForceReference(contact_force_ref[contact_name]);
                 }
             }
-
-            if (_check_model_collisions)
-                _is_model_colliding = _collision_check.is_colliding(robot_->model(), tsid_->data());
         }
     } // namespace controllers
 } // namespace inria_wbc
