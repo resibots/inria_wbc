@@ -86,6 +86,18 @@ namespace inria_wbc {
             // closed loop
             _closed_loop = IWBC_CHECK(c["closed_loop"].as<bool>());
 
+            //check collisions in pinocchio model
+            _check_model_collisions = IWBC_CHECK(c["check_model_collisions"].as<bool>());
+            if (verbose_)
+                std::cout << "check_model_collisions: " << _check_model_collisions << std::endl;
+
+            if (_check_model_collisions) {
+                auto collision_path = IWBC_CHECK(c["collision_path"].as<std::string>());
+                _collision_check.load_collision_file(collision_path);
+                if (verbose_)
+                    std::cout << "collision_path: " << collision_path  << std::endl;
+            }
+
             pinocchio::Model robot_model;
             floating_base_ = IWBC_CHECK(c["floating_base"].as<bool>());
 
@@ -185,6 +197,9 @@ namespace inria_wbc {
             else {
                 _solve();
             }
+
+            if (_check_model_collisions)
+                _is_model_colliding = _collision_check.is_colliding(robot_->model(), tsid_->data());
         };
 
         std::vector<int> Controller::get_non_mimics_indexes() const

@@ -27,6 +27,7 @@
 
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
+#include <inria_wbc/utils/collision_check.hpp>
 
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
@@ -160,6 +161,9 @@ namespace inria_wbc {
             const std::string& urdf() const { return urdf_; }
             const std::string& floating_base_joint_name() const { return floating_base_joint_name_; }
 
+            //check if pinocchio model is colliding
+            inria_wbc::utils::CollisionCheck collision_check() { return _collision_check; }
+            bool is_model_colliding() { return _is_model_colliding; }
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
@@ -209,6 +213,11 @@ namespace inria_wbc {
             std::shared_ptr<tsid::robots::RobotWrapper> robot_;
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
+
+
+            bool _check_model_collisions;
+            inria_wbc::utils::CollisionCheck _collision_check;
+            bool _is_model_colliding = false;
         };
 
         using Factory = utils::Factory<Controller, YAML::Node>;

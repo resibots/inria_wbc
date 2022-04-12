@@ -11,3 +11,5 @@ CONTROLLER:
   closed_loop: false
   verbose: false
   mimic_dof_names : []
+  check_model_collisions: false
+  collision_path: "

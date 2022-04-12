@@ -82,7 +82,7 @@ namespace inria_wbc {
         {
             auto c = IWBC_CHECK(config["stabilizer"]);
             _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
-            
+
             auto path = IWBC_CHECK(config["base_path"].as<std::string>());
             _stabilizer_configs[behavior_types::FIXED_BASE] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>()));
             _stabilizer_configs[behavior_types::SINGLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>()));
@@ -111,7 +111,6 @@ namespace inria_wbc {
 
             _imu_angular_vel_filtered.setZero();
             _imu_angular_vel_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //angular vel data of size 3
-        
         }
 
         void HumanoidPosTracker::set_behavior_type(const std::string& bt)
@@ -155,7 +154,7 @@ namespace inria_wbc {
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
-            
+
             if (_use_stabilizer) {
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
                 IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the RF torque");
@@ -196,14 +195,13 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample com_sample, torso_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
 
-               
                 const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
                 // com_admittance
                 if (valid_cop) {
                     stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                 }
-                
+
                 //zmp admittance
                 if (valid_cop && _stabilizer_configs[behavior_type_].use_zmp) {
 
@@ -221,7 +219,7 @@ namespace inria_wbc {
                 // left ankle_admittance
                 if (cops[1] && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
-                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[1].value(), 
+                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[1].value(),
                         model_joint_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     contact("contact_lfoot")->setReference(lf_contact_sample);
@@ -229,7 +227,7 @@ namespace inria_wbc {
 
                 //right ankle_admittance
                 if (cops[2] && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
-                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[2].value(), 
+                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[2].value(),
                         model_joint_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     contact("contact_rfoot")->setReference(rf_contact_sample);
@@ -288,12 +286,15 @@ namespace inria_wbc {
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
-                                  
+
                 for (auto& contact_name : ac) {
                     contact(contact_name)->setReference(contact_sample_ref[contact_name]);
                     contact(contact_name)->Contact6d::setForceReference(contact_force_ref[contact_name]);
                 }
             }
+
+            if (_check_model_collisions)
+                _is_model_colliding = _collision_check.is_colliding(robot_->model(), tsid_->data());
         }
     } // namespace controllers
 } // namespace inria_wbc
