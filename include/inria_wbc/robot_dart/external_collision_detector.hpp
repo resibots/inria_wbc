@@ -18,7 +18,7 @@ namespace inria_wbc {
                 const std::map<std::string, std::string> filter_body_names_pairs = {})
                 : _robot(robot),
                   _external_robot(external_robot),
-                  _collision_detector(dart::collision::CollisionDetector::getFactory()->create("ode")),
+                  _collision_detector(dart::collision::CollisionDetector::getFactory()->create("fcl")),
                   _collision_group(_collision_detector->createCollisionGroup(robot->skeleton().get())),
                   _external_collision_group(_collision_detector->createCollisionGroup(external_robot->skeleton().get())),
                   _collision_filter(std::make_shared<dart::collision::BodyNodeCollisionFilter>()),

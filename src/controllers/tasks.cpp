@@ -244,7 +244,6 @@ namespace inria_wbc {
             auto q_lb = robot->model().lowerPositionLimit.tail(robot->na());
             auto q_ub = robot->model().upperPositionLimit.tail(robot->na());
             task->setPositionBounds(q_lb, q_ub);
-
             // add the task
             tsid->addMotionTask(*task, weight, 0);
 
@@ -300,7 +299,7 @@ namespace inria_wbc {
             auto fmin = IWBC_CHECK(node["fmin"].as<double>());
             auto fmax = IWBC_CHECK(node["fmax"].as<double>());
             IWBC_ASSERT(normal.size() == 3, "normal size:", normal.size());
-            IWBC_ASSERT(robot->model().existJointName(joint_name), joint_name, " does not exist!");
+            IWBC_ASSERT(robot->model().existFrame(joint_name), joint_name, " does not exist!");
 
             // create the task
             Matrix3x contact_points(3, 4);

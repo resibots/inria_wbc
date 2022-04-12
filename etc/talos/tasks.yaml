@@ -1,3 +1,21 @@
+head:
+    type: se3
+    tracked: head_1_joint
+    weight: 1.0
+    kp: 1.0
+    mask: 110000
+head_pitch:
+    type: se3
+    tracked: head_1_joint
+    weight: 100.0
+    kp: 30.0
+    mask: 000010
+head_yaw:
+    type: se3
+    tracked: head_2_joint
+    weight: 100.0
+    kp: 30.0
+    mask: 000001
 lh:
     type: se3
     tracked: gripper_left_joint

@@ -6,6 +6,8 @@
 #include <signal.h>
 
 #include <dart/dynamics/BodyNode.hpp>
+#include <dart/constraint/ConstraintSolver.hpp>
+#include <dart/collision/CollisionObject.hpp>
 
 #include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot.hpp>
@@ -446,6 +448,21 @@ int main(int argc, char* argv[])
                 robot->set_commands(cmd, active_dofs_controllable);
                 simu->step_world();
                 timer.end("sim");
+
+                // auto col = simu->world()->getConstraintSolver()->getLastCollisionResult();
+                // size_t nc = col.getNumContacts();
+                // size_t contact_count = 0;
+                // for (size_t i = 0; i < nc; i++) {
+                //     auto& ct = col.getContact(i);
+                //     auto f1 = ct.collisionObject1->getShapeFrame();
+                //     auto f2 = ct.collisionObject2->getShapeFrame();
+                //     std::string name1, name2;
+                //     if (f1->isShapeNode())
+                //         name1 = f1->asShapeNode()->getBodyNodePtr()->getName();
+                //     if (f1->isShapeNode())
+                //         name2 = f1->asShapeNode()->getBodyNodePtr()->getName();
+                //     std::cout << "contact:" << name1<< " -- " << name2 << std::endl;
+                // }
             }
 
             if (traj_saver)
