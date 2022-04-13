@@ -25,9 +25,9 @@
 #include <tsid/tasks/task-se3-equality.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
 
+#include <inria_wbc/utils/collision_check.hpp>
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
-#include <inria_wbc/utils/collision_check.hpp>
 
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
@@ -165,6 +165,7 @@ namespace inria_wbc {
             inria_wbc::utils::CollisionCheck collision_check() { return _collision_check; }
             bool is_model_colliding() { return _is_model_colliding; }
             const void skip_update();
+            void restart_solver() { stop_solver_ = true; };
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
@@ -208,7 +209,7 @@ namespace inria_wbc {
             std::vector<tsid::math::Vector> v_tsid_prev_; // tsid joint velocities at t, t-1, t-2, ..., t-n
             std::vector<std::shared_ptr<pinocchio::Data>> data_prev_; // pinocchio data at t, t-1, t-2, ..., t-n
             int buffer_size_ = 10;
-            int counter_ = 0;// will go from 0 to 2 to select t, t-1 or t-2
+            int counter_ = 0; // will go from 0 to 2 to select t, t-1 or t-2
 
             //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart
@@ -221,10 +222,10 @@ namespace inria_wbc {
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
 
-
             bool _check_model_collisions;
             inria_wbc::utils::CollisionCheck _collision_check;
             bool _is_model_colliding = false;
+            bool stop_solver_ = false;
         };
 
         using Factory = utils::Factory<Controller, YAML::Node>;

@@ -3,6 +3,8 @@
 /* Pinocchio !!!! NEED TO BE INCLUDED BEFORE BOOST*/
 #include "pinocchio/multibody/data.hpp"
 #include "pinocchio/multibody/model.hpp"
+#include <yaml-cpp/yaml.h>
+#include "inria_wbc/exceptions.hpp"
 
 namespace inria_wbc::utils {
 

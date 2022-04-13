@@ -235,73 +235,76 @@ namespace inria_wbc {
             assert(robot_);
             assert(solver_);
 
-            q_tsid_prev_[counter_ % buffer_size_] = q_tsid_;
-            v_tsid_prev_[counter_ % buffer_size_] = v_tsid_;
-            data_prev_[counter_ % buffer_size_] = std::make_shared<pinocchio::Data>(tsid_->data());
-            counter_++;
+            if (!stop_solver_ || q_.isZero(1e-3)) {
 
-            const HQPData& HQPData = tsid_->computeProblemData(t_, q, dq);
-            momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * dq);
+                q_tsid_prev_[counter_ % buffer_size_] = q_tsid_;
+                v_tsid_prev_[counter_ % buffer_size_] = v_tsid_;
+                data_prev_[counter_ % buffer_size_] = std::make_shared<pinocchio::Data>(tsid_->data());
+                counter_++;
 
-            const HQPOutput& sol = solver_->solve(HQPData);
+                const HQPData& HQPData = tsid_->computeProblemData(t_, q, dq);
+                momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * dq);
 
-            if (sol.status == HQP_STATUS_OPTIMAL) {
-                const Vector& tau = tsid_->getActuatorForces(sol);
-                const Vector& dv = tsid_->getAccelerations(sol);
-                tau_tsid_ = tau;
-                a_tsid_ = dv;
-                v_tsid_ = dq + dt_ * dv;
-                q_tsid_ = pinocchio::integrate(robot_->model(), q, dt_ * v_tsid_);
-                t_ += dt_;
+                const HQPOutput& sol = solver_->solve(HQPData);
 
-                activated_contacts_forces_.clear();
-                for (auto& contact : activated_contacts_) {
-                    activated_contacts_forces_[contact] = tsid_->getContactForces(contact, sol);
-                }
+                if (sol.status == HQP_STATUS_OPTIMAL) {
+                    const Vector& tau = tsid_->getActuatorForces(sol);
+                    const Vector& dv = tsid_->getAccelerations(sol);
+                    tau_tsid_ = tau;
+                    a_tsid_ = dv;
+                    v_tsid_ = dq + dt_ * dv;
+                    q_tsid_ = pinocchio::integrate(robot_->model(), q, dt_ * v_tsid_);
+                    t_ += dt_;
 
-                if (floating_base_) {
-                    Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
-                    Eigen::AngleAxisd aaxis(quat);
-                    q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
-                    tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
+                    activated_contacts_forces_.clear();
+                    for (auto& contact : activated_contacts_) {
+                        activated_contacts_forces_[contact] = tsid_->getContactForces(contact, sol);
+                    }
+
+                    if (floating_base_) {
+                        Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
+                        Eigen::AngleAxisd aaxis(quat);
+                        q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
+                        tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
+                    }
+                    else {
+                        q_ << q_tsid_;
+                        tau_ << tau_tsid_;
+                    }
+
+                    dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
+                    ddq_ = a_tsid_;
                 }
                 else {
-                    q_ << q_tsid_;
-                    tau_ << tau_tsid_;
+                    std::string error = "Controller failed, can't solve problem. ";
+                    error += "Status : " + toString(sol.status);
+                    switch (sol.status) {
+                    case -1:
+                        error += " => Unknown";
+                        break;
+                    case 1:
+                        error += " => Infeasible ";
+                        break;
+                    case 2:
+                        error += " => Unbounded ";
+                        break;
+                    case 3:
+                        error += " => Max iter reached ";
+                        break;
+                    case 4:
+                        error += " => Error ";
+                        break;
+                    default:
+                        error += " => Uknown status";
+                    }
+                    error += " (t=" + std::to_string(t_) + ")";
+                    throw IWBC_EXCEPTION(error);
                 }
-
-                dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
-                ddq_ = a_tsid_;
+                if (_check_model_collisions)
+                    _is_model_colliding = _collision_check.is_colliding(robot_->model(), tsid_->data());
+                if (_is_model_colliding)
+                    stop_solver_ = true;
             }
-            else {
-                std::string error = "Controller failed, can't solve problem. ";
-                error += "Status : " + toString(sol.status);
-                switch (sol.status) {
-                case -1:
-                    error += " => Unknown";
-                    break;
-                case 1:
-                    error += " => Infeasible ";
-                    break;
-                case 2:
-                    error += " => Unbounded ";
-                    break;
-                case 3:
-                    error += " => Max iter reached ";
-                    break;
-                case 4:
-                    error += " => Error ";
-                    break;
-                default:
-                    error += " => Uknown status";
-                }
-                error += " (t=" + std::to_string(t_) + ")";
-                throw IWBC_EXCEPTION(error);
-            }
-            if (_check_model_collisions)
-                _is_model_colliding = _collision_check.is_colliding(robot_->model(), tsid_->data());
-            if (_is_model_colliding)
-                skip_update();
         }
 
         // Removes the universe and root (floating base) joint names
