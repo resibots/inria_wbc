@@ -406,8 +406,8 @@ int main(int argc, char* argv[])
                 Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                 if (ghost) {
                     translate_ghost(0) -= 1;
-                    ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
-                    ghost->set_positions(q.head(6) + translate_ghost, floating_base);
+                    ghost->set_positions(controller->filter_cmd(controller->q_solver(false)).tail(ncontrollable), controllable_dofs);
+                    ghost->set_positions(controller->q_solver(false).head(6) + translate_ghost, floating_base);
                 }
 
                 is_colliding = controller->is_model_colliding();

@@ -164,8 +164,9 @@ namespace inria_wbc {
             //check if pinocchio model is colliding
             inria_wbc::utils::CollisionCheck collision_check() { return _collision_check; }
             bool is_model_colliding() { return _is_model_colliding; }
+            void restart_solver() { stop_solver_ = false; };
             const void skip_update();
-            void restart_solver() { stop_solver_ = true; };
+            Eigen::VectorXd q_solver(bool filter_mimics = true) const;
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
@@ -208,7 +209,7 @@ namespace inria_wbc {
             std::vector<tsid::math::Vector> q_tsid_prev_; // tsid joint positions at t, t-1, t-2, ..., t-n
             std::vector<tsid::math::Vector> v_tsid_prev_; // tsid joint velocities at t, t-1, t-2, ..., t-n
             std::vector<std::shared_ptr<pinocchio::Data>> data_prev_; // pinocchio data at t, t-1, t-2, ..., t-n
-            int buffer_size_ = 10;
+            int buffer_size_ = 2;
             int counter_ = 0; // will go from 0 to 2 to select t, t-1 or t-2
 
             //---- Dart conventions for the floating base: axis-angle
@@ -223,6 +224,7 @@ namespace inria_wbc {
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
 
             bool _check_model_collisions;
+            Eigen::VectorXd q_solver_; //q computed by the qp solver even when not sent (with skip_update)
             inria_wbc::utils::CollisionCheck _collision_check;
             bool _is_model_colliding = false;
             bool stop_solver_ = false;

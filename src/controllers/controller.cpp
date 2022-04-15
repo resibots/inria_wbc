@@ -146,6 +146,7 @@ namespace inria_wbc {
 
             q0_.resize(ndofs);
             q_ = Vector::Zero(ndofs);
+            q_solver_ = Vector::Zero(ndofs);
             dq_ = Vector::Zero(ndofs);
             ddq_ = Vector::Zero(ndofs);
             tau_ = Vector::Zero(ndofs);
@@ -271,7 +272,7 @@ namespace inria_wbc {
                         q_ << q_tsid_;
                         tau_ << tau_tsid_;
                     }
-
+                    q_solver_ = q_;
                     dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
                     ddq_ = a_tsid_;
                 }
@@ -304,6 +305,7 @@ namespace inria_wbc {
                     _is_model_colliding = _collision_check.is_colliding(robot_->model(), tsid_->data());
                 if (_is_model_colliding)
                     stop_solver_ = true;
+                // skip_update();
             }
         }
 
@@ -384,6 +386,11 @@ namespace inria_wbc {
             return filter_mimics ? slice_vec(q_, non_mimic_indexes_) : q_;
         }
 
+        Eigen::VectorXd Controller::q_solver(bool filter_mimics) const
+        {
+            return filter_mimics ? slice_vec(q_solver_, non_mimic_indexes_) : q_;
+        }
+
         Eigen::VectorXd Controller::q0(bool filter_mimics) const
         {
             return filter_mimics ? slice_vec(q0_, non_mimic_indexes_) : q0_;
@@ -438,7 +445,9 @@ namespace inria_wbc {
                 IWBC_ERROR("skip_update has been called too early, less than 3 updates have been done")
             q_tsid_ = q_tsid_prev_[0];
             v_tsid_ = v_tsid_prev_[0];
+            v_tsid_.setZero();
             tsid_->data() = *data_prev_[0];
+            // tsid_->data() = *data_prev_[0];
         }
 
     } // namespace controllers
