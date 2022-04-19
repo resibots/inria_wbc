@@ -14,7 +14,11 @@
 
 #include <tsid/solvers/solver-HQP-base.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
-#include <tsid/solvers/solver-HQP-qpmad.hpp>
+
+#ifdef TSID_QPMAD_FOUND
+    #include <tsid/solvers/solver-HQP-qpmad.hpp>
+#endif
+
 #include <tsid/solvers/solver-HQP-factory.hxx>
 #include <tsid/solvers/utils.hpp>
 #include <tsid/utils/statistics.hpp>
@@ -79,25 +83,24 @@ namespace inria_wbc {
             ////////////////////Create an HQP solver /////////////////////////////////////
             using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
 
-            //solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_OSQP, "solver-osqp"));
-
             if(solver_to_use_ == "qpmad")
+            {
+        #ifdef TSID_QPMAD_FOUND
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
+        #else
+                IWBC_ERROR("'qpmad' solver is not available in tsid or in the system.");
+        #endif
+            }
             else if(solver_to_use_ == "eiquadprog")
+            {
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+            }
             else
+            {
                 IWBC_ERROR("solver in configuration file must be either 'eiquadprog' or 'qpmad'.");
+            }
             
             solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
-
-            /*
-            auto qpmad_solver = std::dynamic_pointer_cast<solvers::SolverHQpmad>(solver_);
-            if(qpmad_solver)
-            {
-                qpmad_solver->settings().max_iter_ = 50;
-                qpmad_solver->settings().tolerance_ = 1e-8;
-            }
-            */
 
             ////////////////////Compute Problem Data at init /////////////////////////////
             const uint nv = robot_->nv();
