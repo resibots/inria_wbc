@@ -34,43 +34,33 @@ namespace inria_wbc {
     namespace controllers {
         static Register<TalosPosTracker> __talos_pos_tracking("talos-pos-tracker");
 
-        TalosPosTracker::TalosPosTracker(const YAML::Node& config) : PosTracker(config)
+        TalosPosTracker::TalosPosTracker(const YAML::Node& config) : HumanoidPosTracker(config)
         {
-            behavior_type_ = behavior_types::FIXED_BASE;
-            parse_configuration(config["CONTROLLER"]);
-            if (verbose_)
-                std::cout << "Talos pos tracker initialized" << std::endl;
-            init_com();
-        }
+            parse_torque_safety(config["CONTROLLER"]);
 
-        void TalosPosTracker::parse_configuration(const YAML::Node& config)
-        {
-
-            //set the _torso_max_roll in the bounds for safety
+            //set the _torso_max_roll in the bounds for safety (for the stabilizer)
             auto names = robot_->model().names;
             names.erase(names.begin(), names.begin() + names.size() - robot_->na());
             auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
             auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
             std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
-
-            float torso_max_roll = IWBC_CHECK(config["torso_max_roll"].as<float>()) / 180 * M_PI;
+            
+            _torso_max_roll = IWBC_CHECK(config["CONTROLLER"]["torso_max_roll"].as<float>()) / 180 * M_PI;
             for (auto& n : to_limit) {
                 IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
                 auto id = std::distance(names.begin(), std::find(names.begin(), names.end(), n));
 
-                if (!(q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]))
-                    IWBC_ERROR("Error in bounds, the torso limits are not viable");
+                IWBC_ASSERT((q_lb[id] <= q0_.tail(robot_->na()).transpose()[id]) && (q_ub[id] >= q0_.tail(robot_->na()).transpose()[id]), "Error in bounds, the torso limits are not viable");
 
-                q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - torso_max_roll;
-                q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + torso_max_roll;
+                q_lb[id] = q0_.tail(robot_->na()).transpose()[id] - _torso_max_roll;
+                q_ub[id] = q0_.tail(robot_->na()).transpose()[id] + _torso_max_roll;
             }
+
             bound_task()->setPositionBounds(q_lb, q_ub);
+        }
 
-            if (verbose_)
-                std::cout << "torso_max_toll " << torso_max_roll << std::endl;
-
-            parse_stabilizer(config);
-
+        void TalosPosTracker::parse_torque_safety(const YAML::Node& config)
+        {
             // init collision detection
             {
                 auto c = IWBC_CHECK(config["collision_detection"]);
@@ -132,218 +122,8 @@ namespace inria_wbc {
             return;
         }
 
-        // this is called by the constructor
-        // we move the CoM to the center of the feet, to always start in the most stable configuration
-        // (this should already be the case with a propre SRDF)
-        void TalosPosTracker::init_com()
-        {
-            if (tasks_.find("com") != tasks_.end()) {
-                auto com_init = this->com();
-                auto com_final = this->com();
-
-                // check that we have one task for each foot and that they are in contact
-                if (tasks_.find("lf") != tasks_.end() && tasks_.find("rf") != tasks_.end() && contacts_.find("contact_lfoot") != contacts_.end() && contacts_.find("contact_rfoot") != contacts_.end()) {
-                    com_final.head(2) = (this->get_se3_ref("lf").translation().head(2) + this->get_se3_ref("rf").translation().head(2)) / 2;
-                    if ((this->com() - com_final).norm() > 0.01) // 1 cm
-                        IWBC_ERROR("Wrong starting configuration: the CoM needs to be between the two feet with less than 1cm difference, but the distance is ", (this->com() - com_final).norm());
-
-                    this->set_com_ref(com_final);
-                    if (verbose_)
-                        std::cout << "Taking initial com reference in the middle of the support polygon" << std::endl;
-                }
-                else {
-                    IWBC_ERROR("init_com: contact_rfoot or contact_lfoot or lf or rf is missing, cannot compute initial com reference");
-                }
-
-                if (verbose_) {
-                    std::cout << "Previous com ref: " << com_init.transpose() << std::endl;
-                    std::cout << "New com ref: " << com_final.transpose() << std::endl;
-                }
-                this->set_com_ref(com_final);
-            }
-            else {
-                IWBC_ERROR("init_com: no com task");
-            }
-        }
-
-        void TalosPosTracker::parse_stabilizer(const YAML::Node& config)
-        {
-
-            auto c = IWBC_CHECK(config["stabilizer"]);
-            _use_stabilizer = IWBC_CHECK(c["activated"].as<bool>());
-
-            std::string stab_path;
-            auto path = IWBC_CHECK(config["base_path"].as<std::string>());
-            _stabilizer_configs[behavior_types::FIXED_BASE] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_fixed_base"].as<std::string>()));
-            _stabilizer_configs[behavior_types::SINGLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ss"].as<std::string>()));
-            _stabilizer_configs[behavior_types::DOUBLE_SUPPORT] = inria_wbc::stabilizer::parse_stab_conf(IWBC_CHECK(path + "/" + c["params_ds"].as<std::string>()));
-
-            if (verbose_) {
-                for (auto& c : _stabilizer_configs) {
-                    std::cout << c.first << std::endl;
-                    std::cout << c.second << std::endl;
-                }
-                std::cout << "using " << behavior_type_ << std::endl;
-            }
-
-            auto history = _stabilizer_configs[behavior_type_].filter_size;
-            _cop_estimator.set_history_size(history);
-
-            _lf_force_filtered.setZero();
-            _rf_force_filtered.setZero();
-            _lf_force_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
-            _rf_force_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
-
-            _lf_torque_filtered.setZero();
-            _rf_torque_filtered.setZero();
-            _lf_torque_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
-            _rf_torque_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //force data of size 3
-
-            _imu_angular_vel_filtered.setZero();
-            _imu_angular_vel_filter = std::make_shared<estimators::MovingAverageFilter>(3, history); //angular vel data of size 3
-        }
-
-        void TalosPosTracker::set_behavior_type(const std::string& bt)
-        {
-            Controller::set_behavior_type(bt);
-
-            if (_stabilizer_configs.find(behavior_type_) != _stabilizer_configs.end()) {
-                auto history = _stabilizer_configs[behavior_type_].filter_size;
-                _cop_estimator.set_history_size(history);
-                _lf_force_filter->set_window_size(history);
-                _rf_force_filter->set_window_size(history);
-                _lf_torque_filter->set_window_size(history);
-                _rf_torque_filter->set_window_size(history);
-                _imu_angular_vel_filter->set_window_size(history);
-            }
-            else {
-                IWBC_ERROR("_stabilizer_configs does not have ", behavior_type_);
-            }
-        }
-
         void TalosPosTracker::update(const SensorData& sensor_data)
-        {
-            if (_stabilizer_configs.find(behavior_type_) == _stabilizer_configs.end())
-                IWBC_ERROR("_stabilizer_configs does not have ", behavior_type_);
-
-            // keep track of previous references to set them back after stabilization
-            std::map<std::string, tsid::trajectories::TrajectorySample> contact_sample_ref;
-            std::map<std::string, pinocchio::SE3> contact_se3_ref;
-            std::map<std::string, Eigen::Matrix<double, 6, 1>> contact_force_ref;
-            tsid::trajectories::TrajectorySample momentum_ref;
-
-            auto ac = activated_contacts_;
-            for (auto& contact_name : ac) {
-                pinocchio::SE3 se3;
-                auto contact_pos = contact(contact_name)->getMotionTask().getReference().getValue();
-                tsid::math::vectorToSE3(contact_pos, se3);
-                contact_se3_ref[contact_name] = se3;
-                contact_sample_ref[contact_name] = contact(contact_name)->getMotionTask().getReference();
-                contact_force_ref[contact_name] = contact(contact_name)->getForceReference();
-            }
-
-            auto com_ref = com_task()->getReference();
-            auto left_ankle_ref = get_full_se3_ref("lf");
-            auto right_ankle_ref = get_full_se3_ref("rf");
-            auto torso_ref = get_full_se3_ref("torso");
-
-            if (_stabilizer_configs[behavior_type_].use_momentum)
-                momentum_ref = get_full_momentum_ref();
-
-            if (_use_stabilizer) {
-                IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
-                IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the RF torque");
-                IWBC_ASSERT(sensor_data.find("velocity") != sensor_data.end(), "the stabilizer needs the velocity");
-                IWBC_ASSERT(sensor_data.find("imu_vel") != sensor_data.end(), "the stabilizer imu needs angular velocity");
-
-                // estimate the CoP / ZMP
-                auto cops = _cop_estimator.update(com_ref.getValue().head(2),
-                    model_joint_pos("leg_left_6_joint").translation(),
-                    model_joint_pos("leg_right_6_joint").translation(),
-                    sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
-                    sensor_data.at("rf_torque"), sensor_data.at("rf_force"));
-
-                // if the foot is on the ground
-                if (sensor_data.at("lf_force").norm() > _cop_estimator.fmin()) {
-                    _lf_force_filtered = _lf_force_filter->filter(sensor_data.at("lf_force"));
-                    _lf_torque_filtered = _lf_torque_filter->filter(sensor_data.at("lf_torque"));
-                }
-                else {
-                    _lf_force_filtered.setZero();
-                    _lf_torque_filtered.setZero();
-                }
-                if (sensor_data.at("rf_force").norm() > _cop_estimator.fmin()) {
-                    _rf_force_filtered = _rf_force_filter->filter(sensor_data.at("rf_force"));
-                    _rf_torque_filtered = _rf_torque_filter->filter(sensor_data.at("rf_torque"));
-                }
-                else {
-                    _rf_force_filtered.setZero();
-                    _rf_force_filtered.setZero();
-                }
-
-                tsid::trajectories::TrajectorySample lf_se3_sample, lf_contact_sample, rf_se3_sample, rf_contact_sample;
-                tsid::trajectories::TrajectorySample com_sample, torso_sample;
-                tsid::trajectories::TrajectorySample momentum_sample;
-                tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
-
-                if (_stabilizer_configs[behavior_type_].use_momentum) {
-                    _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
-
-                    auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
-                    stabilizer::momentum_imu_admittance(dt_, _stabilizer_configs[behavior_type_].momentum_p, _stabilizer_configs[behavior_type_].momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
-                    set_momentum_ref(momentum_sample);
-                }
-
-                const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
-                // com_admittance
-                if (valid_cop) {
-                    stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
-                    set_com_ref(com_sample);
-                }
-
-                //zmp admittance
-                if (valid_cop && _stabilizer_configs[behavior_type_].use_zmp) {
-                    double M = pinocchio_total_model_mass();
-                    Eigen::Matrix<double, 6, 1> left_fref, right_fref;
-                    stabilizer::zmp_distributor_admittance(dt_, _stabilizer_configs[behavior_type_].zmp_p, _stabilizer_configs[behavior_type_].zmp_d, M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
-
-                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
-                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
-                    contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
-                    contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
-                }
-
-                // left ankle_admittance
-                if (cops[1] && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
-
-                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[1].value(), model_joint_pos("leg_left_6_joint"), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
-                    set_se3_ref(lf_se3_sample, "lf");
-                    contact("contact_lfoot")->setReference(lf_contact_sample);
-                }
-
-                //right ankle_admittance
-                if (cops[2] && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
-                    stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[2].value(), model_joint_pos("leg_right_6_joint"), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
-                    set_se3_ref(rf_se3_sample, "rf");
-                    contact("contact_rfoot")->setReference(rf_contact_sample);
-                }
-
-                //foot force difference admittance
-                if (activated_contacts_forces_.find("contact_rfoot") != activated_contacts_forces_.end()
-                    && activated_contacts_forces_.find("contact_lfoot") != activated_contacts_forces_.end()
-                    && _lf_force_filter->data_ready()
-                    && _rf_force_filter->data_ready()) {
-
-                    //normal force of the contacts from tsid solution
-                    double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
-                    double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
-                    double M = pinocchio_total_model_mass();
-
-                    stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _stabilizer_configs[behavior_type_].ffda_gains, lf_normal_force, rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
-                    set_se3_ref(torso_sample, "torso");
-                }
-            }
-
+        {            
             if (_use_torque_collision_detection) {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "torque collision detection requires torque sensor data");
                 IWBC_ASSERT(sensor_data.at("joints_torque").size() == _torque_collision_joints.size(), "torque sensor data has a wrong size. call torque_sensor_joints() for needed values");
@@ -352,50 +132,22 @@ namespace inria_wbc {
                 _collision_detected = (false == _torque_collision_detection.check(tsid_tau, sensor_data.at("joints_torque")));
             }
 
-            if (_closed_loop) {
-                IWBC_ASSERT(sensor_data.find("floating_base_position") != sensor_data.end(),
-                    "we need the floating base position in closed loop mode!");
-                IWBC_ASSERT(sensor_data.find("floating_base_velocity") != sensor_data.end(),
-                    "we need the floating base velocity in closed loop mode!");
-                IWBC_ASSERT(sensor_data.find("positions") != sensor_data.end(),
-                    "we need the joint positions in closed loop mode!");
-                IWBC_ASSERT(sensor_data.find("joint_velocities") != sensor_data.end(),
-                    "we need the joint velocities in closed loop mode!");
+            tsid::trajectories::TrajectorySample momentum_ref;
+            if (_use_stabilizer && _stabilizer_configs[behavior_type_].use_momentum) {
+                momentum_ref = get_full_momentum_ref();
 
-                Eigen::VectorXd q_tsid(q_tsid_.size()), dq(v_tsid_.size());
-                auto pos = sensor_data.at("positions");
-                auto vel = sensor_data.at("joint_velocities");
-                auto fb_pos = sensor_data.at("floating_base_position");
-                auto fb_vel = sensor_data.at("floating_base_velocity");
+                tsid::trajectories::TrajectorySample momentum_sample;
+                _imu_angular_vel_filtered = _imu_angular_vel_filter->filter(sensor_data.at("imu_vel"));
 
-                IWBC_ASSERT(vel.size() + fb_vel.size() == v_tsid_.size(),
-                    "Joint velocities do not have the correct size:", vel.size() + fb_vel.size(), " vs (expected)", v_tsid_.size());
-                IWBC_ASSERT(pos.size() + fb_pos.size() == q_tsid_.size(),
-                    "Joint positions do not have the correct size:", pos.size() + fb_pos.size(), " vs (expected)", q_tsid_.size());
-
-                q_tsid << fb_pos, pos;
-                dq << fb_vel, vel;
-
-                _solve(q_tsid, dq);
-            }
-            else {
-                _solve();
+                auto motion = robot()->frameVelocity(tsid()->data(), robot()->model().getFrameId("imu_link"));
+                stabilizer::momentum_imu_admittance(dt_, _stabilizer_configs[behavior_type_].momentum_p, _stabilizer_configs[behavior_type_].momentum_d, motion.angular(), _imu_angular_vel_filtered, momentum_ref, momentum_sample);
+                set_momentum_ref(momentum_sample);
             }
 
-            // set the CoM back (useful if the behavior does not the set the ref at each timestep)
-            if (_use_stabilizer) {
-                set_com_ref(com_ref);
-                set_se3_ref(left_ankle_ref, "lf");
-                set_se3_ref(right_ankle_ref, "rf");
-                set_se3_ref(torso_ref, "torso");
-                if (_stabilizer_configs[behavior_type_].use_momentum)
-                    set_momentum_ref(momentum_ref);
+            HumanoidPosTracker::update(sensor_data);
 
-                for (auto& contact_name : ac) {
-                    contact(contact_name)->setReference(contact_sample_ref[contact_name]);
-                    contact(contact_name)->Contact6d::setForceReference(contact_force_ref[contact_name]);
-                }
-            }
+            if (_use_stabilizer && _stabilizer_configs[behavior_type_].use_momentum)
+                set_momentum_ref(momentum_ref);
         }
 
         void TalosPosTracker::clear_collision_detection()

@@ -8,7 +8,7 @@ namespace inria_wbc {
             Walk::Walk(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config)
             {
                   // check that the controller is compatible
-                auto h_controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+                auto h_controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
                 IWBC_ASSERT(h_controller != NULL, "Walk: the controllers needs to be a HumanoidPosTracker (or related)!");
                 IWBC_ASSERT(h_controller->has_task("lf"), "Walk: an lf task is required (left foot)");
                 IWBC_ASSERT(h_controller->has_task("rf"), "Walk: an rf task is required (right foot)");
@@ -61,7 +61,7 @@ namespace inria_wbc {
                 cycle_.push_back(States::LIFT_DOWN_LF_FINAL);
                 cycle_.push_back(States::MOVE_COM_CENTER_FINAL);
 
-                auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+                auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
                 assert(controller);
                 auto translate = [](const pinocchio::SE3& p, double v, int index) {
                     auto p2 = p;
@@ -69,10 +69,10 @@ namespace inria_wbc {
                     return p2;
                 };
                 // set the waypoints for the feet
-                auto lf_low = controller->model_joint_pos("leg_left_6_joint");
+                auto lf_low = controller->get_se3_ref("lf");
                 auto lf_high = translate(lf_low, step_height_, 2);
 
-                auto rf_low = controller->model_joint_pos("leg_right_6_joint");
+                auto rf_low = controller->get_se3_ref("rf");
                 auto rf_high = translate(rf_low, step_height_, 2);
 
                 // set the waypoints for the CoM : lf/rf but same height
@@ -188,7 +188,7 @@ namespace inria_wbc {
             void Walk::update(const controllers::SensorData& sensor_data)
             {
 
-                auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+                auto controller = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_);
 
                 if (run_) {
 

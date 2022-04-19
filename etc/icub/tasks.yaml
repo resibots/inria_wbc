@@ -1,0 +1,112 @@
+lh:
+    type: se3
+    tracked: l_hand
+    weight: 1.0
+    kp: 30.0
+    mask: 111111 # xyz
+rh:
+    type: se3
+    tracked: r_hand
+    weight: 1.0
+    kp: 30.0
+    mask: 111111
+lf:
+    type: se3
+    tracked: left_foot
+    weight: 1000.0
+    kp: 30.0
+    mask: 111111
+rf:
+    type: se3
+    tracked: right_foot
+    weight: 10.0
+    kp: 30.0     
+    mask: 111111
+com:
+    type: com
+    weight: 3000.0
+    kp: 50.0
+    mask: 111
+momentum: #!!!!!WARNING IS DISZBLED FOR SINGLE SUPPORT cf parse_stabiliser !!!!!!!!!!!
+    type: momentum
+    weight: 1000.0
+    kp: 30.0
+    mask: 000110
+posture:
+    type: posture
+    weight: 0.05
+    kp: 10.0
+    ref: inria_start
+torso:
+    type: se3
+    tracked: chest
+    weight: 1.0
+    kp: 30.0
+    mask: 000111
+head:
+    type: se3
+    tracked: head
+    weight: 10.0
+    kp: 30.0
+    mask: 110111
+bounds:
+    type: bounds
+    weight: 1000.0
+contact_lfoot:
+    type: contact
+    joint: l_ankle_roll
+    kp: 30.0
+    lxp: 0.14   # foot length in positive x direction
+    lxn: 0.06  # foot length in negative x direction
+    lyp: 0.045 # foot length in positive y direction
+    lyn: 0.045 # foot length in negative y direction
+    lz: 0.065  # foot sole height with respect to ankle joint
+    fmin: 5.0
+    fmax: 1500.0
+    mu: 0.3
+    normal: [0, 0, -1]
+contact_rfoot:
+    type: contact
+    joint: r_ankle_roll
+    kp: 30.0
+    lxp: 0.14   # foot length in positive x direction
+    lxn: 0.06  # foot length in negative x direction
+    lyp: 0.045 # foot length in positive y direction
+    lyn: 0.045 # foot length in negative y direction
+    lz:  0.065 # foot sole height with respect to ankle joint
+    fmin: 5.0
+    fmax: 1500.0
+    mu: 0.3
+    normal: [0, 0, -1]
+self_collision-left:
+    type: self-collision
+    tracked: l_wrist_yaw
+    radius: 0.05
+    avoided: 
+        r_wrist_yaw: 0.05
+        v_leg_right: 0.08
+        v_leg_left: 0.08  
+        torso_pitch: 0.11
+        l_hip_pitch: 0.08
+        r_hip_pitch: 0.08
+        l_knee: 0.08
+        r_knee: 0.08
+    weight: 500
+    kp: 700.0
+    p: 3
+self_collision-right:
+    type: self-collision
+    tracked: r_wrist_yaw
+    radius: 0.05
+    avoided: 
+        l_wrist_yaw: 0.05
+        v_leg_right: 0.08
+        v_leg_left: 0.08  
+        torso_pitch: 0.11
+        l_hip_pitch: 0.08
+        r_hip_pitch: 0.08
+        l_knee: 0.08
+        r_knee: 0.08
+    weight: 500
+    kp: 700.0
+    p: 3

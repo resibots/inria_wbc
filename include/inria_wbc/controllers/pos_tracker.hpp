@@ -7,7 +7,8 @@
 
 namespace inria_wbc {
     namespace controllers {
-
+      
+        // generic position tracker, for both fixed-base and floatin-base robots
         class PosTracker : public Controller {
         public:
             PosTracker(const YAML::Node& config);
