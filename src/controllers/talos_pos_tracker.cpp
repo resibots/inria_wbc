@@ -385,12 +385,14 @@ namespace inria_wbc {
             {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "compliance_posture task needs torque sensor measurements");
                 
+                Eigen::VectorXd compliance_mask = this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask();
+
                 Eigen::VectorXd error = Eigen::VectorXd::Zero(this->tau().size());
                 const Eigen::VectorXd& joints_torque = sensor_data.at("joints_torque");
                 for(int i=0; i < _torque_collision_joints_ids.size(); ++i)
                 {
                     auto idx = _torque_collision_joints_ids[i];
-                    error(idx) = joints_torque[i] - this->tau()(idx);
+                    error(idx) = (joints_torque[i] - this->tau()(idx)) * compliance_mask(idx-6);
                 }
                 
                 Eigen::VectorXd ref = this->q() - _compliance_posture_kp * error; // method 1
@@ -400,8 +402,8 @@ namespace inria_wbc {
                     if(this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask()(i-6) != 1)
                         ref_no_fb(i-6) = this->q()(i);
                 
-                std::cerr << this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask().transpose() << std::endl;
-                std::cerr << (this->q().tail(this->q().size()-6) - ref_no_fb).transpose() << std::endl;
+                // std::cerr << this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask().transpose() << std::endl;
+                // std::cerr << (this->q().tail(this->q().size()-6) - ref_no_fb).transpose() << std::endl;
                 this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->setReference(trajs::to_sample(ref_no_fb));
             }
 
