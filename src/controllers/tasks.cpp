@@ -244,13 +244,37 @@ namespace inria_wbc {
             auto q_lb = robot->model().lowerPositionLimit.tail(robot->na());
             auto q_ub = robot->model().upperPositionLimit.tail(robot->na());
             task->setPositionBounds(q_lb, q_ub);
-
             // add the task
             tsid->addMotionTask(*task, weight, 0);
 
             return task;
         }
         RegisterYAML<tsid::tasks::TaskJointPosVelAccBounds> __register_bounds("bounds", make_bounds);
+
+        ////// Actuation Bounds //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_actuation_bounds(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskActuationBounds>(task_name, *robot);
+            auto tau_max = robot->model().effortLimit.tail(robot->na());
+            task->setBounds(-tau_max, tau_max);
+
+            // add the task
+            tsid->addActuationTask(*task, weight, 0);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskActuationBounds> __register_actuation_bounds("actuation-bounds", make_actuation_bounds);
+
 
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
@@ -275,7 +299,8 @@ namespace inria_wbc {
             auto fmin = IWBC_CHECK(node["fmin"].as<double>());
             auto fmax = IWBC_CHECK(node["fmax"].as<double>());
             IWBC_ASSERT(normal.size() == 3, "normal size:", normal.size());
-            IWBC_ASSERT(robot->model().existJointName(joint_name), joint_name, " does not exist!");
+            IWBC_ASSERT(robot->model().existFrame(joint_name), joint_name, " does not exist!");
+
             auto horizontal = IWBC_CHECK(node["horizontal"].as<bool>());
             auto x_cst =  IWBC_CHECK(node["x_cst"].as<bool>());
             auto activate_from_the_start = IWBC_CHECK(node["activate_from_the_start"].as<bool>());

@@ -1,0 +1,11 @@
+filter_size: 7
+com: [0, 0, 0, 0, 0, 0]
+ankle: [0, 0, 0, 0, 0, 0]
+ffda: [0, 0, 0]
+use_zmp: false
+zmp_w: [0, 0, 0, 0, 0, 0]
+zmp_d: [0, 0, 0, 0, 0, 0]
+zmp_p: [0, 0, 0, 0, 0, 0] 
+use_momentum: false
+momentum_p: [0, 0, 0, 0, 0, 0]
+momentum_d: [0, 0, 0, 0, 0, 0]
