@@ -209,6 +209,8 @@ namespace inria_wbc {
             std::shared_ptr<tsid::robots::RobotWrapper> robot_;
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
+
+            std::string solver_to_use_;
         };
 
         using Factory = utils::Factory<Controller, YAML::Node>;
