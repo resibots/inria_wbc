@@ -134,14 +134,14 @@ namespace inria_wbc {
             {
                 assert(tsid_);
                 assert(robot_);
-                assert(robot_->model().existJointName(joint_name));
+                IWBC_ASSERT(robot_->model().existJointName(joint_name), "[", joint_name, "] (joint) does not exist!");
                 return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             }
             pinocchio::SE3 model_frame_pos(const std::string& frame_name) const
             {
                 assert(tsid_);
                 assert(robot_);
-                assert(robot_->model().existFrame(frame_name));
+                IWBC_ASSERT(robot_->model().existFrame(frame_name), "[", frame_name, "] (frame) does not exist!");
                 return robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
             }
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
@@ -209,28 +209,9 @@ namespace inria_wbc {
             std::shared_ptr<tsid::robots::RobotWrapper> robot_;
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
+
+            std::string solver_to_use_;
         };
-
-        inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.setValue(ref);
-            sample.setDerivative(Eigen::VectorXd::Zero(ref.size()));
-            sample.setSecondDerivative(Eigen::VectorXd::Zero(ref.size()));
-            return sample;
-        }
-
-        inline tsid::trajectories::TrajectorySample to_sample(const pinocchio::SE3& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.resize(12, 6);
-
-            Eigen::VectorXd ref_vec(12);
-            tsid::math::SE3ToVector(ref, ref_vec);
-            sample.setValue(ref_vec);
-            
-            return sample;
-        }
 
         using Factory = utils::Factory<Controller, YAML::Node>;
         template <typename T>

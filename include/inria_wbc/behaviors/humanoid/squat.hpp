@@ -6,7 +6,7 @@
 
 #include <inria_wbc/behaviors/behavior.hpp>
 #include <inria_wbc/controllers/pos_tracker.hpp>
-#include <inria_wbc/utils/trajectory_handler.hpp>
+#include <inria_wbc/trajs/trajectory_generator.hpp>
 
 namespace inria_wbc {
     namespace behaviors {
@@ -24,8 +24,8 @@ namespace inria_wbc {
             private:
                 int time_ = 0;
                 int traj_selector_ = 0;
-                std::vector<std::vector<Eigen::VectorXd>> trajectories_;
-                std::vector<Eigen::VectorXd> current_trajectory_;
+                std::vector<std::vector<tsid::trajectories::TrajectorySample>> trajectories_;
+                std::vector<tsid::trajectories::TrajectorySample> current_trajectory_;
                 float trajectory_duration_ = 3; //will be changed if specified in yaml
                 float motion_size_ = 0.2; //will be changed if specified in yaml
             };

@@ -1,0 +1,22 @@
+CONTROLLER:
+  name: humanoid-pos-tracker
+  base_path: /home/pal/inria_wbc/etc/icub
+  tasks: tasks.yaml
+  urdf: icub.urdf
+  configurations: configurations.srdf 
+  ref_config: inria_start
+  frames: frames.yaml
+  floating_base_joint_name: ""
+  floating_base: true
+  dt: 0.001
+  # by default we do not close the loop on the floating base
+  # because it's not required in position control
+  # and our robot does not have a very good estimator yet
+  closed_loop: false
+  verbose: true
+  mimic_dof_names : []
+  stabilizer:
+    activated: true
+    params_ss: stab_single_support.yaml
+    params_ds: stab_double_support.yaml
+    params_fixed_base: stab_fixed_base.yaml
