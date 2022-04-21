@@ -93,7 +93,7 @@ namespace inria_wbc {
 
             if (check_model_collisions_) {
                 auto collision_path = IWBC_CHECK(c["collision_path"].as<std::string>());
-                _collision_check.load_collision_file(collision_path, verbose_);
+                collision_check_.load_collision_file(collision_path, verbose_);
                 if (verbose_)
                     std::cout << "collision_path: " << collision_path << std::endl;
             }
@@ -307,7 +307,7 @@ namespace inria_wbc {
                 throw IWBC_EXCEPTION(error);
             }
             if (check_model_collisions_)
-                is_model_colliding_ = _collision_check.is_colliding(robot_->model(), tsid_->data());
+                is_model_colliding_ = collision_check_.is_colliding(robot_->model(), tsid_->data());
             if (is_model_colliding_ && !q_.isZero(1e-3))
                 send_cmd_ = false;
         }
