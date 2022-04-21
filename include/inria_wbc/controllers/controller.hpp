@@ -227,6 +227,8 @@ namespace inria_wbc {
             bool is_model_colliding_ = false;
             bool send_cmd_ = true;
             Eigen::VectorXd q_solver_; //q computed by the qp solver even when not sent (with send_cmd_ == false)
+            
+            std::string solver_to_use_;
         };
 
         using Factory = utils::Factory<Controller, YAML::Node>;
