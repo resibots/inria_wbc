@@ -402,7 +402,6 @@ int main(int argc, char* argv[])
                 }
                 timer.end("cmd");
 
-
                 Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                 if (ghost) {
                     translate_ghost(0) -= 1;

@@ -163,10 +163,11 @@ namespace inria_wbc {
 
             //check if pinocchio model is colliding
             inria_wbc::utils::CollisionCheck collision_check() { return _collision_check; }
-            bool is_model_colliding() { return _is_model_colliding; }
-            void restart_solver() { stop_solver_ = false; };
-            const void skip_update();
+            bool is_model_colliding() { return is_model_colliding_; }
+            void set_send_cmd(const bool& send_cmd) { send_cmd_ = send_cmd; };
             Eigen::VectorXd q_solver(bool filter_mimics = true) const;
+            const void qp_step_back(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, const pinocchio::Data& data);
+            const void qp_step_back() { qp_step_back(q_tsid_prev_, v_tsid_prev_, *data_prev_); };
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
@@ -206,11 +207,9 @@ namespace inria_wbc {
             tsid::math::Vector momentum_; // momentum
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces_; //tsid contact forces of the activated contacts
 
-            std::vector<tsid::math::Vector> q_tsid_prev_; // tsid joint positions at t, t-1, t-2, ..., t-n
-            std::vector<tsid::math::Vector> v_tsid_prev_; // tsid joint velocities at t, t-1, t-2, ..., t-n
-            std::vector<std::shared_ptr<pinocchio::Data>> data_prev_; // pinocchio data at t, t-1, t-2, ..., t-n
-            int buffer_size_ = 2;
-            int counter_ = 0; // will go from 0 to 2 to select t, t-1 or t-2
+            tsid::math::Vector q_tsid_prev_; // latest sent tsid joint positions at t, t-1, t-2, ..., t-n
+            tsid::math::Vector v_tsid_prev_; // latest sent tsid joint positions at t, t-1, t-2, ..., t-n
+            std::shared_ptr<pinocchio::Data> data_prev_; // latest sent  pinocchio data at t, t-1, t-2, ..., t-n
 
             //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart
@@ -223,11 +222,11 @@ namespace inria_wbc {
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
 
-            bool _check_model_collisions;
-            Eigen::VectorXd q_solver_; //q computed by the qp solver even when not sent (with skip_update)
+            bool check_model_collisions_;
             inria_wbc::utils::CollisionCheck _collision_check;
-            bool _is_model_colliding = false;
-            bool stop_solver_ = false;
+            bool is_model_colliding_ = false;
+            bool send_cmd_ = true;
+            Eigen::VectorXd q_solver_; //q computed by the qp solver even when not sent (with send_cmd_ == false)
         };
 
         using Factory = utils::Factory<Controller, YAML::Node>;

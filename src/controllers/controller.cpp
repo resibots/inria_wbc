@@ -87,11 +87,11 @@ namespace inria_wbc {
             _closed_loop = IWBC_CHECK(c["closed_loop"].as<bool>());
 
             //check collisions in pinocchio model
-            _check_model_collisions = IWBC_CHECK(c["check_model_collisions"].as<bool>());
+            check_model_collisions_ = IWBC_CHECK(c["check_model_collisions"].as<bool>());
             if (verbose_)
-                std::cout << "check_model_collisions: " << _check_model_collisions << std::endl;
+                std::cout << "check_model_collisions: " << check_model_collisions_ << std::endl;
 
-            if (_check_model_collisions) {
+            if (check_model_collisions_) {
                 auto collision_path = IWBC_CHECK(c["collision_path"].as<std::string>());
                 _collision_check.load_collision_file(collision_path, verbose_);
                 if (verbose_)
@@ -138,7 +138,7 @@ namespace inria_wbc {
             uint ndofs = robot_->nv(); // na + 6 (floating base), if not f_base only na
 
             v_tsid_ = Vector::Zero(ndofs);
-            v_tsid_prev_ = std::vector<Vector>(buffer_size_, Vector::Zero(ndofs));
+            v_tsid_prev_ = Vector::Zero(ndofs);
 
             a_tsid_ = Vector::Zero(ndofs);
             tau_tsid_ = Vector::Zero(nactuated);
@@ -152,9 +152,8 @@ namespace inria_wbc {
             tau_ = Vector::Zero(ndofs);
 
             q_tsid_ = Vector::Zero(robot_->nq());
-            q_tsid_prev_ = std::vector<Vector>(buffer_size_, Vector::Zero(robot_->nq()));
-            data_prev_ = std::vector<std::shared_ptr<pinocchio::Data>>(buffer_size_, std::make_shared<pinocchio::Data>(robot_->model()));
-
+            q_tsid_prev_ = Vector::Zero(robot_->nq());
+            data_prev_ = std::make_shared<pinocchio::Data>(robot_->model());
             tsid_joint_names_ = all_dofs(false);
             non_mimic_indexes_ = get_non_mimics_indexes();
         }
@@ -236,77 +235,81 @@ namespace inria_wbc {
             assert(robot_);
             assert(solver_);
 
-            if (!stop_solver_ || q_.isZero(1e-3)) {
+            if (send_cmd_) {
+                q_tsid_prev_ = q;
+                v_tsid_prev_ = dq;
+                data_prev_ = std::make_shared<pinocchio::Data>(tsid_->data());
+            }
 
-                q_tsid_prev_[counter_ % buffer_size_] = q_tsid_;
-                v_tsid_prev_[counter_ % buffer_size_] = v_tsid_;
-                data_prev_[counter_ % buffer_size_] = std::make_shared<pinocchio::Data>(tsid_->data());
-                counter_++;
+            const HQPData& HQPData = tsid_->computeProblemData(t_, q, dq);
+            momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * dq);
 
-                const HQPData& HQPData = tsid_->computeProblemData(t_, q, dq);
-                momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * dq);
+            const HQPOutput& sol = solver_->solve(HQPData);
 
-                const HQPOutput& sol = solver_->solve(HQPData);
+            if (sol.status == HQP_STATUS_OPTIMAL) {
+                const Vector& tau = tsid_->getActuatorForces(sol);
+                const Vector& dv = tsid_->getAccelerations(sol);
+                tau_tsid_ = tau;
+                a_tsid_ = dv;
+                v_tsid_ = dq + dt_ * dv;
+                q_tsid_ = pinocchio::integrate(robot_->model(), q, dt_ * v_tsid_);
+                t_ += dt_;
 
-                if (sol.status == HQP_STATUS_OPTIMAL) {
-                    const Vector& tau = tsid_->getActuatorForces(sol);
-                    const Vector& dv = tsid_->getAccelerations(sol);
-                    tau_tsid_ = tau;
-                    a_tsid_ = dv;
-                    v_tsid_ = dq + dt_ * dv;
-                    q_tsid_ = pinocchio::integrate(robot_->model(), q, dt_ * v_tsid_);
-                    t_ += dt_;
+                activated_contacts_forces_.clear();
+                for (auto& contact : activated_contacts_) {
+                    activated_contacts_forces_[contact] = tsid_->getContactForces(contact, sol);
+                }
 
-                    activated_contacts_forces_.clear();
-                    for (auto& contact : activated_contacts_) {
-                        activated_contacts_forces_[contact] = tsid_->getContactForces(contact, sol);
-                    }
-
-                    if (floating_base_) {
-                        Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
-                        Eigen::AngleAxisd aaxis(quat);
+                if (floating_base_) {
+                    Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
+                    Eigen::AngleAxisd aaxis(quat);
+                    q_solver_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
+                    if (send_cmd_) {
                         q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
                         tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
                     }
-                    else {
+                }
+                else {
+                    q_solver_ << q_tsid_;
+                    if (send_cmd_) {
                         q_ << q_tsid_;
                         tau_ << tau_tsid_;
                     }
-                    q_solver_ = q_;
+                }
+                if (send_cmd_) {
                     dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
                     ddq_ = a_tsid_;
                 }
-                else {
-                    std::string error = "Controller failed, can't solve problem. ";
-                    error += "Status : " + toString(sol.status);
-                    switch (sol.status) {
-                    case -1:
-                        error += " => Unknown";
-                        break;
-                    case 1:
-                        error += " => Infeasible ";
-                        break;
-                    case 2:
-                        error += " => Unbounded ";
-                        break;
-                    case 3:
-                        error += " => Max iter reached ";
-                        break;
-                    case 4:
-                        error += " => Error ";
-                        break;
-                    default:
-                        error += " => Uknown status";
-                    }
-                    error += " (t=" + std::to_string(t_) + ")";
-                    throw IWBC_EXCEPTION(error);
-                }
-                if (_check_model_collisions)
-                    _is_model_colliding = _collision_check.is_colliding(robot_->model(), tsid_->data());
-                if (_is_model_colliding)
-                    stop_solver_ = true;
-                // skip_update();
             }
+            else {
+                std::string error = "Controller failed, can't solve problem. ";
+                error += "Status : " + toString(sol.status);
+                switch (sol.status) {
+                case -1:
+                    error += " => Unknown";
+                    break;
+                case 1:
+                    error += " => Infeasible ";
+                    break;
+                case 2:
+                    error += " => Unbounded ";
+                    break;
+                case 3:
+                    error += " => Max iter reached ";
+                    break;
+                case 4:
+                    error += " => Error ";
+                    break;
+                default:
+                    error += " => Uknown status";
+                }
+                error += " (t=" + std::to_string(t_) + ")";
+                throw IWBC_EXCEPTION(error);
+            }
+            if (check_model_collisions_)
+                is_model_colliding_ = _collision_check.is_colliding(robot_->model(), tsid_->data());
+            if (is_model_colliding_ && !q_.isZero(1e-3))
+                send_cmd_ = false;
         }
 
         // Removes the universe and root (floating base) joint names
@@ -388,7 +391,7 @@ namespace inria_wbc {
 
         Eigen::VectorXd Controller::q_solver(bool filter_mimics) const
         {
-            return filter_mimics ? slice_vec(q_solver_, non_mimic_indexes_) : q_;
+            return filter_mimics ? slice_vec(q_solver_, non_mimic_indexes_) : q_solver_;
         }
 
         Eigen::VectorXd Controller::q0(bool filter_mimics) const
@@ -439,16 +442,11 @@ namespace inria_wbc {
                 std::cout << "using " << bt << std::endl;
         }
 
-        const void Controller::skip_update()
+        const void Controller::qp_step_back(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, const pinocchio::Data& data)
         {
-            if (counter_ < buffer_size_)
-                IWBC_ERROR("skip_update has been called too early, less than 3 updates have been done")
-            q_tsid_ = q_tsid_prev_[0];
-            v_tsid_ = v_tsid_prev_[0];
-            v_tsid_.setZero();
-            tsid_->data() = *data_prev_[0];
-            // tsid_->data() = *data_prev_[0];
+            q_tsid_ = q;
+            v_tsid_= dq;
+            tsid_->data() = data;
         }
-
     } // namespace controllers
 } // namespace inria_wbc
