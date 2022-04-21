@@ -14,6 +14,11 @@
 
 #include <tsid/solvers/solver-HQP-base.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
+
+#ifdef TSID_QPMAD_FOUND
+    #include <tsid/solvers/solver-HQP-qpmad.hpp>
+#endif
+
 #include <tsid/solvers/solver-HQP-factory.hxx>
 #include <tsid/solvers/utils.hpp>
 #include <tsid/utils/statistics.hpp>
@@ -23,6 +28,7 @@
 
 #include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/controllers/tasks.hpp"
+#include "inria_wbc/trajs/utils.hpp"
 
 using namespace tsid;
 using namespace tsid::math;
@@ -35,6 +41,9 @@ namespace inria_wbc {
         {
             // we only care about the CONTROLLER section
             YAML::Node c = IWBC_CHECK(config["CONTROLLER"]);
+
+            // qp solver to be used (eiquadprog or qpmad)
+            solver_to_use_ = IWBC_CHECK(c["solver"].as<std::string>());
 
             // all the file paths are relative to base_path
             auto path = IWBC_CHECK(c["base_path"].as<std::string>());
@@ -73,7 +82,24 @@ namespace inria_wbc {
 
             ////////////////////Create an HQP solver /////////////////////////////////////
             using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
-            solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+
+            if(solver_to_use_ == "qpmad")
+            {
+        #ifdef TSID_QPMAD_FOUND
+                solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
+        #else
+                IWBC_ERROR("'qpmad' solver is not available in tsid or in the system.");
+        #endif
+            }
+            else if(solver_to_use_ == "eiquadprog")
+            {
+                solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+            }
+            else
+            {
+                IWBC_ERROR("solver in configuration file must be either 'eiquadprog' or 'qpmad'.");
+            }
+            
             solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
 
             ////////////////////Compute Problem Data at init /////////////////////////////
@@ -126,6 +152,7 @@ namespace inria_wbc {
 
             if (verbose_) {
                 std::cout << "--------- Solver size info ---------" << std::endl;
+                std::cout << "Solver : " << solver_to_use_ << std::endl;
                 std::cout << "total number of variable (acceleration + contact-force) : " << tsid_->nVar() << std::endl;
                 std::cout << "number of equality constraints : " << tsid_->nEq() << std::endl;
                 std::cout << "number of inequality constraints : " << tsid_->nIn() << std::endl;
@@ -133,6 +160,7 @@ namespace inria_wbc {
                 std::cout << "position tracker initializer" << std::endl;
             }
         }
+ 
 
         void PosTracker::parse_tasks(const std::string& path, const YAML::Node& config)
         {
@@ -196,14 +224,14 @@ namespace inria_wbc {
         void PosTracker::set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name)
         {
             auto task = se3_task(task_name);
-            auto sample = to_sample(ref);
+            auto sample = trajs::to_sample(ref);
             task->setReference(sample);
         }
 
         void PosTracker::set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name)
         {
             auto c = contact(contact_name);
-            auto sample = to_sample(ref);
+            auto sample = trajs::to_sample(ref);
             c->setReference(sample);
         }
 

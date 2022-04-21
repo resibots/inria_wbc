@@ -1,0 +1,5 @@
+BEHAVIOR:
+  name : generic::cartesian_traj
+  trajectories: traj_dance/traj_dance.yaml
+  loop: true
+  scale: 0.75

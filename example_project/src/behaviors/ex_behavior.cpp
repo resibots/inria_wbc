@@ -20,8 +20,8 @@ namespace inria_wbc {
             auto lh_final = lh_init;
             lh_final.translation()(2) += motion_size_;
 
-            trajectories_.push_back(trajectory_handler::compute_traj(lh_init, lh_final, controller_->dt(), trajectory_duration_));
-            trajectories_.push_back(trajectory_handler::compute_traj(lh_final, lh_init, controller_->dt(), trajectory_duration_));
+            trajectories_.push_back(trajs::min_jerk_trajectory(lh_init, lh_final, controller_->dt(), trajectory_duration_));
+            trajectories_.push_back(trajs::min_jerk_trajectory(lh_final, lh_init, controller_->dt(), trajectory_duration_));
             current_trajectory_ = trajectories_[traj_selector_];
         }
 

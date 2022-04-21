@@ -6,6 +6,8 @@
 #include <signal.h>
 
 #include <dart/dynamics/BodyNode.hpp>
+#include <dart/constraint/ConstraintSolver.hpp>
+#include <dart/collision/CollisionObject.hpp>
 
 #include <robot_dart/control/pd_control.hpp>
 #include <robot_dart/robot.hpp>
@@ -380,9 +382,9 @@ int main(int argc, char* argv[])
                 auto q = controller->q(false);
                 timer.end("solver");
 
-                auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
+                Eigen::VectorXd q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
                 timer.begin("cmd");
-                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
+                Eigen::VectorXd q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
 
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, active_dofs_controllable);
@@ -446,6 +448,21 @@ int main(int argc, char* argv[])
                 robot->set_commands(cmd, active_dofs_controllable);
                 simu->step_world();
                 timer.end("sim");
+
+                // auto col = simu->world()->getConstraintSolver()->getLastCollisionResult();
+                // size_t nc = col.getNumContacts();
+                // size_t contact_count = 0;
+                // for (size_t i = 0; i < nc; i++) {
+                //     auto& ct = col.getContact(i);
+                //     auto f1 = ct.collisionObject1->getShapeFrame();
+                //     auto f2 = ct.collisionObject2->getShapeFrame();
+                //     std::string name1, name2;
+                //     if (f1->isShapeNode())
+                //         name1 = f1->asShapeNode()->getBodyNodePtr()->getName();
+                //     if (f1->isShapeNode())
+                //         name2 = f1->asShapeNode()->getBodyNodePtr()->getName();
+                //     std::cout << "contact:" << name1<< " -- " << name2 << std::endl;
+                // }
             }
 
             if (traj_saver)
@@ -456,10 +473,14 @@ int main(int argc, char* argv[])
                     timer.report(*x.second, simu->scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
+                else if (x.first == "tau")
+                    (*x.second) << controller->tau().transpose() << std::endl;
                 else if (x.first == "com") // the real com
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
+                else if (x.first == "objective_value")
+                    (*x.second) << controller_pos->objective_value() << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "ft")
@@ -507,8 +528,22 @@ int main(int argc, char* argv[])
                     else
                         (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
                 }
-                else if (robot->body_node(x.first) != nullptr)
-                    (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
+                else if (x.first.find("task_") != std::string::npos) // e.g. task_lh
+                {
+                    auto ref = controller_pos->se3_task(x.first.substr(strlen("task_")))->getReference();
+                    (*x.second) << ref.getValue().transpose() << " "
+                        << ref.getDerivative().transpose() << " "
+                        << ref.getSecondDerivative().transpose() << std::endl;
+                }
+                else if (robot->body_node(x.first) != nullptr) {
+                    pinocchio::SE3 frame;
+                    frame.rotation() = robot->body_pose(x.first).rotation();
+                    frame.translation() = robot->body_pose(x.first).translation();
+
+                    Eigen::VectorXd vec(12);
+                    tsid::math::SE3ToVector(frame, vec);
+                    (*x.second) << vec.transpose() << std::endl;
+                }
             }
             if (vm.count("srdf")) {
                 auto conf = vm["srdf"].as<float>();

@@ -79,8 +79,10 @@ namespace inria_wbc {
             urdf_ = urdf;
 #warning Utheque (URDF library) not found during cmake configuration
 #endif
-            if (verbose_)
+            if (verbose_) {
+                std::cout << "controller dt " << dt_ << std::endl;
                 std::cout << "controller urdf " << urdf_ << std::endl;
+            }
             // closed loop
             _closed_loop = IWBC_CHECK(c["closed_loop"].as<bool>());
 

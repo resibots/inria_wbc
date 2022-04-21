@@ -6,7 +6,7 @@
 
 #include <inria_wbc/behaviors/behavior.hpp>
 #include <inria_wbc/controllers/pos_tracker.hpp>
-#include <inria_wbc/utils/trajectory_handler.hpp>
+#include <inria_wbc/trajs/trajectory_generator.hpp>
 #include <inria_wbc/trajs/loader.hpp>
 
 namespace inria_wbc {
@@ -26,6 +26,7 @@ namespace inria_wbc {
                 int step_ = 1;
                 bool loop_;
                 std::shared_ptr<trajs::Loader> traj_loader_;
+                double scale_ = 1;
             };
         } // namespace generic
     } // namespace behaviors
