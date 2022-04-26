@@ -48,7 +48,7 @@ namespace inria_wbc::utils {
         const std::vector<std::string>& joint_names() const { return _model.names; }
         std::vector<std::string> frame_names();
 
-        void update_model(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, bool update_dynamics = false);
+        void update(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, bool update_dynamics = false, bool update_jacobians = false);
 
         pinocchio::Data::Matrix6x jacobian(const std::string& joint_name, const pinocchio::ReferenceFrame& reference_frame = pinocchio::WORLD);
         pinocchio::Data::Tensor3x hessian(const std::string& joint_name, const pinocchio::ReferenceFrame& reference_frame = pinocchio::WORLD);
@@ -63,6 +63,7 @@ namespace inria_wbc::utils {
         std::string _fb_joint_name; // floating base joint name
 
         bool _dyn_updated = false;
+        bool _jac_updated = false;
     };
 } // namespace inria_wbc::utils
 #endif // IWBC_UTILS_MODEL_HPP

@@ -77,7 +77,7 @@ namespace inria_wbc::utils
         return frame_names;
     }
 
-    void RobotModel::update_model(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, bool update_dynamics, bool update_jacobians)
+    void RobotModel::update(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, bool update_dynamics, bool update_jacobians)
     {
         _dyn_updated = false;
         _jac_updated = false;
@@ -127,7 +127,7 @@ namespace inria_wbc::utils
         if (!_model.existJointName(joint_name))
             throw IWBC_EXCEPTION("Joint name ", joint_name, "is not in model");
         IWBC_ASSERT(_jac_updated, "Jacobians have not been updated in RobotModel::update_model.");
-        
+
         pinocchio::Model::Index id = _model.getJointId(joint_name);
         return pinocchio::getJointKinematicHessian(_model, _data, id, reference_frame);
     }
