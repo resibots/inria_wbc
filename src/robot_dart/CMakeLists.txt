@@ -10,6 +10,7 @@ set(EXAMPLE_LIST
 set(NODART_EXAMPLE_LIST
     tutorial_0.cpp
     qp_timer_test.cpp
+    tutorial_2.cpp
 )
 
 function(compile_examples)

@@ -1,18 +1,8 @@
 #include <iostream>
 #include <signal.h>
 
-#include "inria_wbc/behaviors/humanoid/squat.hpp"
-#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
-#include "inria_wbc/robot_dart/cmd.hpp"
-#include "inria_wbc/robot_dart/utils.hpp"
-
-#include <robot_dart/robot_dart_simu.hpp>
-#include <robot_dart/robots/talos.hpp>
-
-#ifdef GRAPHIC
-#include <robot_dart/gui/magnum/graphics.hpp>
-#endif
+#include "inria_wbc/utils/robot_model.hpp"
 
 // easy search for an URDF
 #include <utheque/utheque.hpp>
@@ -32,17 +22,28 @@ int main(int argc, char* argv[])
 
     ////////// INRIA_WBC ////////////////////////////////////////////////////////////////////
     //First construct the controller from the controller config file
-    inria_wbc::utilsRobotrModel::Configuration config;
+    inria_wbc::utils::RobotModel::Configuration config;
     config.verbose = false;
     config.is_floating_base = true;
 
-    inria_wbc::utils::RobotModel robot_model(utheque::path("talos/talos.urdf"), config);
+    std::string urdf_path = utheque::path("talos/talos.urdf");
+    std::cout << "Loading model at: " << urdf_path << std::endl;
+    
+    inria_wbc::utils::RobotModel robot_model(urdf_path, config);
+    std::cout << "Robot type: " << (robot_model.is_floating_base() ? "floating" : "fixed") << " base\n";
+    
+    //robot_model.frame_names();
     
     Eigen::VectorXd q(robot_model.nq());
     Eigen::VectorXd dq(robot_model.nv());
-    
+
+    q.setZero();
+    dq.setZero();
+
     robot_model.update(q, dq, true, true);
+    std::cout << "Robot com: " << robot_model.com().transpose() << std::endl;
+    std::cout << "Robot bias vector (coriolis, centrifugal and gravity): " << robot_model.bias_vector().transpose() << std::endl;
     
-    
+    std::cout << "Exit" << std::endl;
     return 0;
 }

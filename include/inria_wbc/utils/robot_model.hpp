@@ -1,5 +1,5 @@
-#ifndef IWBC_UTILS_MODEL_HPP
-#define IWBC_UTILS_MODEL_HPP
+#ifndef IWBC_UTILS_ROBOT_MODEL_HPP
+#define IWBC_UTILS_ROBOT_MODEL_HPP
 
 /* Pinocchio !!!! NEED TO BE INCLUDED BEFORE BOOST*/
 #include <pinocchio/multibody/data.hpp>
@@ -7,8 +7,12 @@
 
 #include <inria_wbc/exceptions.hpp>
 
+#include <string>
 
-namespace inria_wbc::utils {
+
+namespace inria_wbc {
+namespace utils {
+
     class RobotModel {
 
     public:
@@ -20,6 +24,7 @@ namespace inria_wbc::utils {
             bool verbose;
         };
 
+        RobotModel() = default;
         RobotModel(const std::string& urdf_path, const Configuration& config);
         RobotModel(const pinocchio::Model& model, const Configuration& config);
 
@@ -48,7 +53,9 @@ namespace inria_wbc::utils {
         const std::vector<std::string>& joint_names() const { return _model.names; }
         std::vector<std::string> frame_names();
 
+        void update(const Eigen::VectorXd& q, bool update_dynamics = false, bool update_jacobians = false);
         void update(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, bool update_dynamics = false, bool update_jacobians = false);
+        void update(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, const Eigen::VectorXd& ddq, bool update_dynamics = false, bool update_jacobians = false);
 
         pinocchio::Data::Matrix6x jacobian(const std::string& joint_name, const pinocchio::ReferenceFrame& reference_frame = pinocchio::WORLD);
         pinocchio::Data::Tensor3x hessian(const std::string& joint_name, const pinocchio::ReferenceFrame& reference_frame = pinocchio::WORLD);
@@ -65,5 +72,8 @@ namespace inria_wbc::utils {
         bool _dyn_updated = false;
         bool _jac_updated = false;
     };
-} // namespace inria_wbc::utils
-#endif // IWBC_UTILS_MODEL_HPP
+
+} //namespace utils
+} // namespace inria_wbc
+
+#endif // IWBC_UTILS_ROBOT_MODEL_HPP

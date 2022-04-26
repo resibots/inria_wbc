@@ -1,6 +1,4 @@
 #include <inria_wbc/utils/robot_model.hpp>
-#include <iwbc_teleop/utils/tensor.hpp>
-
 #include <inria_wbc/exceptions.hpp>
 
 #include <pinocchio/algorithm/jacobian.hpp>
@@ -18,26 +16,21 @@
 
 #include <Eigen/Eigenvalues>
 
-namespace inria_wbc::utils
-{
-    RobotModel::RobotModel(const std::string& urdf_path, const Configuration& config)
+namespace inria_wbc {
+namespace utils {
+
+    RobotModel::RobotModel(const std::string& urdf_path, const RobotModel::Configuration& config)
         :  _config(config)
     {
-        if (_config.is_floating_base) 
-        {
-            if (!_config.fb_joint_name.empty()) 
-            {
+        if (_config.is_floating_base) {
+            if (!_config.fb_joint_name.empty()) {
                 _fb_joint_name = config.fb_joint_name; // floating base joint already in urdf
                 pinocchio::urdf::buildModel(urdf_path, _model, _config.verbose);
-            }
-            else 
-            {
+            } else {
                 pinocchio::urdf::buildModel(urdf_path, pinocchio::JointModelFreeFlyer(), _model, _config.verbose);
                 _fb_joint_name = "root_joint";
             }
-        }
-        else 
-        {
+        } else {
             _fb_joint_name = "";
             pinocchio::urdf::buildModel(urdf_path, _model, _config.verbose);
         }
@@ -45,7 +38,7 @@ namespace inria_wbc::utils
         _data = pinocchio::Data(_model);
     }
 
-    RobotModel::RobotModel(const pinocchio::Model& model, const Configuration& config)
+    RobotModel::RobotModel(const pinocchio::Model& model, const RobotModel::Configuration& config)
      :  _config(config),
         _model(model),
         _data(model)
@@ -77,14 +70,24 @@ namespace inria_wbc::utils
         return frame_names;
     }
 
+    void RobotModel::update(const Eigen::VectorXd& q, bool update_dynamics, bool update_jacobians)
+    {
+        update(q, Eigen::VectorXd::Zero(_model.nv), Eigen::VectorXd::Zero(_model.nv), update_dynamics, update_jacobians); 
+    }
+
     void RobotModel::update(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, bool update_dynamics, bool update_jacobians)
+    {
+        update(q, dq, Eigen::VectorXd::Zero(_model.nv), update_dynamics, update_jacobians);
+    }
+
+    void RobotModel::update(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, const Eigen::VectorXd& ddq, bool update_dynamics, bool update_jacobians)
     {
         _dyn_updated = false;
         _jac_updated = false;
 
         // update kynematics
         pinocchio::forwardKinematics(_model, _data, q, dq);
-        pinocchio::centerOfMass(_model, _data, q, dq, Eigen::VectorXd::Zero(_model.nv), false); // false -> not computed for subtrees
+        pinocchio::centerOfMass(_model, _data, q, dq, ddq, false); // false -> not computed for subtrees
 
         if(update_jacobians)
         {
@@ -132,4 +135,5 @@ namespace inria_wbc::utils
         return pinocchio::getJointKinematicHessian(_model, _data, id, reference_frame);
     }
 
-} // namespace inria_wbc::utils
+} // namespace utils
+} // namespace inria_wbc

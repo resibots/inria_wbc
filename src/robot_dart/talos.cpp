@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <boost/program_options.hpp>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -33,6 +32,8 @@
 #include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/utils/timer.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
+
+#include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";

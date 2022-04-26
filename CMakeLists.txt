@@ -17,7 +17,6 @@ find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
 
 
 set(INRIA_WBC_SOURCES
-  src/utils/robot_model.cpp
   src/controllers/controller.cpp
   src/controllers/pos_tracker.cpp
   src/controllers/tasks.cpp
@@ -37,6 +36,7 @@ set(INRIA_WBC_SOURCES
   src/estimators/cop.cpp
   src/tsid/task-self-collision.cpp
   src/tsid/task-momentum-equality.cpp
+  src/utils/robot_model.cpp
 )
 
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})
