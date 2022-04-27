@@ -63,11 +63,11 @@ namespace utils {
 
     std::vector<std::string> RobotModel::frame_names()
     {
-        std::vector<std::string> frame_names;
-        std::transform(_model.frames.begin(), _model.frames.end(), frame_names.begin(),
+        std::vector<std::string> frames;
+        std::transform(_model.frames.begin(), _model.frames.end(), std::back_inserter(frames),
             [](const pinocchio::Frame& f) { return f.name; }
         );
-        return frame_names;
+        return frames;
     }
 
     void RobotModel::update(const Eigen::VectorXd& q, bool update_dynamics, bool update_jacobians)
