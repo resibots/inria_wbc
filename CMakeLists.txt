@@ -34,6 +34,7 @@ set(INRIA_WBC_SOURCES
                             src/safety/torque_collision_detection.cpp
                             src/stabilizers/stabilizer.cpp
                             src/estimators/cop.cpp
+                            src/utils/collision_check.cpp
                             src/tsid/task-self-collision.cpp
                             src/tsid/task-momentum-equality.cpp
 )

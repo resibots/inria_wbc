@@ -164,7 +164,7 @@ namespace inria_wbc {
             //check if pinocchio model is colliding
             inria_wbc::utils::CollisionCheck collision_check() { return collision_check_; }
             bool is_model_colliding() { return is_model_colliding_; }
-            void set_send_cmd(const bool& send_cmd) { send_cmd_ = send_cmd; };
+            void set_send_cmd(const bool send_cmd) { send_cmd_ = send_cmd; };
 
             Eigen::VectorXd q_solver(bool filter_mimics = true) const;
             const void qp_step_back(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, const pinocchio::Data& data);

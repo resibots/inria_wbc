@@ -93,9 +93,9 @@ namespace inria_wbc {
 
             if (check_model_collisions_) {
                 auto collision_path = IWBC_CHECK(c["collision_path"].as<std::string>());
-                collision_check_.load_collision_file(collision_path, verbose_);
                 if (verbose_)
-                    std::cout << "collision_path: " << collision_path << std::endl;
+                    std::cout << "collision_path: " << base_path_ + "/" + collision_path << std::endl;
+                collision_check_.load_collision_file(base_path_ + "/" + collision_path, verbose_);
             }
 
             pinocchio::Model robot_model;
@@ -445,7 +445,7 @@ namespace inria_wbc {
         const void Controller::qp_step_back(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, const pinocchio::Data& data)
         {
             q_tsid_ = q;
-            v_tsid_= dq;
+            v_tsid_ = dq;
             tsid_->data() = data;
         }
     } // namespace controllers
