@@ -25,7 +25,7 @@
 #include <tsid/tasks/task-se3-equality.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
 
-#include <inria_wbc/utils/collision_check.hpp>
+#include <inria_wbc/safety/collision_check.hpp>
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
 

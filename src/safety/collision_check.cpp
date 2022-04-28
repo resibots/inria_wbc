@@ -1,5 +1,5 @@
 
-#include "inria_wbc/utils/collision_check.hpp"
+#include "inria_wbc/safety/collision_check.hpp"
 
 namespace inria_wbc::utils {
 
