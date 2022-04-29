@@ -26,10 +26,10 @@ namespace inria_wbc {
                 lh_final.translation()(1) -= motion_size_;
                 rh_final.translation()(1) += motion_size_;
 
-                lh_trajs_.push_back(trajectory_handler::compute_traj(lh_init, lh_final, controller_->dt(), trajectory_duration_));
-                lh_trajs_.push_back(trajectory_handler::compute_traj(lh_final, lh_init, controller_->dt(), trajectory_duration_));
-                rh_trajs_.push_back(trajectory_handler::compute_traj(rh_init, rh_final, controller_->dt(), trajectory_duration_));
-                rh_trajs_.push_back(trajectory_handler::compute_traj(rh_final, rh_init, controller_->dt(), trajectory_duration_));
+                lh_trajs_.push_back(trajs::min_jerk_trajectory(lh_init, lh_final, controller_->dt(), trajectory_duration_));
+                lh_trajs_.push_back(trajs::min_jerk_trajectory(lh_final, lh_init, controller_->dt(), trajectory_duration_));
+                rh_trajs_.push_back(trajs::min_jerk_trajectory(rh_init, rh_final, controller_->dt(), trajectory_duration_));
+                rh_trajs_.push_back(trajs::min_jerk_trajectory(rh_final, rh_init, controller_->dt(), trajectory_duration_));
             }
 
             void Clapping::update(const controllers::SensorData& sensor_data)

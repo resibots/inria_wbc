@@ -1,15 +1,17 @@
 CONTROLLER:
   name: talos-pos-tracker
+  solver: eiquadprog #qpmad
   base_path: /home/pal/inria_wbc/etc/talos
   tasks: tasks.yaml
-  urdf: talos.urdf
+  urdf: talos/talos.urdf
   configurations: configurations.srdf 
   ref_config: inria_start
   frames: frames.yaml
   floating_base_joint_name: ""
   floating_base: true
   dt: 0.001
-  torso_max_roll: 0.25 #to prevent leg collision
+  # joint_range_reduction: 2.0 # reduce joint range of motion (degrees for upper and lower bound)
+  torso_max_roll: 14.32 #to prevent leg collision in degrees
   # by default we do not close the loop on the floating base
   # because it's not required in position control
   # and our robot does not have a very good estimator yet
@@ -27,6 +29,8 @@ CONTROLLER:
                      "gripper_right_inner_single_joint",
                      "gripper_right_fingertip_3_joint",
                      "gripper_right_motor_single_joint"]
+  check_model_collisions: true
+  collision_path: collisions/talos_collisions_margin.yaml
   stabilizer:
     activated: true
     params_ss: stab_single_support.yaml

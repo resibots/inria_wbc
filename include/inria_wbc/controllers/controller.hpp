@@ -25,6 +25,7 @@
 #include <tsid/tasks/task-se3-equality.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
 
+#include <inria_wbc/safety/collision_check.hpp>
 #include <inria_wbc/utils/factory.hpp>
 #include <inria_wbc/utils/utils.hpp>
 
@@ -134,14 +135,14 @@ namespace inria_wbc {
             {
                 assert(tsid_);
                 assert(robot_);
-                assert(robot_->model().existJointName(joint_name));
+                IWBC_ASSERT(robot_->model().existJointName(joint_name), "[", joint_name, "] (joint) does not exist!");
                 return robot_->position(tsid_->data(), robot_->model().getJointId(joint_name));
             }
             pinocchio::SE3 model_frame_pos(const std::string& frame_name) const
             {
                 assert(tsid_);
                 assert(robot_);
-                assert(robot_->model().existFrame(frame_name));
+                IWBC_ASSERT(robot_->model().existFrame(frame_name), "[", frame_name, "] (frame) does not exist!");
                 return robot_->framePosition(tsid_->data(), robot_->model().getFrameId(frame_name));
             }
             double cost(const std::shared_ptr<tsid::tasks::TaskBase>& task) const
@@ -160,6 +161,14 @@ namespace inria_wbc {
             const std::string& urdf() const { return urdf_; }
             const std::string& floating_base_joint_name() const { return floating_base_joint_name_; }
 
+            //check if pinocchio model is colliding
+            inria_wbc::utils::CollisionCheck collision_check() { return collision_check_; }
+            bool is_model_colliding() { return is_model_colliding_; }
+            void set_send_cmd(const bool send_cmd) { send_cmd_ = send_cmd; };
+
+            Eigen::VectorXd q_solver(bool filter_mimics = true) const;
+            const void qp_step_back(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, const pinocchio::Data& data);
+            const void qp_step_back() { qp_step_back(q_tsid_prev_, v_tsid_prev_, *data_prev_); };
 
         private:
             std::vector<int> get_non_mimics_indexes() const;
@@ -199,6 +208,10 @@ namespace inria_wbc {
             tsid::math::Vector momentum_; // momentum
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces_; //tsid contact forces of the activated contacts
 
+            tsid::math::Vector q_tsid_prev_; // latest sent tsid joint positions 
+            tsid::math::Vector v_tsid_prev_; // latest sent tsid joint positions 
+            std::shared_ptr<pinocchio::Data> data_prev_; // latest sent  pinocchio data 
+
             //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart
             Eigen::VectorXd q_; // tsid joint positions resized for dart
@@ -209,24 +222,15 @@ namespace inria_wbc {
             std::shared_ptr<tsid::robots::RobotWrapper> robot_;
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> tsid_;
             std::shared_ptr<tsid::solvers::SolverHQPBase> solver_;
+
+            inria_wbc::utils::CollisionCheck collision_check_;
+            bool check_model_collisions_;
+            bool is_model_colliding_ = false;
+            bool send_cmd_ = true;
+            Eigen::VectorXd q_solver_; //q computed by the qp solver even when not sent (with send_cmd_ == false)
+
+            std::string solver_to_use_;
         };
-
-        inline tsid::trajectories::TrajectorySample to_sample(const Eigen::VectorXd& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.pos = ref;
-            sample.vel.setZero(ref.size());
-            sample.acc.setZero(ref.size());
-            return sample;
-        }
-
-        inline tsid::trajectories::TrajectorySample to_sample(const pinocchio::SE3& ref)
-        {
-            tsid::trajectories::TrajectorySample sample;
-            sample.resize(12, 6);
-            tsid::math::SE3ToVector(ref, sample.pos);
-            return sample;
-        }
 
         using Factory = utils::Factory<Controller, YAML::Node>;
         template <typename T>

@@ -1,4 +1,4 @@
 BEHAVIOR:
   name: humanoid::squat
-  trajectory_duration: 3
+  trajectory_duration: 6
   motion_size: 0.2

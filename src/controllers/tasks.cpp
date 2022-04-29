@@ -1,4 +1,5 @@
 #include <tsid/tasks/task-actuation-bounds.hpp>
+#include <tsid/tasks/task-actuation-equality.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-cop-equality.hpp>
@@ -9,6 +10,7 @@
 #include <tsid/tasks/task-se3-equality.hpp>
 
 #include "inria_wbc/controllers/tasks.hpp"
+#include "inria_wbc/trajs/utils.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
 using namespace tsid;
@@ -71,7 +73,7 @@ namespace inria_wbc {
                 ref = robot->position(tsid->data(), robot->model().getJointId(tracked));
             else
                 ref = robot->framePosition(tsid->data(), robot->model().getFrameId(tracked));
-            auto sample = to_sample(ref);
+            auto sample = trajs::to_sample(ref);
             task->setReference(sample);
 
             // add the task to TSID (side effect, be careful)
@@ -106,7 +108,7 @@ namespace inria_wbc {
             task->setMask(mask);
 
             // set the reference
-            task->setReference(to_sample(robot->com(tsid->data())));
+            task->setReference(trajs::to_sample(robot->com(tsid->data())));
 
             // add to TSID
             tsid->addMotionTask(*task, weight, 1);
@@ -141,7 +143,7 @@ namespace inria_wbc {
 
             // set the reference
             Eigen::VectorXd ref = Eigen::VectorXd::Zero(6);
-            task->setReference(to_sample(ref));
+            task->setReference(trajs::to_sample(ref));
 
             // add to TSID
             tsid->addMotionTask(*task, weight, 1);
@@ -212,7 +214,7 @@ namespace inria_wbc {
             task->setMask(mask_post);
 
             // set the reference to the current position of the robot
-            task->setReference(to_sample(ref_q.tail(robot->na())));
+            task->setReference(trajs::to_sample(ref_q.tail(robot->na())));
 
             // add the task
             tsid->addMotionTask(*task, weight, 1);
@@ -220,6 +222,53 @@ namespace inria_wbc {
             return task;
         }
         RegisterYAML<tsid::tasks::TaskJointPosture> __register_posture("posture", make_posture);
+
+        ////// Torques //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_torque(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+
+            bool floating_base_flag = (robot->na() == robot->nv()) ? false : true;
+            int n_actuated = floating_base_flag ? robot->nv() - 6 : robot->nv();
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskActuationEquality>(task_name, *robot);
+
+            Vector mask_post(n_actuated);
+            if (!node["mask"]) {
+                mask_post = Vector::Ones(n_actuated);
+            }
+            else {
+                auto mask = IWBC_CHECK(node["mask"].as<std::string>());
+                IWBC_ASSERT(mask.size() == mask_post.size(), "wrong size in torque mask, expected:", mask_post.size(), " got:", mask.size());
+                mask_post = convert_mask<Eigen::Dynamic>(mask);
+            }
+            task->mask(mask_post);
+
+            if (node["scaling"]){
+                auto scaling = IWBC_CHECK(node["scaling"].as<std::vector<double>>());
+                IWBC_ASSERT(scaling.size() == n_actuated, "wrong size in torque scaling, expected:", n_actuated, " got:", scaling.size());
+                Eigen::VectorXd scaling_post = Eigen::VectorXd::Map(scaling.data(), scaling.size());
+                task->setWeightVector(scaling_post);
+            }
+
+            // set the reference to the zero
+            Vector ref = Vector::Zero(n_actuated);
+            task->setReference(ref);
+
+            // add the task
+            tsid->addActuationTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskActuationEquality> __register_torque("torque", make_torque);
 
         ////// Bounds //////
         std::shared_ptr<tsid::tasks::TaskBase> make_bounds(
@@ -243,13 +292,37 @@ namespace inria_wbc {
             auto q_lb = robot->model().lowerPositionLimit.tail(robot->na());
             auto q_ub = robot->model().upperPositionLimit.tail(robot->na());
             task->setPositionBounds(q_lb, q_ub);
-
             // add the task
             tsid->addMotionTask(*task, weight, 0);
 
             return task;
         }
         RegisterYAML<tsid::tasks::TaskJointPosVelAccBounds> __register_bounds("bounds", make_bounds);
+
+        ////// Actuation Bounds //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_actuation_bounds(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskActuationBounds>(task_name, *robot);
+            auto tau_max = robot->model().effortLimit.tail(robot->na());
+            task->setBounds(-tau_max, tau_max);
+
+            // add the task
+            tsid->addActuationTask(*task, weight, 0);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskActuationBounds> __register_actuation_bounds("actuation-bounds", make_actuation_bounds);
+
 
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
@@ -274,7 +347,7 @@ namespace inria_wbc {
             auto fmin = IWBC_CHECK(node["fmin"].as<double>());
             auto fmax = IWBC_CHECK(node["fmax"].as<double>());
             IWBC_ASSERT(normal.size() == 3, "normal size:", normal.size());
-            IWBC_ASSERT(robot->model().existJointName(joint_name), joint_name, " does not exist!");
+            IWBC_ASSERT(robot->model().existFrame(joint_name), joint_name, " does not exist!");
 
             // create the task
             Matrix3x contact_points(3, 4);

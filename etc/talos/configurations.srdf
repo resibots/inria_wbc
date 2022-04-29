@@ -23,13 +23,13 @@
 		<joint name="arm_left_5_joint" value="0.315339" />
 		<joint name="arm_left_6_joint" value="0.0615923" />
 		<joint name="arm_left_7_joint" value="-0.146577" />
-		<joint name="gripper_left_inner_double_joint" value="-1.01167e-05" />
-		<joint name="gripper_left_fingertip_1_joint" value="1.45114e-06" />
-		<joint name="gripper_left_fingertip_2_joint" value="1.45126e-06" />
-		<joint name="gripper_left_inner_single_joint" value="1.38952e-05" />
-		<joint name="gripper_left_fingertip_3_joint" value="2.2327e-06" />
-		<joint name="gripper_left_joint" value="-3.73337e-22" />
-		<joint name="gripper_left_motor_single_joint" value="1.1706e-05" />
+		<joint name="gripper_left_inner_double_joint" value="-2e-1" />
+		<joint name="gripper_left_fingertip_1_joint" value="2e-1" />
+		<joint name="gripper_left_fingertip_2_joint" value="2e-1" />
+		<joint name="gripper_left_inner_single_joint" value="2e-1" />
+		<joint name="gripper_left_fingertip_3_joint" value="2e-1" />
+		<joint name="gripper_left_joint" value="-2e-1" />
+		<joint name="gripper_left_motor_single_joint" value="2e-1" />
 		<joint name="arm_right_1_joint" value="-0.218505" />
 		<joint name="arm_right_2_joint" value="-0.566321" />
 		<joint name="arm_right_3_joint" value="0.582227" />
@@ -37,13 +37,13 @@
 		<joint name="arm_right_5_joint" value="-0.315343" />
 		<joint name="arm_right_6_joint" value="-0.0617214" />
 		<joint name="arm_right_7_joint" value="-0.146588" />
-		<joint name="gripper_right_inner_double_joint" value="-1.0188e-05" />
-		<joint name="gripper_right_fingertip_1_joint" value="1.45499e-06" />
-		<joint name="gripper_right_fingertip_2_joint" value="1.45486e-06" />
-		<joint name="gripper_right_inner_single_joint" value="1.472e-05" />
-		<joint name="gripper_right_fingertip_3_joint" value="2.23076e-06" />
-		<joint name="gripper_right_joint" value="4.7177e-22" />
-		<joint name="gripper_right_motor_single_joint" value="1.1679e-05" />
+		<joint name="gripper_right_inner_double_joint" value="-2e-1" />
+		<joint name="gripper_right_fingertip_1_joint" value="2e-1" />
+		<joint name="gripper_right_fingertip_2_joint" value="2e-1" />
+		<joint name="gripper_right_inner_single_joint" value="2e-1" />
+		<joint name="gripper_right_fingertip_3_joint" value="2e-1" />
+		<joint name="gripper_right_joint" value="-2e-1" />
+		<joint name="gripper_right_motor_single_joint" value="2e-1" />
 		<joint name="head_1_joint" value="-0.0041334" />
 		<joint name="head_2_joint" value="1.98607e-05" />
 	</group_state>
