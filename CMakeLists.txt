@@ -17,26 +17,27 @@ find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
 
 
 set(INRIA_WBC_SOURCES
-  src/controllers/controller.cpp
-  src/controllers/pos_tracker.cpp
-  src/controllers/tasks.cpp
-  src/controllers/humanoid_pos_tracker.cpp
-  src/controllers/talos_pos_tracker.cpp
-  src/trajs/saver.cpp
-  src/trajs/loader.cpp
-  src/behaviors/behavior.cpp
-  src/behaviors/generic/cartesian.cpp
-  src/behaviors/generic/cartesian_traj.cpp
-  src/behaviors/humanoid/squat.cpp
-  src/behaviors/humanoid/walk_on_spot.cpp
-  src/behaviors/humanoid/walk.cpp
-  src/behaviors/humanoid/clapping.cpp
-  src/safety/torque_collision_detection.cpp
-  src/stabilizers/stabilizer.cpp
-  src/estimators/cop.cpp
-  src/tsid/task-self-collision.cpp
-  src/tsid/task-momentum-equality.cpp
-  src/utils/robot_model.cpp
+    src/controllers/controller.cpp
+    src/controllers/pos_tracker.cpp
+    src/controllers/tasks.cpp
+    src/controllers/humanoid_pos_tracker.cpp
+    src/controllers/talos_pos_tracker.cpp
+    src/trajs/saver.cpp
+    src/trajs/loader.cpp
+    src/behaviors/behavior.cpp
+    src/behaviors/generic/cartesian.cpp
+    src/behaviors/generic/cartesian_traj.cpp
+    src/behaviors/humanoid/squat.cpp
+    src/behaviors/humanoid/walk_on_spot.cpp
+    src/behaviors/humanoid/walk.cpp
+    src/behaviors/humanoid/clapping.cpp
+    src/safety/torque_collision_detection.cpp
+    src/stabilizers/stabilizer.cpp
+    src/estimators/cop.cpp
+    src/safety/collision_check.cpp
+    src/tsid/task-self-collision.cpp
+    src/tsid/task-momentum-equality.cpp
+    src/utils/robot_model.cpp
 )
 
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})
