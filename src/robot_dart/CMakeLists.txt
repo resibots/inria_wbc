@@ -4,9 +4,8 @@ set(EXAMPLE_LIST
     talos_load_external.cpp
     franka.cpp
     tiago.cpp
-    tutorial_0.cpp
-    icub.cpp
     tutorial_1.cpp
+    icub.cpp
 )
 
 set(NODART_EXAMPLE_LIST
