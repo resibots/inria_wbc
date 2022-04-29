@@ -1,5 +1,6 @@
 CONTROLLER:
   name: talos-pos-tracker
+  solver: eiquadprog #qpmad
   base_path: /home/pal/inria_wbc/etc/talos
   tasks: tasks.yaml
   urdf: talos/talos.urdf
@@ -28,6 +29,8 @@ CONTROLLER:
                      "gripper_right_inner_single_joint",
                      "gripper_right_fingertip_3_joint",
                      "gripper_right_motor_single_joint"]
+  check_model_collisions: true
+  collision_path: collisions/talos_collisions_margin.yaml
   stabilizer:
     activated: true
     params_ss: stab_single_support.yaml

@@ -1,4 +1,5 @@
 #include "inria_wbc/behaviors/humanoid/walk_on_spot.hpp"
+#include <inria_wbc/trajs/utils.hpp>
 
 namespace inria_wbc {
     namespace behaviors {
@@ -8,7 +9,7 @@ namespace inria_wbc {
             WalkOnSpot::WalkOnSpot(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config)
             {
                 // check that the controller is compatible
-                auto h_controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+                auto h_controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
                 IWBC_ASSERT(h_controller != NULL, "Walk on spot: the controllers needs to be a HumanoidPosTracker (or related)!");
                 IWBC_ASSERT(h_controller->has_task("lf"), "Walk on spot: an lf task is required (left foot)");
                 IWBC_ASSERT(h_controller->has_task("rf"), "Walk on spot: an rf task is required (right foot)");
@@ -43,8 +44,8 @@ namespace inria_wbc {
                     States::LIFT_DOWN_RF,
                     States::MOVE_COM_RIGHT};
 
-                auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
-                assert(controller);
+                auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
+                IWBC_ASSERT(controller, "Walk on spot requires a humanoid controller!");
                 auto translate_up = [](const pinocchio::SE3& p, double v) {
                     auto p2 = p;
                     p2.translation()(2) += v;
@@ -52,10 +53,10 @@ namespace inria_wbc {
                 };
                 // set the waypoints for the feet
                 Eigen::VectorXd high = (Eigen::VectorXd(3) << 0, step_height_, 0).finished();
-                auto lf_low = controller->model_joint_pos("leg_left_6_joint");
+                auto lf_low = controller->get_se3_ref("lf");
                 auto lf_high = translate_up(lf_low, step_height_);
 
-                auto rf_low = controller->model_joint_pos("leg_right_6_joint");
+                auto rf_low = controller->get_se3_ref("rf");
                 auto rf_high = translate_up(rf_low, step_height_);
 
                 // set the waypoints for the CoM : lf/rf but same height
@@ -71,39 +72,81 @@ namespace inria_wbc {
                 for (auto c : cycle_) {
                     switch (c) {
                     case States::INIT:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajectory_handler::compute_traj(com_init, com_rf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_com_duration_)));
+                        _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
+                        _com_trajs.push_back(
+                            trajs::to_sample_trajectory(
+                                trajs::min_jerk_trajectory(com_init, com_rf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_init, com_rf, dt_, traj_com_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_init, com_rf, dt_, traj_com_duration_)
+                            */)
+                        );
                         break;
                     case States::LIFT_UP_LF:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajectory_handler::compute_traj(lf_low, lf_high, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajectory_handler::constant_traj(com_rf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_foot_duration_)));
+                        _lf_trajs.push_back(
+                            trajs::to_sample_trajectory(
+                                trajs::min_jerk_trajectory(lf_low, lf_high, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lf_low, lf_high, dt_, traj_foot_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lf_low, lf_high, dt_, traj_foot_duration_)
+                            */)
+                        );
+                        _com_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(com_rf, dt_, traj_foot_duration_)));
                         break;
                     case States::LIFT_DOWN_LF:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajectory_handler::compute_traj(lf_high, lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajectory_handler::constant_traj(com_rf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_foot_duration_)));
+                        _lf_trajs.push_back(
+                            trajs::to_sample_trajectory(
+                                trajs::min_jerk_trajectory(lf_high, lf_low, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lf_high, lf_low, dt_, traj_foot_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lf_high, lf_low, dt_, traj_foot_duration_)
+                            */)
+                        );
+                        _com_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(com_rf, dt_, traj_foot_duration_)));
                         break;
                     case States::MOVE_COM_LEFT:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajectory_handler::compute_traj(com_rf, com_lf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_com_duration_)));
+                        _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
+                        _com_trajs.push_back(
+                            trajs::to_sample_trajectory(
+                                trajs::min_jerk_trajectory(com_rf, com_lf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_rf, com_lf, dt_, traj_com_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_rf, com_lf, dt_, traj_com_duration_)
+                            */)
+                        );
                         break;
                     case States::LIFT_UP_RF:
-                        _rf_trajs.push_back(trajectory_handler::compute_traj(rf_low, rf_high, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajectory_handler::constant_traj(com_lf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(
+                            trajs::to_sample_trajectory(
+                                trajs::min_jerk_trajectory(rf_low, rf_high, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rf_low, rf_high, dt_, traj_foot_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rf_low, rf_high, dt_, traj_foot_duration_)
+                            */)
+                        );
+                        _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_foot_duration_)));
+                        _com_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(com_lf, dt_, traj_foot_duration_)));
                         break;
                     case States::LIFT_DOWN_RF:
-                        _rf_trajs.push_back(trajectory_handler::compute_traj(rf_high, rf_low, dt_, traj_foot_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_foot_duration_));
-                        _com_trajs.push_back(trajectory_handler::constant_traj(com_lf, dt_, traj_foot_duration_));
+                        _rf_trajs.push_back(
+                            trajs::to_sample_trajectory(
+                                trajs::min_jerk_trajectory(rf_high, rf_low, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rf_high, rf_low, dt_, traj_foot_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rf_high, rf_low, dt_, traj_foot_duration_)
+                            */)
+                        );
+                        _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_foot_duration_)));
+                        _com_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(com_lf, dt_, traj_foot_duration_)));
                         break;
                     case States::MOVE_COM_RIGHT:
-                        _rf_trajs.push_back(trajectory_handler::constant_traj(rf_low, dt_, traj_com_duration_));
-                        _lf_trajs.push_back(trajectory_handler::constant_traj(lf_low, dt_, traj_com_duration_));
-                        _com_trajs.push_back(trajectory_handler::compute_traj(com_lf, com_rf, dt_, traj_com_duration_));
+                        _rf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_com_duration_)));
+                        _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
+                        _com_trajs.push_back(
+                            trajs::to_sample_trajectory(
+                                trajs::min_jerk_trajectory(com_lf, com_rf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_lf, com_rf, dt_, traj_com_duration_),
+                                trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_lf, com_rf, dt_, traj_com_duration_)
+                            */)
+                        );
                         break;
                     default:
                         assert(0 && "unknown state");
@@ -116,7 +159,7 @@ namespace inria_wbc {
 
             void WalkOnSpot::update(const controllers::SensorData& sensor_data)
             {
-                auto controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller_);
+                auto controller = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_);
 
                 // add and remove contacts
                 if (time_ == 0 && state_ == States::LIFT_UP_LF)
@@ -144,11 +187,14 @@ namespace inria_wbc {
                 assert(time_ < _rf_trajs[_current_traj].size());
                 assert(time_ < _lf_trajs[_current_traj].size());
 
+                pinocchio::SE3 lf_se3 = trajs::se3_from_sample(_lf_trajs[_current_traj][time_]);
+                pinocchio::SE3 rf_se3 = trajs::se3_from_sample(_rf_trajs[_current_traj][time_]);
+
                 controller->set_com_ref(_com_trajs[_current_traj][time_]);
                 controller->set_se3_ref(_lf_trajs[_current_traj][time_], "lf");
                 controller->set_se3_ref(_rf_trajs[_current_traj][time_], "rf");
-                controller->set_contact_se3_ref(_lf_trajs[_current_traj][time_], "contact_lfoot");
-                controller->set_contact_se3_ref(_rf_trajs[_current_traj][time_], "contact_rfoot");
+                controller->set_contact_se3_ref(lf_se3, "contact_lfoot");
+                controller->set_contact_se3_ref(rf_se3, "contact_rfoot");
 
                 controller_->update(sensor_data);
                 time_++;

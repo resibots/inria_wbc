@@ -79,10 +79,24 @@ namespace inria_wbc {
             urdf_ = urdf;
 #warning Utheque (URDF library) not found during cmake configuration
 #endif
-            if (verbose_)
+            if (verbose_) {
+                std::cout << "controller dt " << dt_ << std::endl;
                 std::cout << "controller urdf " << urdf_ << std::endl;
+            }
             // closed loop
             _closed_loop = IWBC_CHECK(c["closed_loop"].as<bool>());
+
+            //check collisions in pinocchio model
+            check_model_collisions_ = IWBC_CHECK(c["check_model_collisions"].as<bool>());
+            if (verbose_)
+                std::cout << "check_model_collisions: " << check_model_collisions_ << std::endl;
+
+            if (check_model_collisions_) {
+                auto collision_path = IWBC_CHECK(c["collision_path"].as<std::string>());
+                if (verbose_)
+                    std::cout << "collision_path: " << base_path_ + "/" + collision_path << std::endl;
+                collision_check_.load_collision_file(base_path_ + "/" + collision_path, verbose_);
+            }
 
             pinocchio::Model robot_model;
             floating_base_ = IWBC_CHECK(c["floating_base"].as<bool>());
@@ -124,16 +138,22 @@ namespace inria_wbc {
             uint ndofs = robot_->nv(); // na + 6 (floating base), if not f_base only na
 
             v_tsid_ = Vector::Zero(ndofs);
+            v_tsid_prev_ = Vector::Zero(ndofs);
+
             a_tsid_ = Vector::Zero(ndofs);
             tau_tsid_ = Vector::Zero(nactuated);
             momentum_ = Vector::Zero(3);
 
             q0_.resize(ndofs);
             q_ = Vector::Zero(ndofs);
+            q_solver_ = Vector::Zero(ndofs);
             dq_ = Vector::Zero(ndofs);
             ddq_ = Vector::Zero(ndofs);
             tau_ = Vector::Zero(ndofs);
 
+            q_tsid_ = Vector::Zero(robot_->nq());
+            q_tsid_prev_ = Vector::Zero(robot_->nq());
+            data_prev_ = std::make_shared<pinocchio::Data>(robot_->model());
             tsid_joint_names_ = all_dofs(false);
             non_mimic_indexes_ = get_non_mimics_indexes();
         }
@@ -214,6 +234,13 @@ namespace inria_wbc {
             assert(tsid_);
             assert(robot_);
             assert(solver_);
+
+            if (send_cmd_) {
+                q_tsid_prev_ = q;
+                v_tsid_prev_ = dq;
+                data_prev_ = std::make_shared<pinocchio::Data>(tsid_->data());
+            }
+
             const HQPData& HQPData = tsid_->computeProblemData(t_, q, dq);
             momentum_ = (robot_->momentumJacobian(tsid_->data()).bottomRows(3) * dq);
 
@@ -236,16 +263,23 @@ namespace inria_wbc {
                 if (floating_base_) {
                     Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                     Eigen::AngleAxisd aaxis(quat);
-                    q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
-                    tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
+                    q_solver_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
+                    if (send_cmd_) {
+                        q_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->nq() - 7); //q_tsid_ of size 37 (pos+quat+nactuated)
+                        tau_ << 0, 0, 0, 0, 0, 0, tau_tsid_; //the size of tau is actually 30 (nactuated)
+                    }
                 }
                 else {
-                    q_ << q_tsid_;
-                    tau_ << tau_tsid_;
+                    q_solver_ << q_tsid_;
+                    if (send_cmd_) {
+                        q_ << q_tsid_;
+                        tau_ << tau_tsid_;
+                    }
                 }
-
-                dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
-                ddq_ = a_tsid_;
+                if (send_cmd_) {
+                    dq_ = v_tsid_; //the speed of the free flyerjoint is dim 6 even if its pos id dim 7
+                    ddq_ = a_tsid_;
+                }
             }
             else {
                 std::string error = "Controller failed, can't solve problem. ";
@@ -272,6 +306,10 @@ namespace inria_wbc {
                 error += " (t=" + std::to_string(t_) + ")";
                 throw IWBC_EXCEPTION(error);
             }
+            if (check_model_collisions_)
+                is_model_colliding_ = collision_check_.is_colliding(robot_->model(), tsid_->data());
+            if (is_model_colliding_ && !q_.isZero(1e-3))
+                send_cmd_ = false;
         }
 
         // Removes the universe and root (floating base) joint names
@@ -351,6 +389,11 @@ namespace inria_wbc {
             return filter_mimics ? slice_vec(q_, non_mimic_indexes_) : q_;
         }
 
+        Eigen::VectorXd Controller::q_solver(bool filter_mimics) const
+        {
+            return filter_mimics ? slice_vec(q_solver_, non_mimic_indexes_) : q_solver_;
+        }
+
         Eigen::VectorXd Controller::q0(bool filter_mimics) const
         {
             return filter_mimics ? slice_vec(q0_, non_mimic_indexes_) : q0_;
@@ -399,5 +442,11 @@ namespace inria_wbc {
                 std::cout << "using " << bt << std::endl;
         }
 
+        const void Controller::qp_step_back(const Eigen::VectorXd& q, const Eigen::VectorXd& dq, const pinocchio::Data& data)
+        {
+            q_tsid_ = q;
+            v_tsid_ = dq;
+            tsid_->data() = data;
+        }
     } // namespace controllers
 } // namespace inria_wbc
