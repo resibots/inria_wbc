@@ -6,9 +6,12 @@ CONTROLLER:
   urdf: tiago_steel.urdf
   configurations: configurations-elbow-down.srdf 
   closed_loop: false
+  solver: eiquadprog
   ref_config: start
   floating_base: false
   floating_base_joint_name: ""
   dt: 0.001
   verbose: false
   mimic_dof_names : []
+  check_model_collisions: true
+  collision_path: collisions.yaml

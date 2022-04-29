@@ -1,12 +1,18 @@
 ee:
     type: se3
     tracked: gripper_link
-    weight: 500.0
+    weight: 1500.0
     kp: 50.0
     mask: 111111
+head:
+    type: se3
+    tracked: head_2_link
+    weight: 500.0
+    kp: 50.0
+    mask: 000111
 posture:
     type: posture
-    weight: 1.00
+    weight: 0.1
     kp: 10.0
     ref: start
 bounds:

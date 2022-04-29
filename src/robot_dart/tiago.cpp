@@ -22,6 +22,7 @@
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/external_collision_detector.hpp"
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
+#include "inria_wbc/robot_dart/utils.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 
 int main(int argc, char* argv[])
@@ -37,6 +38,7 @@ int main(int argc, char* argv[])
         ("big_window,w", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
         ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
+        ("model_collisions",po::value<bool>()->default_value(false), "display pinocchio qp model collision spheres")
         ("collisions", po::value<std::string>(), "display the collision shapes for task [name]")
         ("collision,k", po::value<std::string>()->default_value("fcl"), "collision engine [default:fcl]")
         ("controller,c", po::value<std::string>()->default_value("../etc/tiago/pos_tracker.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/tiago/pos_tracker.yaml]")
@@ -203,6 +205,13 @@ int main(int argc, char* argv[])
 
         // the main loop
         using namespace std::chrono;
+        
+        // for Pinocchio self-collisions
+        bool init_model_sphere_collisions = false;
+        std::vector<std::shared_ptr<robot_dart::Robot>> spheres;
+        bool is_colliding = false;
+
+        //////////////////////////////// MAIN LOOP ////////////////////////////////
         while (simu.scheduler().next_time() < vm["duration"].as<int>() && !simu.graphics()->done()) {
             double time_step_solver = 0, time_step_cmd = 0, time_step_simu = 0;
 
@@ -244,6 +253,23 @@ int main(int argc, char* argv[])
 
                 max_time_solver = std::max(time_step_solver, max_time_solver);
                 min_time_solver = std::min(time_step_solver, min_time_solver);
+
+
+                // check the collisions
+                 is_colliding = controller->is_model_colliding();
+                if (vm["model_collisions"].as<bool>()) {
+                    auto spherical_members = controller->collision_check().spherical_members();
+                    auto sphere_color = dart::Color::Green(0.5);
+
+                    if (init_model_sphere_collisions == false) {
+                        spheres = inria_wbc::robot_dart::create_spherical_members(spherical_members, simu, sphere_color);
+                        init_model_sphere_collisions = true;
+                    }
+                    else {
+                        inria_wbc::robot_dart::update_spherical_members(spherical_members, spheres, sphere_color, is_colliding, controller->collision_check().collision_index(), Eigen::VectorXd::Zero(3));
+                    }
+                }
+
             }
 
          if (simu.schedule(simu.graphics_freq()) && vm.count("collisions")) {
