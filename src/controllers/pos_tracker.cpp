@@ -114,37 +114,35 @@ namespace inria_wbc {
             parse_tasks(p.string(), config);
 
             ///////////// check if joint range of motion has to be reduced //////////////////////////
-            if(c["joint_range_reduction"])
-            {
+            if (c["joint_range_reduction"]) {
                 double reduction_rads = IWBC_CHECK(c["joint_range_reduction"].as<double>()) / 180 * M_PI;
-                if(reduction_rads < 0)
+                if (reduction_rads < 0)
                     IWBC_ERROR("Joint range reduction: reduction must be positive.");
 
                 auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
                 auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
 
-                if(verbose_)
+                if (verbose_)
                     std::cout << "Joints' range of motion reduced by: " << reduction_rads << " rads." << std::endl;
 
                 auto q = q0_.tail(robot_->na());
 
-                for(size_t i=0; i < robot_->na(); ++i)
-                {
-                    if(q_ub[i] - q_lb[i] < 2 * reduction_rads)
+                for (size_t i = 0; i < robot_->na(); ++i) {
+                    if (q_ub[i] - q_lb[i] < 2 * reduction_rads)
                         IWBC_ERROR("Joint range reduction: reduction cannot be greater than actual range of motion");
 
-                    if(verbose_)
-                        std::cout << "change bounds for " << pinocchio_joint_names()[i+2] 
-                            << " from (" << q_lb[i] <<  "," << q_ub[i] << ") ";
-                    
+                    if (verbose_)
+                        std::cout << "change bounds for " << pinocchio_joint_names()[i + 2]
+                                  << " from (" << q_lb[i] << "," << q_ub[i] << ") ";
+
                     q_lb[i] += reduction_rads;
                     q_ub[i] -= reduction_rads;
 
-                    if(verbose_)
-                        std::cout << "to (" << q_lb[i] <<  "," << q_ub[i] << "). q=" << q[i] << std::endl;
+                    if (verbose_)
+                        std::cout << "to (" << q_lb[i] << "," << q_ub[i] << "). q=" << q[i] << std::endl;
 
-                    if(q[i] < q_lb[i] || q[i] > q_ub[i])
-                        IWBC_ERROR("Joint range reduction(", pinocchio_joint_names()[i+2], "): q0 falls outside reduced joint space.");
+                    if (q[i] < q_lb[i] || q[i] > q_ub[i])
+                        IWBC_ERROR("Joint range reduction(", pinocchio_joint_names()[i + 2], "): q0 falls outside reduced joint space.");
                 }
 
                 bound_task()->setPositionBounds(q_lb, q_ub);
@@ -160,7 +158,6 @@ namespace inria_wbc {
                 std::cout << "position tracker initializer" << std::endl;
             }
         }
- 
 
         void PosTracker::parse_tasks(const std::string& path, const YAML::Node& config)
         {
