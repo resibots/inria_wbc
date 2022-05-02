@@ -171,6 +171,7 @@ int main(int argc, char* argv[])
         // do some modifications according to command-line options
         controller_config["CONTROLLER"]["base_path"] = "../etc/talos"; // we assume that we run in ./build
         controller_config["CONTROLLER"]["urdf"] = robot->model_filename();
+        // controller_config["CONTROLLER"]["urdf"] = "../etc/talos/talos_fast_collisions_d_reflex.urdf";
         controller_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         controller_config["CONTROLLER"]["verbose"] = verbose;
         int control_freq = vm["control_freq"].as<int>();

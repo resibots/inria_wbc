@@ -97,9 +97,12 @@ contact_rhand:
     mu: 0.3
     normal: [0, 1, 0] 
     activate: false  
-    x: 0.
-    y: -0.50
-    z: 1.2
+    x: 0.0
+    y: -0.0
+    z: 0.0
+    # x: 0.
+    # y: -0.50
+    # z: 1.2
 
 contact_lhand:
     type: contact
@@ -116,5 +119,8 @@ contact_lhand:
     normal: [0, -1, 0]
     activate: false 
     x: 0.
-    y: 0.70
-    z: 1.15
+    y: 0.
+    z: 0.
+    # x: 0.
+    # y: 0.70
+    # z: 1.15

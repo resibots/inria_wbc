@@ -2,8 +2,8 @@ CONTROLLER:
   name: talos-pos-tracker
   solver: eiquadprog #qpmad
   base_path: /home/pal/inria_wbc/etc/talos
-  tasks: tasks.yaml
-  urdf: talos/talos.urdf
+  tasks: tasks_d_reflex.yaml
+  urdf: talos/talos_fast_collision_d_reflex.urdf
   configurations: configurations.srdf 
   ref_config: inria_start
   frames: frames.yaml

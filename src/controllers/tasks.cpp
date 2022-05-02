@@ -382,9 +382,9 @@ namespace inria_wbc {
             contact_task->Kd(2.0 * contact_task->Kp().cwiseSqrt());
             auto contact_ref = robot->framePosition(tsid->data(), robot->model().getFrameId(joint_name));
             if (!horizontal){
-                contact_ref.translation()[0] = x;
-                contact_ref.translation()[1] = y;
-                contact_ref.translation()[2] = z;
+                contact_ref.translation()[0] += x;
+                contact_ref.translation()[1] += y;
+                contact_ref.translation()[2] += z;
             }
             // hand orientation
             Eigen::Quaterniond q;
