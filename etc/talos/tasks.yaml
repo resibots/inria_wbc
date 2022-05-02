@@ -80,15 +80,10 @@ contact_lfoot:
     fmax: 1500.0
     mu: 0.3
     normal: [0, 0, 1]
-    horizontal: true
-    x_cst: false
-    activate_from_the_start: true
+    activate: true
     x: 0.
     y: 0.
     z: 0.
-    roll: 0.
-    pitch: 0.
-    yaw: 0.
 contact_rfoot:
     type: contact
     joint: leg_right_6_joint
@@ -102,15 +97,10 @@ contact_rfoot:
     fmax: 1500.0
     mu: 0.3
     normal: [0, 0, 1]
-    horizontal: true
-    x_cst: false
-    activate_from_the_start: true
+    activate: true
     x: 0.
     y: 0.
     z: 0.
-    roll: 0.
-    pitch: 0.
-    yaw: 0.
 contact_rhand:
     type: contact
     joint: gripper_right_joint
@@ -124,18 +114,13 @@ contact_rhand:
     fmax: 1500.0
     mu: 0.3
     normal: [0, -1, 0]
-    horizontal: false 
-    x_cst: false   
-    activate_from_the_start: false  
+    activate: false  
     # x: 0.05
     # y: 0.1
     # z: 0.0
     x: 0.0
     y: 0.0
     z: 0.0
-    roll: 0.0
-    pitch: 0.
-    yaw: 0.
 self_collision-left:
     type: self-collision
     tracked: gripper_left_joint

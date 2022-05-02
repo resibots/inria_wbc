@@ -348,61 +348,60 @@ namespace inria_wbc {
             auto fmax = IWBC_CHECK(node["fmax"].as<double>());
             IWBC_ASSERT(normal.size() == 3, "normal size:", normal.size());
             IWBC_ASSERT(robot->model().existFrame(joint_name), joint_name, " does not exist!");
-
-            auto horizontal = IWBC_CHECK(node["horizontal"].as<bool>());
-            auto x_cst =  IWBC_CHECK(node["x_cst"].as<bool>());
-            auto activate_from_the_start = IWBC_CHECK(node["activate_from_the_start"].as<bool>());
+            auto activate = IWBC_CHECK(node["activate"].as<bool>());
             auto x = IWBC_CHECK(node["x"].as<double>());
             auto y = IWBC_CHECK(node["y"].as<double>());
             auto z = IWBC_CHECK(node["z"].as<double>());
-            auto roll = IWBC_CHECK(node["roll"].as<double>());
-            auto pitch = IWBC_CHECK(node["pitch"].as<double>());
-            auto yaw = IWBC_CHECK(node["yaw"].as<double>());
-
-            // create the task
+    
             Matrix3x contact_points(3, 4);
-            if (horizontal){
+            Eigen::Vector3d contact_normal(normal.data());
+            bool horizontal;
+            if (normal.at(0) == 0. && normal.at(1) == 0){
+                // Horizontal plan (default for the foot contacts)
+                horizontal = true;
                 contact_points <<   -lxn, -lxn, lxp, lxp,
-                                    -lyn, lyp, -lyn, lyp,
-                                    lz, lz, lz, lz;  // z constant = horizontal
+                                -lyn, lyp, -lyn, lyp,
+                                lz, lz, lz, lz;  // z constant = horizontal
             } else {
-                if (x_cst){
-                    contact_points << lz,  lz,  lz,   lz, // x constant = verticale
-                                    -lyn,  lyp, -lyn, lyp,
-                                    -lxn, -lxn, lxp,  lxp;
-                } else {
-                    contact_points << -lxn, -lxn, lxp,  lxp,
-                                    lz, lz,  lz,  lz,  // y constant = verticale
-                                    -lyn,  lyp, -lyn, lyp;
-                }
-
+                horizontal = false;
+                Eigen::Vector3d vertical = {0., 0., 1.};
+                Eigen::Vector3d u = vertical.cross(contact_normal);
+                u.normalize();
+                Eigen::Vector3d v = contact_normal.cross(u);
+                Eigen::Vector3d tl = -lxn * u + lyp * v;
+                Eigen::Vector3d tr = lxp * u + lyp * v;
+                Eigen::Vector3d br = lxp * u - lyn * v;
+                Eigen::Vector3d bl = -lxn * u - lyn * v;
+                contact_points << bl[0],  tl[0],  br[0],   bl[0], 
+                                bl[1],  tl[1],  br[1],   bl[1],
+                                bl[2],  tl[2],  br[2],   bl[2];
             }
 
-            Eigen::Vector3d contact_normal(normal.data());
             auto contact_task = std::make_shared<tsid::contacts::Contact6dExt>(task_name, *robot, joint_name, contact_points, contact_normal, mu, fmin, fmax);
             contact_task->Kp(kp * Vector::Ones(6));
             contact_task->Kd(2.0 * contact_task->Kp().cwiseSqrt());
             auto contact_ref = robot->framePosition(tsid->data(), robot->model().getFrameId(joint_name));
-
-            // when not using foot contact horizontal should be false 
             if (!horizontal){
-                // translation
-                contact_ref.translation()[0] += x;
-                contact_ref.translation()[1] += y;
-                contact_ref.translation()[2] += z;
-
-                // rotation 
-                auto euler = contact_ref.rotation().eulerAngles(0, 1, 2);
-                euler[0] += roll;
-                euler[1] += pitch;
-                euler[2] += yaw;
-                auto q = Eigen::AngleAxisd(euler[0], Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(euler[1], Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(euler[2], Eigen::Vector3d::UnitZ());
-                contact_ref.rotation() = q.toRotationMatrix();
+                contact_ref.translation()[0] = x;
+                contact_ref.translation()[1] = y;
+                contact_ref.translation()[2] = z;
+            }
+            // hand orientation
+            Eigen::Quaterniond q;
+            if (!horizontal) {
+                auto mask = contact_task->getMotionTask().getMask();
+                mask[0] = 1.;
+                mask[1] = 1.;
+                mask[2] = 1.;
+                mask[3] = 0.;
+                mask[4] = 0.;
+                mask[5] = 0.;
+                contact_task->setMask(mask);
             }
 
             contact_task->Contact6d::setReference(contact_ref);
             // add the task
-            if (activate_from_the_start)
+            if (activate)
                 tsid->addRigidContact(*contact_task, cst::w_force_feet);
 
             return contact_task;

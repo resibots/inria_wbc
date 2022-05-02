@@ -1,0 +1,120 @@
+lh:
+    type: se3
+    tracked: gripper_left_base_link
+    weight: 10.0
+    kp: 30.0
+    mask: 111000 # xyz
+rh:
+    type: se3
+    tracked:  gripper_right_base_link  # gripper_right_base_link
+    weight: 10.0
+    kp: 30.0
+    mask: 111000
+
+torso:
+    type: se3
+    tracked: torso_2_link
+    weight: 0.0
+    kp: 30.0
+    mask: 000110
+lf:
+    type: se3
+    tracked: leg_left_6_joint
+    weight: 1000.0
+    kp: 30.0
+    mask: 111111
+rf:
+    type: se3
+    tracked: leg_right_6_joint
+    weight: 1000.0
+    kp: 30.0     
+    mask: 111111
+com:
+    type: com
+    weight: 1000.0
+    kp: 30.0
+    mask: 110
+posture:
+    type: posture
+    weight: 0.3
+    kp: 10.0
+    ref: inria_start
+momentum: #!!!!!WARNING IS DISZBLED FOR SINGLE SUPPORT cf parse_stabiliser !!!!!!!!!!!
+    type: momentum
+    weight: 1000.0
+    kp: 30.0
+    mask: 000110
+bounds:
+    type: bounds
+    weight: 10000
+contact_lfoot:
+    type: contact
+    joint: leg_left_6_joint
+    kp: 30.0
+    lxp: 0.1   # foot length in positive x direction
+    lxn: 0.11  # foot length in negative x direction
+    lyp: 0.069 # foot length in positive y direction
+    lyn: 0.069 # foot length in negative y direction
+    lz: 0.107  # foot sole height with respect to ankle joint
+    fmin: 5.0
+    fmax: 1500.0
+    mu: 0.3
+    normal: [0, 0, 1]
+    activate: true
+    x: 0.
+    y: 0.
+    z: 0.
+
+contact_rfoot:
+    type: contact
+    joint: leg_right_6_joint
+    kp: 30.0
+    lxp: 0.1   # foot length in positive x direction
+    lxn: 0.11  # foot length in negative x direction
+    lyp: 0.069 # foot length in positive y direction
+    lyn: 0.069 # foot length in negative y direction
+    lz: 0.107  # foot sole height with respect to ankle joint
+    fmin: 5.0
+    fmax: 1500.0
+    mu: 0.3
+    normal: [0, 0, 1]
+    activate: true
+    x: 0.
+    y: 0.
+    z: 0.
+
+contact_rhand:
+    type: contact
+    joint: gripper_right_base_link_joint
+    kp: 30.0
+    lxp: 0.04 # foot length in positive x direction
+    lxn: 0.04 # foot length in negative x direction
+    lyp: 0.04 # foot length in positive y direction
+    lyn: 0.04 # foot length in negative y direction
+    lz: 0.0  # foot sole height with respect to ankle joint
+    fmin: 30.0
+    fmax: 1500.0
+    mu: 0.3
+    normal: [0, 1, 0] 
+    activate: false  
+    x: 0.
+    y: -0.50
+    z: 1.2
+
+contact_lhand:
+    type: contact
+    joint: gripper_left_base_link_joint
+    kp: 30.0
+    lxp: 0.04 # foot length in positive x direction
+    lxn: 0.04 # foot length in negative x direction
+    lyp: 0.04 # foot length in positive y direction
+    lyn: 0.04 # foot length in negative y direction
+    lz: 0.0  # foot sole height with respect to ankle joint
+    fmin: 30.0
+    fmax: 1500.0
+    mu: 0.3
+    normal: [0, -1, 0]
+    activate: false 
+    x: 0.
+    y: 0.70
+    z: 1.15

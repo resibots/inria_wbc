@@ -20,6 +20,11 @@ namespace tsid {
                 m_motionTask.setReference(sample_ref);
             }
 
+            void setMask(math::ConstRefVector mask)
+            {
+                m_motionTask.setMask(mask);
+            }
+
             Matrix3x getContactPoints() { return m_contactPoints; }
 
             Vector6 getForceReference() { return m_fRef; }
