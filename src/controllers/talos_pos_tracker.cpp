@@ -44,7 +44,7 @@ namespace inria_wbc {
             auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
             auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
             std::vector<std::string> to_limit = {"leg_left_2_joint", "leg_right_2_joint"};
-            
+
             _torso_max_roll = IWBC_CHECK(config["CONTROLLER"]["torso_max_roll"].as<float>()) / 180 * M_PI;
             for (auto& n : to_limit) {
                 IWBC_ASSERT(std::find(names.begin(), names.end(), n) != names.end(), "Talos should have ", n);
@@ -123,7 +123,7 @@ namespace inria_wbc {
         }
 
         void TalosPosTracker::update(const SensorData& sensor_data)
-        {            
+        {
             if (_use_torque_collision_detection) {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "torque collision detection requires torque sensor data");
                 IWBC_ASSERT(sensor_data.at("joints_torque").size() == _torque_collision_joints.size(), "torque sensor data has a wrong size. call torque_sensor_joints() for needed values");

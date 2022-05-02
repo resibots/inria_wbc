@@ -171,11 +171,24 @@ namespace utest {
 
 #define UTEST_CHECK_EXCEPTION(test, to_test)                                                       \
     {                                                                                              \
-        utest::res::result_t ok = utest::res::ok;                                                  \
+        utest::res::result_t ok = utest::res::error;                                               \
         try {                                                                                      \
+            to_test;                                                                               \
         }                                                                                          \
         catch (std::exception) {                                                                   \
-            ok = res::error;                                                                       \
+            ok = utest::res::ok;                                                                   \
+        }                                                                                          \
+        test->test_results.push_back(utest::TestResult{#to_test, "", __UTEST_FILE, __LINE__, ok}); \
+    }
+
+#define UTEST_CHECK_NO_EXCEPTION(test, to_test)                                                    \
+    {                                                                                              \
+        utest::res::result_t ok = utest::res::ok;                                                  \
+        try {                                                                                      \
+            to_test;                                                                               \
+        }                                                                                          \
+        catch (std::exception) {                                                                   \
+            ok = utest::res::error;                                                                \
         }                                                                                          \
         test->test_results.push_back(utest::TestResult{#to_test, "", __UTEST_FILE, __LINE__, ok}); \
     }
