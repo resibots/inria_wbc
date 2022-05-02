@@ -12,7 +12,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(tracker, "we need a pos tracker here");
                 YAML::Node c = IWBC_CHECK(config["BEHAVIOR"]);
                 reflex_time_ = IWBC_CHECK(c["reflex_time"].as<float>());
-
+            
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
 
