@@ -21,9 +21,15 @@ namespace inria_wbc {
                 virtual ~D_Reflex() {}
                 std::string behavior_type() const override { return controllers::behavior_types::DOUBLE_SUPPORT; };
 
+                void set_activate(bool activate) { activate_ = activate; };
+                bool activate() { return activate_; };
+
             private:
                 int time_ = 0;
                 float reflex_time_ = 1000000.;
+                bool activate_reflex_time_ = false;
+                bool activate_ = false;
+                bool already_activated_ = false;
             };
         } // namespace humanoid
     } // namespace behaviors

@@ -97,9 +97,9 @@ contact_rhand:
     mu: 0.3
     normal: [0, 1, 0] 
     activate: false  
-    x: 0.0
-    y: -0.0
-    z: 0.0
+    x: -0.22
+    y: -0.73
+    z: 0.93
     # x: 0.
     # y: -0.50
     # z: 1.2
