@@ -1,3 +1,4 @@
 BEHAVIOR:
   name : humanoid::d_reflex
+  activate_reflex_time: true
   reflex_time : 1.0
