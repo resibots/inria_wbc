@@ -14,7 +14,11 @@
 
 #include <tsid/solvers/solver-HQP-base.hpp>
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
-#include <tsid/solvers/solver-HQP-qpmad.hpp>
+
+#ifdef TSID_QPMAD_FOUND
+    #include <tsid/solvers/solver-HQP-qpmad.hpp>
+#endif
+
 #include <tsid/solvers/solver-HQP-factory.hxx>
 #include <tsid/solvers/utils.hpp>
 #include <tsid/utils/statistics.hpp>
@@ -79,25 +83,24 @@ namespace inria_wbc {
             ////////////////////Create an HQP solver /////////////////////////////////////
             using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
 
-            //solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_OSQP, "solver-osqp"));
-
             if(solver_to_use_ == "qpmad")
+            {
+        #ifdef TSID_QPMAD_FOUND
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
+        #else
+                IWBC_ERROR("'qpmad' solver is not available in tsid or in the system.");
+        #endif
+            }
             else if(solver_to_use_ == "eiquadprog")
+            {
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
+            }
             else
+            {
                 IWBC_ERROR("solver in configuration file must be either 'eiquadprog' or 'qpmad'.");
+            }
             
             solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
-
-            /*
-            auto qpmad_solver = std::dynamic_pointer_cast<solvers::SolverHQpmad>(solver_);
-            if(qpmad_solver)
-            {
-                qpmad_solver->settings().max_iter_ = 50;
-                qpmad_solver->settings().tolerance_ = 1e-8;
-            }
-            */
 
             ////////////////////Compute Problem Data at init /////////////////////////////
             const uint nv = robot_->nv();
@@ -111,37 +114,35 @@ namespace inria_wbc {
             parse_tasks(p.string(), config);
 
             ///////////// check if joint range of motion has to be reduced //////////////////////////
-            if(c["joint_range_reduction"])
-            {
+            if (c["joint_range_reduction"]) {
                 double reduction_rads = IWBC_CHECK(c["joint_range_reduction"].as<double>()) / 180 * M_PI;
-                if(reduction_rads < 0)
+                if (reduction_rads < 0)
                     IWBC_ERROR("Joint range reduction: reduction must be positive.");
 
                 auto q_lb = robot_->model().lowerPositionLimit.tail(robot_->na());
                 auto q_ub = robot_->model().upperPositionLimit.tail(robot_->na());
 
-                if(verbose_)
+                if (verbose_)
                     std::cout << "Joints' range of motion reduced by: " << reduction_rads << " rads." << std::endl;
 
                 auto q = q0_.tail(robot_->na());
 
-                for(size_t i=0; i < robot_->na(); ++i)
-                {
-                    if(q_ub[i] - q_lb[i] < 2 * reduction_rads)
+                for (size_t i = 0; i < robot_->na(); ++i) {
+                    if (q_ub[i] - q_lb[i] < 2 * reduction_rads)
                         IWBC_ERROR("Joint range reduction: reduction cannot be greater than actual range of motion");
 
-                    if(verbose_)
-                        std::cout << "change bounds for " << pinocchio_joint_names()[i+2] 
-                            << " from (" << q_lb[i] <<  "," << q_ub[i] << ") ";
-                    
+                    if (verbose_)
+                        std::cout << "change bounds for " << pinocchio_joint_names()[i + 2]
+                                  << " from (" << q_lb[i] << "," << q_ub[i] << ") ";
+
                     q_lb[i] += reduction_rads;
                     q_ub[i] -= reduction_rads;
 
-                    if(verbose_)
-                        std::cout << "to (" << q_lb[i] <<  "," << q_ub[i] << "). q=" << q[i] << std::endl;
+                    if (verbose_)
+                        std::cout << "to (" << q_lb[i] << "," << q_ub[i] << "). q=" << q[i] << std::endl;
 
-                    if(q[i] < q_lb[i] || q[i] > q_ub[i])
-                        IWBC_ERROR("Joint range reduction(", pinocchio_joint_names()[i+2], "): q0 falls outside reduced joint space.");
+                    if (q[i] < q_lb[i] || q[i] > q_ub[i])
+                        IWBC_ERROR("Joint range reduction(", pinocchio_joint_names()[i + 2], "): q0 falls outside reduced joint space.");
                 }
 
                 bound_task()->setPositionBounds(q_lb, q_ub);
