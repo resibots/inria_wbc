@@ -248,12 +248,13 @@ namespace inria_wbc {
             activated_contacts_.erase(std::remove(activated_contacts_.begin(), activated_contacts_.end(), contact_name), activated_contacts_.end());
         }
 
-        void PosTracker::add_contact(const std::string& contact_name)
+        void PosTracker::add_contact(const std::string& contact_name, const int& motion_priority_level)
         {
             if (verbose_)
                 std::cout << "adding contact:" << contact_name << std::endl;
             auto c = contact(contact_name);
-            tsid_->addRigidContact(*c, tasks::cst::w_force_feet);
+
+            tsid_->addRigidContact(*c, tasks::cst::w_force_feet, 1000., motion_priority_level);
             activated_contacts_.push_back(contact_name);
         }
         //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
