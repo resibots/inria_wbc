@@ -33,6 +33,7 @@ namespace inria_wbc {
             bool _use_compliance_posture = false;
             double _compliance_posture_kp;
             double _compliance_posture_div;
+            estimators::Filter::Ptr _joints_torque_filter;
 
 
             //torque collision
