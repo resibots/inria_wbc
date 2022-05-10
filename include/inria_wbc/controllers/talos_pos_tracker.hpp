@@ -31,6 +31,7 @@ namespace inria_wbc {
             double _torso_max_roll = 0.25;
 
             bool _use_compliance_posture = false;
+            std::string _compliance_posture_mode;
             double _compliance_posture_kp;
             double _compliance_posture_div;
             estimators::Filter::Ptr _joints_torque_filter;

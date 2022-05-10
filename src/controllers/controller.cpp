@@ -236,8 +236,8 @@ namespace inria_wbc {
             assert(solver_);
 
             if (send_cmd_) {
-                q_tsid_prev_ = q;
-                v_tsid_prev_ = dq;
+                q_tsid_prev_ = q_tsid_;
+                v_tsid_prev_ = v_tsid_;
                 data_prev_ = std::make_shared<pinocchio::Data>(tsid_->data());
             }
 

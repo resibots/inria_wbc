@@ -38,8 +38,9 @@ CONTROLLER:
     params_fixed_base: stab_fixed_base.yaml
   compliance_posture:
     activated: true
-    kp: 0.05
-    div: 1.0
+    mode: dynamic #dynamic # proportial
+    kp: 0.05      # used by proportional mode
+    div: 0.01     # used by dynamic mode
     filter_size: 10
   collision_detection:
     activated: true

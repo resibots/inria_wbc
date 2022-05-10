@@ -113,12 +113,15 @@ namespace inria_wbc {
             {
                 auto c = IWBC_CHECK(config["compliance_posture"]);
                 _use_compliance_posture = IWBC_CHECK(c["activated"].as<bool>());
+                _compliance_posture_mode = IWBC_CHECK(c["mode"].as<std::string>());
                 _compliance_posture_kp = IWBC_CHECK(c["kp"].as<double>());
                 _compliance_posture_div = IWBC_CHECK(c["div"].as<double>());
                 auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
 
-                IWBC_ASSERT(_compliance_posture_div >= 0 && _compliance_posture_div <= 1, "compliance_posture div must be in [0,1].");
+                // IWBC_ASSERT(_compliance_posture_div >= 0 && _compliance_posture_div <= 1, "compliance_posture div must be in [0,1].");
                 IWBC_ASSERT(this->has_task("compliance_posture"), "talos_pos_tracker compliance_posture task is needed.");
+                IWBC_ASSERT(_compliance_posture_mode == "proportional" || _compliance_posture_mode == "dynamic", 
+                    "talos_pos_tracker compliance_posture mode must be \"proportional\" or \"dynamic\"." );
                 
                 auto compliance_posture_task = this->task<tsid::tasks::TaskJointPosture>("compliance_posture");
                 auto filtered_dof_names = this->all_dofs(true); // filter out mimics, !!! include floating base (6dofs)
@@ -149,6 +152,7 @@ namespace inria_wbc {
                     std::clog << "compliance posture: " << (_use_compliance_posture ? "true" : "false") << std::endl;
                     if(_use_compliance_posture)
                     {
+                        std::clog << "\tmode: " << _compliance_posture_mode << std::endl;
                         std::clog << "\tkp: " << _compliance_posture_kp << std::endl;
                         std::clog << "\tdiv: " << _compliance_posture_div << std::endl;
                         std::clog << "\tfilter size: " << filter_window_size << std::endl;
@@ -185,25 +189,30 @@ namespace inria_wbc {
                 
                 Eigen::VectorXd compliance_mask = this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask();
 
-                Eigen::VectorXd error = Eigen::VectorXd::Zero(actual_tau.size());
                 const Eigen::VectorXd& joints_torque_raw = sensor_data.at("joints_torque");
                 Eigen::VectorXd joints_torque = _joints_torque_filter->filter(joints_torque_raw);
-
+                
+                Eigen::VectorXd error = Eigen::VectorXd::Zero(actual_tau.size());
                 for(int i=0; i < _torque_collision_joints_ids.size(); ++i)
                 {
                     auto idx = _torque_collision_joints_ids[i];
                     error(idx) = (joints_torque[i] - actual_tau(idx)) * compliance_mask(idx-6);
                 }
 
-                Eigen::VectorXd ref = actual_q - _compliance_posture_kp * error; // method 1
-                //Eigen::VectorXd ref = actual_q + _compliance_posture_div * 10000 * (dt_*dt_) * (robot_->mass(tsid_->data()).inverse() * error); // method 2
+                
+                Eigen::VectorXd ref;
+
+                if(_compliance_posture_mode == "proportional") // method 1
+                    ref = actual_q - (_compliance_posture_kp * error); //- tau_fod);
+                else // method 2 (using dynamic model)
+                    ref = actual_q - _compliance_posture_div * (robot_->mass(tsid_->data()).inverse() * error); // method 2
+
+                // update only valid dofs (not needed for method1 since error is already masked)
                 Eigen::VectorXd ref_no_fb = ref.tail(actual_q.size() - 6);
                 for(int i=6; i < actual_q.size(); ++i)
                     if(this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask()(i-6) != 1)
                         ref_no_fb(i-6) = actual_q(i);
                 
-                // std::cerr << this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask().transpose() << std::endl;
-                // std::cerr << (this->q().tail(this->q().size()-6) - ref_no_fb).transpose() << std::endl;
                 this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->setReference(trajs::to_sample(ref_no_fb));
             }
             
