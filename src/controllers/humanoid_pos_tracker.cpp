@@ -156,9 +156,10 @@ namespace inria_wbc {
             auto torso_ref = get_full_se3_ref("torso");
 
             if (_use_stabilizer) {
+                IWBC_ASSERT(sensor_data.find("lf_force") != sensor_data.end(), "the stabilizer needs the LF force");
+                IWBC_ASSERT(sensor_data.find("rf_force") != sensor_data.end(), "the stabilizer needs the RF force");
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
                 IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the RF torque");
-                IWBC_ASSERT(sensor_data.find("velocity") != sensor_data.end(), "the stabilizer needs the velocity");
                 IWBC_ASSERT(sensor_data.find("imu_vel") != sensor_data.end(), "the stabilizer imu needs angular velocity");
 
                 // we retrieve the tracked frame from the contact task as the frames have different names in different robots
