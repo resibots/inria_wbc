@@ -125,9 +125,7 @@ namespace inria_wbc {
                 
                 auto compliance_posture_task = this->task<tsid::tasks::TaskJointPosture>("compliance_posture");
                 auto filtered_dof_names = this->all_dofs(true); // filter out mimics, !!! include floating base (6dofs)
-                //for(auto& str : filtered_dof_names)
-                //    std::cerr << "dof: " << str << std::endl;
-                
+
                 // check mask: create mask from torque collision joints index and execute logic-and with desired one
                 Eigen::VectorXd valid_mask = Eigen::VectorXd::Zero(robot_->na());
                 for(size_t id : _torque_collision_joints_ids)
@@ -199,11 +197,9 @@ namespace inria_wbc {
                     error(idx) = (joints_torque[i] - actual_tau(idx)) * compliance_mask(idx-6);
                 }
 
-                
                 Eigen::VectorXd ref;
-
                 if(_compliance_posture_mode == "proportional") // method 1
-                    ref = actual_q - (_compliance_posture_kp * error); //- tau_fod);
+                    ref = actual_q - (_compliance_posture_kp * error);
                 else // method 2 (using dynamic model)
                     ref = actual_q - _compliance_posture_div * (robot_->mass(tsid_->data()).inverse() * error); // method 2
 
