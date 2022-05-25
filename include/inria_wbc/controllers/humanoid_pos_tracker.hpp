@@ -5,6 +5,7 @@
 #include <inria_wbc/estimators/cop.hpp>
 #include <inria_wbc/estimators/filtering.hpp>
 #include <inria_wbc/safety/torque_collision_detection.hpp>
+#include <inria_wbc/stabilizers/stabilizer_conf.hpp>
 
 namespace inria_wbc {
     namespace controllers {
