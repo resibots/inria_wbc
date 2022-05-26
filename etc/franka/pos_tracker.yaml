@@ -1,6 +1,7 @@
 CONTROLLER:
   name: pos-tracker
   base_path: /home/pal/inria_wbc/etc/franka
+  solver: eiquadprog
   tasks: tasks.yaml
   urdf: franka.urdf
   configurations: configurations.srdf 
