@@ -126,6 +126,7 @@ void test_behavior(utest::test_t test,
     const std::string& behavior_path,
     const std::shared_ptr<robot_dart::Robot>& robot,
     const FData& fdata,
+    bool expect_collision,
     bool verbose = false)
 {
     try {
@@ -196,12 +197,19 @@ void test_behavior(utest::test_t test,
             {
                 simu.step_world();
             }
+            // check collision
+            if (p_controller->is_model_colliding()) {
+                UTEST_CHECK_MESSAGE(test, "unexpected collision", expect_collision == true);
+                break;
+            }
         }
+        if (expect_collision)
+            UTEST_CHECK(test, p_controller->is_model_colliding());
         auto t = timer["controller"];
         UTEST_INFO(test, "solver + behavior:" + std::to_string(t.time / t.iterations / 1000) + "ms " + "[" + std::to_string(t.min_time / 1000) + "," + std::to_string(t.max_time / 1000) + "]");
     }
     catch (std::exception& e) {
-        UTEST_ERROR(test, std::string("error in ref comparison:") + e.what());
+        UTEST_ERROR(test, std::string("Exception:") + e.what());
     }
 }
 
@@ -215,6 +223,7 @@ int main(int argc, char** argv)
     desc.add_options()
         ("n_threads,n", po::value<int>()->default_value(-1), "run tests in parallel (default = number of cores)")
         ("single,s", po::value<std::vector<std::string> >()->multitoken(), "run a single test, args: robot_name controller_path behavior_path actuators")
+        ("verbose,v", po::value<bool>()->default_value(false), "verbose mode")
         ;
     // clang-format on
     po::variables_map vm;
@@ -236,6 +245,7 @@ int main(int argc, char** argv)
     }
 
     int n_threads = vm["n_threads"].as<int>();
+    bool verbose = vm["verbose"].as<bool>();
 
     utest::TestSuite test_suite;
     // paths are relative to the "tests" directory (to use make check)
@@ -248,10 +258,11 @@ int main(int argc, char** argv)
         std::string name = "franka";
         std::string controller_path = "pos_tracker.yaml";
         auto behaviors = {"cartesian_line.yaml"};
+        bool expect_collision = false;
         for (auto& behavior_path : behaviors) {
             auto test1 = utest::make_test("[" + name + "] " + behavior_path);
             auto franka = std::make_shared<robot_dart::robots::Franka>();
-            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, franka, sensor_data_franka, false));
+            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, franka, sensor_data_franka, expect_collision, verbose));
         }
     }
     /////////// Talos robot
@@ -268,7 +279,9 @@ int main(int argc, char** argv)
         for (auto& behavior_path : behaviors) {
             auto test1 = utest::make_test("[" + name + "] " + behavior_path);
             auto talos = std::make_shared<robot_dart::robots::Talos>();
-            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, talos, sensor_data_talos, false));
+            bool expect_collision = (behavior_path == std::string("clapping.yaml")) ? true : false;
+
+            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, talos, sensor_data_talos, expect_collision, verbose));
         }
     }
 
@@ -285,7 +298,8 @@ int main(int argc, char** argv)
         for (auto& behavior_path : behaviors) {
             auto test1 = utest::make_test("[" + name + "] " + behavior_path);
             auto icub = std::make_shared<robot_dart::robots::ICub>();
-            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, icub, sensor_data_icub, false));
+            bool expect_collision = false;
+            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, icub, sensor_data_icub, expect_collision, verbose));
         }
     }
     ///////// RUN everything
