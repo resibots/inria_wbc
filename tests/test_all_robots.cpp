@@ -198,8 +198,7 @@ void test_behavior(utest::test_t test,
             }
         }
         auto t = timer["controller"];
-        UTEST_INFO(test, "solver + behavior:" + std::to_string(t.time / t.iterations) + " " + "[" + std::to_string(t.min_time) + "," + std::to_string(t.max_time) + "]");
-        UTEST_INFO(test, "test done");
+        UTEST_INFO(test, "solver + behavior:" + std::to_string(t.time / t.iterations / 1000) + "ms " + "[" + std::to_string(t.min_time / 1000) + "," + std::to_string(t.max_time / 1000) + "]");
     }
     catch (std::exception& e) {
         UTEST_ERROR(test, std::string("error in ref comparison:") + e.what());
