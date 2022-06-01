@@ -56,6 +56,26 @@ void test_jacobians_update(utest::test_t test, inria_wbc::utils::RobotModel robo
     UTEST_CHECK_NO_EXCEPTION(test, robot_model.hessian("arm_right_1_joint"));
 }
 
+void test_compute_rnea(utest::test_t test, inria_wbc::utils::RobotModel robot_model)
+{
+    Eigen::VectorXd q(robot_model.nq()), dq(robot_model.nv()), ddq(robot_model.nv()), tau_model;
+    q.setZero();
+    dq.setZero();
+    ddq.setZero();
+
+    robot_model.update(q, dq, ddq, true, true);
+
+    std::unordered_map<std::string, Eigen::MatrixXd> sensor_data;
+    Eigen::Vector3d data = Eigen::Vector3d::Zero();
+    sensor_data["lf_torque"] = data;
+    sensor_data["rf_torque"] = data;
+    data(2) = 442.0;
+    sensor_data["lf_force"] = data;
+    sensor_data["rf_force"] = data;
+
+    UTEST_CHECK_NO_EXCEPTION(test, robot_model.compute_rnea_double_support(sensor_data, q, dq ,ddq , tau_model));
+}
+
 
 int main(int argc, char** argv)
 {
@@ -100,6 +120,9 @@ int main(int argc, char** argv)
 
     auto jac_update_test = utest::make_test("robot_model kinematics update");
     UTEST_REGISTER(test_suite, jac_update_test, test_jacobians_update(jac_update_test, robot_model));
+
+    auto test_rnea = utest::make_test("test rnea computation");
+    UTEST_REGISTER(test_suite, test_rnea, test_compute_rnea(test_rnea, robot_model));
 
     test_suite.run();
     utest::write_report(test_suite, std::cout, true);
