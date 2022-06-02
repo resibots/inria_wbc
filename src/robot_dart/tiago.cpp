@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
         po::options_description desc("Test_controller options");
         // clang-format off
         desc.add_options()
-        ("actuators,a", po::value<std::string>()->default_value("servo"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
+        ("actuators,a", po::value<std::string>()->default_value("spd"), "actuator model torque/velocity/servo (always for position control) [default:servo]")
         ("behavior,b", po::value<std::string>()->default_value("../etc/tiago/cartesian_line.yaml"), "Configuration file of the tasks (yaml) [default: ../etc/tiago/circular_cartesian.yam]")
         ("big_window,w", "use a big window (nicer but slower) [default:true]")
         ("check_self_collisions", "check the self collisions (print if a collision)")
