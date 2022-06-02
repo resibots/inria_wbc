@@ -135,11 +135,10 @@ namespace utils {
         return pinocchio::getJointKinematicHessian(_model, _data, id, reference_frame);
     }
 
-    void RobotModel::compute_rnea_double_support(const std::unordered_map<std::string, Eigen::MatrixXd>& sensor_data,
+    Eigen::VectorXd RobotModel::compute_rnea_double_support(const std::unordered_map<std::string, Eigen::MatrixXd>& sensor_data,
         const Eigen::VectorXd& q, 
         const Eigen::VectorXd& v,
         const Eigen::VectorXd& a, 
-        Eigen::VectorXd& tau_model,
         bool add_foot_mass,
         const std::string& left_ft_frame,
         const std::string& right_ft_frame,
@@ -152,10 +151,6 @@ namespace utils {
         //compute torques with no external forces
         pinocchio::rnea(_model, _data, q, v, a);
         Eigen::VectorXd tau(_data.tau);
-
-        //initiallize outputs
-        tau_model.resize(tau.size());
-        tau_model.setZero();
 
         //get F/T sensor data from both feet
         Eigen::Vector3d right_force = Eigen::Vector3d::Zero();
@@ -229,7 +224,7 @@ namespace utils {
         tau -= J_right.transpose() * f_right.toVector();
         tau -= J_left.transpose() * f_left.toVector();
 
-        tau_model = tau;
+        return tau;
 
     };
 

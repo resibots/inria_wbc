@@ -58,7 +58,7 @@ void test_jacobians_update(utest::test_t test, inria_wbc::utils::RobotModel robo
 
 void test_compute_rnea(utest::test_t test, inria_wbc::utils::RobotModel robot_model)
 {
-    Eigen::VectorXd q(robot_model.nq()), dq(robot_model.nv()), ddq(robot_model.nv()), tau_model;
+    Eigen::VectorXd q(robot_model.nq()), dq(robot_model.nv()), ddq(robot_model.nv());
     q.setZero();
     dq.setZero();
     ddq.setZero();
@@ -73,7 +73,7 @@ void test_compute_rnea(utest::test_t test, inria_wbc::utils::RobotModel robot_mo
     sensor_data["lf_force"] = data;
     sensor_data["rf_force"] = data;
 
-    UTEST_CHECK_NO_EXCEPTION(test, robot_model.compute_rnea_double_support(sensor_data, q, dq ,ddq , tau_model));
+    UTEST_CHECK_NO_EXCEPTION(test, robot_model.compute_rnea_double_support(sensor_data, q, dq ,ddq, "true","leg_left_6_joint", "leg_right_6_joint","left_sole_link","right_sole_link"));
 }
 
 
