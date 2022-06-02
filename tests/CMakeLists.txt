@@ -12,7 +12,7 @@ endif()
 
 find_program (BASH_PROGRAM bash)
 if (BASH_PROGRAM)  
-  add_test (test_example_project ${BASH_PROGRAM}  ${CMAKE_CURRENT_SOURCE_DIR}/test_example_project.sh ${CMAKE_C_COMPILER} ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_STANDARD} ${CMAKE_CXX_FLAGS} ${CMAKE_PREFIX_PATH} ${CMAKE_INSTALL_PREFIX} ${NUM_CORES})
+  add_test (test_example_project ${BASH_PROGRAM}  ${CMAKE_CURRENT_SOURCE_DIR}/test_example_project.sh "${CMAKE_C_COMPILER}" "${CMAKE_CXX_COMPILER}" "${CMAKE_CXX_STANDARD}" "${CMAKE_CXX_FLAGS}" "${CMAKE_PREFIX_PATH}" "${CMAKE_INSTALL_PREFIX}" "${NUM_CORES}")
 endif (BASH_PROGRAM)
 
 # the tests require Dart to run
