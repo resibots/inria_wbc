@@ -12,8 +12,8 @@ cd /tmp/example_project
 sh ./create_project.sh testc
 mkdir build
 cd build
-cmake .. -DCMAKE_PREFIX_PATH=$1 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$2
-make -j$3
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$1 -DCMAKE_CXX_COMPILER=$2 -DCMAKE_CXX_STANDARD=$3  -DCMAKE_CXX_FLAGS=$4 -DCMAKE_PREFIX_PATH=$5  -DCMAKE_INSTALL_PREFIX=$6 ..
+make -j$7
 
 
 
