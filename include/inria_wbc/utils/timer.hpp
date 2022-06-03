@@ -7,6 +7,12 @@ namespace inria_wbc {
     namespace utils {
         class Timer {
         public:
+            struct info_t {
+                int iterations;
+                double time;
+                double min_time;
+                double max_time;
+            };
             void begin(const std::string& name)
             {
                 _start[name] = std::chrono::high_resolution_clock::now();
@@ -50,16 +56,14 @@ namespace inria_wbc {
                 _data.clear();
             }
             int iteration() const { return _k; }
-
+            const info_t& operator[](const std::string& name) const { 
+                assert(_data.find(name) != _data.end());
+                return _data.at(name); 
+            }
         protected:
             int _k = 1;
             using time_t = std::chrono::high_resolution_clock::time_point;
-            struct info_t {
-                int iterations;
-                double time;
-                double min_time;
-                double max_time;
-            };
+           
             std::unordered_map<std::string, time_t> _start;
             std::unordered_map<std::string, info_t> _data;
         };
