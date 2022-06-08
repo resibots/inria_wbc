@@ -1,7 +1,7 @@
 BEHAVIOR:
   name: humanoid::move_com
   trajectory_duration: 1.0
-  targets: [[0, 0, -0.1]]
+  targets: [[0, 0, -0.15]]
   mask: 001
   absolute: false
   loop: true
