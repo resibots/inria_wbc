@@ -1,7 +1,7 @@
 #include <iostream>
 #include <signal.h>
 
-#include "inria_wbc/behaviors/humanoid/squat.hpp"
+#include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/controllers/pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/utils/timer.hpp"

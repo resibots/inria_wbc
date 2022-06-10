@@ -166,6 +166,8 @@ namespace utest {
 
 #define UTEST_CHECK_MESSAGE(test, message, to_test) __UTEST_CHECK_MESSAGE(test, message, to_test, utest::res::error)
 #define UTEST_CHECK(test, to_test) UTEST_CHECK_MESSAGE(test, "", to_test)
+#define UTEST_ERROR_MESSAGE(test, message) __UTEST_CHECK_MESSAGE(test, message, false, utest::res::error)
+
 #define UTEST_WARN(test, to_test) __UTEST_CHECK_MESSAGE(test, "", to_test, utest::res::warning)
 #define UTEST_WARN_MESSAGE(test, msg, to_test) __UTEST_CHECK_MESSAGE(test, msg, to_test, utest::res::warning)
 

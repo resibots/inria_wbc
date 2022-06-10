@@ -1,0 +1,157 @@
+head_yaw:
+  weight: 100.0
+  type: se3
+  tracked: head_2_joint
+  kp: 30.0
+  mask: 000001
+head_pitch:
+  tracked: head_1_joint
+  weight: 100.0
+  type: se3
+  kp: 30.0
+  mask: 000010
+head:
+  mask: 110000
+  weight: 1.0
+  kp: 1.0
+  tracked: head_1_joint
+  type: se3
+rh:
+  weight: 10.0
+  type: se3
+  tracked: gripper_right_joint
+  kp: 30.0
+  mask: 111111
+torso:
+  weight: 10.0
+  type: se3
+  tracked: torso_2_link
+  kp: 30.0
+  mask: 000110
+lf:
+  weight: 1000.0
+  type: se3
+  tracked: leg_left_6_joint
+  kp: 30.0
+  mask: 111111
+lh:
+  weight: 10.0
+  tracked: gripper_left_joint
+  type: se3
+  kp: 30.0
+  mask: 111111
+com:
+  kp: 30.0
+  type: com
+  weight: 1000.0
+  mask: 111
+rf:
+  type: se3
+  tracked: leg_right_6_joint
+  weight: 1000.0
+  kp: 30.0
+  mask: 111111
+posture:
+  type: posture
+  kp: 10.0
+  weight: 1.75
+  ref: inria_start
+actuation_bounds:
+  type: actuation-bounds
+  weight: 10000
+momentum:
+  weight: 1000.0
+  kp: 30.0
+  type: momentum
+  mask: 000110
+bounds:
+  weight: 10000
+  type: bounds
+contact_lfoot:
+  lxp: 0.1
+  kp: 30.0
+  type: contact
+  joint: leg_left_6_joint
+  lyn: 0.069
+  mu: 0.3
+  lyp: 0.069
+  lxn: 0.11
+  lz: 0.107
+  fmin: 5.0
+  fmax: 1500.0
+  normal: [0, 0, 1]
+contact_rfoot:
+  normal: [0, 0, 1]
+  joint: leg_right_6_joint
+  kp: 30.0
+  lz: 0.107
+  lxn: 0.11
+  type: contact
+  lxp: 0.1
+  lyp: 0.069
+  lyn: 0.069
+  fmax: 1500.0
+  fmin: 5.0
+  mu: 0.3
+self_collision-left:
+  tracked: gripper_left_joint
+  avoided:
+    v_base_link_right: 0.115
+    leg_right_4_joint: 0.1
+    v_leg_left_3: 0.15
+    v_leg_right_3: 0.15
+    gripper_right_joint: 0.1
+    arm_right_5_joint: 0.05
+    base_link: 0.15
+    torso_2_joint: 0.1
+    leg_right_1_joint: 0.15
+    leg_left_1_joint: 0.15
+    leg_left_4_joint: 0.1
+    v_base_link_left: 0.115
+  type: self-collision
+  radius: 0.1
+  weight: 500
+  p: 3
+  kp: 700.0
+self_collision-right:
+  type: self-collision
+  weight: 500
+  tracked: gripper_right_joint
+  radius: 0.1
+  avoided:
+    gripper_left_joint: 0.1
+    arm_left_5_joint: 0.05
+    v_leg_right_3: 0.15
+    leg_right_1_joint: 0.15
+    torso_2_joint: 0.1
+    base_link: 0.15
+    v_base_link_right: 0.115
+    v_base_link_left: 0.115
+    v_leg_left_3: 0.15
+    leg_left_1_joint: 0.15
+    leg_left_4_joint: 0.1
+    leg_right_4_joint: 0.1
+  p: 3
+  kp: 700.0
+self_collision-arm-right:
+  type: self-collision
+  radius: 0.15
+  avoided:
+    v_base_link_left: 0.115
+    base_link: 0.15
+    v_base_link_right: 0.115
+  tracked: arm_right_4_joint
+  kp: 10.0
+  p: 3
+  weight: 10
+self_collision-arm-left:
+  avoided:
+    v_base_link_right: 0.115
+    v_base_link_left: 0.115
+    base_link: 0.15
+  tracked: arm_left_4_joint
+  kp: 10.0
+  radius: 0.15
+  type: self-collision
+  weight: 10
+  p: 3
