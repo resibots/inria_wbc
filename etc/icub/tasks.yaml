@@ -92,8 +92,10 @@ self_collision-left:
         l_knee: 0.08
         r_knee: 0.08
     weight: 500
-    kp: 700.0
-    p: 3
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
 self_collision-right:
     type: self-collision
     tracked: r_wrist_yaw
@@ -108,5 +110,7 @@ self_collision-right:
         l_knee: 0.08
         r_knee: 0.08
     weight: 500
-    kp: 700.0
-    p: 3
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
