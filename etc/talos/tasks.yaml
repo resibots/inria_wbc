@@ -110,9 +110,11 @@ self_collision-left:
         leg_left_1_joint: 0.15
         leg_right_4_joint: 0.1
         leg_left_4_joint: 0.1
-    weight: 500
-    kp: 700.0
-    p: 3
+    weight: 2000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
 self_collision-right:
     type: self-collision
     tracked: gripper_right_joint
@@ -130,10 +132,12 @@ self_collision-right:
         leg_left_1_joint: 0.15
         leg_right_4_joint: 0.1
         leg_left_4_joint: 0.1
-    weight: 500
-    kp: 700.0
-    p: 3
-self_collision-arm-right:
+    weight: 2000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-elbow-right:
     type: self-collision
     tracked: arm_right_4_joint
     radius: 0.15
@@ -141,10 +145,12 @@ self_collision-arm-right:
         base_link: 0.15
         v_base_link_left: 0.115
         v_base_link_right: 0.115
-    weight: 10
-    kp: 10.0
-    p: 3
-self_collision-arm-left:
+    weight: 1000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-elbow-left:
     type: self-collision
     tracked: arm_left_4_joint
     radius: 0.15
@@ -152,6 +158,34 @@ self_collision-arm-left:
         base_link: 0.15
         v_base_link_left: 0.115
         v_base_link_right: 0.115
-    weight: 10
-    kp: 10.0
-    p: 3
+    weight: 1000
+    kp: 150.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-wrist-right:
+    type: self-collision
+    tracked: arm_right_5_joint
+    radius: 0.10
+    avoided:
+        base_link: 0.15
+        v_base_link_left: 0.115
+        v_base_link_right: 0.115
+    weight: 1000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-wrist-left:
+    type: self-collision
+    tracked: arm_left_5_joint
+    radius: 0.10
+    avoided:
+        base_link: 0.15
+        v_base_link_left: 0.115
+        v_base_link_right: 0.115
+    weight: 1000
+    kp: 150.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2

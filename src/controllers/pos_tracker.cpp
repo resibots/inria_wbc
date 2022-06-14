@@ -16,7 +16,7 @@
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
 
 #ifdef TSID_QPMAD_FOUND
-    #include <tsid/solvers/solver-HQP-qpmad.hpp>
+#include <tsid/solvers/solver-HQP-qpmad.hpp>
 #endif
 
 #include <tsid/solvers/solver-HQP-factory.hxx>
@@ -65,6 +65,8 @@ namespace inria_wbc {
             auto ref_map = robot_->model().referenceConfigurations;
             IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
             q_tsid_ = ref_map[ref_config];
+            if (verbose_)
+                std::cout << "q_tsid ref:" << q_tsid_.transpose() << "[" << q_tsid_.size() << "]" << std::endl;
 
             if (floating_base_) {
                 //q0_ is in "Dart format" for the floating base
@@ -83,23 +85,20 @@ namespace inria_wbc {
             ////////////////////Create an HQP solver /////////////////////////////////////
             using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
 
-            if(solver_to_use_ == "qpmad")
-            {
-        #ifdef TSID_QPMAD_FOUND
+            if (solver_to_use_ == "qpmad") {
+#ifdef TSID_QPMAD_FOUND
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
-        #else
+#else
                 IWBC_ERROR("'qpmad' solver is not available in tsid or in the system.");
-        #endif
+#endif
             }
-            else if(solver_to_use_ == "eiquadprog")
-            {
+            else if (solver_to_use_ == "eiquadprog") {
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
             }
-            else
-            {
+            else {
                 IWBC_ERROR("solver in configuration file must be either 'eiquadprog' or 'qpmad'.");
             }
-            
+
             solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
 
             ////////////////////Compute Problem Data at init /////////////////////////////
