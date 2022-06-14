@@ -376,9 +376,11 @@ namespace inria_wbc {
 
             // retrieve parameters from YAML
             double kp = IWBC_CHECK(node["kp"].as<double>());
+            double kd = IWBC_CHECK(node["kd"].as<double>());
+            double m = IWBC_CHECK(node["m"].as<double>());
             auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
             auto weight = IWBC_CHECK(node["weight"].as<double>());
-            auto p = IWBC_CHECK(node["p"].as<double>());
+            auto margin = IWBC_CHECK(node["margin"].as<double>());
             auto radius = IWBC_CHECK(node["radius"].as<double>());
 
             std::unordered_map<std::string, double> avoided;
@@ -390,9 +392,9 @@ namespace inria_wbc {
             // create the task
             assert(tsid);
             assert(robot);
-            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, p);
+            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, margin, m);
             task->Kp(kp);
-            task->Kd(2.0 * sqrt(task->Kp()));
+            task->Kd(kd);
 
             // add the task to TSID (side effect, be careful)
             tsid->addMotionTask(*task, weight, 1);

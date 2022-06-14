@@ -64,6 +64,7 @@ namespace inria_wbc {
 
             void Cartesian::update(const controllers::SensorData& sensor_data)
             {
+
                 for (uint i = 0; i < task_names_.size(); i++) {
                     if (traj_selector_ < trajectories_[i].size()) {
 
