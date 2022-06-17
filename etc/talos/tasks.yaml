@@ -38,18 +38,18 @@ lf:
     type: se3
     tracked: leg_left_6_joint
     weight: 1000.0
-    kp: 30.0
+    kp: 300.0
     mask: 111111
 rf:
     type: se3
     tracked: leg_right_6_joint
     weight: 1000.0
-    kp: 30.0
+    kp: 300.0
     mask: 111111
 com:
     type: com
     weight: 1000.0
-    kp: 30.0
+    kp: 300.0
     mask: 111
 posture:
     type: posture
@@ -70,12 +70,12 @@ actuation_bounds:
 contact_lfoot:
     type: contact
     joint: leg_left_6_joint
-    kp: 30.0
+    kp: 300.0
     lxp: 0.1   # foot length in positive x direction
     lxn: 0.11  # foot length in negative x direction
     lyp: 0.069 # foot length in positive y direction
     lyn: 0.069 # foot length in negative y direction
-    lz: 0.107  # foot sole height with respect to ankle joint
+    lz: 0.110 # foot sole height with respect to ankle joint
     fmin: 5.0
     fmax: 1500.0
     mu: 0.3
@@ -83,12 +83,12 @@ contact_lfoot:
 contact_rfoot:
     type: contact
     joint: leg_right_6_joint
-    kp: 30.0
+    kp: 300.0
     lxp: 0.1   # foot length in positive x direction
     lxn: 0.11  # foot length in negative x direction
     lyp: 0.069 # foot length in positive y direction
     lyn: 0.069 # foot length in negative y direction
-    lz: 0.107  # foot sole height with respect to ankle joint
+    lz: 0.110  # foot sole height with respect to ankle joint
     fmin: 5.0
     fmax: 1500.0
     mu: 0.3

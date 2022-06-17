@@ -297,6 +297,50 @@ namespace inria_wbc {
 
             return task;
         }
+
+         ////// Posture //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_contact_force_equality(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            double kp = IWBC_CHECK(node["kp"].as<double>());
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+
+            bool floating_base_flag = (robot->na() == robot->nv()) ? false : true;
+            
+            int n_actuated = floating_base_flag ? robot->nv() - 6 : robot->nv();
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskContactForceEquality>(task_name, *robot, dt, contact);
+
+            task->Kp(kp * Vector::Ones(n_actuated));
+            task->Kd(2.0 * task->Kp().cwiseSqrt());
+            Vector mask_post(n_actuated);
+            if (!node["mask"]) {
+                mask_post = Vector::Ones(n_actuated);
+            }
+            else {
+                auto mask = IWBC_CHECK(node["mask"].as<std::string>());
+                IWBC_ASSERT(mask.size() == mask_post.size(), "wrong size in posture mask, expected:", mask_post.size(), " got:", mask.size());
+                mask_post = convert_mask<Eigen::Dynamic>(mask);
+            }
+            task->setMask(mask_post);
+
+            // set the reference to the current position of the robot
+            task->setReference(trajs::to_sample(ref_q.tail(robot->na())));
+
+            // add the task
+            tsid->addMotionTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskContactForceEquality> __register_contact_force_equality("contact-force-equality", make_contact_force_equality);
+
         RegisterYAML<tsid::tasks::TaskJointPosVelAccBounds> __register_bounds("bounds", make_bounds);
 
         ////// Actuation Bounds //////

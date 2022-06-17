@@ -1,0 +1,9 @@
+BEHAVIOR:
+  name: humanoid::active_walk
+  traj_com_duration: 5
+  traj_foot_duration: 5
+  step_height: 0.1
+  step_length: 0.0
+  force_treshold: 5
+  customize_task_weights:
+    momentum: 0.0
