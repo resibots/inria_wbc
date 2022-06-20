@@ -1,9 +1,11 @@
 BEHAVIOR:
   name: humanoid::active_walk
-  traj_com_duration: 5
-  traj_foot_duration: 5
+  traj_com_duration: 2
+  traj_foot_duration: 2
   step_height: 0.1
-  step_length: 0.0
-  force_treshold: 5
+  step_length: 0.1
+  force_treshold: 30000
+  remove_contacts: true
+  num_cycles: 1
   customize_task_weights:
     momentum: 0.0

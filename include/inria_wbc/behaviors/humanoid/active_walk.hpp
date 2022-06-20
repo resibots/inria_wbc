@@ -41,20 +41,21 @@ namespace inria_wbc {
                 int state_ = -1;
                 std::string left_ankle_name_;
                 std::string right_ankle_name_;
+                bool first_step_ = true;
+                bool remove_contacts_ = true;
+                int num_cycles_ = -1;
+                int cycle_count_ = 0;
 
                 float force_treshold_ = inria_wbc::estimators::FMIN;
 
                 enum States {
-                    INIT = 0,
-                    LF_INIT = 1,
-                    LIFT_DOWN_LF = 2,
-                    MOVE_COM_LEFT = 3,
-                    LIFT_UP_RF = 4,
-                    LIFT_DOWN_RF = 5,
-                    MOVE_COM_RIGHT = 6,
-                    LIFT_UP_LF = 7,
-                    LIFT_DOWN_LF_FINAL = 8,
-                    MOVE_COM_CENTER_FINAL = 9
+                    GO_TO_RF = 0,
+                    LIFT_DOWN_LF = 1,
+                    LIFT_UP_LF = 2,
+                    GO_TO_LF = 3,
+                    LIFT_DOWN_RF = 4,
+                    LIFT_UP_RF = 5,
+                    GO_TO_MIDDLE = 6
                 };
             };
         } // namespace humanoid

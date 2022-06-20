@@ -174,7 +174,7 @@ namespace inria_wbc {
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
-                else {
+                else if (type != "contact-force-equality") {
                     // the task is added automatically to TSID by the factory
                     auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config);
                     tasks_[name] = task;
@@ -184,8 +184,21 @@ namespace inria_wbc {
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
                 task_count++;
             }
-            if (verbose_)
-                std::cout << "Number of parsed tasks " << task_count << std::endl;
+            for (auto it = task_list.begin(); it != task_list.end(); ++it) {
+                auto name = IWBC_CHECK(it->first.as<std::string>());
+                auto type = IWBC_CHECK(it->second["type"].as<std::string>());
+                if (type == "contact-force-equality"){
+                    auto task = tasks::make_contact_force_equality(robot_, tsid_, name, it->second, config, contacts_);
+                    tasks_[name] = task;
+                    activated_tasks_.push_back(name);
+                    }
+                if (verbose_)
+                    std::cout << "added task/contact:" << name << " type:" << type << std::endl;
+                task_count++;
+
+                if (verbose_)
+                    std::cout << "Number of parsed tasks " << task_count << std::endl;
+            }
         }
 
         void PosTracker::parse_frames(const std::string& path)

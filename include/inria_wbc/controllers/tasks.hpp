@@ -8,6 +8,7 @@
 #include <tsid/contacts/contact-6d-ext.hpp>
 #include <tsid/contacts/contact-point.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
+#include <tsid/tasks/task-contact-force-equality.hpp>
 #include <tsid/math/fwd.hpp>
 #include <tsid/math/utils.hpp>
 #include <tsid/robots/fwd.hpp>
@@ -39,6 +40,12 @@ namespace inria_wbc {
             const std::shared_ptr<tsid::robots::RobotWrapper>& robot,
             const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>& tsid,
             const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node);
+
+        ////// Task contact force equality not added in the task factory because it needs already created contacts //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_contact_force_equality(
+            const std::shared_ptr<tsid::robots::RobotWrapper>& robot,
+            const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node, std::unordered_map<std::string, std::shared_ptr<tsid::contacts::Contact6dExt>>& contact_map);
     } // namespace tasks
 } // namespace inria_wbc
 

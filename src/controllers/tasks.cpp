@@ -252,7 +252,7 @@ namespace inria_wbc {
             }
             task->mask(mask_post);
 
-            if (node["scaling"]){
+            if (node["scaling"]) {
                 auto scaling = IWBC_CHECK(node["scaling"].as<std::vector<double>>());
                 IWBC_ASSERT(scaling.size() == n_actuated, "wrong size in torque scaling, expected:", n_actuated, " got:", scaling.size());
                 Eigen::VectorXd scaling_post = Eigen::VectorXd::Map(scaling.data(), scaling.size());
@@ -298,48 +298,52 @@ namespace inria_wbc {
             return task;
         }
 
-         ////// Posture //////
+        ////// Task contact force equality not added in the task factory because it needs already created contacts //////
         std::shared_ptr<tsid::tasks::TaskBase> make_contact_force_equality(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node, std::unordered_map<std::string, std::shared_ptr<tsid::contacts::Contact6dExt>>& contact_map)
         {
             assert(tsid);
             assert(robot);
 
             // parse yaml
             double kp = IWBC_CHECK(node["kp"].as<double>());
+            double kd = IWBC_CHECK(node["kd"].as<double>());
+            double ki = IWBC_CHECK(node["ki"].as<double>());
             auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto dt = IWBC_CHECK(controller_node["CONTROLLER"]["dt"].as<double>());
+            std::string contact_name = IWBC_CHECK(node["contact_name"].as<std::string>());
 
             bool floating_base_flag = (robot->na() == robot->nv()) ? false : true;
-            
-            int n_actuated = floating_base_flag ? robot->nv() - 6 : robot->nv();
-
+            IWBC_ASSERT(contact_map.find(contact_name) != contact_map.end(), "contact force equality : contact : ", contact_name, " is not inside the contact map");
             // create the task
-            auto task = std::make_shared<tsid::tasks::TaskContactForceEquality>(task_name, *robot, dt, contact);
+            auto task = std::make_shared<tsid::tasks::TaskContactForceEquality>(task_name, *robot, dt, *contact_map.at(contact_name));
 
-            task->Kp(kp * Vector::Ones(n_actuated));
-            task->Kd(2.0 * task->Kp().cwiseSqrt());
-            Vector mask_post(n_actuated);
+             Vector mask_force(6);
             if (!node["mask"]) {
-                mask_post = Vector::Ones(n_actuated);
+                mask_force = Vector::Ones(6);
             }
             else {
                 auto mask = IWBC_CHECK(node["mask"].as<std::string>());
-                IWBC_ASSERT(mask.size() == mask_post.size(), "wrong size in posture mask, expected:", mask_post.size(), " got:", mask.size());
-                mask_post = convert_mask<Eigen::Dynamic>(mask);
+                IWBC_ASSERT(mask.size() == 6, "wrong size in torque mask, expected:", 6, " got:", mask.size());
+                mask_force = convert_mask<Eigen::Dynamic>(mask);
             }
-            task->setMask(mask_post);
 
-            // set the reference to the current position of the robot
-            task->setReference(trajs::to_sample(ref_q.tail(robot->na())));
+            task->Kp(kp * mask_force);
+            task->Kd(kd * mask_force);
+            task->Ki(ki * mask_force);
+
+
+            // set the reference to nothing, it will not work until we give it the correct ref + measurment
 
             // add the task
-            tsid->addMotionTask(*task, weight, 1);
+            tsid->addForceTask(*task, weight, 1);
 
             return task;
         }
-        RegisterYAML<tsid::tasks::TaskContactForceEquality> __register_contact_force_equality("contact-force-equality", make_contact_force_equality);
+        //do not register we need the contact to be already created and passed in argument
+        // RegisterYAML<tsid::tasks::TaskContactForceEquality> __register_contact_force_equality("contact-force-equality", make_contact_force_equality);
 
         RegisterYAML<tsid::tasks::TaskJointPosVelAccBounds> __register_bounds("bounds", make_bounds);
 
@@ -366,7 +370,6 @@ namespace inria_wbc {
             return task;
         }
         RegisterYAML<tsid::tasks::TaskActuationBounds> __register_actuation_bounds("actuation-bounds", make_actuation_bounds);
-
 
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
