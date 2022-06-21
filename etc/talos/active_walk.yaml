@@ -4,8 +4,10 @@ BEHAVIOR:
   traj_foot_duration: 2
   step_height: 0.1
   step_length: 0.1
-  force_treshold: 30000
+  force_treshold: 50
   remove_contacts: true
+  go_to_middle: true
+  com_percentage: 0.33
   num_cycles: 1
   customize_task_weights:
     momentum: 0.0

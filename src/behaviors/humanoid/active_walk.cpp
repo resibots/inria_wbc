@@ -28,6 +28,10 @@ namespace inria_wbc {
                 force_treshold_ = IWBC_CHECK(c["force_treshold"].as<float>());
                 remove_contacts_ = IWBC_CHECK(c["remove_contacts"].as<bool>());
                 num_cycles_ = IWBC_CHECK(c["num_cycles"].as<int>());
+                go_to_middle_ = IWBC_CHECK(c["go_to_middle"].as<bool>());
+                com_percentage_ = IWBC_CHECK(c["com_percentage"].as<float>());
+                if (com_percentage_ >= 1.0 || com_percentage_ <= 0.0)
+                    IWBC_ERROR("com_percentage_ should be between 0.0 and 1.0, it is ", com_percentage_);
 
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
@@ -54,6 +58,10 @@ namespace inria_wbc {
 
                 left_ankle_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_lfoot")->getMotionTask().frame_id()].name;
                 right_ankle_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_rfoot")->getMotionTask().frame_id()].name;
+                left_sole_lyn_ = std::abs(h_controller->contact("contact_lfoot")->getContactPoints()(1, 0));
+                left_sole_lyp_ = std::abs(h_controller->contact("contact_lfoot")->getContactPoints()(1, 1));
+                right_sole_lyn_ = std::abs(h_controller->contact("contact_rfoot")->getContactPoints()(1, 0));
+                right_sole_lyp_ = std::abs(h_controller->contact("contact_rfoot")->getContactPoints()(1, 1));
             }
 
             void ActiveWalk::update(const controllers::SensorData& sensor_data)
@@ -84,7 +92,7 @@ namespace inria_wbc {
                         index_++;
                     }
                     else {
-                        state_ = States::GO_TO_MIDDLE;
+                        state_ = next_state_;
                         begin_ = true;
                     }
                 }
@@ -93,7 +101,11 @@ namespace inria_wbc {
                     if (begin_) {
                         com_init_ = controller->com();
                         com_final_ = com_init_;
-                        com_final_.head(2) = controller->get_se3_ref("rf").translation().head(2);
+                        com_final_(0) = controller->get_se3_ref("rf").translation()(0);
+                        auto y_ankle = controller->get_se3_ref("rf").translation()(1);
+                        auto internal_rf_border = y_ankle - sign(y_ankle) * right_sole_lyp_;
+                        auto external_rf_border = y_ankle + sign(y_ankle) * right_sole_lyn_;
+                        com_final_(1) = internal_rf_border + com_percentage_ * (external_rf_border - internal_rf_border);
                         begin_ = false;
                         index_ = 0;
                     }
@@ -180,12 +192,16 @@ namespace inria_wbc {
                             controller->add_contact("contact_lfoot");
 
                         if (cycle_count_ == num_cycles_) {
+                            next_state_ = States::GO_TO_MIDDLE;
                             state_ = States::GO_TO_MIDDLE;
+                        }
+                        else if (go_to_middle_) {
+                            state_ = States::GO_TO_MIDDLE;
+                            next_state_ = States::GO_TO_LF;
                         }
                         else {
                             state_ = States::GO_TO_LF;
                         }
-
                         begin_ = true;
                     }
                 }
@@ -194,7 +210,11 @@ namespace inria_wbc {
                     if (begin_) {
                         com_init_ = controller->com();
                         com_final_ = com_init_;
-                        com_final_.head(2) = controller->get_se3_ref("lf").translation().head(2);
+                        com_final_(0) = controller->get_se3_ref("lf").translation()(0);
+                        auto y_ankle = controller->get_se3_ref("lf").translation()(1);
+                        auto internal_lf_border = y_ankle - sign(y_ankle) * left_sole_lyp_;
+                        auto external_lf_border = y_ankle + sign(y_ankle) * left_sole_lyn_;
+                        com_final_(1) = internal_lf_border + com_percentage_ * (external_lf_border - internal_lf_border);
                         begin_ = false;
                         index_ = 0;
                     }
@@ -280,9 +300,18 @@ namespace inria_wbc {
                     else {
                         if (remove_contacts_)
                             controller->add_contact("contact_rfoot");
-                        state_ = States::GO_TO_RF;
+
                         begin_ = true;
                         cycle_count_++;
+
+                        if (go_to_middle_) {
+                            state_ = States::GO_TO_MIDDLE;
+                            next_state_ = States::GO_TO_RF;
+                        }
+                        else {
+                            state_ = States::GO_TO_RF;
+                        }
+
                         if (cycle_count_ == num_cycles_)
                             first_step_ = true;
                     }

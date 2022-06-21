@@ -21,6 +21,12 @@ namespace inria_wbc {
 
                 std::string behavior_type() const override { return controllers::behavior_types::SINGLE_SUPPORT; };
 
+                template <typename T>
+                int sign(T val)
+                {
+                    return (T(0) < val) - (val < T(0));
+                }
+
             private:
                 int time_ = 0;
                 float dt_;
@@ -39,12 +45,19 @@ namespace inria_wbc {
                 int index_ = 0;
                 bool begin_ = true;
                 int state_ = -1;
+                int next_state_ = States::GO_TO_MIDDLE;
                 std::string left_ankle_name_;
                 std::string right_ankle_name_;
                 bool first_step_ = true;
                 bool remove_contacts_ = true;
                 int num_cycles_ = -1;
                 int cycle_count_ = 0;
+                bool go_to_middle_ = true;
+                float com_percentage_ = 0.5;
+                float left_sole_lyp_ = 0.0;
+                float left_sole_lyn_ = 0.0;
+                float right_sole_lyp_ = 0.0;
+                float right_sole_lyn_ = 0.0;
 
                 float force_treshold_ = inria_wbc::estimators::FMIN;
 
