@@ -21,6 +21,9 @@ namespace inria_wbc {
 
                 std::string behavior_type() const override { return controllers::behavior_types::SINGLE_SUPPORT; };
 
+                void set_se3_ref(const pinocchio::SE3& init, const pinocchio::SE3& final, const std::string& task_name, const std::string& contact_name);
+                void set_com_ref(const Eigen::VectorXd& init, const Eigen::VectorXd& final);
+
                 template <typename T>
                 int sign(T val)
                 {
@@ -29,12 +32,14 @@ namespace inria_wbc {
 
             private:
                 int time_ = 0;
-                float dt_;
+                float dt_ = 0.0;
 
                 float traj_com_duration_ = 3; //will be changed if specified in yaml
                 float traj_foot_duration_ = 3; //will be changed if specified in yaml
+                float traj_stop_duration_ = 3;
                 float step_height_ = 0.1;
                 float step_length_ = 0.1;
+                float step_lateral_ = 0.1;
 
                 Eigen::VectorXd com_init_, com_final_;
                 pinocchio::SE3 lh_init_, lh_final_;
@@ -58,6 +63,9 @@ namespace inria_wbc {
                 float left_sole_lyn_ = 0.0;
                 float right_sole_lyp_ = 0.0;
                 float right_sole_lyn_ = 0.0;
+                bool send_vel_acc_ = false;
+
+                bool one_foot_ = false;
 
                 float force_treshold_ = inria_wbc::estimators::FMIN;
 
@@ -68,7 +76,8 @@ namespace inria_wbc {
                     GO_TO_LF = 3,
                     LIFT_DOWN_RF = 4,
                     LIFT_UP_RF = 5,
-                    GO_TO_MIDDLE = 6
+                    GO_TO_MIDDLE = 6,
+                    STOP = 7
                 };
             };
         } // namespace humanoid

@@ -1,13 +1,17 @@
 BEHAVIOR:
   name: humanoid::active_walk
-  traj_com_duration: 2
-  traj_foot_duration: 2
-  step_height: 0.1
-  step_length: 0.1
-  force_treshold: 50
-  remove_contacts: true
-  go_to_middle: true
-  com_percentage: 0.33
-  num_cycles: 1
+  traj_com_duration: 5 # duration of trajectories moving the com
+  traj_foot_duration: 5 # duration of trajectories moving a foot
+  traj_stop_duration: 5 # stop duration after putting com in the middle of the convex hull, only works with go_to_middle to true
+  remove_contacts: true # remove/add contacts you can put false if you just want the robot to put move the com without moving the feet
+  step_height: 0.1 # height of the step
+  step_length: 0.1 # lenght of the step
+  step_lateral: 0.00 # lateral lenght of the step
+  com_percentage: 0.4 # put the com reference inside the foot (at com_percentage*(external_foot_border - internal_foot_border) + internal_foot_border)
+  force_treshold: 50000 # when putting foot on ground if the FT sensor returns more than force_treshold, the foot will not be lowered any furhter
+  go_to_middle: true # put this to true for the com to stop in the middle of the convex hull (when going from one foot to the other)
+  num_cycles: 10 # put -1 for infinite
+  send_vel_acc: true # if true it will give vel and acc references to the tasks
+  one_foot: false # do not walk but put the robot on one foot
   customize_task_weights:
     momentum: 0.0

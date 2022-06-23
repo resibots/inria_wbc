@@ -23,15 +23,36 @@ namespace inria_wbc {
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
                 traj_com_duration_ = IWBC_CHECK(c["traj_com_duration"].as<float>());
                 traj_foot_duration_ = IWBC_CHECK(c["traj_foot_duration"].as<float>());
+                traj_stop_duration_ = IWBC_CHECK(c["traj_stop_duration"].as<float>());
+
+                if (traj_com_duration_ < 0.0)
+                    IWBC_ERROR("traj_com_duration_ should >= 0.0");
+                if (traj_foot_duration_ < 0.0)
+                    IWBC_ERROR("traj_com_duration_ should >= 0.0");
+                if (traj_stop_duration_ < 0.0)
+                    IWBC_ERROR("traj_com_duration_ should >= 0.0");
+
                 step_height_ = IWBC_CHECK(c["step_height"].as<float>());
                 step_length_ = IWBC_CHECK(c["step_length"].as<float>());
-                force_treshold_ = IWBC_CHECK(c["force_treshold"].as<float>());
+                step_lateral_ = IWBC_CHECK(c["step_lateral"].as<float>());
                 remove_contacts_ = IWBC_CHECK(c["remove_contacts"].as<bool>());
+
+                if ((std::abs(step_height_) < 1e-5 || std::abs(step_length_) < 1e-5) && !remove_contacts_)
+                    IWBC_ERROR("remove_contacts_ should be true to make a step");
+
+                force_treshold_ = IWBC_CHECK(c["force_treshold"].as<float>());
                 num_cycles_ = IWBC_CHECK(c["num_cycles"].as<int>());
-                go_to_middle_ = IWBC_CHECK(c["go_to_middle"].as<bool>());
+
                 com_percentage_ = IWBC_CHECK(c["com_percentage"].as<float>());
                 if (com_percentage_ >= 1.0 || com_percentage_ <= 0.0)
                     IWBC_ERROR("com_percentage_ should be between 0.0 and 1.0, it is ", com_percentage_);
+
+                go_to_middle_ = IWBC_CHECK(c["go_to_middle"].as<bool>());
+                send_vel_acc_ = IWBC_CHECK(c["send_vel_acc"].as<bool>());
+                one_foot_ = IWBC_CHECK(c["one_foot"].as<bool>());
+
+                if (one_foot_ && !remove_contacts_)
+                    IWBC_ERROR("remove_contacts_ should be true to put Talos on one foot");
 
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
@@ -62,6 +83,42 @@ namespace inria_wbc {
                 left_sole_lyp_ = std::abs(h_controller->contact("contact_lfoot")->getContactPoints()(1, 1));
                 right_sole_lyn_ = std::abs(h_controller->contact("contact_rfoot")->getContactPoints()(1, 0));
                 right_sole_lyp_ = std::abs(h_controller->contact("contact_rfoot")->getContactPoints()(1, 1));
+
+                dt_ = h_controller->dt();
+            }
+
+            void ActiveWalk::set_se3_ref(const pinocchio::SE3& init, const pinocchio::SE3& final, const std::string& task_name, const std::string& contact_name)
+            {
+                tsid::trajectories::TrajectorySample sample_ref(12, 6);
+                Eigen::VectorXd ref_vec(12);
+                auto ref = trajs::min_jerk_trajectory(init, final, dt_, traj_foot_duration_, index_);
+                tsid::math::SE3ToVector(ref, ref_vec);
+                sample_ref.setValue(ref_vec);
+                sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(init, final, dt_, traj_foot_duration_, index_));
+                sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(init, final, dt_, traj_foot_duration_, index_));
+                if (send_vel_acc_) {
+                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(ref, task_name);
+                    if (contact_name != "")
+                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(ref, contact_name);
+                }
+                else {
+                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref, task_name);
+                    if (contact_name != "")
+                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(sample_ref, contact_name);
+                }
+            }
+
+            void ActiveWalk::set_com_ref(const Eigen::VectorXd& init, const Eigen::VectorXd& final)
+            {
+                tsid::trajectories::TrajectorySample sample_ref(3, 3);
+                auto ref = trajs::min_jerk_trajectory(init, final, dt_, traj_com_duration_, index_);
+                sample_ref.setValue(ref);
+                sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(init, final, dt_, traj_com_duration_, index_));
+                sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(init, final, dt_, traj_com_duration_, index_));
+                if (send_vel_acc_)
+                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(sample_ref);
+                else
+                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(ref);
             }
 
             void ActiveWalk::update(const controllers::SensorData& sensor_data)
@@ -74,6 +131,7 @@ namespace inria_wbc {
 
                 auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
 
+                //GO_TO_MIDDLE: PUT COM BETWEEN THE TWO FEET
                 if (state_ == States::GO_TO_MIDDLE) {
                     if (begin_) {
                         com_init_ = controller->com();
@@ -83,20 +141,29 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (index_ < std::floor(traj_com_duration_ / controller->dt())) {
-                        tsid::trajectories::TrajectorySample sample_ref(3, 3);
-                        sample_ref.setValue(trajs::min_jerk_trajectory(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_com_ref(trajs::min_jerk_trajectory(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
+                    if (index_ < std::floor(traj_com_duration_ / dt_)) {
+                        set_com_ref(com_init_, com_final_);
                         index_++;
                     }
+                    else {
+                        state_ = States::STOP;
+                        begin_ = true;
+                    }
+                }
+
+                if (state_ == States::STOP) {
+                    if (begin_) {
+                        index_ = 0;
+                        begin_ = false;
+                    }
+                    if (index_ < std::floor(traj_stop_duration_ / dt_))
+                        index_++;
                     else {
                         state_ = next_state_;
                         begin_ = true;
                     }
                 }
-
+                //GO_TO_RF: PUT COM ON RF
                 if (state_ == States::GO_TO_RF) {
                     if (begin_) {
                         com_init_ = controller->com();
@@ -110,12 +177,8 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (index_ < std::floor(traj_com_duration_ / controller->dt())) {
-                        tsid::trajectories::TrajectorySample sample_ref(3, 3);
-                        sample_ref.setValue(trajs::min_jerk_trajectory(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_com_ref(trajs::min_jerk_trajectory(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
+                    if (index_ < std::floor(traj_com_duration_ / dt_)) {
+                        set_com_ref(com_init_, com_final_);
                         index_++;
                     }
                     else {
@@ -124,6 +187,7 @@ namespace inria_wbc {
                     }
                 }
 
+                //LIFT_UP_LF: LIFT LEFT FOOT OFF THE GROUND
                 if (state_ == States::LIFT_UP_LF) {
                     if (begin_) {
                         if (remove_contacts_)
@@ -135,28 +199,30 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (index_ < std::floor(traj_foot_duration_ / controller->dt())) {
-                        tsid::trajectories::TrajectorySample sample_ref(12, 6);
-                        Eigen::VectorXd ref_vec(12);
-                        tsid::math::SE3ToVector(trajs::min_jerk_trajectory(lf_init_, lf_final_, controller->dt(), traj_foot_duration_, index_), ref_vec);
-                        sample_ref.setValue(ref_vec);
-                        sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lf_init_, lf_final_, controller->dt(), traj_foot_duration_, index_));
-                        sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lf_init_, lf_final_, controller->dt(), traj_foot_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_se3_ref(sample_ref, "lf");
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_contact_se3_ref(sample_ref, "contact_lfoot");
+                    if (index_ < std::floor(traj_foot_duration_ / dt_)) {
+                        set_se3_ref(lf_init_, lf_final_, "lf", "contact_lfoot");
                         index_++;
                     }
                     else {
-                        state_ = States::LIFT_DOWN_LF;
-                        begin_ = true;
+                        if (one_foot_) {
+                            state_ = States::STOP;
+                            next_state_ = States::STOP;
+                        }
+                        else {
+                            state_ = States::LIFT_DOWN_LF;
+                            begin_ = true;
+                        }
                     }
                 }
 
+                //LIFT_DOWN_LF: PUT LEFT FOOT ON THE GROUND
                 if (state_ == States::LIFT_DOWN_LF) {
 
                     if (begin_) {
                         lf_init_ = controller->model_frame_pos(left_ankle_name_);
                         lf_final_ = lf_init_;
+                        if (first_step_)
+                            lf_final_.translation()(1) += step_lateral_;
                         lf_final_.translation()(2) -= step_height_;
                         lf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
                         lh_init_ = controller->robot()->framePosition(controller->tsid()->data(), controller->task<tsid::tasks::TaskSE3Equality>("lh")->frame_id());
@@ -164,27 +230,11 @@ namespace inria_wbc {
                         lh_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
                         begin_ = false;
                         index_ = 0;
-                        if (first_step_)
-                            first_step_ = false;
                     }
 
-                    if (index_ < std::floor(traj_foot_duration_ / controller->dt()) && sensor_data.at("lf_force")(2) < force_treshold_) {
-                        tsid::trajectories::TrajectorySample sample_ref(12, 6);
-                        Eigen::VectorXd ref_vec(12);
-                        tsid::math::SE3ToVector(trajs::min_jerk_trajectory(lf_init_, lf_final_, controller->dt(), traj_foot_duration_, index_), ref_vec);
-                        sample_ref.setValue(ref_vec);
-                        sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lf_init_, lf_final_, controller->dt(), traj_foot_duration_, index_));
-                        sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lf_init_, lf_final_, controller->dt(), traj_foot_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_se3_ref(sample_ref, "lf");
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_contact_se3_ref(sample_ref, "contact_lfoot");
-
-                        tsid::trajectories::TrajectorySample sample_ref_hand(12, 6);
-                        Eigen::VectorXd ref_vec_hand(12);
-                        tsid::math::SE3ToVector(trajs::min_jerk_trajectory(lh_init_, lh_final_, controller->dt(), traj_foot_duration_, index_), ref_vec_hand);
-                        sample_ref_hand.setValue(ref_vec_hand);
-                        sample_ref_hand.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lh_init_, lh_final_, controller->dt(), traj_foot_duration_, index_));
-                        sample_ref_hand.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lh_init_, lh_final_, controller->dt(), traj_foot_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_se3_ref(sample_ref_hand, "lh");
+                    if (index_ < std::floor(traj_foot_duration_ / dt_) && sensor_data.at("lf_force")(2) < force_treshold_) {
+                        set_se3_ref(lf_init_, lf_final_, "lf", "contact_lfoot");
+                        set_se3_ref(lh_init_, lh_final_, "lh", "");
                         index_++;
                     }
                     else {
@@ -206,6 +256,7 @@ namespace inria_wbc {
                     }
                 }
 
+                //GO_TO_LF: PUT COM ON LEFT FOOT
                 if (state_ == States::GO_TO_LF) {
                     if (begin_) {
                         com_init_ = controller->com();
@@ -219,12 +270,8 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (index_ < std::floor(traj_com_duration_ / controller->dt())) {
-                        tsid::trajectories::TrajectorySample sample_ref(3, 3);
-                        sample_ref.setValue(trajs::min_jerk_trajectory(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_init_, com_final_, controller->dt(), traj_com_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_com_ref(sample_ref);
+                    if (index_ < std::floor(traj_com_duration_ / dt_)) {
+                        set_com_ref(com_init_, com_final_);
                         index_++;
                     }
                     else {
@@ -233,6 +280,7 @@ namespace inria_wbc {
                     }
                 }
 
+                //LIFT_UP_RF: LIFT RIGHT FOOT OFF THE GROUND
                 if (state_ == States::LIFT_UP_RF) {
                     if (begin_) {
                         if (remove_contacts_)
@@ -244,16 +292,8 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (index_ < std::floor(traj_foot_duration_ / controller->dt())) {
-                        tsid::trajectories::TrajectorySample sample_ref(12, 6);
-                        Eigen::VectorXd ref_vec(12);
-                        tsid::math::SE3ToVector(trajs::min_jerk_trajectory(rf_init_, rf_final_, controller->dt(), traj_foot_duration_, index_), ref_vec);
-                        auto ref = trajs::min_jerk_trajectory(rf_init_, rf_final_, controller->dt(), traj_foot_duration_, index_);
-                        sample_ref.setValue(ref_vec);
-                        sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rf_init_, rf_final_, controller->dt(), traj_foot_duration_, index_));
-                        sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rf_init_, rf_final_, controller->dt(), traj_foot_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_se3_ref(sample_ref, "rf");
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_contact_se3_ref(sample_ref, "contact_rfoot");
+                    if (index_ < std::floor(traj_foot_duration_ / dt_)) {
+                        set_se3_ref(rf_init_, rf_final_, "rf", "contact_rfoot");
                         index_++;
                     }
                     else {
@@ -262,11 +302,16 @@ namespace inria_wbc {
                     }
                 }
 
+                //LIFT_DOWN_RF: PUT RIGHT FOOT ON THE GROUND
                 if (state_ == States::LIFT_DOWN_RF) {
 
                     if (begin_) {
                         rf_init_ = controller->model_frame_pos(right_ankle_name_);
                         rf_final_ = rf_init_;
+                        if (first_step_) {
+                            rf_final_.translation()(1) -= step_lateral_;
+                            first_step_ = false;
+                        }
                         rf_final_.translation()(2) -= step_height_;
                         rf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
                         rh_init_ = controller->robot()->framePosition(controller->tsid()->data(), controller->task<tsid::tasks::TaskSE3Equality>("rh")->frame_id());
@@ -277,24 +322,9 @@ namespace inria_wbc {
                         if (first_step_)
                             first_step_ = false;
                     }
-                    if (index_ < std::floor(traj_foot_duration_ / controller->dt()) && sensor_data.at("rf_force")(2) < force_treshold_) {
-                        tsid::trajectories::TrajectorySample sample_ref(12, 6);
-                        Eigen::VectorXd ref_vec(12);
-                        tsid::math::SE3ToVector(trajs::min_jerk_trajectory(rf_init_, rf_final_, controller->dt(), traj_foot_duration_, index_), ref_vec);
-                        auto ref = trajs::min_jerk_trajectory(rf_init_, rf_final_, controller->dt(), traj_foot_duration_, index_);
-                        sample_ref.setValue(ref_vec);
-                        sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rf_init_, rf_final_, controller->dt(), traj_foot_duration_, index_));
-                        sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rf_init_, rf_final_, controller->dt(), traj_foot_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_se3_ref(sample_ref, "rf");
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_contact_se3_ref(sample_ref, "contact_rfoot");
-
-                        tsid::trajectories::TrajectorySample sample_ref_hand(12, 6);
-                        Eigen::VectorXd ref_vec_hand(12);
-                        tsid::math::SE3ToVector(trajs::min_jerk_trajectory(rh_init_, rh_final_, controller->dt(), traj_foot_duration_, index_), ref_vec_hand);
-                        sample_ref_hand.setValue(ref_vec_hand);
-                        sample_ref_hand.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rh_init_, rh_final_, controller->dt(), traj_foot_duration_, index_));
-                        sample_ref_hand.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rh_init_, rh_final_, controller->dt(), traj_foot_duration_, index_));
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller)->set_se3_ref(sample_ref_hand, "rh");
+                    if (index_ < std::floor(traj_foot_duration_ / dt_) && sensor_data.at("rf_force")(2) < force_treshold_) {
+                        set_se3_ref(rf_init_, rf_final_, "rf", "contact_rfoot");
+                        set_se3_ref(rh_init_, rh_final_, "rh", "");
                         index_++;
                     }
                     else {
