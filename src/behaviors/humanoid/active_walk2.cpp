@@ -126,7 +126,6 @@ namespace inria_wbc {
 
             void ActiveWalk2::update(const controllers::SensorData& sensor_data)
             {
-                std::cout << state_  << std::endl;
                 if (sensor_data.find("lf_force") == sensor_data.end())
                     IWBC_ERROR("ActiveWalk2 needs the LF force");
 
@@ -181,7 +180,7 @@ namespace inria_wbc {
                     if (begin_) {
                         lf_init_ = controller->model_frame_pos(left_ankle_name_);
                         lf_final_ = lf_init_;
-                        if (first_step_)
+                        if (first_step_ && cycle_count_ != num_cycles_)
                             lf_final_.translation()(1) += step_lateral_;
                         lf_final_.translation()(2) -= step_height_;
                         lf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
@@ -200,8 +199,15 @@ namespace inria_wbc {
                     else {
                         if (remove_contacts_)
                             controller->add_contact("contact_lfoot");
-                        state_ = States::GO_TO_MIDDLE;
-                        next_state_ = States::GO_TO_LF;
+
+                        if (cycle_count_ == num_cycles_) {
+                            next_state_ = States::GO_TO_MIDDLE;
+                            state_ = States::GO_TO_MIDDLE;
+                        }
+                        else {
+                            state_ = States::GO_TO_MIDDLE;
+                            next_state_ = States::GO_TO_LF;
+                        }
                         begin_ = true;
                     }
                 }
@@ -247,7 +253,6 @@ namespace inria_wbc {
 
                     if (index_ < std::floor(traj_foot_duration_ / dt_)) {
                         auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
-                        std::cout << internal_lf_border_ << " " << ref(1) << " " << external_lf_border_ << std::endl;
                         if (ref(1) > com_foot_up_) {
                             if (remove_contacts_ && controller->activated_contacts_forces().find("contact_rfoot") != controller->activated_contacts_forces().end()) {
                                 controller->remove_contact("contact_rfoot");
@@ -272,7 +277,7 @@ namespace inria_wbc {
                     if (begin_) {
                         rf_init_ = controller->model_frame_pos(right_ankle_name_);
                         rf_final_ = rf_init_;
-                        if (first_step_) {
+                        if (first_step_ && cycle_count_ != num_cycles_) {
                             rf_final_.translation()(1) -= step_lateral_;
                             first_step_ = false;
                         }
@@ -297,6 +302,9 @@ namespace inria_wbc {
 
                         begin_ = true;
                         cycle_count_++;
+
+                        if (cycle_count_ == num_cycles_)
+                            first_step_ = true;
 
                         state_ = States::GO_TO_MIDDLE;
                         next_state_ = States::GO_TO_RF;

@@ -221,7 +221,7 @@ namespace inria_wbc {
                     if (begin_) {
                         lf_init_ = controller->model_frame_pos(left_ankle_name_);
                         lf_final_ = lf_init_;
-                        if (first_step_)
+                        if (first_step_ && cycle_count_ != num_cycles_)
                             lf_final_.translation()(1) += step_lateral_;
                         lf_final_.translation()(2) -= step_height_;
                         lf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
@@ -308,7 +308,7 @@ namespace inria_wbc {
                     if (begin_) {
                         rf_init_ = controller->model_frame_pos(right_ankle_name_);
                         rf_final_ = rf_init_;
-                        if (first_step_) {
+                        if (first_step_ && cycle_count_ != num_cycles_) {
                             rf_final_.translation()(1) -= step_lateral_;
                             first_step_ = false;
                         }
