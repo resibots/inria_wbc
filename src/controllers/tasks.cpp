@@ -1,6 +1,7 @@
 #include <tsid/tasks/task-actuation-bounds.hpp>
 #include <tsid/tasks/task-actuation-equality.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
+#include <tsid/tasks/task-capture-point-inequality.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-cop-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
@@ -63,9 +64,10 @@ namespace inria_wbc {
             // we need to check if this is a joint or a frame
             bool joint = robot->model().existJointName(tracked);
             bool body = robot->model().existBodyName(tracked);
+            bool frame = robot->model().existFrame(tracked); 
             if (joint && body)
                 throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
-            if (!joint && !body)
+            if (!joint && !body && !frame)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
             pinocchio::SE3 ref;
 
@@ -162,7 +164,7 @@ namespace inria_wbc {
             assert(robot);
 
             // parse yaml
-            auto weight = node["weight"].as<double>();
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
 
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskCopEquality>(task_name, *robot);
@@ -320,7 +322,7 @@ namespace inria_wbc {
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskContactForceEquality>(task_name, *robot, dt, *contact_map.at(contact_name));
 
-             Vector mask_force(6);
+            Vector mask_force(6);
             if (!node["mask"]) {
                 mask_force = Vector::Ones(6);
             }
@@ -333,7 +335,6 @@ namespace inria_wbc {
             task->Kp(kp * mask_force);
             task->Kd(kd * mask_force);
             task->Ki(ki * mask_force);
-
 
             // set the reference to nothing, it will not work until we give it the correct ref + measurment
 
@@ -370,6 +371,42 @@ namespace inria_wbc {
             return task;
         }
         RegisterYAML<tsid::tasks::TaskActuationBounds> __register_actuation_bounds("actuation-bounds", make_actuation_bounds);
+
+        // ////// CP inequality constraint //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_cp_inequality(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto x_margin = IWBC_CHECK(node["x_margin"].as<double>());
+            auto y_margin = IWBC_CHECK(node["y_margin"].as<double>());
+            auto x_max = IWBC_CHECK(node["x_max"].as<double>());
+            auto x_min = IWBC_CHECK(node["x_min"].as<double>());
+            auto y_max = IWBC_CHECK(node["y_max"].as<double>());
+            auto y_min = IWBC_CHECK(node["y_min"].as<double>());
+            auto factor = IWBC_CHECK(node["factor"].as<double>());
+            auto dt = IWBC_CHECK(controller_node["CONTROLLER"]["dt"].as<double>());
+
+            if (factor < 1.0)
+                IWBC_ERROR("cp inequality bound : factor should be more than 1.0");
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskCapturePointInequality>(task_name, *robot, factor*dt);
+            task->setSafetyMargin(x_margin, y_margin);
+            task->setSupportLimitsXAxis(x_min, x_max);
+            task->setSupportLimitsYAxis(y_min, y_max);
+
+            // add to TSID
+            tsid->addMotionTask(*task, weight, 0);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskCapturePointInequality> __register_cp_inequality("cp-inequality", make_cp_inequality);
 
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase

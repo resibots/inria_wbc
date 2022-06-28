@@ -210,7 +210,7 @@ void test_behavior(utest::test_t test,
                 auto tf_bd_world = node->getWorldTransform();
                 auto tf_bd_joint = robot->joint(t.tracked)->getTransformFromParentBodyNode();
                 pos_dart = (tf_bd_world * tf_bd_joint).translation();
-                pos_tsid = controller->model_joint_pos(t.tracked).translation();
+                pos_tsid = controller->model_frame_pos(t.tracked).translation();
             }
             else {
                 pos_dart = robot->body_pose(t.tracked).translation();

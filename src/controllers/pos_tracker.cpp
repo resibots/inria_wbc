@@ -298,7 +298,6 @@ namespace inria_wbc {
                 auto foot_mass = robot_->model().inertias[robot_->model().getJointId(ankle_frame)].mass();
                 // auto contact_normal = contact(contact_name)->getContactNormal();
                 force_tsid.head(3) += foot_mass * robot_->model().gravity.linear();
-                ;
                 Eigen::Vector3d tmp = force_tsid.head(3);
                 force_tsid.tail(3) -= (ankle_world.translation() - sole_world.translation()).cross(tmp);
             }

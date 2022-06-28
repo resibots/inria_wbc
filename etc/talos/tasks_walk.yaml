@@ -48,13 +48,23 @@ momentum: #!!!!!WARNING IS DISZBLED FOR SINGLE SUPPORT cf parse_stabiliser !!!!!
     type: momentum
     weight: 1000.0
     kp: 30.0
-    mask: 111111
+    mask: 000111
 bounds:
     type: bounds
     weight: 10000
 actuation_bounds:
     type: actuation-bounds
     weight: 10000
+# capture_point_bounds:
+#     type: cp-inequality
+#     weight: 10000
+#     factor: 1.0
+#     x_margin: 0.02
+#     y_margin: 0.02
+#     x_max: 0.0720226
+#     x_min: -0.1279774
+#     y_max: 0.154
+#     y_min: -0.154
 contact_lfoot:
     type: contact
     joint: leg_left_6_joint

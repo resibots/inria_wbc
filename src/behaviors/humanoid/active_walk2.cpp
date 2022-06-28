@@ -34,8 +34,11 @@ namespace inria_wbc {
                 step_lateral_ = IWBC_CHECK(c["step_lateral"].as<float>());
                 remove_contacts_ = IWBC_CHECK(c["remove_contacts"].as<bool>());
 
-                if ((std::abs(step_height_) < 1e-5 || std::abs(step_length_) < 1e-5) && !remove_contacts_)
+                if ((std::abs(step_height_) > 1e-5 || std::abs(step_length_) > 1e-5 || std::abs(step_lateral_) > 1e-5) && !remove_contacts_)
                     IWBC_ERROR("remove_contacts_ should be true to make a step");
+
+                if (std::abs(step_height_) < 1e-5 && (std::abs(step_length_) > 1e-5 || std::abs(step_lateral_) > 1e-5))
+                    IWBC_ERROR("step_height_ should be non zero true to make a step");
 
                 force_treshold_ = IWBC_CHECK(c["force_treshold"].as<float>());
                 num_cycles_ = IWBC_CHECK(c["num_cycles"].as<int>());

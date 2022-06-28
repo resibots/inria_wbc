@@ -167,8 +167,8 @@ namespace inria_wbc {
 
                 // estimate the CoP / ZMP
                 cops = _cop_estimator.update(com_ref.getValue().head(2),
-                    model_joint_pos(left_ankle_name).translation(),
-                    model_joint_pos(right_ankle_name).translation(),
+                    model_frame_pos(left_ankle_name).translation(),
+                    model_frame_pos(right_ankle_name).translation(),
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
                     sensor_data.at("rf_torque"), sensor_data.at("rf_force"));
             }
@@ -227,7 +227,7 @@ namespace inria_wbc {
                 if (cops[1] && std::find(ac.begin(), ac.end(), "contact_lfoot") != ac.end()) {
 
                     stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[1].value(),
-                        model_joint_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
+                        model_frame_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     contact("contact_lfoot")->setReference(lf_contact_sample);
                 }
@@ -235,7 +235,7 @@ namespace inria_wbc {
                 //right ankle_admittance
                 if (cops[2] && std::find(ac.begin(), ac.end(), "contact_rfoot") != ac.end()) {
                     stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[2].value(),
-                        model_joint_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
+                        model_frame_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     contact("contact_rfoot")->setReference(rf_contact_sample);
                 }
