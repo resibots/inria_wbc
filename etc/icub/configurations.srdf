@@ -1,55 +1,38 @@
 <?xml version="1.0" ?>
 <robot name="robot">
 	<group_state name="inria_start" group="all">
-		<joint name="root_joint" value="  -0.0522203  0.000467603     0.43    0.0001534    0.0526897 -0.000532457     0.998611" />
-		<joint name="l_hip_pitch" value="0.589391" />
-		<joint name="r_hip_pitch" value="0.589391" />
-
-		<joint name="l_hip_roll" value="0.0969721" />
-		<joint name="r_hip_roll" value="0.0969721" />
-
-		<joint name="l_hip_yaw" value="-0.0496379" />
-		<joint name="r_hip_yaw" value="-0.0496379" />
-		
-		<joint name="l_knee" value="-0.873709" />
-		<joint name="r_knee" value="-0.873709" />
-		
-		<joint name="l_ankle_pitch" value="-0.392096" />
-		<joint name="r_ankle_pitch" value="-0.392096" />
-
-		<joint name="l_ankle_roll" value="-0.109139" />
-		<joint name="r_ankle_roll" value="-0.109139" />
-
-	
-		
-		<joint name="torso_pitch" value="0.00670584" />
-		<joint name="torso_roll" value="-0.000253351" />
-		<joint name="torso_yaw" value="-0.00176508" />
-
-		<joint name="l_shoulder_pitch" value="-1.145" />
-		<joint name="r_shoulder_pitch" value="-1.145" />
-
-		<joint name="l_shoulder_roll" value="0.523578" />
-		<joint name="r_shoulder_roll" value="0.523578" />
-
-		<joint name="l_shoulder_yaw" value="0.0647369" />
-		<joint name="r_shoulder_yaw" value="0.0647369" />
-
-		<joint name="l_elbow_joint" value="0.230685" />
-		<joint name="r_elbow_joint" value="0.230685" />
-
-		<joint name="l_wrist_prosup" value="0.0504902" />
-		<joint name="r_wrist_prosup" value="0.0504902" />
-
-		<joint name="l_wrist_pitch" value="-0.105206" />
-		<joint name="r_wrist_pitch" value="-0.105206" />
-
-		<joint name="l_wrist_yaw" value="0.238379" />
-		<joint name="r_wrist_yaw" value="0.238379" />
-
-		<joint name="neck_pitch" value="0.112923" />
-		<joint name="neck_roll" value="-0.000713353" />
-		<joint name="neck_yaw" value="-0.000643952" />
-		
+		<joint name="root_joint" value="-0.0165507  0.00110185    0.436005  0.00143734   -0.144318 -0.00332486    0.989525" />
+		<joint name="l_hip_pitch" value="0.0765931" />
+		<joint name="l_hip_roll" value="0.0957478" />
+		<joint name="l_hip_yaw" value="0.0" />
+		<joint name="l_knee" value="-0.817699" />
+		<joint name="l_ankle_pitch" value="-0.452669" />
+		<joint name="l_ankle_roll" value="-0.0980072" />
+		<joint name="r_hip_pitch" value="0.0765931" />
+		<joint name="r_hip_roll" value="0.0957478" />
+		<joint name="r_hip_yaw" value="0.0" />
+		<joint name="r_knee" value="-0.817699" />
+		<joint name="r_ankle_pitch" value="-0.452669" />
+		<joint name="r_ankle_roll" value="-0.0980072" />
+		<joint name="torso_pitch" value="0.3951" />
+		<joint name="torso_roll" value="0.0" />
+		<joint name="torso_yaw" value="0.0" />
+		<joint name="l_shoulder_pitch" value="-0.0619188" />
+		<joint name="l_shoulder_roll" value="0.377713" />
+		<joint name="l_shoulder_yaw" value="0.280484" />
+		<joint name="l_elbow" value="0.838804" />
+		<joint name="l_wrist_prosup" value="-0.174619" />
+		<joint name="l_wrist_pitch" value="-0.080911" />
+		<joint name="l_wrist_yaw" value="-0.0313247" />
+		<joint name="neck_pitch" value="0." />
+		<joint name="neck_roll" value="0." />
+		<joint name="neck_yaw" value="0." />
+		<joint name="r_shoulder_pitch" value="-0.0619188" />
+		<joint name="r_shoulder_roll" value="0.377713" />
+		<joint name="r_shoulder_yaw" value="0.280484" />
+		<joint name="r_elbow" value="0.838804" />
+		<joint name="r_wrist_prosup" value="-0.174619" />
+		<joint name="r_wrist_pitch" value="-0.080911" />
+		<joint name="r_wrist_yaw" value="-0.0313247" />
 	</group_state>
 </robot>

@@ -63,7 +63,7 @@ namespace inria_wbc {
 
             //q_tsid_ for talos is of size 37 (pos+quat+nactuated)
             auto ref_map = robot_->model().referenceConfigurations;
-            IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
+            IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config, ",from file : ", p_srdf);
             q_tsid_ = ref_map[ref_config];
             if (verbose_)
                 std::cout << "q_tsid ref:" << q_tsid_.transpose() << "[" << q_tsid_.size() << "]" << std::endl;
