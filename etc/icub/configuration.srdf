@@ -20,7 +20,7 @@
 		<joint name="l_shoulder_pitch" value="-1.02395" />
 		<joint name="l_shoulder_roll" value="0.511463" />
 		<joint name="l_shoulder_yaw" value="0.0473993" />
-		<joint name="l_elbow_joint" value="0.232871" />
+		<joint name="l_elbow" value="0.232871" />
 		<joint name="l_wrist_prosup" value="0.0471739" />
 		<joint name="l_wrist_pitch" value="-0.106723" />
 		<joint name="l_wrist_yaw" value="0.259116" />
@@ -30,7 +30,7 @@
 		<joint name="r_shoulder_pitch" value="-1.02382" />
 		<joint name="r_shoulder_roll" value="0.511383" />
 		<joint name="r_shoulder_yaw" value="0.0473731" />
-		<joint name="r_elbow_joint" value="0.233003" />
+		<joint name="r_elbow" value="0.233003" />
 		<joint name="r_wrist_prosup" value="0.0470791" />
 		<joint name="r_wrist_pitch" value="-0.106679" />
 		<joint name="r_wrist_yaw" value="0.25915" />

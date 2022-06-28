@@ -12,13 +12,13 @@ rh:
     mask: 111111
 lf:
     type: se3
-    tracked: left_foot
+    tracked: l_foot
     weight: 1000.0
     kp: 30.0
     mask: 111111
 rf:
     type: se3
-    tracked: right_foot
+    tracked: r_foot
     weight: 1000.0
     kp: 30.0     
     mask: 111111
