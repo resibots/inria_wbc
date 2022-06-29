@@ -32,7 +32,7 @@ CONTROLLER:
   check_model_collisions: true
   collision_path: collisions/talos_collisions_margin.yaml
   stabilizer:
-    activated: false
+    activated: true
     params_ss: stab_single_support.yaml
     params_ds: stab_double_support.yaml
     params_fixed_base: stab_fixed_base.yaml

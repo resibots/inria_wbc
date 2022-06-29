@@ -108,14 +108,14 @@ namespace inria_wbc {
                 sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(init, final, dt_, trajectory_duration, index));
                 sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(init, final, dt_, trajectory_duration, index));
                 if (send_vel_acc_) {
-                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(ref, task_name);
+                    std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(ref, task_name);
                     if (contact_name != "")
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(ref, contact_name);
+                        std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(ref, contact_name);
                 }
                 else {
-                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref, task_name);
+                    std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref, task_name);
                     if (contact_name != "")
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(sample_ref, contact_name);
+                        std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(sample_ref, contact_name);
                 }
             }
 
@@ -127,9 +127,9 @@ namespace inria_wbc {
                 sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(init, final, dt_, trajectory_duration, index));
                 sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(init, final, dt_, trajectory_duration, index));
                 if (send_vel_acc_)
-                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(sample_ref);
+                    std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(sample_ref);
                 else
-                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(ref);
+                    std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(ref);
                 return ref;
             }
 

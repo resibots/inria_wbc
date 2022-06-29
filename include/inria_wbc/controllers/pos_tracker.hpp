@@ -27,7 +27,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(t->name() == it->first, "Task name error (tsid)[", t->name(), "] vs [", it->first, "]");
                 return t;
             }
-            std::shared_ptr<tsid::contacts::Contact6dExt> contact(const std::string& str) const
+            std::shared_ptr<tsid::contacts::ContactBase> contact(const std::string& str) const
             {
                 auto it = contacts_.find(str);
                 IWBC_ASSERT(it != contacts_.end(), "Contact [", str, "] not found");
@@ -76,7 +76,7 @@ namespace inria_wbc {
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>> tasks_;
             std::vector<std::string> activated_tasks_;
             // contacts are not tasks in tsid
-            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::Contact6dExt>> contacts_;
+            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> contacts_;
 
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
         };

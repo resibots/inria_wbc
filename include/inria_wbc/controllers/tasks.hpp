@@ -7,6 +7,7 @@
 
 #include <tsid/contacts/contact-6d-ext.hpp>
 #include <tsid/contacts/contact-point.hpp>
+#include <tsid/contacts/contact-base.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/tasks/task-contact-force-equality.hpp>
 #include <tsid/math/fwd.hpp>
@@ -30,7 +31,8 @@ namespace inria_wbc {
             std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>, // tsid
             std::string, //the name of the task
             YAML::Node, // the task node to parse
-            YAML::Node // the controller node to parse
+            YAML::Node, // the controller node to parse
+            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> //already added contacts
             >;
         template <typename T>
         using RegisterYAML = FactoryYAML::AutoRegister<T>;
@@ -41,11 +43,6 @@ namespace inria_wbc {
             const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>& tsid,
             const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node);
 
-        ////// Task contact force equality not added in the task factory because it needs already created contacts //////
-        std::shared_ptr<tsid::tasks::TaskBase> make_contact_force_equality(
-            const std::shared_ptr<tsid::robots::RobotWrapper>& robot,
-            const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node, std::unordered_map<std::string, std::shared_ptr<tsid::contacts::Contact6dExt>>& contact_map);
     } // namespace tasks
 } // namespace inria_wbc
 

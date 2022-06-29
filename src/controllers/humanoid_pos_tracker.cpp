@@ -143,11 +143,12 @@ namespace inria_wbc {
             auto ac = activated_contacts_;
             for (auto& contact_name : ac) {
                 pinocchio::SE3 se3;
-                auto contact_pos = contact(contact_name)->getMotionTask().getReference().getValue();
+                auto contact_ext = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
+                auto contact_pos = contact_ext->getMotionTask().getReference().getValue();
                 tsid::math::vectorToSE3(contact_pos, se3);
                 contact_se3_ref[contact_name] = se3;
-                contact_sample_ref[contact_name] = contact(contact_name)->getMotionTask().getReference();
-                contact_force_ref[contact_name] = contact(contact_name)->getForceReference();
+                contact_sample_ref[contact_name] = contact_ext->getMotionTask().getReference();
+                contact_force_ref[contact_name] = contact_ext->getForceReference();
             }
 
             auto com_ref = com_task()->getReference();
@@ -180,6 +181,9 @@ namespace inria_wbc {
                 IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
                 IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the RF torque");
                 IWBC_ASSERT(sensor_data.find("imu_vel") != sensor_data.end(), "the stabilizer imu needs angular velocity");
+
+                auto contact_lfoot = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact("contact_lfoot"));
+                auto contact_rfoot = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact("contact_rfoot"));
 
                 // if the foot is on the ground
                 if (sensor_data.at("lf_force").norm() > _cop_estimator.fmin()) {
@@ -218,10 +222,10 @@ namespace inria_wbc {
                     stabilizer::zmp_distributor_admittance(dt_, _stabilizer_configs[behavior_type_].zmp_p, _stabilizer_configs[behavior_type_].zmp_d,
                         M, contact_se3_ref, ac, valid_cop.value(), model_current_com, left_fref, right_fref);
 
-                    contact("contact_lfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
-                    contact("contact_rfoot")->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
-                    contact("contact_lfoot")->Contact6d::setForceReference(left_fref);
-                    contact("contact_rfoot")->Contact6d::setForceReference(right_fref);
+                    contact_lfoot->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
+                    contact_rfoot->Contact6d::setRegularizationTaskWeightVector(_stabilizer_configs[behavior_type_].zmp_w);
+                    contact_lfoot->Contact6d::setForceReference(left_fref);
+                    contact_rfoot->Contact6d::setForceReference(right_fref);
                 }
 
                 // left ankle_admittance
@@ -231,7 +235,7 @@ namespace inria_wbc {
                         model_frame_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     if (robot_->model().frames[contact("contact_lfoot")->getMotionTask().frame_id()].name == left_ankle_name)
-                        contact("contact_lfoot")->setReference(lf_contact_sample);
+                        contact_lfoot->setReference(lf_contact_sample);
                 }
 
                 //right ankle_admittance
@@ -240,7 +244,7 @@ namespace inria_wbc {
                         model_frame_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     if (robot_->model().frames[contact("contact_rfoot")->getMotionTask().frame_id()].name == right_ankle_name)
-                        contact("contact_rfoot")->setReference(rf_contact_sample);
+                        contact_rfoot->setReference(rf_contact_sample);
                 }
 
                 //foot force difference admittance
@@ -250,8 +254,8 @@ namespace inria_wbc {
                     && _rf_force_filter->data_ready()) {
 
                     //normal force of the contacts from tsid solution
-                    double lf_normal_force = contact("contact_lfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
-                    double rf_normal_force = contact("contact_rfoot")->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
+                    double lf_normal_force = contact_lfoot->Contact6d::getNormalForce(activated_contacts_forces_["contact_lfoot"]);
+                    double rf_normal_force = contact_rfoot->Contact6d::getNormalForce(activated_contacts_forces_["contact_rfoot"]);
                     double M = pinocchio_total_model_mass();
 
                     stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _stabilizer_configs[behavior_type_].ffda_gains, lf_normal_force,
@@ -298,8 +302,9 @@ namespace inria_wbc {
                 set_se3_ref(torso_ref, "torso");
 
                 for (auto& contact_name : ac) {
-                    contact(contact_name)->setReference(contact_sample_ref[contact_name]);
-                    contact(contact_name)->Contact6d::setForceReference(contact_force_ref[contact_name]);
+                    auto contact_ext = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
+                    contact_ext->setReference(contact_sample_ref[contact_name]);
+                    contact_ext->Contact6d::setForceReference(contact_force_ref[contact_name]);
                 }
             }
         }
