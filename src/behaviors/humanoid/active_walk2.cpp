@@ -11,8 +11,8 @@ namespace inria_wbc {
                 // check that the controller is compatible
                 auto h_controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
                 IWBC_ASSERT(h_controller != NULL, "ActiveWalk2: the controllers needs to be a HumanoidPosTracker (or related)!");
-                IWBC_ASSERT(h_controller->has_task("lf"), "active_walk: an lf task is required (left foot)");
-                IWBC_ASSERT(h_controller->has_task("rf"), "active_walk: an rf task is required (right foot)");
+                IWBC_ASSERT(h_controller->has_task("lf_sole"), "active_walk: an lf_sole task is required (left foot)");
+                IWBC_ASSERT(h_controller->has_task("rf_sole"), "active_walk: an rf_sole task is required (right foot)");
                 IWBC_ASSERT(h_controller->has_task("lh"), "active_walk: an lh task is required (left hand)");
                 IWBC_ASSERT(h_controller->has_task("rh"), "active_walk: an rh task is required (right hand)");
                 IWBC_ASSERT(h_controller->has_task("com"), "active_walk: a com task is required");
@@ -69,25 +69,31 @@ namespace inria_wbc {
                 com_init_ = h_controller->com();
                 lh_init_ = h_controller->get_se3_ref("lh");
                 rh_init_ = h_controller->get_se3_ref("rh");
-                lf_init_ = h_controller->get_se3_ref("lf");
-                rf_init_ = h_controller->get_se3_ref("rf");
-                lh_init_ = h_controller->get_se3_ref("lh");
-                rh_init_ = h_controller->get_se3_ref("rh");
+                lf_init_ = h_controller->get_se3_ref("lf_sole");
+                rf_init_ = h_controller->get_se3_ref("rf_sole");
                 com_final_ = com_init_;
                 com_foot_up_ = rh_init_.translation()(1);
                 lh_final_ = lh_init_;
                 rh_final_ = rh_init_;
                 lf_final_ = lf_init_;
                 rf_final_ = rf_init_;
-                lh_final_ = lh_init_;
-                rh_final_ = rh_init_;
 
-                left_ankle_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_lfoot")->getMotionTask().frame_id()].name;
-                right_ankle_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_rfoot")->getMotionTask().frame_id()].name;
-                left_sole_lyn_ = std::abs(h_controller->contact("contact_lfoot")->getContactPoints()(1, 0));
-                left_sole_lyp_ = std::abs(h_controller->contact("contact_lfoot")->getContactPoints()(1, 1));
-                right_sole_lyn_ = std::abs(h_controller->contact("contact_rfoot")->getContactPoints()(1, 0));
-                right_sole_lyp_ = std::abs(h_controller->contact("contact_rfoot")->getContactPoints()(1, 1));
+                left_sole_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_lfoot")->getMotionTask().frame_id()].name;
+                right_sole_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_rfoot")->getMotionTask().frame_id()].name;
+
+                if (h_controller->robot()->model().frames[h_controller->task<tsid::tasks::TaskSE3Equality>("lf_sole")->frame_id()].name != left_sole_name_)
+                    IWBC_ERROR("lf_sole and contact_lfoot should track the same frame");
+                if (h_controller->robot()->model().frames[h_controller->task<tsid::tasks::TaskSE3Equality>("rf_sole")->frame_id()].name != right_sole_name_)
+                    IWBC_ERROR("rf_sole and contact_rfoot should track the same frame");
+
+                if (!h_controller->robot()->model().existFrame("v_left_sole_internal_border"))
+                    IWBC_ERROR("There is no v_left_sole_internal_border virtual frame. Please add it in the dedicated virtual frames yaml");
+                if (!h_controller->robot()->model().existFrame("v_left_sole_external_border"))
+                    IWBC_ERROR("There is no v_left_sole_external_border virtual frame. Please add it in the dedicated virtual frames yaml");
+                if (!h_controller->robot()->model().existFrame("v_right_sole_internal_border"))
+                    IWBC_ERROR("There is no v_right_sole_internal_border virtual frame. Please add it in the dedicated virtual frames yaml");
+                if (!h_controller->robot()->model().existFrame("v_right_sole_external_border"))
+                    IWBC_ERROR("There is no v_right_sole_external_border virtual frame. Please add it in the dedicated virtual frames yaml");
 
                 dt_ = h_controller->dt();
             }
@@ -142,15 +148,17 @@ namespace inria_wbc {
                     if (begin_) {
                         com_init_ = controller->com();
                         com_final_ = com_init_;
-                        com_final_(0) = controller->get_se3_ref("rf").translation()(0);
-                        auto y_ankle = controller->get_se3_ref("rf").translation()(1);
-                        internal_rf_border_ = y_ankle - sign(y_ankle) * right_sole_lyp_;
-                        external_rf_border_ = y_ankle + sign(y_ankle) * right_sole_lyn_;
-                        com_final_(1) = internal_rf_border_ + com_percentage_ref_ * (external_rf_border_ - internal_rf_border_);
-                        com_foot_up_ = internal_rf_border_ + com_percentage_foot_up_ * (external_rf_border_ - internal_rf_border_);
-                        lf_init_ = controller->model_frame_pos(left_ankle_name_);
+                        com_final_(0) = controller->model_frame_pos(right_sole_name_).translation()(0);
+
+                        auto internal_rf_border =  controller->model_frame_pos("v_right_sole_internal_border").translation()[1];
+                        auto external_rf_border =  controller->model_frame_pos("v_right_sole_external_border").translation()[1];
+                        com_final_(1) = internal_rf_border + com_percentage_ref_ * (external_rf_border - internal_rf_border);
+                        com_foot_up_ = internal_rf_border + com_percentage_foot_up_ * (external_rf_border - internal_rf_border);
+
+                        lf_init_ = controller->model_frame_pos(left_sole_name_);
                         lf_final_ = lf_init_;
                         lf_final_.translation()(2) += step_height_;
+
                         begin_ = false;
                         index_ = 0;
                         time_index_ = 0;
@@ -165,7 +173,7 @@ namespace inria_wbc {
                                 remove_contact_index_ = index_;
                             }
                             if (time_index_ < std::floor(traj_foot_duration_ / dt_ - remove_contact_index_)) {
-                                set_se3_ref(lf_init_, lf_final_, "lf", "contact_lfoot", traj_foot_duration_ - remove_contact_index_ * dt_, time_index_);
+                                set_se3_ref(lf_init_, lf_final_, "lf_sole", "contact_lfoot", traj_foot_duration_ - remove_contact_index_ * dt_, time_index_);
                                 time_index_++;
                             }
                         }
@@ -181,21 +189,22 @@ namespace inria_wbc {
                 if (state_ == States::LIFT_DOWN_LF) {
 
                     if (begin_) {
-                        lf_init_ = controller->model_frame_pos(left_ankle_name_);
+                        lf_init_ = controller->model_frame_pos(left_sole_name_);
                         lf_final_ = lf_init_;
                         if (first_step_ && cycle_count_ != num_cycles_)
                             lf_final_.translation()(1) += step_lateral_;
-                        lf_final_.translation()(2) -= step_height_;
+                        lf_final_.translation()(2) = 0.0;
                         lf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
-                        lh_init_ = controller->robot()->framePosition(controller->tsid()->data(), controller->task<tsid::tasks::TaskSE3Equality>("lh")->frame_id());
+                        lh_init_ = controller->get_se3_ref("lh");
                         lh_final_ = lh_init_;
-                        lh_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
+                        lh_final_.translation()(0) = lf_final_.translation()(0) + 0.3;
+                        lh_final_.translation()(1) = lf_final_.translation()(1) + 0.3;
                         begin_ = false;
                         index_ = 0;
                     }
 
                     if (index_ < std::floor(transition_duration_ / dt_) && sensor_data.at("lf_force")(2) < force_treshold_) {
-                        set_se3_ref(lf_init_, lf_final_, "lf", "contact_lfoot", transition_duration_, index_);
+                        set_se3_ref(lf_init_, lf_final_, "lf_sole", "contact_lfoot", transition_duration_, index_);
                         set_se3_ref(lh_init_, lh_final_, "lh", "", transition_duration_, index_);
                         index_++;
                     }
@@ -220,7 +229,7 @@ namespace inria_wbc {
                     if (begin_) {
                         com_init_ = controller->com();
                         com_final_ = com_init_;
-                        com_final_.head(2) = 0.5 * (controller->model_frame_pos(left_ankle_name_).translation().head(2) + controller->model_frame_pos(right_ankle_name_).translation().head(2));
+                        com_final_.head(2) = 0.5 * (controller->model_frame_pos(left_sole_name_).translation().head(2) + controller->model_frame_pos(right_sole_name_).translation().head(2));
                         begin_ = false;
                         index_ = 0;
                     }
@@ -239,15 +248,17 @@ namespace inria_wbc {
                     if (begin_) {
                         com_init_ = controller->com();
                         com_final_ = com_init_;
-                        com_final_(0) = controller->get_se3_ref("lf").translation()(0);
-                        auto y_ankle = controller->get_se3_ref("lf").translation()(1);
-                        internal_lf_border_ = y_ankle - sign(y_ankle) * left_sole_lyp_;
-                        external_lf_border_ = y_ankle + sign(y_ankle) * left_sole_lyn_;
-                        com_final_(1) = internal_lf_border_ + com_percentage_ref_ * (external_lf_border_ - internal_lf_border_);
-                        com_foot_up_ = internal_lf_border_ + com_percentage_foot_up_ * (external_lf_border_ - internal_lf_border_);
-                        rf_init_ = controller->model_frame_pos(right_ankle_name_);
+                        com_final_(0) = controller->model_frame_pos(left_sole_name_).translation()(0);
+
+                        auto internal_lf_border =  controller->model_frame_pos("v_left_sole_internal_border").translation()[1];
+                        auto external_lf_border =  controller->model_frame_pos("v_left_sole_external_border").translation()[1];
+                        com_final_(1) = internal_lf_border + com_percentage_ref_ * (external_lf_border - internal_lf_border);
+                        com_foot_up_ = internal_lf_border + com_percentage_foot_up_ * (external_lf_border - internal_lf_border);
+
+                        rf_init_ = controller->model_frame_pos(right_sole_name_);
                         rf_final_ = rf_init_;
                         rf_final_.translation()(2) += step_height_;
+
                         begin_ = false;
                         index_ = 0;
                         time_index_ = 0;
@@ -262,7 +273,7 @@ namespace inria_wbc {
                                 remove_contact_index_ = index_;
                             }
                             if (time_index_ < std::floor(traj_foot_duration_ / dt_ - remove_contact_index_)) {
-                                set_se3_ref(rf_init_, rf_final_, "rf", "contact_rfoot", traj_foot_duration_ - remove_contact_index_ * dt_, time_index_);
+                                set_se3_ref(rf_init_, rf_final_, "rf_sole", "contact_rfoot", traj_foot_duration_ - remove_contact_index_ * dt_, time_index_);
                                 time_index_++;
                             }
                         }
@@ -278,24 +289,25 @@ namespace inria_wbc {
                 if (state_ == States::LIFT_DOWN_RF) {
 
                     if (begin_) {
-                        rf_init_ = controller->model_frame_pos(right_ankle_name_);
+                        rf_init_ = controller->model_frame_pos(right_sole_name_);
                         rf_final_ = rf_init_;
                         if (first_step_ && cycle_count_ != num_cycles_) {
                             rf_final_.translation()(1) -= step_lateral_;
                             first_step_ = false;
                         }
-                        rf_final_.translation()(2) -= step_height_;
+                        rf_final_.translation()(2) = 0.0;
                         rf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
-                        rh_init_ = controller->robot()->framePosition(controller->tsid()->data(), controller->task<tsid::tasks::TaskSE3Equality>("rh")->frame_id());
+                        rh_init_ = controller->get_se3_ref("rh");
                         rh_final_ = rh_init_;
-                        rh_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
+                        rh_final_.translation()(0) = rf_final_.translation()(0) + 0.3;
+                        rh_final_.translation()(1) = rf_final_.translation()(1) - 0.3;
                         begin_ = false;
                         index_ = 0;
                         if (first_step_)
                             first_step_ = false;
                     }
                     if (index_ < std::floor(transition_duration_ / dt_) && sensor_data.at("rf_force")(2) < force_treshold_) {
-                        set_se3_ref(rf_init_, rf_final_, "rf", "contact_rfoot", transition_duration_, index_);
+                        set_se3_ref(rf_init_, rf_final_, "rf_sole", "contact_rfoot", transition_duration_, index_);
                         set_se3_ref(rh_init_, rh_final_, "rh", "", transition_duration_, index_);
                         index_++;
                     }

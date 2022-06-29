@@ -47,34 +47,27 @@ namespace inria_wbc {
                 pinocchio::SE3 rf_init_, rf_final_;
 
                 int index_ = 0;
-                int remove_contact_index_ = 0;
+                int remove_contact_index_ = 0; //time index for when to remove the contact
                 int time_index_ = 0;
 
+                bool first_step_ = true;
                 bool begin_ = true;
                 int state_ = -1;
                 int next_state_ = States::GO_TO_RF;
-                std::string left_ankle_name_;
-                std::string right_ankle_name_;
-                bool first_step_ = true;
+
+
+                std::string left_sole_name_;
+                std::string right_sole_name_;
                 bool remove_contacts_ = true;
                 int num_cycles_ = -1;
                 int cycle_count_ = 0;
                 float com_percentage_ref_ = 0.5;
                 float com_percentage_foot_up_ = 0.5;
-                float left_sole_lyp_ = 0.0;
-                float left_sole_lyn_ = 0.0;
-                float right_sole_lyp_ = 0.0;
-                float right_sole_lyn_ = 0.0;
                 bool send_vel_acc_ = false;
-
                 bool one_foot_ = false;
-
                 float force_treshold_ = inria_wbc::estimators::FMIN;
 
-                float internal_rf_border_ = 0.0;
-                float external_rf_border_ = 0.0;
-                float internal_lf_border_ = 0.0;
-                float external_lf_border_ = 0.0;
+
 
                 enum States {
                     GO_TO_RF = 0,

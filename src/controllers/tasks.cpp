@@ -64,7 +64,7 @@ namespace inria_wbc {
             // we need to check if this is a joint or a frame
             bool joint = robot->model().existJointName(tracked);
             bool body = robot->model().existBodyName(tracked);
-            bool frame = robot->model().existFrame(tracked); 
+            bool frame = robot->model().existFrame(tracked);
             if (joint && body)
                 throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
             if (!joint && !body && !frame)
@@ -396,7 +396,7 @@ namespace inria_wbc {
                 IWBC_ERROR("cp inequality bound : factor should be more than 1.0");
 
             // create the task
-            auto task = std::make_shared<tsid::tasks::TaskCapturePointInequality>(task_name, *robot, factor*dt);
+            auto task = std::make_shared<tsid::tasks::TaskCapturePointInequality>(task_name, *robot, factor * dt);
             task->setSafetyMargin(x_margin, y_margin);
             task->setSupportLimitsXAxis(x_min, x_max);
             task->setSupportLimitsYAxis(y_min, y_max);
@@ -420,7 +420,7 @@ namespace inria_wbc {
 
             // parse yaml
             auto kp = IWBC_CHECK(node["kp"].as<double>());
-            auto joint_name = IWBC_CHECK(node["joint"].as<std::string>());
+            auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
             auto lxn = IWBC_CHECK(node["lxn"].as<double>());
             auto lyn = IWBC_CHECK(node["lyn"].as<double>());
             auto lxp = IWBC_CHECK(node["lxp"].as<double>());
@@ -431,7 +431,14 @@ namespace inria_wbc {
             auto fmin = IWBC_CHECK(node["fmin"].as<double>());
             auto fmax = IWBC_CHECK(node["fmax"].as<double>());
             IWBC_ASSERT(normal.size() == 3, "normal size:", normal.size());
-            IWBC_ASSERT(robot->model().existFrame(joint_name), joint_name, " does not exist!");
+
+            bool joint = robot->model().existJointName(tracked);
+            bool body = robot->model().existBodyName(tracked);
+            bool frame = robot->model().existFrame(tracked);
+            if (joint && body)
+                throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
+            if (!joint && !body && !frame)
+                throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
 
             // create the task
             Matrix3x contact_points(3, 4);
@@ -439,10 +446,17 @@ namespace inria_wbc {
                 -lyn, lyp, -lyn, lyp,
                 lz, lz, lz, lz;
             Eigen::Vector3d contact_normal(normal.data());
-            auto contact_task = std::make_shared<tsid::contacts::Contact6dExt>(task_name, *robot, joint_name, contact_points, contact_normal, mu, fmin, fmax);
+            auto contact_task = std::make_shared<tsid::contacts::Contact6dExt>(task_name, *robot, tracked, contact_points, contact_normal, mu, fmin, fmax);
             contact_task->Kp(kp * Vector::Ones(6));
             contact_task->Kd(2.0 * contact_task->Kp().cwiseSqrt());
-            auto contact_ref = robot->position(tsid->data(), robot->model().getJointId(joint_name));
+
+            pinocchio::SE3 contact_ref;
+
+            if (joint)
+                contact_ref = robot->position(tsid->data(), robot->model().getJointId(tracked));
+            else
+                contact_ref = robot->framePosition(tsid->data(), robot->model().getFrameId(tracked));
+
             contact_task->Contact6d::setReference(contact_ref);
 
             // add the task

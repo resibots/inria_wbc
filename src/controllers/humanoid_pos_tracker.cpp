@@ -157,13 +157,14 @@ namespace inria_wbc {
 
             std::string left_ankle_name, right_ankle_name;
             std::vector<boost::optional<Eigen::Vector2d>> cops;
-            
+
             if (sensor_data.find("lf_force") != sensor_data.end() && sensor_data.find("rf_force") != sensor_data.end()
                 && sensor_data.find("lf_torque") != sensor_data.end() && sensor_data.find("rf_torque") != sensor_data.end()) {
                 // we retrieve the tracked frame from the contact task as the frames have different names in different robots
                 // the ankle = where is the f/t sensor
-                left_ankle_name = robot_->model().frames[contact("contact_lfoot")->getMotionTask().frame_id()].name;
-                right_ankle_name = robot_->model().frames[contact("contact_rfoot")->getMotionTask().frame_id()].name;
+
+                left_ankle_name = robot_->model().frames[task<tsid::tasks::TaskSE3Equality>("lh")->frame_id()].name;
+                right_ankle_name = robot_->model().frames[task<tsid::tasks::TaskSE3Equality>("rh")->frame_id()].name;
 
                 // estimate the CoP / ZMP
                 cops = _cop_estimator.update(com_ref.getValue().head(2),
@@ -229,7 +230,8 @@ namespace inria_wbc {
                     stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[1].value(),
                         model_frame_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
-                    contact("contact_lfoot")->setReference(lf_contact_sample);
+                    if (robot_->model().frames[contact("contact_lfoot")->getMotionTask().frame_id()].name == left_ankle_name)
+                        contact("contact_lfoot")->setReference(lf_contact_sample);
                 }
 
                 //right ankle_admittance
@@ -237,7 +239,8 @@ namespace inria_wbc {
                     stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[2].value(),
                         model_frame_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
-                    contact("contact_rfoot")->setReference(rf_contact_sample);
+                    if (robot_->model().frames[contact("contact_rfoot")->getMotionTask().frame_id()].name == right_ankle_name)
+                        contact("contact_rfoot")->setReference(rf_contact_sample);
                 }
 
                 //foot force difference admittance

@@ -555,6 +555,13 @@ int main(int argc, char* argv[])
                                 << ref.getDerivative().transpose() << " "
                                 << ref.getSecondDerivative().transpose() << std::endl;
                 }
+                else if (x.first.find("contact_") != std::string::npos) // e.g. task_lh
+                {
+                    auto ref = controller_pos->contact(x.first)->getMotionTask().getReference();
+                    (*x.second) << ref.getValue().transpose() << " "
+                                << ref.getDerivative().transpose() << " "
+                                << ref.getSecondDerivative().transpose() << std::endl;
+                }
                 else if (robot->body_node(x.first) != nullptr) {
                     pinocchio::SE3 frame;
                     frame.rotation() = robot->body_pose(x.first).rotation();
