@@ -285,6 +285,9 @@ int main(int argc, char* argv[])
         std::vector<std::shared_ptr<robot_dart::Robot>> spheres;
         bool is_colliding = false;
 
+        robot->set_draw_axis("leg_right_6_link");
+        robot->set_draw_axis("leg_left_6_link");
+
         while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
 
             if (vm["damage"].as<bool>()) {
@@ -506,6 +509,11 @@ int main(int argc, char* argv[])
                 else if (x.first == "ft")
                     (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
                                 << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
+                else if (x.first == "ft_sol")
+                    (*x.second) << controller_pos->force_torque_from_solution("contact_lfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_left_6_link")].mass(), "left_sole_link").tail(3).transpose() << " "
+                                << controller_pos->force_torque_from_solution("contact_lfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_left_6_link")].mass(), "left_sole_link").head(3).transpose() << " "
+                                << controller_pos->force_torque_from_solution("contact_rfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_right_6_link")].mass(), "right_sole_link").tail(3).transpose() << " "
+                                << controller_pos->force_torque_from_solution("contact_rfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_right_6_link")].mass(), "right_sole_link").head(3).transpose() << std::endl;
                 else if (x.first == "force") // the cop according to controller
                     (*x.second) << ft_sensor_left->force().transpose() << " "
                                 << controller->lf_force_filtered().transpose() << " "

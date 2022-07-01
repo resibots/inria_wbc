@@ -187,11 +187,11 @@ namespace inria_wbc {
             for (auto it = task_list.begin(); it != task_list.end(); ++it) {
                 auto name = IWBC_CHECK(it->first.as<std::string>());
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
-                if (type == "contact-force-equality"){
+                if (type == "contact-force-equality") {
                     auto task = tasks::make_contact_force_equality(robot_, tsid_, name, it->second, config, contacts_);
                     tasks_[name] = task;
                     activated_tasks_.push_back(name);
-                    }
+                }
                 if (verbose_)
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
                 task_count++;
@@ -276,7 +276,7 @@ namespace inria_wbc {
         }
         //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
         //when we supress foot mass it corresponds to F/T sensor data
-        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& contact_name, bool remove_foot_mass, const std::string& sole_frame)
+        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& contact_name, float foot_mass, const std::string& sole_frame)
         {
             Eigen::Matrix<double, 6, 1> force_tsid;
             force_tsid.setZero();
@@ -286,20 +286,18 @@ namespace inria_wbc {
             auto generatorMatrix = contact(contact_name)->Contact6d::getForceGeneratorMatrix();
             force_tsid = generatorMatrix * contact_force;
 
-            if (remove_foot_mass) {
+            if (foot_mass > 1e-5) {
                 // we retrieve the tracked frame from the contact task
-                auto ankle_frame = robot_->model().frames[contact(contact_name)->getMotionTask().frame_id()].name;
-                IWBC_ASSERT(robot_->model().existFrame(ankle_frame), "Frame " + ankle_frame + " does not exist in model.");
+                auto contact_frame = robot_->model().frames[contact(contact_name)->getMotionTask().frame_id()].name;
+                IWBC_ASSERT(robot_->model().existFrame(contact_frame), "Frame " + contact_frame + " does not exist in model.");
                 IWBC_ASSERT(robot_->model().existFrame(sole_frame), "Frame " + sole_frame + " does not exist in model.");
 
-                auto ankle_world = tsid_->data().oMi[robot_->model().getJointId(ankle_frame)];
+                auto contact_world = tsid_->data().oMi[robot_->model().getJointId(contact_frame)];
                 auto sole_world = tsid_->data().oMf[robot_->model().getFrameId(sole_frame)];
 
-                auto foot_mass = robot_->model().inertias[robot_->model().getJointId(ankle_frame)].mass();
-                // auto contact_normal = contact(contact_name)->getContactNormal();
                 force_tsid.head(3) += foot_mass * robot_->model().gravity.linear();
                 Eigen::Vector3d tmp = force_tsid.head(3);
-                force_tsid.tail(3) -= (ankle_world.translation() - sole_world.translation()).cross(tmp);
+                force_tsid.tail(3) -= (contact_world.translation() - sole_world.translation()).cross(tmp);
             }
             return force_tsid;
         }
