@@ -66,8 +66,7 @@ namespace inria_wbc {
                 bool send_vel_acc_ = false;
                 bool one_foot_ = false;
                 float force_treshold_ = inria_wbc::estimators::FMIN;
-
-
+                float error_cop_ = 0.0;
 
                 enum States {
                     GO_TO_RF = 0,

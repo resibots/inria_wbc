@@ -59,6 +59,10 @@ namespace inria_wbc {
                 if (one_foot_ && !remove_contacts_)
                     IWBC_ERROR("remove_contacts_ should be true to put Talos on one foot");
 
+                error_cop_ = IWBC_CHECK(c["error_cop"].as<float>());
+                if (error_cop_ < 0.0)
+                    IWBC_ERROR("error_cop should be >= 0");
+
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
 
@@ -142,6 +146,10 @@ namespace inria_wbc {
                     IWBC_ERROR("ActiveWalk2 needs the LF force");
 
                 auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
+                Eigen::Vector2d cop = Eigen::Vector2d::Zero();
+                if (controller->cop())
+                    cop = controller->cop().value();
+                bool keep_sending_com_traj = true;
 
                 //GO_TO_RF: PUT COM ON RF
                 if (state_ == States::GO_TO_RF) {
@@ -150,8 +158,8 @@ namespace inria_wbc {
                         com_final_ = com_init_;
                         com_final_(0) = controller->model_frame_pos(right_sole_name_).translation()(0);
 
-                        auto internal_rf_border =  controller->model_frame_pos("v_right_sole_internal_border").translation()[1];
-                        auto external_rf_border =  controller->model_frame_pos("v_right_sole_external_border").translation()[1];
+                        auto internal_rf_border = controller->model_frame_pos("v_right_sole_internal_border").translation()[1];
+                        auto external_rf_border = controller->model_frame_pos("v_right_sole_external_border").translation()[1];
                         com_final_(1) = internal_rf_border + com_percentage_ref_ * (external_rf_border - internal_rf_border);
                         com_foot_up_ = internal_rf_border + com_percentage_foot_up_ * (external_rf_border - internal_rf_border);
 
@@ -165,9 +173,22 @@ namespace inria_wbc {
                         remove_contact_index_ = 0;
                     }
 
+                    if (controller->cop()) {
+                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
+                        std::cout << (cop - com_final_.head(2)).norm() << std::endl;
+                        // std::cout << cop(1) << " "  << com_foot_up_ << std::endl;
+                    }
+
                     if (index_ < std::floor(traj_foot_duration_ / dt_)) {
-                        auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
-                        if (ref(1) < com_foot_up_) {
+                        bool lift_foot_up = false;
+                        if (keep_sending_com_traj) {
+                            auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
+                            lift_foot_up = ref(1) < com_foot_up_;
+                        }
+                        else {
+                            lift_foot_up = true;
+                        }
+                        if (lift_foot_up) {
                             if (remove_contacts_ && controller->activated_contacts_forces().find("contact_lfoot") != controller->activated_contacts_forces().end()) {
                                 controller->remove_contact("contact_lfoot");
                                 remove_contact_index_ = index_;
@@ -234,7 +255,10 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (index_ < std::floor(transition_duration_ / dt_)) {
+                    if (controller->cop())
+                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
+
+                    if (index_ < std::floor(transition_duration_ / dt_) && keep_sending_com_traj) {
                         set_com_ref(com_init_, com_final_, transition_duration_, index_);
                         index_++;
                     }
@@ -250,8 +274,8 @@ namespace inria_wbc {
                         com_final_ = com_init_;
                         com_final_(0) = controller->model_frame_pos(left_sole_name_).translation()(0);
 
-                        auto internal_lf_border =  controller->model_frame_pos("v_left_sole_internal_border").translation()[1];
-                        auto external_lf_border =  controller->model_frame_pos("v_left_sole_external_border").translation()[1];
+                        auto internal_lf_border = controller->model_frame_pos("v_left_sole_internal_border").translation()[1];
+                        auto external_lf_border = controller->model_frame_pos("v_left_sole_external_border").translation()[1];
                         com_final_(1) = internal_lf_border + com_percentage_ref_ * (external_lf_border - internal_lf_border);
                         com_foot_up_ = internal_lf_border + com_percentage_foot_up_ * (external_lf_border - internal_lf_border);
 
@@ -265,9 +289,20 @@ namespace inria_wbc {
                         remove_contact_index_ = 0;
                     }
 
+                    if (controller->cop()) {
+                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
+                    }
+
                     if (index_ < std::floor(traj_foot_duration_ / dt_)) {
-                        auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
-                        if (ref(1) > com_foot_up_) {
+                        bool lift_foot_up = false;
+                        if (keep_sending_com_traj) {
+                            auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
+                            lift_foot_up = ref(1) < com_foot_up_;
+                        }
+                        else {
+                            lift_foot_up = true;
+                        }
+                        if (lift_foot_up) {
                             if (remove_contacts_ && controller->activated_contacts_forces().find("contact_rfoot") != controller->activated_contacts_forces().end()) {
                                 controller->remove_contact("contact_rfoot");
                                 remove_contact_index_ = index_;
