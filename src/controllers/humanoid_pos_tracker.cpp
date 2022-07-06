@@ -163,8 +163,8 @@ namespace inria_wbc {
                 // we retrieve the tracked frame from the contact task as the frames have different names in different robots
                 // the ankle = where is the f/t sensor
 
-                left_ankle_name = robot_->model().frames[task<tsid::tasks::TaskSE3Equality>("lh")->frame_id()].name;
-                right_ankle_name = robot_->model().frames[task<tsid::tasks::TaskSE3Equality>("rh")->frame_id()].name;
+                left_ankle_name = robot_->model().frames[task<tsid::tasks::TaskSE3Equality>("lf")->frame_id()].name;
+                right_ankle_name = robot_->model().frames[task<tsid::tasks::TaskSE3Equality>("rf")->frame_id()].name;
 
                 // estimate the CoP / ZMP
                 cops = _cop_estimator.update(com_ref.getValue().head(2),
