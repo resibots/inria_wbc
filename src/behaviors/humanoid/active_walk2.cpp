@@ -62,6 +62,7 @@ namespace inria_wbc {
                 error_cop_ = IWBC_CHECK(c["error_cop"].as<float>());
                 if (error_cop_ < 0.0)
                     IWBC_ERROR("error_cop should be >= 0");
+                std::cout << "error_cop_ " << error_cop_ << std::endl;
 
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
@@ -154,6 +155,7 @@ namespace inria_wbc {
                 //GO_TO_RF: PUT COM ON RF
                 if (state_ == States::GO_TO_RF) {
                     if (begin_) {
+                        std::cout << "GO_TO_RF" << std::endl;
                         com_init_ = controller->com();
                         com_final_ = com_init_;
                         com_final_(0) = controller->model_frame_pos(right_sole_name_).translation()(0);
@@ -175,8 +177,8 @@ namespace inria_wbc {
 
                     if (controller->cop()) {
                         keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
-                        std::cout << (cop - com_final_.head(2)).norm() << std::endl;
-                        // std::cout << cop(1) << " "  << com_foot_up_ << std::endl;
+                        if (k++ % 6 == 0)
+                            file_ << "GO_TO_RF diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
                     }
 
                     if (index_ < std::floor(traj_foot_duration_ / dt_)) {
@@ -186,6 +188,12 @@ namespace inria_wbc {
                             lift_foot_up = ref(1) < com_foot_up_;
                         }
                         else {
+                            if (first_time_) {
+                                std::cout << "stop!" << std::endl;
+                                std::cout << "com_final " << com_final_.transpose() << std::endl;
+                                std::cout << "current_cop " << cop.transpose() << std::endl;
+                                first_time_ = false;
+                            }
                             lift_foot_up = true;
                         }
                         if (lift_foot_up) {
@@ -201,6 +209,8 @@ namespace inria_wbc {
                         index_++;
                     }
                     else {
+                        keep_sending_com_traj = true;
+                        first_time_ = true;
                         state_ = States::LIFT_DOWN_LF;
                         begin_ = true;
                     }
@@ -210,6 +220,8 @@ namespace inria_wbc {
                 if (state_ == States::LIFT_DOWN_LF) {
 
                     if (begin_) {
+                        std::cout << "LIFT_DOWN_LF" << std::endl;
+
                         lf_init_ = controller->model_frame_pos(left_sole_name_);
                         lf_final_ = lf_init_;
                         if (first_step_ && cycle_count_ != num_cycles_)
@@ -248,6 +260,7 @@ namespace inria_wbc {
                 //GO_TO_MIDDLE: PUT COM BETWEEN THE TWO FEET
                 if (state_ == States::GO_TO_MIDDLE) {
                     if (begin_) {
+                        std::cout << "GO_TO_MIDDLE" << std::endl;
                         com_init_ = controller->com();
                         com_final_ = com_init_;
                         com_final_.head(2) = 0.5 * (controller->model_frame_pos(left_sole_name_).translation().head(2) + controller->model_frame_pos(right_sole_name_).translation().head(2));
@@ -255,14 +268,23 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (controller->cop())
+                    if (controller->cop()) {
                         keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
+                        if (k++ % 6 == 0)
+                            file_ << "GO_TO_MIDDLE diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
+                    }
 
                     if (index_ < std::floor(transition_duration_ / dt_) && keep_sending_com_traj) {
                         set_com_ref(com_init_, com_final_, transition_duration_, index_);
                         index_++;
                     }
                     else {
+                        if (!keep_sending_com_traj && next_state_ != States::GO_TO_MIDDLE) {
+                            std::cout << "stop!" << std::endl;
+                            std::cout << "com_final " << com_final_.transpose() << std::endl;
+                            std::cout << "current_cop " << cop.transpose() << std::endl;
+                        }
+                        keep_sending_com_traj = true;
                         state_ = next_state_;
                         begin_ = true;
                     }
@@ -270,6 +292,7 @@ namespace inria_wbc {
 
                 if (state_ == States::GO_TO_LF) {
                     if (begin_) {
+                        std::cout << "GO_TO_LF" << std::endl;
                         com_init_ = controller->com();
                         com_final_ = com_init_;
                         com_final_(0) = controller->model_frame_pos(left_sole_name_).translation()(0);
@@ -291,15 +314,23 @@ namespace inria_wbc {
 
                     if (controller->cop()) {
                         keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
+                        if (k++ % 6 == 0)
+                            file_ << "GO_TO_LF diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
                     }
 
                     if (index_ < std::floor(traj_foot_duration_ / dt_)) {
                         bool lift_foot_up = false;
                         if (keep_sending_com_traj) {
                             auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
-                            lift_foot_up = ref(1) < com_foot_up_;
+                            lift_foot_up = ref(1) > com_foot_up_;
                         }
                         else {
+                            if (first_time_) {
+                                std::cout << "stop!" << std::endl;
+                                std::cout << "com_final " << com_final_.transpose() << std::endl;
+                                std::cout << "current_cop " << cop.transpose() << std::endl;
+                                first_time_ = false;
+                            }
                             lift_foot_up = true;
                         }
                         if (lift_foot_up) {
@@ -315,8 +346,10 @@ namespace inria_wbc {
                         index_++;
                     }
                     else {
+                        keep_sending_com_traj = true;
                         state_ = States::LIFT_DOWN_RF;
                         begin_ = true;
+                        first_time_ = true;
                     }
                 }
 

@@ -50,11 +50,11 @@ namespace inria_wbc {
                 int remove_contact_index_ = 0; //time index for when to remove the contact
                 int time_index_ = 0;
 
+                bool first_time_ = true;
                 bool first_step_ = true;
                 bool begin_ = true;
                 int state_ = -1;
                 int next_state_ = States::GO_TO_RF;
-
 
                 std::string left_sole_name_;
                 std::string right_sole_name_;
@@ -67,6 +67,9 @@ namespace inria_wbc {
                 bool one_foot_ = false;
                 float force_treshold_ = inria_wbc::estimators::FMIN;
                 float error_cop_ = 0.0;
+
+                std::ofstream file_{"/home/pal/my_file"};
+                int k = 0;
 
                 enum States {
                     GO_TO_RF = 0,
