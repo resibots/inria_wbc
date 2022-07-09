@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
                     auto spherical_members = controller->collision_check().spherical_members();
                     auto sphere_color = dart::Color::Green(0.5);
                     Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
-                   // translate_ghost(0) -= 1;
+                    translate_ghost(0) -= 1;
 
                     if (init_model_sphere_collisions == false) {
                         spheres = inria_wbc::robot_dart::create_spherical_members(spherical_members, simu, sphere_color);
