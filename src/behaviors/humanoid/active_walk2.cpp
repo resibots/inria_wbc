@@ -1,5 +1,6 @@
 #include "inria_wbc/behaviors/humanoid/active_walk2.hpp"
 #include "inria_wbc/estimators/cop.hpp"
+#include "inria_wbc/stabilizers/stabilizer.hpp"
 
 namespace inria_wbc {
     namespace behaviors {
@@ -18,6 +19,8 @@ namespace inria_wbc {
                 IWBC_ASSERT(h_controller->has_task("com"), "active_walk: a com task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "active_walk: a contact_lfoot task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "active_walk: a contact_rfoot task is required");
+                IWBC_ASSERT(h_controller->has_task("cop"), "active_walk: a cop task is required");
+                // IWBC_ASSERT(h_controller->has_task("cop_rfoot"), "active_walk: a cop_rfoot task is required");
 
                 // load the parameters
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
@@ -63,6 +66,8 @@ namespace inria_wbc {
                 if (error_cop_ < 0.0)
                     IWBC_ERROR("error_cop should be >= 0");
                 std::cout << "error_cop_ " << error_cop_ << std::endl;
+
+                activate_error_cop_ = IWBC_CHECK(c["activate_error_cop"].as<bool>());
 
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
@@ -113,14 +118,14 @@ namespace inria_wbc {
                 sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(init, final, dt_, trajectory_duration, index));
                 sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(init, final, dt_, trajectory_duration, index));
                 if (send_vel_acc_) {
-                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(ref, task_name);
+                    std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(ref, task_name);
                     if (contact_name != "")
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(ref, contact_name);
+                        std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(ref, contact_name);
                 }
                 else {
-                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref, task_name);
+                    std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref, task_name);
                     if (contact_name != "")
-                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(sample_ref, contact_name);
+                        std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(sample_ref, contact_name);
                 }
             }
 
@@ -132,10 +137,18 @@ namespace inria_wbc {
                 sample_ref.setDerivative(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(init, final, dt_, trajectory_duration, index));
                 sample_ref.setSecondDerivative(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(init, final, dt_, trajectory_duration, index));
                 if (send_vel_acc_)
-                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(sample_ref);
+                    std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(sample_ref);
                 else
-                    std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(ref);
+                    std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(ref);
                 return ref;
+            }
+
+            // cop = (left_cop*left_force + right_cop*right_force)*(1/(left_force+right_force))
+            // here we have global cop from reference, we can fix the foot cop (other_foot_cop) that will stay on the ground to the middle of the foot.
+            // result is the opposite foot cop that will be lifted
+            Eigen::Vector2d compute_foot_cop(const Eigen::Vector2d& other_foot_cop, const Eigen::Vector2d& total_cop, double other_foot_f, double f)
+            {
+                return (total_cop * (other_foot_f + f) - other_foot_cop * other_foot_f) * (1 / f);
             }
 
             void ActiveWalk2::update(const controllers::SensorData& sensor_data)
@@ -176,7 +189,7 @@ namespace inria_wbc {
                     }
 
                     if (controller->cop()) {
-                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
+                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_ || !activate_error_cop_;
                         if (k++ % 6 == 0)
                             file_ << "GO_TO_RF diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
                     }
@@ -199,6 +212,7 @@ namespace inria_wbc {
                         if (lift_foot_up) {
                             if (remove_contacts_ && controller->activated_contacts_forces().find("contact_lfoot") != controller->activated_contacts_forces().end()) {
                                 controller->remove_contact("contact_lfoot");
+                                // controller->set_task_weight("cop_lfoot", cop_tasks_weight_);
                                 remove_contact_index_ = index_;
                             }
                             if (time_index_ < std::floor(traj_foot_duration_ / dt_ - remove_contact_index_)) {
@@ -242,8 +256,10 @@ namespace inria_wbc {
                         index_++;
                     }
                     else {
-                        if (remove_contacts_)
+                        if (remove_contacts_) {
                             controller->add_contact("contact_lfoot");
+                            // controller->set_task_weight("cop_lfoot", cop_tasks_weight_);
+                        }
 
                         if (cycle_count_ == num_cycles_) {
                             next_state_ = States::GO_TO_MIDDLE;
@@ -269,7 +285,7 @@ namespace inria_wbc {
                     }
 
                     if (controller->cop()) {
-                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
+                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_ || !activate_error_cop_;
                         if (k++ % 6 == 0)
                             file_ << "GO_TO_MIDDLE diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
                     }
@@ -313,7 +329,7 @@ namespace inria_wbc {
                     }
 
                     if (controller->cop()) {
-                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_;
+                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_ || !activate_error_cop_;
                         if (k++ % 6 == 0)
                             file_ << "GO_TO_LF diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
                     }
@@ -336,6 +352,7 @@ namespace inria_wbc {
                         if (lift_foot_up) {
                             if (remove_contacts_ && controller->activated_contacts_forces().find("contact_rfoot") != controller->activated_contacts_forces().end()) {
                                 controller->remove_contact("contact_rfoot");
+                                // controller->set_task_weight("cop_rfoot", cop_tasks_weight_);
                                 remove_contact_index_ = index_;
                             }
                             if (time_index_ < std::floor(traj_foot_duration_ / dt_ - remove_contact_index_)) {
@@ -380,9 +397,10 @@ namespace inria_wbc {
                         index_++;
                     }
                     else {
-                        if (remove_contacts_)
+                        if (remove_contacts_) {
                             controller->add_contact("contact_rfoot");
-
+                            // controller->set_task_weight("cop_rfoot", cop_tasks_weight_);
+                        }
                         begin_ = true;
                         cycle_count_++;
 
@@ -393,6 +411,42 @@ namespace inria_wbc {
                         next_state_ = States::GO_TO_RF;
                     }
                 }
+
+                Eigen::Matrix<double, 6, 1> left_fref, right_fref;
+                left_fref.setZero();
+                right_fref.setZero();
+
+                std::map<std::string, pinocchio::SE3> contact_se3_ref;
+                auto ac = controller->activated_contacts();
+                for (auto& contact_name : ac) {
+                    pinocchio::SE3 se3;
+                    auto contact_ext = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(controller->contact(contact_name));
+                    auto contact_pos = contact_ext->getMotionTask().getReference().getValue();
+                    tsid::math::vectorToSE3(contact_pos, se3);
+                    contact_se3_ref[contact_name] = se3;
+                }
+
+                auto zmp = stabilizer::com_to_zmp(controller->get_full_com_ref());
+                Eigen::Vector3d zmp_ref = controller->get_com_ref();
+                zmp_ref(2) = 0.0;
+                controller->set_cop_ref(zmp_ref, "cop");
+                // auto alpha = stabilizer::zmp_distributor(controller->pinocchio_total_model_mass(), zmp, contact_se3_ref, controller->activated_contacts(), left_fref, right_fref);
+
+                // if (state_ == States::GO_TO_LF) {
+
+                //     auto lcop = compute_foot_cop(controller->get_cop_ref("cop_rfoot").head(2), zmp, right_fref(2), left_fref(2));
+                //     Eigen::Vector3d lcop_ref = Eigen::Vector3d::Zero();
+                //     lcop_ref.head(2) = lcop;
+                //     controller->set_cop_ref(lcop_ref, "cop_lfoot");
+                // }
+                // if (state_ == States::GO_TO_RF) {
+                //     auto rcop = compute_foot_cop(controller->get_cop_ref("cop_lfoot").head(2), zmp, left_fref(2), right_fref(2));
+                //     Eigen::Vector3d rcop_ref = Eigen::Vector3d::Zero();
+                //     rcop_ref.head(2) = rcop;
+                //     controller->set_cop_ref(rcop_ref, "cop_rfoot");
+                // }
+                // std::cout << "lcop " << controller->get_cop_ref("cop_lfoot").head(2).transpose() << " rcop " << controller->get_cop_ref("cop_rfoot").head(2).transpose() << " zmp " << zmp.transpose() << std::endl;
+                // // controller->set_cop_ref(controller->get_se3_ref("lf_sole").translation(), "cop_lfoot");
 
                 controller->update(sensor_data);
             }

@@ -285,9 +285,6 @@ int main(int argc, char* argv[])
         std::vector<std::shared_ptr<robot_dart::Robot>> spheres;
         bool is_colliding = false;
 
-        robot->set_draw_axis("leg_right_6_link");
-        robot->set_draw_axis("leg_left_6_link");
-
         while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
 
             if (vm["damage"].as<bool>()) {
@@ -498,6 +495,8 @@ int main(int argc, char* argv[])
                     (*x.second) << cmd.transpose() << std::endl;
                 else if (x.first == "task_com")
                     (*x.second) << controller_pos->get_com_ref().transpose() << std::endl;
+                else if (x.first == "task_cop")
+                    (*x.second) << controller_pos->get_cop_ref("cop").transpose() << std::endl;
                 else if (x.first == "tau")
                     (*x.second) << controller->tau().transpose() << std::endl;
                 else if (x.first == "com") // the real com

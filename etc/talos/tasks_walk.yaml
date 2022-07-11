@@ -16,12 +16,12 @@ torso:
     weight: 10.0
     kp: 30.0
     mask: 000110
-base_link:
-    type: se3
-    tracked: base_link
-    weight: 10.0
-    kp: 30.0
-    mask: 000111
+# base_link:
+#     type: se3
+#     tracked: base_link
+#     weight: 10.0
+#     kp: 30.0
+#     mask: 000111
 lf:
     type: se3
     tracked: leg_left_6_joint
@@ -68,15 +68,20 @@ actuation_bounds:
     type: actuation-bounds
     weight: 10000
 # capture_point_bounds:
-#     type: cp-inequality
+#     type: contact-cp-inequality
+#     contact_names: [contact_lfoot, contact_rfoot]
 #     weight: 10000
 #     factor: 1.0
 #     x_margin: 0.02
 #     y_margin: 0.02
-#     x_max: 0.0720226
-#     x_min: -0.1279774
-#     y_max: 0.154
-#     y_min: -0.154
+#     frame_x_max: 0.0720226
+#     frame_x_min: -0.1279774
+#     frame_y_max: 0.154
+#     frame_y_min: -0.154
+cop:
+    type: contact-cop-equality
+    weight: 0.0
+    contact_name: [contact_lfoot, contact_rfoot]
 contact_lfoot:
     type: contact
     tracked: v_left_sole

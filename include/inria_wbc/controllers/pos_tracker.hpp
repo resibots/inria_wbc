@@ -27,7 +27,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(t->name() == it->first, "Task name error (tsid)[", t->name(), "] vs [", it->first, "]");
                 return t;
             }
-            std::shared_ptr<tsid::contacts::Contact6dExt> contact(const std::string& str) const
+            std::shared_ptr<tsid::contacts::ContactBase> contact(const std::string& str) const
             {
                 auto it = contacts_.find(str);
                 IWBC_ASSERT(it != contacts_.end(), "Contact [", str, "] not found");
@@ -39,6 +39,7 @@ namespace inria_wbc {
             std::shared_ptr<tsid::tasks::TaskMEquality> momentum_task() { return task<tsid::tasks::TaskMEquality>("momentum"); }
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return task<tsid::tasks::TaskComEquality>("com"); }
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
+            std::shared_ptr<tsid::tasks::TaskCopEquality> cop_task(const std::string& str) { return task<tsid::tasks::TaskCopEquality>(str); }
 
             double cost(const std::string& task_name) const override { return Controller::cost(task<tsid::tasks::TaskBase>(task_name)); }
             double objective_value() const { return solver_->getObjectiveValue(); }
@@ -46,9 +47,11 @@ namespace inria_wbc {
             pinocchio::SE3 get_se3_ref(const std::string& task_name);
             tsid::trajectories::TrajectorySample get_full_se3_ref(const std::string& task_name) { return se3_task(task_name)->getReference(); }
             // we do not return the velocity for now
+            const tsid::math::Vector3 get_cop_ref(const std::string& task_name) { return cop_task(task_name)->getReference(); }
             const tsid::math::Vector3 get_com_ref() { return com_task()->getReference().getValue(); }
             const tsid::trajectories::TrajectorySample get_full_com_ref() { return com_task()->getReference(); }
             const tsid::trajectories::TrajectorySample get_full_momentum_ref() { return momentum_task()->getReference(); }
+            void set_cop_ref(const tsid::math::Vector3& ref, const std::string& task_name) { cop_task(task_name)->setReference(ref); }
             void set_com_ref(const tsid::math::Vector3& ref) { com_task()->setReference(trajs::to_sample(ref)); }
             void set_com_ref(const tsid::trajectories::TrajectorySample& sample) { com_task()->setReference(sample); }
             void set_momentum_ref(const tsid::trajectories::TrajectorySample& sample) { momentum_task()->setReference(sample); }
@@ -76,7 +79,7 @@ namespace inria_wbc {
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>> tasks_;
             std::vector<std::string> activated_tasks_;
             // contacts are not tasks in tsid
-            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::Contact6dExt>> contacts_;
+            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> contacts_;
 
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
         };

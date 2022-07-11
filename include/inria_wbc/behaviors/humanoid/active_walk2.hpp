@@ -71,6 +71,8 @@ namespace inria_wbc {
                 std::ofstream file_{"/home/pal/my_file"};
                 int k = 0;
 
+                bool activate_error_cop_ = false;
+
                 enum States {
                     GO_TO_RF = 0,
                     GO_TO_MIDDLE_RF = 1,

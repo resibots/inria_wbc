@@ -19,14 +19,12 @@ namespace inria_wbc {
                 auto absolute = IWBC_CHECK(c["absolute"].as<bool>());
                 IWBC_ASSERT(mask.size() == 3, "The mask for the CoM should be 3-dimensional");
 
-
                 Eigen::VectorXd task_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_com_ref();
                 if (loop_)
                     if (absolute)
                         targets.push_back({task_init(0), task_init(1), task_init(2)});
                     else
                         targets.push_back({0., 0., 0.});
-       
 
                 Eigen::VectorXd start = task_init;
                 for (size_t i = 0; i < targets.size(); ++i) {
@@ -57,7 +55,7 @@ namespace inria_wbc {
                 if (loop_)
                     time_ = time_ % trajectory_.size();
                 else
-                    time_ = std::min(time_, (int)  trajectory_.size() - 1);
+                    time_ = std::min(time_, (int)trajectory_.size() - 1);
             }
         } // namespace humanoid
     } // namespace behaviors

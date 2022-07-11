@@ -174,9 +174,9 @@ namespace inria_wbc {
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
-                else if (type != "contact-force-equality") {
+                else if (type.find("contact-") == std::string::npos) {
                     // the task is added automatically to TSID by the factory
-                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config);
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, {});
                     tasks_[name] = task;
                     activated_tasks_.push_back(name);
                 }
@@ -187,8 +187,8 @@ namespace inria_wbc {
             for (auto it = task_list.begin(); it != task_list.end(); ++it) {
                 auto name = IWBC_CHECK(it->first.as<std::string>());
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
-                if (type == "contact-force-equality") {
-                    auto task = tasks::make_contact_force_equality(robot_, tsid_, name, it->second, config, contacts_);
+                if (type.find("contact-") != std::string::npos) {
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, contacts_);
                     tasks_[name] = task;
                     activated_tasks_.push_back(name);
                 }
@@ -239,7 +239,7 @@ namespace inria_wbc {
 
         void PosTracker::set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name)
         {
-            auto c = contact(contact_name);
+            auto c = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
             auto sample = trajs::to_sample(ref);
             c->setReference(sample);
         }
@@ -252,7 +252,7 @@ namespace inria_wbc {
 
         void PosTracker::set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name)
         {
-            auto c = contact(contact_name);
+            auto c = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
             c->setReference(sample);
         }
 
@@ -283,7 +283,7 @@ namespace inria_wbc {
 
             IWBC_ASSERT(activated_contacts_forces_.find(contact_name) != activated_contacts_forces_.end(), contact_name, " not in activated_contacts_forces_");
             auto contact_force = activated_contacts_forces_[contact_name];
-            auto generatorMatrix = contact(contact_name)->Contact6d::getForceGeneratorMatrix();
+            auto generatorMatrix = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name))->Contact6d::getForceGeneratorMatrix();
             force_tsid = generatorMatrix * contact_force;
 
             if (foot_mass > 1e-5) {

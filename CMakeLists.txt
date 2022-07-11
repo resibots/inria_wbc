@@ -30,7 +30,6 @@ set(INRIA_WBC_SOURCES
     src/behaviors/humanoid/move_com.cpp
     src/behaviors/humanoid/walk_on_spot.cpp
     src/behaviors/humanoid/walk.cpp
-    src/behaviors/humanoid/active_walk.cpp
     src/behaviors/humanoid/active_walk2.cpp
     src/behaviors/humanoid/clapping.cpp
     src/safety/torque_collision_detection.cpp
