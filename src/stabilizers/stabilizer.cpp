@@ -58,6 +58,27 @@ namespace inria_wbc {
             se3_sample.setSecondDerivative(aref_m);
         }
 
+        void cop_admittance(
+            double dt,
+            const Eigen::VectorXd& p,
+            const Eigen::Vector2d& cop_filtered,
+            const tsid::trajectories::TrajectorySample& model_current_com,
+            const Eigen::Vector3d& cop_ref,
+            Eigen::Vector3d& cop_out)
+        {
+            IWBC_ASSERT("you need 1 coefficient in p for cop admittance", p.size() == 2);
+
+            if (std::abs(cop_filtered(0)) >= 10 && std::abs(cop_filtered(1)) >= 10)
+                IWBC_ERROR("cop_admittance : something is wrong with input cop_filtered, check sensor measurment: ", std::abs(cop_filtered(0)), " ", std::abs(cop_filtered(1)));
+
+            Eigen::Vector3d cor = Eigen::Vector3d::Zero();
+            cor.head(2) = p.array() * (com_to_zmp(model_current_com) - cop_filtered).array();
+            std::cout << cor.transpose() << std::endl;
+            // std::cout <<  p.transpose() << std::endl;
+
+            cop_out = cop_ref - cor;
+        }
+
         //computes momentum according to cop, problem is that the robot doesn't go back to initial position after perturbation
         //because momentum task is actually controlling velocity and acceleration and not moment position ?
         //angular momentum vel is found to compensate for cop disturbance and then torso position doesn't go back to normal
@@ -102,8 +123,8 @@ namespace inria_wbc {
             momentum_sample.setDerivative(vref_m);
             momentum_sample.setSecondDerivative(aref_m);
         }
-        
-        //computes momentum based on imu angular velocity and model imu_link angular velocity 
+
+        //computes momentum based on imu angular velocity and model imu_link angular velocity
         void momentum_imu_admittance(
             double dt,
             const Eigen::VectorXd& p,

@@ -53,6 +53,21 @@ namespace inria_wbc {
          *  see Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
          *      by Stéphane Caron, Abderrahmane Kheddar, Olivier Tempier
         */
+
+        //Make the measured cop match the current desired cop by changing the cop ref
+        void cop_admittance(
+            double dt, // controller dt
+            const Eigen::VectorXd& p, // 6d proportional gains
+            const Eigen::Vector2d& cop_filtered, //filtered cop estimation
+            const tsid::trajectories::TrajectorySample& model_current_com,
+            const Eigen::Vector3d& cop_ref, //next cop reference
+            Eigen::Vector3d& cop_out); //out : modified com ref to give to tsid
+
+        /** Correct the roll and pitch angle of the ankle to force the foot cop to be in the middle of the foot
+         *  see Stair Climbing Stabilization of the HRP-4 Humanoid Robot using Whole-body Admittance Control
+         *      by Stéphane Caron, Abderrahmane Kheddar, Olivier Tempier
+        */
+
         void ankle_admittance(
             double dt, // controller dt
             const Eigen::VectorXd& p, // 6d proportional gains

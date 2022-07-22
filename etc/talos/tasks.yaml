@@ -51,6 +51,10 @@ com:
     weight: 1000.0
     kp: 300.0
     mask: 111
+cop:
+    type: contact-cop-equality
+    weight: 1
+    contact_name: [contact_lfoot, contact_rfoot]
 posture:
     type: posture
     weight: 1.75

@@ -162,6 +162,7 @@ namespace inria_wbc {
             }
 
             auto com_ref = com_task()->getReference();
+            auto cop_ref = cop_task("cop")->getReference();
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
@@ -216,6 +217,7 @@ namespace inria_wbc {
                 tsid::trajectories::TrajectorySample lf_se3_sample, lf_contact_sample, rf_se3_sample, rf_contact_sample;
                 tsid::trajectories::TrajectorySample com_sample, torso_sample;
                 tsid::trajectories::TrajectorySample model_current_com = stabilizer::data_to_sample(tsid_->data());
+                Eigen::Vector3d cop_out = Eigen::Vector3d::Zero();
 
                 const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
                 // com_admittance
@@ -223,9 +225,10 @@ namespace inria_wbc {
                     stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                     if (tasks_.find("cop") != tasks_.end()) {
-                        Eigen::Vector3d cop_final = com_sample.getValue();
-                        cop_final(2) = 0.0;
-                        set_cop_ref(cop_final, "cop");
+                        std::cout << "ref " << cop_ref.transpose() << std::endl;
+                        stabilizer::cop_admittance(dt_, _stabilizer_configs[behavior_type_].cop_gains, valid_cop.value(), model_current_com, cop_ref, cop_out);
+                        set_cop_ref(cop_out, "cop");
+                        std::cout << "out " << cop_out.transpose() << std::endl;
                     }
                 }
 
@@ -313,9 +316,7 @@ namespace inria_wbc {
             if (_use_stabilizer) {
                 set_com_ref(com_ref);
                 if (tasks_.find("cop") != tasks_.end()) {
-                    Eigen::Vector3d cop_final = com_ref.getValue();
-                    cop_final(2) = 0.0;
-                    set_cop_ref(cop_final, "cop");
+                    set_cop_ref(cop_ref, "cop");
                 }
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");

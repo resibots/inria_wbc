@@ -45,12 +45,18 @@ namespace inria_wbc {
 
             void MoveCom::update(const controllers::SensorData& sensor_data)
             {
+                auto pos_controller = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_);
                 tsid::trajectories::TrajectorySample sample_ref(3, 3);
                 sample_ref.setValue(trajectory_[time_]);
                 sample_ref.setDerivative(trajectory_d_[time_]);
                 sample_ref.setSecondDerivative(trajectory_dd_[time_]);
-                std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(sample_ref);
+                pos_controller->set_com_ref(sample_ref);
                 controller_->update(sensor_data);
+                if (pos_controller->has_task("cop")) {
+                    Eigen::Vector3d zmp = sample_ref.getValue();
+                    zmp(2) = 0.0;
+                    pos_controller->set_cop_ref(zmp, "cop");
+                }
                 time_++;
                 if (loop_)
                     time_ = time_ % trajectory_.size();
