@@ -14,6 +14,12 @@ mkdir install
 sudo apt-get install libyaml-cpp-dev
 ```
 
+## boost-program-options-dev
+
+```
+sudo apt-get install libboost-program-options-dev
+```
+
 ## assimp 5.0
 
 ```

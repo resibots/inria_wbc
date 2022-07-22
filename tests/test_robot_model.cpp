@@ -65,7 +65,7 @@ void test_compute_rnea(utest::test_t test, inria_wbc::utils::RobotModel robot_mo
 
     robot_model.update(q, dq, ddq, true, true);
 
-    std::unordered_map<std::string, Eigen::MatrixXd> sensor_data;
+    std::map<std::string, Eigen::MatrixXd> sensor_data;
     Eigen::Vector3d data = Eigen::Vector3d::Zero();
     sensor_data["lf_torque"] = data;
     sensor_data["rf_torque"] = data;
