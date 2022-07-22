@@ -326,7 +326,7 @@ int main(int argc, char** argv)
         std::string name = "tiago";
         for (auto& behavior_path : behaviors) {
             auto test1 = utest::make_test("[" + name + "] " + behavior_path);
-            auto tiago = std::make_shared<robot_dart::robots::Tiago>();
+            auto tiago = std::make_shared<robot_dart::robots::Tiago>(1000, "tiago/tiago_steel_no_wheel.urdf");
             bool expect_collision = false;
             UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, tiago, sensor_data_tiago, expect_collision, verbose));
         }

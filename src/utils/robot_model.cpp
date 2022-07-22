@@ -135,5 +135,99 @@ namespace utils {
         return pinocchio::getJointKinematicHessian(_model, _data, id, reference_frame);
     }
 
+    Eigen::VectorXd RobotModel::compute_rnea_double_support(const std::unordered_map<std::string, Eigen::MatrixXd>& sensor_data,
+        const Eigen::VectorXd& q, 
+        const Eigen::VectorXd& v,
+        const Eigen::VectorXd& a, 
+        bool add_foot_mass,
+        const std::string& left_ft_frame,
+        const std::string& right_ft_frame,
+        const std::string& left_sole_frame,
+        const std::string& right_sole_frame)
+    {
+        pinocchio::computeJointJacobians(_model, _data, q);
+        pinocchio::updateFramePlacements(_model, _data);
+
+        //compute torques with no external forces
+        pinocchio::rnea(_model, _data, q, v, a);
+        Eigen::VectorXd tau(_data.tau);
+
+        //get F/T sensor data from both feet
+        Eigen::Vector3d right_force = Eigen::Vector3d::Zero();
+        Eigen::Vector3d right_torque = Eigen::Vector3d::Zero();
+        Eigen::Vector3d left_force = Eigen::Vector3d::Zero();
+        Eigen::Vector3d left_torque = Eigen::Vector3d::Zero();
+
+       if((sensor_data.find("lf_force") == sensor_data.end()) || (sensor_data.find("rf_force") == sensor_data.end()) ||
+          (sensor_data.find("lf_torque") == sensor_data.end()) || (sensor_data.find("rf_torque") == sensor_data.end()))
+            throw IWBC_EXCEPTION("when FT is missing in fext_map");
+
+        //Get data for the right foot
+        right_force = sensor_data.at("rf_force").col(0).head(3);
+        right_torque = sensor_data.at("rf_torque").col(0).head(3);
+        std::string right_frame = right_ft_frame;
+
+        //Add the mass of the foot to sensor_data
+        if(add_foot_mass)
+        {
+            if (!_model.existFrame(right_ft_frame))
+                throw IWBC_EXCEPTION("Frame name ", right_ft_frame, "is not in model");
+            if (!_model.existFrame(right_sole_frame))
+                throw IWBC_EXCEPTION("Frame name ", right_sole_frame, "is not in model");
+
+            auto ankle_world = _data.oMi[_model.getJointId(right_ft_frame)];
+            auto sole_world = _data.oMf[_model.getFrameId(right_sole_frame)];
+
+            float mass_to_add = _model.inertias[_model.getJointId(right_ft_frame)].mass();
+            //TODO hypothesis foot is on planar surface here ?
+            right_force -= mass_to_add * _model.gravity.linear();
+            right_torque += (ankle_world.translation() - sole_world.translation()).cross(right_force);
+            right_frame = right_sole_frame;
+        }
+
+        //Get data for the left foot
+        left_force = sensor_data.at("lf_force").col(0).head(3);
+        left_torque = sensor_data.at("lf_torque").col(0).head(3);
+        std::string left_frame = left_ft_frame;
+        
+        //Add the mass of the foot to sensor_data
+        if(add_foot_mass)
+        {
+            if (!_model.existFrame(left_ft_frame))
+                throw IWBC_EXCEPTION("Frame name ", left_ft_frame, "is not in model");
+            if (!_model.existFrame(left_sole_frame))
+                throw IWBC_EXCEPTION("Frame name ", left_sole_frame, "is not in model");
+
+            auto ankle_world = _data.oMi[_model.getJointId(left_ft_frame)];
+            auto sole_world = _data.oMf[_model.getFrameId(left_sole_frame)];
+
+            float mass_to_add = _model.inertias[_model.getJointId(left_ft_frame)].mass();
+            //TODO hypothesis foot is on planar surface here ?
+            left_force -= mass_to_add * _model.gravity.linear();
+            left_torque += (ankle_world.translation() - sole_world.translation()).cross(left_force);
+            left_frame = left_sole_frame;
+        }
+
+        //Compute the torque from external forces J^transpose*force
+        pinocchio::Data::Matrix6x J_right(pinocchio::Data::Matrix6x(6, _model.nv));
+        J_right.fill(0.);
+        if (_model.existFrame(right_frame))
+            pinocchio::getFrameJacobian(_model, _data, _model.getFrameId(right_frame), pinocchio::LOCAL, J_right);
+
+        pinocchio::Data::Matrix6x J_left(pinocchio::Data::Matrix6x(6, _model.nv));
+        J_left.fill(0.);
+        if (_model.existFrame(left_frame))
+            pinocchio::getFrameJacobian(_model, _data, _model.getFrameId(left_frame), pinocchio::LOCAL, J_left);
+
+        pinocchio::Force f_right(right_force, right_torque);
+        pinocchio::Force f_left(left_force, left_torque);
+        tau -= J_right.transpose() * f_right.toVector();
+        tau -= J_left.transpose() * f_left.toVector();
+
+        return tau;
+
+    };
+
+
 } // namespace utils
 } // namespace inria_wbc

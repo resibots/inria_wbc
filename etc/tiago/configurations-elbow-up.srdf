@@ -3,7 +3,6 @@
     <group_state name="start" group="all">
         <joint name="wheel_right_joint" value="0.0" />
         <joint name="wheel_left_joint" value="0.0" />
-        <joint name="caster_front_right_1_joint" value="0.0" />
         <joint name="torso_lift_joint" value="0.0" />
         <joint name="head_1_joint" value="0.0" />
         <joint name="head_2_joint" value="0.0" />

@@ -256,45 +256,32 @@ namespace inria_wbc {
             activated_contacts_.push_back(contact_name);
         }
         //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
-        //it corresponds to the force of contact(contact_name)->Contact6d::setForceReference(force);
-        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& foot)
+        //when we supress foot mass it corresponds to F/T sensor data
+        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& contact_name, bool remove_foot_mass, const std::string& sole_frame)
         {
-            IWBC_ASSERT(foot == "left" || foot == "right", "foot must be left or right");
-
-            std::string ct_name, tau_x_name, tau_y_name;
-            if (foot == "left") {
-                ct_name = "contact_lfoot";
-                tau_x_name = "leg_left_6_joint";
-                tau_y_name = "leg_left_5_joint";
-            }
-            if (foot == "right") {
-                ct_name = "contact_rfoot";
-                tau_x_name = "leg_right_6_joint";
-                tau_y_name = "leg_right_5_joint";
-            }
-
             Eigen::Matrix<double, 6, 1> force_tsid;
             force_tsid.setZero();
 
-            IWBC_ASSERT(activated_contacts_forces_.find(ct_name) != activated_contacts_forces_.end(), ct_name, "not in activated_contacts_forces_");
-            auto contact_force = activated_contacts_forces_[ct_name];
-            int n_contact_points = contact_force.size() / 3;
-            for (int i = 0; i < n_contact_points; i++) {
-                force_tsid(0) += -contact_force(0 + i * 3);
-                force_tsid(1) += -contact_force(1 + i * 3);
-                force_tsid(2) += -contact_force(2 + i * 3);
+            IWBC_ASSERT(activated_contacts_forces_.find(contact_name) != activated_contacts_forces_.end(), contact_name, " not in activated_contacts_forces_");
+            auto contact_force = activated_contacts_forces_[contact_name];
+            auto generatorMatrix = contact(contact_name)->Contact6d::getForceGeneratorMatrix();
+            force_tsid = generatorMatrix * contact_force;
+
+            if (remove_foot_mass) {
+                // we retrieve the tracked frame from the contact task
+                auto ankle_frame = robot_->model().frames[contact(contact_name)->getMotionTask().frame_id()].name;
+                IWBC_ASSERT(robot_->model().existFrame(ankle_frame), "Frame " + ankle_frame + " does not exist in model.");
+                IWBC_ASSERT(robot_->model().existFrame(sole_frame), "Frame " + sole_frame + " does not exist in model.");
+
+                auto ankle_world = tsid_->data().oMi[robot_->model().getJointId(ankle_frame)];
+                auto sole_world = tsid_->data().oMf[robot_->model().getFrameId(sole_frame)];
+
+                auto foot_mass = robot_->model().inertias[robot_->model().getJointId(ankle_frame)].mass();
+                // auto contact_normal = contact(contact_name)->getContactNormal();
+                force_tsid.head(3) += foot_mass * robot_->model().gravity.linear();;
+                Eigen::Vector3d tmp = force_tsid.head(3);
+                force_tsid.tail(3) -= (ankle_world.translation() - sole_world.translation()).cross(tmp);
             }
-
-            auto tau_vec = tau(false);
-            auto dofs_names = all_dofs(false);
-
-            auto it = std::find(dofs_names.begin(), dofs_names.end(), tau_x_name);
-            IWBC_ASSERT(it != dofs_names.end(), tau_x_name, "not in dofs_names");
-            force_tsid(3) = -tau_vec[std::distance(dofs_names.begin(), it)];
-            it = std::find(dofs_names.begin(), dofs_names.end(), tau_y_name);
-            IWBC_ASSERT(it != dofs_names.end(), tau_y_name, "not in dofs_names");
-            force_tsid(4) = tau_vec[std::distance(dofs_names.begin(), it)];
-
             return force_tsid;
         }
 
