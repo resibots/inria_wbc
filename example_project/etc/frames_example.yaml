@@ -11,3 +11,9 @@ v_base_link_left:
 v_base_link_right:
   ref: "base_link"
   pos: [0, 0.1, 0]
+v_right_gripper:
+  ref: "gripper_right_base_link"
+  pos: [0., 0., -0.09]
+v_left_gripper:
+  ref: "gripper_left_base_link"
+  pos: [0., 0., -0.09]
