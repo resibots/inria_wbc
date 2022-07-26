@@ -224,11 +224,11 @@ namespace inria_wbc {
                 if (valid_cop) {
                     stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
+                    _stabilizer_samples["com"] = com_sample;
                     if (tasks_.find("cop") != tasks_.end()) {
-                        std::cout << "ref " << cop_ref.transpose() << std::endl;
                         stabilizer::cop_admittance(dt_, _stabilizer_configs[behavior_type_].cop_gains, valid_cop.value(), model_current_com, cop_ref, cop_out);
                         set_cop_ref(cop_out, "cop");
-                        std::cout << "out " << cop_out.transpose() << std::endl;
+                        _stabilizer_vector3["cop"] = cop_out;
                     }
                 }
 
@@ -252,6 +252,7 @@ namespace inria_wbc {
                     stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[1].value(),
                         model_frame_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
+                    _stabilizer_samples["lf"] = lf_se3_sample;
                     if (robot_->model().frames[contact("contact_lfoot")->getMotionTask().frame_id()].name == left_ankle_name)
                         contact_lfoot->setReference(lf_contact_sample);
                 }
@@ -261,6 +262,7 @@ namespace inria_wbc {
                     stabilizer::ankle_admittance(dt_, _stabilizer_configs[behavior_type_].ankle_gains, cops[2].value(),
                         model_frame_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
+                    _stabilizer_samples["rf"] = rf_se3_sample;
                     if (robot_->model().frames[contact("contact_rfoot")->getMotionTask().frame_id()].name == right_ankle_name)
                         contact_rfoot->setReference(rf_contact_sample);
                 }
@@ -278,6 +280,7 @@ namespace inria_wbc {
 
                     stabilizer::foot_force_difference_admittance(dt_, M * 9.81, _stabilizer_configs[behavior_type_].ffda_gains, lf_normal_force,
                         rf_normal_force, _lf_force_filtered, _rf_force_filtered, get_full_se3_ref("torso"), torso_sample);
+                    _stabilizer_samples["torso"] = torso_sample;
                     set_se3_ref(torso_sample, "torso");
                 }
             }

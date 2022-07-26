@@ -60,6 +60,9 @@ namespace inria_wbc {
             void set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name);
             void set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name);
 
+            std::map<std::string, tsid::trajectories::TrajectorySample> stabilizer_samples() { return _stabilizer_samples; }
+            std::map<std::string, Eigen::Vector3d> stabilizer_vector3() { return _stabilizer_vector3; }
+
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
             Eigen::VectorXd force_torque_from_solution(const std::string& contact_name, float foot_mass = 0.0, const std::string& sole_frame = "");
@@ -82,6 +85,10 @@ namespace inria_wbc {
             std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> contacts_;
 
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
+
+            //empty if no stabilization strategy
+            std::map<std::string, tsid::trajectories::TrajectorySample> _stabilizer_samples;
+            std::map<std::string, Eigen::Vector3d> _stabilizer_vector3;
         };
 
     } // namespace controllers

@@ -571,6 +571,22 @@ int main(int argc, char* argv[])
                                 << ref.getDerivative().transpose() << " "
                                 << ref.getSecondDerivative().transpose() << std::endl;
                 }
+                else if (x.first.find("stab_") != std::string::npos) {
+                    auto task_name = x.first.substr(strlen("stab_"));
+                    auto it = controller_pos->stabilizer_samples().find(task_name);
+
+                    if (it != controller_pos->stabilizer_samples().end()) {
+                        auto ref = controller_pos->stabilizer_samples().at(task_name);
+                        (*x.second) << ref.getValue().transpose() << " "
+                                    << ref.getDerivative().transpose() << " "
+                                    << ref.getSecondDerivative().transpose() << std::endl;
+                    }
+                    auto it2 = controller_pos->stabilizer_vector3().find(task_name);
+                    if (it2 != controller_pos->stabilizer_vector3().end()) {
+                        auto ref = controller_pos->stabilizer_vector3().at(task_name);
+                        (*x.second) << ref.transpose() << " " << std::endl;
+                    }
+                }
                 else if (robot->body_node(x.first) != nullptr) {
                     pinocchio::SE3 frame;
                     frame.rotation() = robot->body_pose(x.first).rotation();

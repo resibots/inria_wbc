@@ -73,8 +73,6 @@ namespace inria_wbc {
 
             Eigen::Vector3d cor = Eigen::Vector3d::Zero();
             cor.head(2) = p.array() * (com_to_zmp(model_current_com) - cop_filtered).array();
-            std::cout << cor.transpose() << std::endl;
-            // std::cout <<  p.transpose() << std::endl;
 
             cop_out = cop_ref - cor;
         }

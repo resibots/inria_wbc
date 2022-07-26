@@ -80,7 +80,7 @@ actuation_bounds:
 #     frame_y_min: -0.154
 cop:
     type: contact-cop-equality
-    weight: 100
+    weight: 1
     contact_name: [contact_lfoot, contact_rfoot]
 contact_lfoot:
     type: contact
