@@ -60,7 +60,7 @@ namespace inria_wbc {
                         IWBC_ERROR("Wrong starting configuration: the CoM needs to be between the two feet with less than 1cm difference, but the distance is ", (this->com() - com_final).norm());
 
                     this->set_com_ref(com_final);
-                    if (tasks_.find("cop") != tasks_.end()) {
+                    if (this->has_task("cop")) {
                         Eigen::Vector3d cop_final = com_final;
                         cop_final(2) = 0.0;
                         this->set_cop_ref(cop_final, "cop");
@@ -77,7 +77,7 @@ namespace inria_wbc {
                     std::cout << "New com ref: " << com_final.transpose() << std::endl;
                 }
                 this->set_com_ref(com_final);
-                if (tasks_.find("cop") != tasks_.end()) {
+                if (this->has_task("cop")) {
                     Eigen::Vector3d cop_final = com_final;
                     cop_final(2) = 0.0;
                     this->set_cop_ref(cop_final, "cop");
@@ -162,7 +162,10 @@ namespace inria_wbc {
             }
 
             auto com_ref = com_task()->getReference();
-            auto cop_ref = cop_task("cop")->getReference();
+            Eigen::Vector3d cop_ref = Eigen::Vector3d::Zero();
+            if (this->has_task("cop")) {
+                cop_ref = cop_task("cop")->getReference();
+            }
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
@@ -225,7 +228,7 @@ namespace inria_wbc {
                     stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                     _stabilizer_samples["com"] = com_sample;
-                    if (tasks_.find("cop") != tasks_.end()) {
+                    if (this->has_task("cop")) {
                         stabilizer::cop_admittance(dt_, _stabilizer_configs[behavior_type_].cop_gains, valid_cop.value(), model_current_com, cop_ref, cop_out);
                         set_cop_ref(cop_out, "cop");
                         _stabilizer_vector3["cop"] = cop_out;
@@ -318,7 +321,7 @@ namespace inria_wbc {
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
             if (_use_stabilizer) {
                 set_com_ref(com_ref);
-                if (tasks_.find("cop") != tasks_.end()) {
+                if (this->has_task("cop")) {
                     set_cop_ref(cop_ref, "cop");
                 }
                 set_se3_ref(left_ankle_ref, "lf");

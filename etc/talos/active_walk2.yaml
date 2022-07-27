@@ -5,14 +5,15 @@ BEHAVIOR:
   remove_contacts: true # remove/add contacts you can put false if you just want the robot to put move the com without moving the feet
   step_height: 0.05 # height of the step
   step_length: 0.05 # lenght of the step
-  step_lateral: 0.002 # lateral lenght of the step
+  step_lateral: 0.02 # lateral lenght of the step
   com_percentage_ref: 0.5 # put the com reference inside the foot (at com_percentage*(external_foot_border - internal_foot_border) + internal_foot_border)
   com_percentage_foot_up: 0.25 # put the com reference inside the foot (at com_percentage*(external_foot_border - internal_foot_border) + internal_foot_border)
-  force_treshold: 450000 # when putting foot on ground if the FT sensor returns more than force_treshold, the foot will not be lowered any furhter
-  num_cycles: 1 # put -1 for infinite
+  force_treshold: 300 # when putting foot on ground if the FT sensor returns more than force_treshold, the foot will not be lowered any furhter
+  num_cycles: 10 # put -1 for infinite
   send_vel_acc: false # if true it will give vel and acc references to the tasks
   one_foot: false # do not walk but put the robot on one foot
-  error_cop: 0.01
-  activate_error_cop: false
+  error_cop: 0.005
+  activate_error_cop: true
+  error_posture: 0.0
   customize_task_weights:
     momentum: 0.0

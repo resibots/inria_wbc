@@ -495,7 +495,7 @@ int main(int argc, char* argv[])
                     (*x.second) << cmd.transpose() << std::endl;
                 else if (x.first == "task_com")
                     (*x.second) << controller_pos->get_com_ref().transpose() << std::endl;
-                else if (x.first == "task_cop")
+                else if (((x.first == "task_cop") && controller_pos->has_task("cop")))
                     (*x.second) << controller_pos->get_cop_ref("cop").transpose() << std::endl;
                 else if (x.first == "tau")
                     (*x.second) << controller->tau().transpose() << std::endl;

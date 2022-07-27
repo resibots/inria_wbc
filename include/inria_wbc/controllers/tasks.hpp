@@ -22,7 +22,7 @@ namespace inria_wbc {
 
     namespace tasks {
         namespace cst {
-            static constexpr double w_force_feet = 1e-3; // regularization force for contacts
+            static constexpr double w_force_feet = 1e-3; // regularization force for contacts TODO CHANGE FOR STABILIZATION!
         }
 
         using FactoryYAML = utils::Factory<

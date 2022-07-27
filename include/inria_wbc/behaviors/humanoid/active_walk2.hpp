@@ -50,7 +50,7 @@ namespace inria_wbc {
                 int remove_contact_index_ = 0; //time index for when to remove the contact
                 int time_index_ = 0;
 
-                bool first_time_ = true;
+                bool lift_foot_up_ = false;
                 bool first_step_ = true;
                 bool begin_ = true;
                 int state_ = -1;
@@ -67,6 +67,7 @@ namespace inria_wbc {
                 bool one_foot_ = false;
                 float force_treshold_ = inria_wbc::estimators::FMIN;
                 float error_cop_ = 0.0;
+                float error_posture_ = 0.0;
 
                 std::ofstream file_{"/home/pal/my_file"};
                 int k = 0;

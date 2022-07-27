@@ -37,6 +37,7 @@ namespace inria_wbc {
             bool has_contact(const std::string& str) const { return contacts_.find(str) != contacts_.end(); }
             std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> bound_task() { return task<tsid::tasks::TaskJointPosVelAccBounds>("bounds"); }
             std::shared_ptr<tsid::tasks::TaskMEquality> momentum_task() { return task<tsid::tasks::TaskMEquality>("momentum"); }
+            std::shared_ptr<tsid::tasks::TaskJointPosture> posture_task() { return task<tsid::tasks::TaskJointPosture>("posture"); }
             std::shared_ptr<tsid::tasks::TaskComEquality> com_task() { return task<tsid::tasks::TaskComEquality>("com"); }
             std::shared_ptr<tsid::tasks::TaskSE3Equality> se3_task(const std::string& str) { return task<tsid::tasks::TaskSE3Equality>(str); }
             std::shared_ptr<tsid::tasks::TaskCopEquality> cop_task(const std::string& str) { return task<tsid::tasks::TaskCopEquality>(str); }

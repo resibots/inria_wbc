@@ -122,6 +122,7 @@ namespace inria_wbc {
             Eigen::VectorXd q0(bool filter_mimics = true) const;
             Eigen::VectorXd q(bool filter_mimics = true) const;
             tsid::math::Vector q_tsid() const { return q_tsid_; };
+            tsid::math::Vector v_tsid() const { return v_tsid_; };
 
             double t() const { return t_; };
             double dt() const { return dt_; };

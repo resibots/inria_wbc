@@ -19,8 +19,6 @@ namespace inria_wbc {
                 IWBC_ASSERT(h_controller->has_task("com"), "active_walk: a com task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "active_walk: a contact_lfoot task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "active_walk: a contact_rfoot task is required");
-                IWBC_ASSERT(h_controller->has_task("cop"), "active_walk: a cop task is required");
-                // IWBC_ASSERT(h_controller->has_task("cop_rfoot"), "active_walk: a cop_rfoot task is required");
 
                 // load the parameters
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
@@ -106,6 +104,10 @@ namespace inria_wbc {
                     IWBC_ERROR("There is no v_right_sole_external_border virtual frame. Please add it in the dedicated virtual frames yaml");
 
                 dt_ = h_controller->dt();
+
+                error_posture_ = IWBC_CHECK(c["error_posture"].as<float>());
+                if (error_posture_ < 0.0)
+                    IWBC_ERROR("Error_posture_ should be >= 0.0");
             }
 
             void ActiveWalk2::set_se3_ref(const pinocchio::SE3& init, const pinocchio::SE3& final, const std::string& task_name, const std::string& contact_name, const double& trajectory_duration, const int& index)
@@ -159,11 +161,27 @@ namespace inria_wbc {
                 if (sensor_data.find("rf_force") == sensor_data.end())
                     IWBC_ERROR("ActiveWalk2 needs the LF force");
 
+                if (sensor_data.find("positions") == sensor_data.end())
+                    IWBC_ERROR("ActiveWalk2 needs the positions");
+
                 auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
+
+                auto positions = sensor_data.at("positions");
+                auto q_tsid = controller->q_tsid();
+                for (int i = 0; i < positions.size(); i++) {
+                    if (!(std::abs(positions(i, 0)) < 1e-10 && std::abs(q_tsid[i + 7]) > 1e-10))
+                        q_tsid[i + 7] = positions(i, 0);
+                }
+
+                if ((q_tsid - controller->q_tsid()).norm() > error_posture_) {
+                    controller->posture_task()->setReference(trajs::to_sample(q_tsid.tail(controller->robot()->na())));
+                }
+
                 Eigen::Vector2d cop = Eigen::Vector2d::Zero();
                 if (controller->cop())
                     cop = controller->cop().value();
-                bool keep_sending_com_traj = true;
+
+                // bool keep_sending_com_traj = true;
 
                 //GO_TO_RF: PUT COM ON RF
                 if (state_ == States::GO_TO_RF) {
@@ -188,31 +206,15 @@ namespace inria_wbc {
                         remove_contact_index_ = 0;
                     }
 
-                    if (controller->cop()) {
-                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_ || !activate_error_cop_;
-                        if (k++ % 6 == 0)
-                            file_ << "GO_TO_RF diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
-                    }
+                    // if (controller->cop() && activate_error_cop_)
+                    // keep_sending_com_traj = keep_sending_com_traj && ((cop - com_final_.head(2)).norm() > error_cop_);
 
                     if (index_ < std::floor(traj_foot_duration_ / dt_)) {
-                        bool lift_foot_up = false;
-                        if (keep_sending_com_traj) {
-                            auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
-                            lift_foot_up = ref(1) < com_foot_up_;
-                        }
-                        else {
-                            if (first_time_) {
-                                std::cout << "stop!" << std::endl;
-                                std::cout << "com_final " << com_final_.transpose() << std::endl;
-                                std::cout << "current_cop " << cop.transpose() << std::endl;
-                                first_time_ = false;
-                            }
-                            lift_foot_up = true;
-                        }
-                        if (lift_foot_up) {
+                        auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
+                        lift_foot_up_ = ref(1) < com_foot_up_ || lift_foot_up_;
+                        if (lift_foot_up_) {
                             if (remove_contacts_ && controller->activated_contacts_forces().find("contact_lfoot") != controller->activated_contacts_forces().end()) {
                                 controller->remove_contact("contact_lfoot");
-                                // controller->set_task_weight("cop_lfoot", cop_tasks_weight_);
                                 remove_contact_index_ = index_;
                             }
                             if (time_index_ < std::floor(traj_foot_duration_ / dt_ - remove_contact_index_)) {
@@ -223,10 +225,10 @@ namespace inria_wbc {
                         index_++;
                     }
                     else {
-                        keep_sending_com_traj = true;
-                        first_time_ = true;
+                        // keep_sending_com_traj = true;
                         state_ = States::LIFT_DOWN_LF;
                         begin_ = true;
+                        lift_foot_up_ = false;
                     }
                 }
 
@@ -235,7 +237,6 @@ namespace inria_wbc {
 
                     if (begin_) {
                         std::cout << "LIFT_DOWN_LF" << std::endl;
-
                         lf_init_ = controller->model_frame_pos(left_sole_name_);
                         lf_final_ = lf_init_;
                         if (first_step_ && cycle_count_ != num_cycles_)
@@ -250,7 +251,9 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (index_ < std::floor(transition_duration_ / dt_) && sensor_data.at("lf_force")(2) < force_treshold_) {
+                    // keep_sending_com_traj = keep_sending_com_traj && sensor_data.at("lf_force")(2) < force_treshold_;
+
+                    if (index_ < std::floor(transition_duration_ / dt_)) {
                         set_se3_ref(lf_init_, lf_final_, "lf_sole", "contact_lfoot", transition_duration_, index_);
                         set_se3_ref(lh_init_, lh_final_, "lh", "", transition_duration_, index_);
                         index_++;
@@ -258,7 +261,6 @@ namespace inria_wbc {
                     else {
                         if (remove_contacts_) {
                             controller->add_contact("contact_lfoot");
-                            // controller->set_task_weight("cop_lfoot", cop_tasks_weight_);
                         }
 
                         if (cycle_count_ == num_cycles_) {
@@ -269,6 +271,7 @@ namespace inria_wbc {
                             state_ = States::GO_TO_MIDDLE;
                             next_state_ = States::GO_TO_LF;
                         }
+                        // keep_sending_com_traj = true;
                         begin_ = true;
                     }
                 }
@@ -284,23 +287,11 @@ namespace inria_wbc {
                         index_ = 0;
                     }
 
-                    if (controller->cop()) {
-                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_ || !activate_error_cop_;
-                        if (k++ % 6 == 0)
-                            file_ << "GO_TO_MIDDLE diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
-                    }
-
-                    if (index_ < std::floor(transition_duration_ / dt_) && keep_sending_com_traj) {
+                    if (index_ < std::floor(transition_duration_ / dt_)) {
                         set_com_ref(com_init_, com_final_, transition_duration_, index_);
                         index_++;
                     }
                     else {
-                        if (!keep_sending_com_traj && next_state_ != States::GO_TO_MIDDLE) {
-                            std::cout << "stop!" << std::endl;
-                            std::cout << "com_final " << com_final_.transpose() << std::endl;
-                            std::cout << "current_cop " << cop.transpose() << std::endl;
-                        }
-                        keep_sending_com_traj = true;
                         state_ = next_state_;
                         begin_ = true;
                     }
@@ -328,31 +319,17 @@ namespace inria_wbc {
                         remove_contact_index_ = 0;
                     }
 
-                    if (controller->cop()) {
-                        keep_sending_com_traj = (cop - com_final_.head(2)).norm() > error_cop_ || !activate_error_cop_;
-                        if (k++ % 6 == 0)
-                            file_ << "GO_TO_LF diff " << (cop - com_final_.head(2)).norm() << " bool " << keep_sending_com_traj << " error_cop " << error_cop_ << " cop " << cop.transpose() << " com " << com_final_.transpose() << std::endl;
-                    }
+                    // if (controller->cop() && activate_error_cop_) {
+                    //     // std::cout << (cop - com_final_.head(2)).norm() << std::endl;
+                    //     keep_sending_com_traj = keep_sending_com_traj && ((cop - com_final_.head(2)).norm() > error_cop_);
+                    // }
 
                     if (index_ < std::floor(traj_foot_duration_ / dt_)) {
-                        bool lift_foot_up = false;
-                        if (keep_sending_com_traj) {
-                            auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
-                            lift_foot_up = ref(1) > com_foot_up_;
-                        }
-                        else {
-                            if (first_time_) {
-                                std::cout << "stop!" << std::endl;
-                                std::cout << "com_final " << com_final_.transpose() << std::endl;
-                                std::cout << "current_cop " << cop.transpose() << std::endl;
-                                first_time_ = false;
-                            }
-                            lift_foot_up = true;
-                        }
-                        if (lift_foot_up) {
+                        auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
+                        lift_foot_up_ = ref(1) > com_foot_up_ || lift_foot_up_;
+                        if (lift_foot_up_) {
                             if (remove_contacts_ && controller->activated_contacts_forces().find("contact_rfoot") != controller->activated_contacts_forces().end()) {
                                 controller->remove_contact("contact_rfoot");
-                                // controller->set_task_weight("cop_rfoot", cop_tasks_weight_);
                                 remove_contact_index_ = index_;
                             }
                             if (time_index_ < std::floor(traj_foot_duration_ / dt_ - remove_contact_index_)) {
@@ -363,16 +340,15 @@ namespace inria_wbc {
                         index_++;
                     }
                     else {
-                        keep_sending_com_traj = true;
+                        // keep_sending_com_traj = true;
                         state_ = States::LIFT_DOWN_RF;
                         begin_ = true;
-                        first_time_ = true;
+                        lift_foot_up_ = false;
                     }
                 }
 
                 //LIFT_DOWN_RF: PUT RIGHT FOOT ON THE GROUND
                 if (state_ == States::LIFT_DOWN_RF) {
-
                     if (begin_) {
                         rf_init_ = controller->model_frame_pos(right_sole_name_);
                         rf_final_ = rf_init_;
@@ -391,16 +367,17 @@ namespace inria_wbc {
                         if (first_step_)
                             first_step_ = false;
                     }
-                    if (index_ < std::floor(transition_duration_ / dt_) && sensor_data.at("rf_force")(2) < force_treshold_) {
+
+                    // keep_sending_com_traj = keep_sending_com_traj && sensor_data.at("rf_force")(2) < force_treshold_;
+
+                    if (index_ < std::floor(transition_duration_ / dt_)) {
                         set_se3_ref(rf_init_, rf_final_, "rf_sole", "contact_rfoot", transition_duration_, index_);
                         set_se3_ref(rh_init_, rh_final_, "rh", "", transition_duration_, index_);
                         index_++;
                     }
                     else {
-                        if (remove_contacts_) {
+                        if (remove_contacts_)
                             controller->add_contact("contact_rfoot");
-                            // controller->set_task_weight("cop_rfoot", cop_tasks_weight_);
-                        }
                         begin_ = true;
                         cycle_count_++;
 
@@ -409,27 +386,29 @@ namespace inria_wbc {
 
                         state_ = States::GO_TO_MIDDLE;
                         next_state_ = States::GO_TO_RF;
+                        // keep_sending_com_traj = true;
                     }
                 }
 
-                Eigen::Matrix<double, 6, 1> left_fref, right_fref;
-                left_fref.setZero();
-                right_fref.setZero();
+                // Eigen::Matrix<double, 6, 1> left_fref, right_fref;
+                // left_fref.setZero();
+                // right_fref.setZero();
 
-                std::map<std::string, pinocchio::SE3> contact_se3_ref;
-                auto ac = controller->activated_contacts();
-                for (auto& contact_name : ac) {
-                    pinocchio::SE3 se3;
-                    auto contact_ext = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(controller->contact(contact_name));
-                    auto contact_pos = contact_ext->getMotionTask().getReference().getValue();
-                    tsid::math::vectorToSE3(contact_pos, se3);
-                    contact_se3_ref[contact_name] = se3;
-                }
+                // std::map<std::string, pinocchio::SE3> contact_se3_ref;
+                // auto ac = controller->activated_contacts();
+                // for (auto& contact_name : ac) {
+                //     pinocchio::SE3 se3;
+                //     auto contact_ext = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(controller->contact(contact_name));
+                //     auto contact_pos = contact_ext->getMotionTask().getReference().getValue();
+                //     tsid::math::vectorToSE3(contact_pos, se3);
+                //     contact_se3_ref[contact_name] = se3;
+                // }
 
                 auto zmp = stabilizer::com_to_zmp(controller->get_full_com_ref());
                 Eigen::Vector3d zmp_ref = controller->get_com_ref();
                 zmp_ref(2) = 0.0;
-                controller->set_cop_ref(zmp_ref, "cop");
+                if (controller->has_task("cop"))
+                    controller->set_cop_ref(zmp_ref, "cop");
                 // auto alpha = stabilizer::zmp_distributor(controller->pinocchio_total_model_mass(), zmp, contact_se3_ref, controller->activated_contacts(), left_fref, right_fref);
 
                 // if (state_ == States::GO_TO_LF) {
@@ -447,6 +426,14 @@ namespace inria_wbc {
                 // }
                 // std::cout << "lcop " << controller->get_cop_ref("cop_lfoot").head(2).transpose() << " rcop " << controller->get_cop_ref("cop_rfoot").head(2).transpose() << " zmp " << zmp.transpose() << std::endl;
                 // // controller->set_cop_ref(controller->get_se3_ref("lf_sole").translation(), "cop_lfoot");
+
+                // if (keep_sending_com_traj && !controller->is_model_colliding())
+                //     controller->set_send_cmd(true);
+                // if (!keep_sending_com_traj) {
+                //     if (k++ % 6 == 0)
+                //         file_ << "stop" << std::endl;
+                //     controller->set_send_cmd(false);
+                // }
 
                 controller->update(sensor_data);
             }
