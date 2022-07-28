@@ -18,6 +18,8 @@ CONTROLLER:
   closed_loop: false
   verbose: false
   mimic_dof_names : []
+  check_model_collisions: true
+  collision_path: collisions/talos_collisions_margin.yaml
   stabilizer:
     activated: true
     params_ss: stab_single_support.yaml
