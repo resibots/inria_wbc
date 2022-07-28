@@ -172,7 +172,6 @@ namespace inria_wbc {
                     if (!(std::abs(positions(i, 0)) < 1e-10 && std::abs(q_tsid[i + 7]) > 1e-10))
                         q_tsid[i + 7] = positions(i, 0);
                 }
-
                 if ((q_tsid - controller->q_tsid()).norm() > error_posture_) {
                     controller->posture_task()->setReference(trajs::to_sample(q_tsid.tail(controller->robot()->na())));
                 }
