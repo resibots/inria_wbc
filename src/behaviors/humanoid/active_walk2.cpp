@@ -17,6 +17,7 @@ namespace inria_wbc {
                 IWBC_ASSERT(h_controller->has_task("lh"), "active_walk: an lh task is required (left hand)");
                 IWBC_ASSERT(h_controller->has_task("rh"), "active_walk: an rh task is required (right hand)");
                 IWBC_ASSERT(h_controller->has_task("com"), "active_walk: a com task is required");
+                IWBC_ASSERT(h_controller->has_task("torso"), "active_walk: a torso task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "active_walk: a contact_lfoot task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "active_walk: a contact_rfoot task is required");
 
@@ -85,6 +86,10 @@ namespace inria_wbc {
                 rh_final_ = rh_init_;
                 lf_final_ = lf_init_;
                 rf_final_ = rf_init_;
+
+                torso_link_name_ = h_controller->robot()->model().frames[h_controller->task<tsid::tasks::TaskSE3Equality>("torso")->frame_id()].name;
+                lh_delta_init_ = h_controller->get_se3_ref("lh").translation() - controller->model_frame_pos(torso_link_name_).translation();
+                rh_delta_init_ = h_controller->get_se3_ref("rh").translation() - controller->model_frame_pos(torso_link_name_).translation();
 
                 left_sole_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_lfoot")->getMotionTask().frame_id()].name;
                 right_sole_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_rfoot")->getMotionTask().frame_id()].name;
@@ -182,6 +187,15 @@ namespace inria_wbc {
 
                 // bool keep_sending_com_traj = true;
 
+                lh_init_ = controller->get_se3_ref("lh");
+                rh_init_ = controller->get_se3_ref("rh");
+                lh_final_ = lh_init_;
+                rh_final_ = rh_init_;
+                lh_final_.translation() = controller->model_frame_pos(torso_link_name_).translation() + lh_delta_init_;
+                rh_final_.translation() = controller->model_frame_pos(torso_link_name_).translation() + rh_delta_init_;
+                controller->set_se3_ref(lh_final_, "lh");
+                controller->set_se3_ref(rh_final_, "rh");
+
                 //GO_TO_RF: PUT COM ON RF
                 if (state_ == States::GO_TO_RF) {
                     if (begin_) {
@@ -242,10 +256,6 @@ namespace inria_wbc {
                             lf_final_.translation()(1) += step_lateral_;
                         lf_final_.translation()(2) = 0.0;
                         lf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
-                        lh_init_ = controller->get_se3_ref("lh");
-                        lh_final_ = lh_init_;
-                        lh_final_.translation()(0) = lf_final_.translation()(0) + 0.3;
-                        lh_final_.translation()(1) = lf_final_.translation()(1) + 0.3;
                         begin_ = false;
                         index_ = 0;
                     }
@@ -254,7 +264,6 @@ namespace inria_wbc {
 
                     if (index_ < std::floor(transition_duration_ / dt_)) {
                         set_se3_ref(lf_init_, lf_final_, "lf_sole", "contact_lfoot", transition_duration_, index_);
-                        set_se3_ref(lh_init_, lh_final_, "lh", "", transition_duration_, index_);
                         index_++;
                     }
                     else {
@@ -357,10 +366,6 @@ namespace inria_wbc {
                         }
                         rf_final_.translation()(2) = 0.0;
                         rf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
-                        rh_init_ = controller->get_se3_ref("rh");
-                        rh_final_ = rh_init_;
-                        rh_final_.translation()(0) = rf_final_.translation()(0) + 0.3;
-                        rh_final_.translation()(1) = rf_final_.translation()(1) - 0.3;
                         begin_ = false;
                         index_ = 0;
                         if (first_step_)
@@ -371,7 +376,6 @@ namespace inria_wbc {
 
                     if (index_ < std::floor(transition_duration_ / dt_)) {
                         set_se3_ref(rf_init_, rf_final_, "rf_sole", "contact_rfoot", transition_duration_, index_);
-                        set_se3_ref(rh_init_, rh_final_, "rh", "", transition_duration_, index_);
                         index_++;
                     }
                     else {

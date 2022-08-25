@@ -3,13 +3,13 @@ lh:
     tracked: gripper_left_joint
     weight: 10.0
     kp: 30.0
-    mask: 111111 # xyz
+    mask: 111000 # xyz
 rh:
     type: se3
     tracked: gripper_right_joint
     weight: 10.0
     kp: 30.0
-    mask: 111111
+    mask: 111000
 torso:
     type: se3
     tracked: torso_2_link

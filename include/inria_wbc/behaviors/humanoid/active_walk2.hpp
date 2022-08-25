@@ -45,6 +45,8 @@ namespace inria_wbc {
                 pinocchio::SE3 rh_init_, rh_final_;
                 pinocchio::SE3 lf_init_, lf_final_;
                 pinocchio::SE3 rf_init_, rf_final_;
+                tsid::math::Vector3 lh_delta_init_, rh_delta_init_;
+                std::string torso_link_name_;
 
                 int index_ = 0;
                 int remove_contact_index_ = 0; //time index for when to remove the contact
