@@ -371,7 +371,7 @@ int main(int argc, char* argv[])
                 Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
                 for (size_t i = 0; i < controller->controllable_dofs(false).size(); ++i) {
                     auto name = controller->controllable_dofs(false)[i];
-                    if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0) {
+                    if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0 && name != "gripper_left_joint" && name != "gripper_right_joint") {
                         positions(i) = robot->positions({name})[0];
                         velocities(i) = robot->velocities({name})[0];
                     }
@@ -499,6 +499,10 @@ int main(int argc, char* argv[])
                     (*x.second) << controller_pos->get_cop_ref("cop").transpose() << std::endl;
                 else if (x.first == "tau")
                     (*x.second) << controller->tau().transpose() << std::endl;
+                else if (x.first == "q_tsid")
+                    (*x.second) << controller->q_tsid().transpose() << std::endl;
+                else if (x.first == "positions")
+                    (*x.second) << sensor_data["positions"].transpose() << std::endl;
                 else if (x.first == "com") // the real com
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller

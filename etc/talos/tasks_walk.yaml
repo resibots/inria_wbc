@@ -1,27 +1,39 @@
+head:
+    type: se3
+    tracked: head_1_joint
+    weight: 10.0
+    kp: 30.0
+    mask: 000111
+head2:
+    type: se3
+    tracked: head_2_joint
+    weight: 10.0
+    kp: 30.0
+    mask: 000111
 lh:
     type: se3
     tracked: gripper_left_joint
     weight: 10.0
     kp: 30.0
-    mask: 111000 # xyz
+    mask: 111111 # xyz
 rh:
     type: se3
     tracked: gripper_right_joint
     weight: 10.0
     kp: 30.0
-    mask: 111000
+    mask: 111111
 torso:
     type: se3
     tracked: torso_2_link
     weight: 10.0
     kp: 30.0
     mask: 000110
-# base_link:
-#     type: se3
-#     tracked: base_link
-#     weight: 10.0
-#     kp: 30.0
-#     mask: 000111
+base_link:
+    type: se3
+    tracked: base_link
+    weight: 10.0
+    kp: 30.0
+    mask: 000111
 lf:
     type: se3
     tracked: leg_left_6_joint
@@ -67,21 +79,6 @@ bounds:
 actuation_bounds:
     type: actuation-bounds
     weight: 10000
-# capture_point_bounds:
-#     type: contact-cp-inequality
-#     contact_names: [contact_lfoot, contact_rfoot]
-#     weight: 10000
-#     factor: 1.0
-#     x_margin: 0.02
-#     y_margin: 0.02
-#     frame_x_max: 0.0720226
-#     frame_x_min: -0.1279774
-#     frame_y_max: 0.154
-#     frame_y_min: -0.154
-# cop:
-#     type: contact-cop-equality
-#     weight: 0.0
-#     contact_name: [contact_lfoot, contact_rfoot]
 contact_lfoot:
     type: contact
     tracked: v_left_sole
