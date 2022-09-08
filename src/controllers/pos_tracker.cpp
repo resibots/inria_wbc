@@ -237,6 +237,12 @@ namespace inria_wbc {
             task->setReference(sample);
         }
 
+        void PosTracker::set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name)
+        {
+            auto c = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
+            c->setReference(sample);
+        }
+        
         void PosTracker::remove_contact(const std::string& contact_name)
         {
             if (verbose_)
@@ -278,7 +284,8 @@ namespace inria_wbc {
 
                 auto foot_mass = robot_->model().inertias[robot_->model().getJointId(ankle_frame)].mass();
                 // auto contact_normal = contact(contact_name)->getContactNormal();
-                force_tsid.head(3) += foot_mass * robot_->model().gravity.linear();;
+                force_tsid.head(3) += foot_mass * robot_->model().gravity.linear();
+                ;
                 Eigen::Vector3d tmp = force_tsid.head(3);
                 force_tsid.tail(3) -= (ankle_world.translation() - sole_world.translation()).cross(tmp);
             }
