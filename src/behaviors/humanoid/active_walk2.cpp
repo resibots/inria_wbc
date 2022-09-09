@@ -239,7 +239,7 @@ namespace inria_wbc {
                     }
                     else {
                         // keep_sending_com_traj = true;
-                        state_ = States::LIFT_DOWN_LF;
+                        state_ = States::MOVE_LF_FORWARD;
                         begin_ = true;
                         lift_foot_up_ = false;
                     }
@@ -252,10 +252,7 @@ namespace inria_wbc {
                         std::cout << "LIFT_DOWN_LF" << std::endl;
                         lf_init_ = controller->model_frame_pos(left_sole_name_);
                         lf_final_ = lf_init_;
-                        if (first_step_ && cycle_count_ != num_cycles_)
-                            lf_final_.translation()(1) += step_lateral_;
                         lf_final_.translation()(2) = 0.0;
-                        lf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
                         begin_ = false;
                         index_ = 0;
                     }
@@ -279,6 +276,60 @@ namespace inria_wbc {
                             state_ = States::GO_TO_MIDDLE;
                             next_state_ = States::GO_TO_LF;
                         }
+                        // keep_sending_com_traj = true;
+                        begin_ = true;
+                    }
+                }
+                
+                //MOVE_RF_FORWARD: MOVE RIGHT FOOT AT SAME HEIGHT ABOVE THE GROUND
+                if (state_ == States::MOVE_RF_FORWARD) {
+
+                    if (begin_) {
+                        std::cout << "MOVE_RF_FORWARD" << std::endl;
+                        rf_init_ = controller->model_frame_pos(right_sole_name_);
+                        rf_final_ = rf_init_;
+                        if (first_step_ && cycle_count_ != num_cycles_)
+                            rf_final_.translation()(1) -= step_lateral_;
+                        rf_final_.translation()(0) += first_step_ ? 2 * step_length_ : 2 * step_length_;
+                        begin_ = false;
+                        index_ = 0;
+                    }
+
+                    // keep_sending_com_traj = keep_sending_com_traj && sensor_data.at("lf_force")(2) < force_treshold_;
+
+                    if (index_ < std::floor(transition_duration_ / dt_)) {
+                        set_se3_ref(rf_init_, rf_final_, "rf_sole", "contact_rfoot", transition_duration_, index_);
+                        index_++;
+                    }
+                    else {
+                        state_ = States::LIFT_DOWN_RF;
+                        // keep_sending_com_traj = true;
+                        begin_ = true;
+                    }
+                }
+                
+                //MOVE_LF_FORWARD: MOVE LEFT FOOT AT SAME HEIGHT ABOVE THE GROUND
+                if (state_ == States::MOVE_LF_FORWARD) {
+
+                    if (begin_) {
+                        std::cout << "MOVE_LF_FORWARD" << std::endl;
+                        lf_init_ = controller->model_frame_pos(left_sole_name_);
+                        lf_final_ = lf_init_;
+                        if (first_step_ && cycle_count_ != num_cycles_)
+                            lf_final_.translation()(1) += step_lateral_;
+                        lf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
+                        begin_ = false;
+                        index_ = 0;
+                    }
+
+                    // keep_sending_com_traj = keep_sending_com_traj && sensor_data.at("lf_force")(2) < force_treshold_;
+
+                    if (index_ < std::floor(transition_duration_ / dt_)) {
+                        set_se3_ref(lf_init_, lf_final_, "lf_sole", "contact_lfoot", transition_duration_, index_);
+                        index_++;
+                    }
+                    else {
+                        state_ = States::LIFT_DOWN_LF;
                         // keep_sending_com_traj = true;
                         begin_ = true;
                     }
@@ -349,7 +400,7 @@ namespace inria_wbc {
                     }
                     else {
                         // keep_sending_com_traj = true;
-                        state_ = States::LIFT_DOWN_RF;
+                        state_ = States::MOVE_RF_FORWARD;
                         begin_ = true;
                         lift_foot_up_ = false;
                     }
@@ -361,11 +412,9 @@ namespace inria_wbc {
                         rf_init_ = controller->model_frame_pos(right_sole_name_);
                         rf_final_ = rf_init_;
                         if (first_step_ && cycle_count_ != num_cycles_) {
-                            rf_final_.translation()(1) -= step_lateral_;
                             first_step_ = false;
                         }
                         rf_final_.translation()(2) = 0.0;
-                        rf_final_.translation()(0) += first_step_ ? step_length_ : 2 * step_length_;
                         begin_ = false;
                         index_ = 0;
                         if (first_step_)
