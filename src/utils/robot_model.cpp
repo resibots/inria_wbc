@@ -135,7 +135,7 @@ namespace utils {
         return pinocchio::getJointKinematicHessian(_model, _data, id, reference_frame);
     }
 
-    Eigen::VectorXd RobotModel::compute_rnea_double_support(const std::unordered_map<std::string, Eigen::MatrixXd>& sensor_data,
+    Eigen::VectorXd RobotModel::compute_rnea_double_support(const std::map<std::string, Eigen::MatrixXd>& sensor_data,
         const Eigen::VectorXd& q, 
         const Eigen::VectorXd& v,
         const Eigen::VectorXd& a, 

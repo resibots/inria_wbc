@@ -63,7 +63,7 @@ namespace utils {
         //Compute torques from sensor_data external forces.
         //It is here done for the two foot contacts but it could be generalized to less or more contacts if needed
         //You could directly use pinocchio rnea if there is no external forces or no foot mass to add
-        Eigen::VectorXd compute_rnea_double_support(const std::unordered_map<std::string, Eigen::MatrixXd>& sensor_data,
+        Eigen::VectorXd compute_rnea_double_support(const std::map<std::string, Eigen::MatrixXd>& sensor_data,
             const Eigen::VectorXd& q, 
             const Eigen::VectorXd& v,
             const Eigen::VectorXd& a, 

@@ -1,10 +1,11 @@
 #include <algorithm>
-#include <boost/program_options.hpp>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <signal.h>
 
+#include <dart/collision/CollisionObject.hpp>
+#include <dart/constraint/ConstraintSolver.hpp>
 #include <dart/dynamics/BodyNode.hpp>
 
 #include <robot_dart/control/pd_control.hpp>
@@ -20,7 +21,6 @@
 
 #include "inria_wbc/behaviors/behavior.hpp"
 #include "inria_wbc/controllers/pos_tracker.hpp"
-#include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/robot_dart/damages.hpp"
@@ -31,6 +31,8 @@
 #include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/utils/timer.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
+
+#include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -61,6 +63,7 @@ int main(int argc, char* argv[])
         ("sim_freq", po::value<int>()->default_value(1000), "set the simulation frequency")
         ("srdf,s", po::value<float>()->default_value(0.0), "save the configuration at the specified time")
         ("ghost,g", "display the ghost (Pinocchio model)")
+        ("model_collisions",po::value<bool>()->default_value(false), "display pinocchio qp model collision spheres")
         ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
         ("help,h", "produce help message")
         ("height", po::value<bool>()->default_value(false), "print total feet force data to adjust height in config")
@@ -240,10 +243,16 @@ int main(int argc, char* argv[])
                 simu->add_visual_robot(self_collision_spheres.back());
             }
         }
-        std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
 
-        auto talos_tracker_controller = std::static_pointer_cast<inria_wbc::controllers::TalosPosTracker>(controller);
-        for (const auto& joint : talos_tracker_controller->torque_sensor_joints()) {
+        std::vector<std::shared_ptr<robot_dart::sensor::Torque>> torque_sensors;
+        std::vector<std::string> torque_collision_joints = {
+            "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint",
+            "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
+            "torso_1_joint", "torso_2_joint",
+            "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
+            "arm_right_1_joint", "arm_right_2_joint", "arm_right_3_joint", "arm_right_4_joint"};
+
+        for (const auto& joint : torque_collision_joints) {
             torque_sensors.push_back(simu->add_sensor<robot_dart::sensor::Torque>(robot, joint, control_freq));
             std::cerr << "Add joint torque sensor:  " << joint << std::endl;
         }
@@ -276,6 +285,10 @@ int main(int argc, char* argv[])
         inria_wbc::robot_dart::RobotDamages robot_damages(robot, simu, active_dofs_controllable, active_dofs);
 
         Eigen::VectorXd activated_joints = Eigen::VectorXd::Zero(active_dofs.size());
+
+        bool init_model_sphere_collisions = false;
+        std::vector<std::shared_ptr<robot_dart::Robot>> spheres;
+        bool is_colliding = false;
 
         while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
 
@@ -380,9 +393,9 @@ int main(int argc, char* argv[])
                 auto q = controller->q(false);
                 timer.end("solver");
 
-                auto q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
+                Eigen::VectorXd q_no_mimic = controller->filter_cmd(q).tail(ncontrollable); //no fb
                 timer.begin("cmd");
-                auto q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
+                Eigen::VectorXd q_damaged = inria_wbc::robot_dart::filter_cmd(q_no_mimic, controllable_dofs, active_dofs_controllable);
 
                 if (vm["actuators"].as<std::string>() == "velocity" || vm["actuators"].as<std::string>() == "servo")
                     cmd = inria_wbc::robot_dart::compute_velocities(robot, q_damaged, 1. / control_freq, active_dofs_controllable);
@@ -395,11 +408,25 @@ int main(int argc, char* argv[])
                 }
                 timer.end("cmd");
 
+                Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                 if (ghost) {
-                    Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
                     translate_ghost(0) -= 1;
-                    ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
-                    ghost->set_positions(q.head(6) + translate_ghost, floating_base);
+                    ghost->set_positions(controller->filter_cmd(controller->q_solver(false)).tail(ncontrollable), controllable_dofs);
+                    ghost->set_positions(controller->q_solver(false).head(6) + translate_ghost, floating_base);
+                }
+
+                is_colliding = controller->is_model_colliding();
+                if (vm["model_collisions"].as<bool>()) {
+                    auto spherical_members = controller->collision_check().spherical_members();
+                    auto sphere_color = dart::Color::Green(0.5);
+
+                    if (init_model_sphere_collisions == false) {
+                        spheres = inria_wbc::robot_dart::create_spherical_members(spherical_members, *simu, sphere_color);
+                        init_model_sphere_collisions = true;
+                    }
+                    else {
+                        inria_wbc::robot_dart::update_spherical_members(spherical_members, spheres, sphere_color, is_colliding, controller->collision_check().collision_index(), translate_ghost.head(3));
+                    }
                 }
             }
 
@@ -446,6 +473,21 @@ int main(int argc, char* argv[])
                 robot->set_commands(cmd, active_dofs_controllable);
                 simu->step_world();
                 timer.end("sim");
+
+                // auto col = simu->world()->getConstraintSolver()->getLastCollisionResult();
+                // size_t nc = col.getNumContacts();
+                // size_t contact_count = 0;
+                // for (size_t i = 0; i < nc; i++) {
+                //     auto& ct = col.getContact(i);
+                //     auto f1 = ct.collisionObject1->getShapeFrame();
+                //     auto f2 = ct.collisionObject2->getShapeFrame();
+                //     std::string name1, name2;
+                //     if (f1->isShapeNode())
+                //         name1 = f1->asShapeNode()->getBodyNodePtr()->getName();
+                //     if (f1->isShapeNode())
+                //         name2 = f1->asShapeNode()->getBodyNodePtr()->getName();
+                //     std::cout << "contact:" << name1<< " -- " << name2 << std::endl;
+                // }
             }
 
             if (traj_saver)
@@ -456,10 +498,14 @@ int main(int argc, char* argv[])
                     timer.report(*x.second, simu->scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
+                else if (x.first == "tau")
+                    (*x.second) << controller->tau().transpose() << std::endl;
                 else if (x.first == "com") // the real com
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
                     (*x.second) << controller->com().transpose() << std::endl;
+                else if (x.first == "objective_value")
+                    (*x.second) << controller_pos->objective_value() << std::endl;
                 else if (x.first.find("cost_") != std::string::npos) // e.g. cost_com
                     (*x.second) << controller->cost(x.first.substr(strlen("cost_"))) << std::endl;
                 else if (x.first == "ft")
@@ -507,8 +553,22 @@ int main(int argc, char* argv[])
                     else
                         (*x.second) << Eigen::Vector2d::Constant(1000).transpose() << std::endl;
                 }
-                else if (robot->body_node(x.first) != nullptr)
-                    (*x.second) << robot->body_pose(x.first).translation().transpose() << std::endl;
+                else if (x.first.find("task_") != std::string::npos) // e.g. task_lh
+                {
+                    auto ref = controller_pos->se3_task(x.first.substr(strlen("task_")))->getReference();
+                    (*x.second) << ref.getValue().transpose() << " "
+                                << ref.getDerivative().transpose() << " "
+                                << ref.getSecondDerivative().transpose() << std::endl;
+                }
+                else if (robot->body_node(x.first) != nullptr) {
+                    pinocchio::SE3 frame;
+                    frame.rotation() = robot->body_pose(x.first).rotation();
+                    frame.translation() = robot->body_pose(x.first).translation();
+
+                    Eigen::VectorXd vec(12);
+                    tsid::math::SE3ToVector(frame, vec);
+                    (*x.second) << vec.transpose() << std::endl;
+                }
             }
             if (vm.count("srdf")) {
                 auto conf = vm["srdf"].as<float>();
@@ -520,6 +580,8 @@ int main(int argc, char* argv[])
 #ifdef GRAPHIC // to avoid the warning
                 oss.precision(3);
                 timer.report(oss, simu->scheduler().current_time(), -1, '\n');
+                if (is_colliding)
+                    oss << "Model is colliding" << std::endl;
                 if (!vm.count("mp4"))
                     simu->set_text_panel(oss.str());
 #endif
