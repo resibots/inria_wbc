@@ -15,5 +15,6 @@ BEHAVIOR:
   error_cop: 0.005
   activate_error_cop: true
   error_posture: 0.0
+  stop_state: 6 # DO_NOT_STOP = -1, GO_TO_RF = 0, MOVE_LF_FORWARD = 1, LIFT_DOWN_LF = 2, GO_TO_MIDDLE = 3, GO_TO_LF = 4, MOVE_RF_FORWARD = 5, LIFT_DOWN_RF = 6,
   customize_task_weights:
     momentum: 0.0

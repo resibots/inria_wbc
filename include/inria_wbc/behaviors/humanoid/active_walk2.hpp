@@ -57,6 +57,8 @@ namespace inria_wbc {
                 bool begin_ = true;
                 int state_ = -1;
                 int next_state_ = States::GO_TO_RF;
+                int stop_state_ = -1;
+                bool stop_ = false;
 
                 std::string left_sole_name_;
                 std::string right_sole_name_;
@@ -78,14 +80,12 @@ namespace inria_wbc {
 
                 enum States {
                     GO_TO_RF = 0,
-                    MOVE_RF_FORWARD = 1,
-                    GO_TO_MIDDLE_RF = 2,
-                    LIFT_DOWN_LF = 3,
-                    GO_TO_MIDDLE = 4,
-                    GO_TO_LF = 5,
-                    MOVE_LF_FORWARD = 6,
-                    GO_TO_MIDDLE_LF = 7,
-                    LIFT_DOWN_RF = 8
+                    MOVE_LF_FORWARD = 1,
+                    LIFT_DOWN_LF = 2,
+                    GO_TO_MIDDLE = 3,
+                    GO_TO_LF = 4,
+                    MOVE_RF_FORWARD = 5,
+                    LIFT_DOWN_RF = 6,
                 };
             };
         } // namespace humanoid
