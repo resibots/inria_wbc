@@ -3,7 +3,7 @@
 namespace inria_wbc {
     namespace behaviors {
         namespace generic {
-            static Register<MoveFeet> __talos_move_arm("humanoid::move-feet");
+            static Register<MoveFeet> __talos_move_feet("humanoid::move-feet");
 
             MoveFeet::MoveFeet(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config),
                                                                                                traj_selector_(0)
