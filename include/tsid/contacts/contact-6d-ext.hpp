@@ -22,6 +22,8 @@ namespace tsid {
 
             Matrix3x getContactPoints() { return m_contactPoints; }
 
+            Vector3 getContactNormal() { return m_contactNormal; }
+
             Vector6 getForceReference() { return m_fRef; }
         };
     } // namespace contacts

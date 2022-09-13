@@ -7,7 +7,7 @@
 
 namespace inria_wbc {
     namespace controllers {
-      
+
         // generic position tracker, for both fixed-base and floatin-base robots
         class PosTracker : public Controller {
         public:
@@ -55,10 +55,11 @@ namespace inria_wbc {
             void set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name);
             void set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name);
             void set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name);
+            void set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name);
 
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
-            Eigen::VectorXd force_torque_from_solution(const std::string& foot);
+            Eigen::VectorXd force_torque_from_solution(const std::string& contact_name, bool remove_foot_mass = false, const std::string& sole_frame = "");
 
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
             // therefore you can re-add it later by using its name

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <signal.h>
 
-#include "inria_wbc/behaviors/humanoid/squat.hpp"
+#include "inria_wbc/behaviors/humanoid/move_com.hpp"
 #include "inria_wbc/controllers/talos_pos_tracker.hpp"
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
     //Now contruct the behavior, the behavior will send reference trajectories to the controller
     std::string behavior_conf_path = "../etc/talos/squat.yaml";
     auto behavior_yaml = IWBC_CHECK(YAML::LoadFile(behavior_conf_path));
-    auto behavior = std::make_shared<inria_wbc::behaviors::humanoid::Squat>(controller, behavior_yaml);
+    auto behavior = std::make_shared<inria_wbc::behaviors::humanoid::MoveCom>(controller, behavior_yaml);
 
     ////////// ROBOT_DART ////////////////////////////////////////////////////////////////////
     //Create talos robot

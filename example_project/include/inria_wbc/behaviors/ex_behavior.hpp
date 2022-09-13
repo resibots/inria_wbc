@@ -16,7 +16,7 @@ namespace inria_wbc {
             ExBehavior() = delete;
             ExBehavior(const ExBehavior&) = delete;
 
-            void update(const controllers::SensorData& sensor_data) override;
+            void update(const controllers::SensorData& sensor_data ={}) override;
             virtual ~ExBehavior() {}
             std::string behavior_type() const override { return controllers::behavior_types::DOUBLE_SUPPORT; };
         private:

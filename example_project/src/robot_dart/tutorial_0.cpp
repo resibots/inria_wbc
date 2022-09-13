@@ -1,7 +1,7 @@
 #include <iostream>
 #include <signal.h>
 
-#include "inria_wbc/behaviors/humanoid/squat.hpp"
+#include "inria_wbc/behaviors/ex_behavior.hpp"
 #include "inria_wbc/controllers/ex_controller.hpp"
 #include "inria_wbc/exceptions.hpp"
 
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     //Now contruct the behavior, the behavior will send reference trajectories to the controller
     std::string behavior_conf_path = "../etc/@project_name@_behavior.yaml";
     auto behavior_yaml = IWBC_CHECK(YAML::LoadFile(behavior_conf_path));
-    auto behavior = std::make_shared<inria_wbc::behaviors::humanoid::Squat>(controller, behavior_yaml);
+    auto behavior = std::make_shared<inria_wbc::behaviors::ExBehavior>(controller, behavior_yaml);
 
     while (!stop) {
         behavior->update();

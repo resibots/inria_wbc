@@ -2,13 +2,43 @@ find_package(Boost COMPONENTS program_options)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-
 set(BINARY ${CMAKE_PROJECT_NAME}_test)
+
+include(ProcessorCount)
+ProcessorCount(N)
+if(NOT N EQUAL 0)
+  set(NUM_CORES ${N})
+endif()
+
+find_program (BASH_PROGRAM bash)
+if (BASH_PROGRAM)
+  set(ARGS, "")
+  if (DEFINED CMAKE_C_COMPILER)
+        set(ARGS "${ARGS} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
+  endif()
+  if (DEFINED CMAKE_CXX_COMPILER)
+        set(ARGS "${ARGS}  -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
+  endif()
+  if (DEFINED CMAKE_CXX_STANDARD)
+        set(ARGS "${ARGS} -DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}")
+  endif()
+  if (DEFINED CMAKE_CXX_FLAGS)
+        set(ARGS "${ARGS} -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
+  endif()
+  if (DEFINED CMAKE_PREFIX_PATH)
+        set(ARGS "${ARGS} -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
+  endif()
+  if (DEFINED CMAKE_INSTALL_PREFIX)
+    set(ARGS "${ARGS} -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+  endif()
+
+  add_test (test_example_project ${BASH_PROGRAM}  ${CMAKE_CURRENT_SOURCE_DIR}/test_example_project.sh ${ARGS} "${NUM_CORES}")
+endif (BASH_PROGRAM)
 
 # the tests require Dart to run
 if(${COMPILE_ROBOT_DART_EXAMPLE} STREQUAL "ON")
         find_package(RobotDART REQUIRED COMPONENTS Simu OPTIONAL_COMPONENTS Magnum)
-        set(TEST_SOURCES test_determinism.cpp test_talos.cpp test_franka.cpp test_robot_model.cpp)
+        set(TEST_SOURCES test_determinism.cpp test_robot_model.cpp test_all_robots.cpp)
 endif()
 
 foreach(TEST ${TEST_SOURCES})
@@ -23,16 +53,3 @@ foreach(TEST ${TEST_SOURCES})
                 target_link_libraries(${TEST_NAME}_graphics PUBLIC inria_wbc RobotDART::Magnum RobotDART::Simu Boost::program_options Threads::Threads)
         endif()
 endforeach()
-
-
-include(ProcessorCount)
-ProcessorCount(N)
-if(NOT N EQUAL 0)
-  set(NUM_CORES ${N})
-endif()
-
-find_program (BASH_PROGRAM bash)
-if (BASH_PROGRAM)  
-  add_test (test_example_project ${BASH_PROGRAM}  ${CMAKE_CURRENT_SOURCE_DIR}/test_example_project.sh ${CMAKE_PREFIX_PATH} ${CMAKE_INSTALL_PREFIX} ${NUM_CORES})
-
-endif (BASH_PROGRAM)

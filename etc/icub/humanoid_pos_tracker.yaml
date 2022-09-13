@@ -1,5 +1,6 @@
 CONTROLLER:
   name: humanoid-pos-tracker
+  solver: eiquadprog
   base_path: /home/pal/inria_wbc/etc/icub
   tasks: tasks.yaml
   urdf: icub.urdf

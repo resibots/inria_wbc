@@ -1,12 +1,12 @@
-#include "inria_wbc/behaviors/generic/cartesian.hpp"
+#include "inria_wbc/behaviors/humanoid/move_feet.hpp"
 
 namespace inria_wbc {
     namespace behaviors {
         namespace generic {
-            static Register<Cartesian> __talos_move_arm("generic::cartesian");
+            static Register<MoveFeet> __talos_move_feet("humanoid::move-feet");
 
-            Cartesian::Cartesian(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config),
-                                                                                                 traj_selector_(0)
+            MoveFeet::MoveFeet(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config),
+                                                                                               traj_selector_(0)
             {
 
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
@@ -16,25 +16,35 @@ namespace inria_wbc {
 
                 loop_ = IWBC_CHECK(c["loop"].as<bool>());
                 task_names_ = IWBC_CHECK(c["task_names"].as<std::vector<std::string>>());
+                contact_names_ = IWBC_CHECK(c["contact_names"].as<std::vector<std::string>>());
+
+                for (auto& task_name : task_names_) {
+                    IWBC_ASSERT(std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->has_task(task_name), "active_walk: a " + task_name + " task is required");
+                }
+
+                for (auto& contact_name : contact_names_) {
+                    IWBC_ASSERT(std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->has_contact(contact_name), "active_walk: a " + contact_name + " task is required");
+                }
+
                 auto ts = IWBC_CHECK(c["relative_targets_pos"].as<std::vector<std::vector<double>>>());
                 auto to = IWBC_CHECK(c["relative_targets_rpy"].as<std::vector<std::vector<double>>>());
 
                 if (task_names_.size() != ts.size())
-                    IWBC_ERROR("cartesian behavior needs the same number of tasks and targets");
+                    IWBC_ERROR("MoveFeet behavior needs the same number of tasks and targets");
 
                 for (uint i = 0; i < task_names_.size(); i++) {
 
                     auto task_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[i]);
                     auto task_final = task_init;
 
-                    if(ts[i].size() == 3)
+                    if (ts[i].size() == 3)
                         task_final.translation() = Eigen::Vector3d::Map(ts[i].data()) + task_init.translation();
 
-                    if(to[i].size() == 3)
-                    {
+                    if (to[i].size() == 3) {
                         Eigen::Matrix3d rot = (Eigen::AngleAxisd(to[i][2], Eigen::Vector3d::UnitZ())
                             * Eigen::AngleAxisd(to[i][1], Eigen::Vector3d::UnitY())
-                            * Eigen::AngleAxisd(to[i][0], Eigen::Vector3d::UnitX())).toRotationMatrix();
+                            * Eigen::AngleAxisd(to[i][0], Eigen::Vector3d::UnitX()))
+                                                  .toRotationMatrix();
 
                         task_final.rotation() = rot * task_init.rotation();
                     }
@@ -47,8 +57,7 @@ namespace inria_wbc {
                     trajectory_d.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(task_init, task_final, controller_->dt(), trajectory_duration_));
                     trajectory_dd.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(task_init, task_final, controller_->dt(), trajectory_duration_));
 
-                    if (loop_)
-                    {
+                    if (loop_) {
                         trajectory.push_back(trajs::min_jerk_trajectory(task_final, task_init, controller_->dt(), trajectory_duration_));
                         trajectory_d.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(task_final, task_init, controller_->dt(), trajectory_duration_));
                         trajectory_dd.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(task_final, task_init, controller_->dt(), trajectory_duration_));
@@ -58,11 +67,9 @@ namespace inria_wbc {
                     trajectories_d_.push_back(trajectory_d);
                     trajectories_dd_.push_back(trajectory_dd);
                 }
-
-
             }
 
-            void Cartesian::update(const controllers::SensorData& sensor_data)
+            void MoveFeet::update(const controllers::SensorData& sensor_data)
             {
 
                 for (uint i = 0; i < task_names_.size(); i++) {
@@ -72,12 +79,13 @@ namespace inria_wbc {
                         Eigen::VectorXd ref_vec(12);
                         tsid::math::SE3ToVector(ref, ref_vec);
 
-                        tsid::trajectories::TrajectorySample sample_ref(12,6);
+                        tsid::trajectories::TrajectorySample sample_ref(12, 6);
                         sample_ref.setValue(ref_vec);
-                        sample_ref.setDerivative( trajectories_d_[i][traj_selector_][time_] );
-                        sample_ref.setSecondDerivative( trajectories_dd_[i][traj_selector_][time_] );
+                        sample_ref.setDerivative(trajectories_d_[i][traj_selector_][time_]);
+                        sample_ref.setSecondDerivative(trajectories_dd_[i][traj_selector_][time_]);
 
                         std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref, task_names_[i]);
+                        std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_contact_se3_ref(sample_ref, contact_names_[i]);
                     }
                 }
 

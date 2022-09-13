@@ -155,23 +155,30 @@ namespace inria_wbc {
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
 
-            if (_use_stabilizer) {
-                IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
-                IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the RF torque");
-                IWBC_ASSERT(sensor_data.find("velocity") != sensor_data.end(), "the stabilizer needs the velocity");
-                IWBC_ASSERT(sensor_data.find("imu_vel") != sensor_data.end(), "the stabilizer imu needs angular velocity");
-
+            std::string left_ankle_name, right_ankle_name;
+            std::vector<boost::optional<Eigen::Vector2d>> cops;
+            
+            if (sensor_data.find("lf_force") != sensor_data.end() && sensor_data.find("rf_force") != sensor_data.end()
+                && sensor_data.find("lf_torque") != sensor_data.end() && sensor_data.find("rf_torque") != sensor_data.end()) {
                 // we retrieve the tracked frame from the contact task as the frames have different names in different robots
                 // the ankle = where is the f/t sensor
-                auto left_ankle_name = robot_->model().frames[contact("contact_lfoot")->getMotionTask().frame_id()].name;
-                auto right_ankle_name = robot_->model().frames[contact("contact_rfoot")->getMotionTask().frame_id()].name;
+                left_ankle_name = robot_->model().frames[contact("contact_lfoot")->getMotionTask().frame_id()].name;
+                right_ankle_name = robot_->model().frames[contact("contact_rfoot")->getMotionTask().frame_id()].name;
 
                 // estimate the CoP / ZMP
-                auto cops = _cop_estimator.update(com_ref.getValue().head(2),
+                cops = _cop_estimator.update(com_ref.getValue().head(2),
                     model_joint_pos(left_ankle_name).translation(),
                     model_joint_pos(right_ankle_name).translation(),
                     sensor_data.at("lf_torque"), sensor_data.at("lf_force"),
                     sensor_data.at("rf_torque"), sensor_data.at("rf_force"));
+            }
+
+            if (_use_stabilizer) {
+                IWBC_ASSERT(sensor_data.find("lf_force") != sensor_data.end(), "the stabilizer needs the LF force");
+                IWBC_ASSERT(sensor_data.find("rf_force") != sensor_data.end(), "the stabilizer needs the RF force");
+                IWBC_ASSERT(sensor_data.find("lf_torque") != sensor_data.end(), "the stabilizer needs the LF torque");
+                IWBC_ASSERT(sensor_data.find("rf_torque") != sensor_data.end(), "the stabilizer needs the RF torque");
+                IWBC_ASSERT(sensor_data.find("imu_vel") != sensor_data.end(), "the stabilizer imu needs angular velocity");
 
                 // if the foot is on the ground
                 if (sensor_data.at("lf_force").norm() > _cop_estimator.fmin()) {
