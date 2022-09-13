@@ -38,18 +38,18 @@ lf:
     type: se3
     tracked: leg_left_6_joint
     weight: 1000.0
-    kp: 300.0
+    kp: 30.0
     mask: 111111
 rf:
     type: se3
     tracked: leg_right_6_joint
     weight: 1000.0
-    kp: 300.0
+    kp: 30.0
     mask: 111111
 com:
     type: com
     weight: 1000.0
-    kp: 300.0
+    kp: 30.0
     mask: 111
 cop:
     type: contact-cop-equality
@@ -74,7 +74,7 @@ actuation_bounds:
 contact_lfoot:
     type: contact
     tracked: leg_left_6_joint
-    kp: 300.0
+    kp: 30.0
     lxp: 0.1   # foot length in positive x direction
     lxn: 0.11  # foot length in negative x direction
     lyp: 0.069 # foot length in positive y direction
@@ -87,7 +87,7 @@ contact_lfoot:
 contact_rfoot:
     type: contact
     tracked: leg_right_6_joint
-    kp: 300.0
+    kp: 30.0
     lxp: 0.1   # foot length in positive x direction
     lxn: 0.11  # foot length in negative x direction
     lyp: 0.069 # foot length in positive y direction

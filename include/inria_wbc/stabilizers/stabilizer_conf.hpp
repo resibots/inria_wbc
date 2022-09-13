@@ -14,7 +14,6 @@ namespace inria_wbc {
         struct StabConfig {
             int filter_size;
             Eigen::VectorXd com_gains;
-            Eigen::VectorXd cop_gains;
             Eigen::VectorXd ankle_gains;
             Eigen::VectorXd ffda_gains;
             bool use_zmp;
@@ -31,7 +30,6 @@ namespace inria_wbc {
             os << "StabConfig" << std::endl;
             os << "filter_size: " << s.filter_size << std::endl;
             os << "com_gains: " << s.com_gains.transpose() << std::endl;
-            os << "cop_gains: " << s.cop_gains.transpose() << std::endl;
             os << "ankle_gains: " << s.ankle_gains.transpose() << std::endl;
             os << "ffda_gains: " << s.ffda_gains.transpose() << std::endl;
             os << "use_zmp: " << s.use_zmp << std::endl;
@@ -51,7 +49,6 @@ namespace inria_wbc {
             YAML::Node s = IWBC_CHECK(YAML::LoadFile(stab_path));
 
             sconf.com_gains.resize(6);
-            sconf.cop_gains.resize(2);
             sconf.ankle_gains.resize(6);
             sconf.ffda_gains.resize(3);
             sconf.zmp_p.resize(6);
@@ -70,7 +67,6 @@ namespace inria_wbc {
             sconf.momentum_d.setZero();
 
             IWBC_ASSERT(IWBC_CHECK(s["com"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the com stabilizer");
-            IWBC_ASSERT(IWBC_CHECK(s["cop"].as<std::vector<double>>()).size() == 2, "you need 2 coefficient in p for the cop stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the ankle stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["ffda"].as<std::vector<double>>()).size() == 3, "you need 6 coefficient in p for the ffda stabilizer");
             IWBC_ASSERT(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in p for the zmp stabilizer");
@@ -80,7 +76,6 @@ namespace inria_wbc {
             IWBC_ASSERT(IWBC_CHECK(s["momentum_d"].as<std::vector<double>>()).size() == 6, "you need 6 coefficient in d for the momentum stabilizer");
 
             sconf.com_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["com"].as<std::vector<double>>()).data(), sconf.com_gains.size());
-            sconf.cop_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["cop"].as<std::vector<double>>()).data(), sconf.cop_gains.size());
             sconf.ankle_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ankle"].as<std::vector<double>>()).data(), sconf.ankle_gains.size());
             sconf.ffda_gains = Eigen::VectorXd::Map(IWBC_CHECK(s["ffda"].as<std::vector<double>>()).data(), sconf.ffda_gains.size());
             sconf.zmp_p = Eigen::VectorXd::Map(IWBC_CHECK(s["zmp_p"].as<std::vector<double>>()).data(), sconf.zmp_p.size());

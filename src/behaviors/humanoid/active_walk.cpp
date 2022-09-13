@@ -1,17 +1,17 @@
-#include "inria_wbc/behaviors/humanoid/active_walk2.hpp"
+#include "inria_wbc/behaviors/humanoid/active_walk.hpp"
 #include "inria_wbc/estimators/cop.hpp"
 #include "inria_wbc/stabilizers/stabilizer.hpp"
 
 namespace inria_wbc {
     namespace behaviors {
         namespace humanoid {
-            static Register<ActiveWalk2> __ActiveWalk2("humanoid::active_walk2");
+            static Register<ActiveWalk> __ActiveWalk("humanoid::active_walk");
 
-            ActiveWalk2::ActiveWalk2(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config)
+            ActiveWalk::ActiveWalk(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config)
             {
                 // check that the controller is compatible
                 auto h_controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
-                IWBC_ASSERT(h_controller != NULL, "ActiveWalk2: the controllers needs to be a HumanoidPosTracker (or related)!");
+                IWBC_ASSERT(h_controller != NULL, "ActiveWalk: the controllers needs to be a HumanoidPosTracker (or related)!");
                 IWBC_ASSERT(h_controller->has_task("lf_sole"), "active_walk: an lf_sole task is required (left foot)");
                 IWBC_ASSERT(h_controller->has_task("rf_sole"), "active_walk: an rf_sole task is required (right foot)");
                 IWBC_ASSERT(h_controller->has_task("lh"), "active_walk: an lh task is required (left hand)");
@@ -34,15 +34,10 @@ namespace inria_wbc {
                 step_height_ = IWBC_CHECK(c["step_height"].as<float>());
                 step_length_ = IWBC_CHECK(c["step_length"].as<float>());
                 step_lateral_ = IWBC_CHECK(c["step_lateral"].as<float>());
-                remove_contacts_ = IWBC_CHECK(c["remove_contacts"].as<bool>());
-
-                if ((std::abs(step_height_) > 1e-5 || std::abs(step_length_) > 1e-5 || std::abs(step_lateral_) > 1e-5) && !remove_contacts_)
-                    IWBC_ERROR("remove_contacts_ should be true to make a step");
 
                 if (std::abs(step_height_) < 1e-5 && (std::abs(step_length_) > 1e-5 || std::abs(step_lateral_) > 1e-5))
                     IWBC_ERROR("step_height_ should be non zero true to make a step");
 
-                force_treshold_ = IWBC_CHECK(c["force_treshold"].as<float>());
                 num_cycles_ = IWBC_CHECK(c["num_cycles"].as<int>());
 
                 com_percentage_ref_ = IWBC_CHECK(c["com_percentage_ref"].as<float>());
@@ -56,17 +51,6 @@ namespace inria_wbc {
                     IWBC_ERROR("com_percentage_foot_up_ should < to com_percentage_ref_");
 
                 send_vel_acc_ = IWBC_CHECK(c["send_vel_acc"].as<bool>());
-                one_foot_ = IWBC_CHECK(c["one_foot"].as<bool>());
-
-                if (one_foot_ && !remove_contacts_)
-                    IWBC_ERROR("remove_contacts_ should be true to put Talos on one foot");
-
-                error_cop_ = IWBC_CHECK(c["error_cop"].as<float>());
-                if (error_cop_ < 0.0)
-                    IWBC_ERROR("error_cop should be >= 0");
-                std::cout << "error_cop_ " << error_cop_ << std::endl;
-
-                activate_error_cop_ = IWBC_CHECK(c["activate_error_cop"].as<bool>());
 
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
@@ -112,12 +96,13 @@ namespace inria_wbc {
 
                 dt_ = h_controller->dt();
 
+                activate_error_posture_ = IWBC_CHECK(c["activate_error_posture"].as<bool>());
                 error_posture_ = IWBC_CHECK(c["error_posture"].as<float>());
                 if (error_posture_ < 0.0)
                     IWBC_ERROR("Error_posture_ should be >= 0.0");
             }
 
-            void ActiveWalk2::set_se3_ref(const pinocchio::SE3& init, const pinocchio::SE3& final, const std::string& task_name, const std::string& contact_name, const double& trajectory_duration, const int& index)
+            void ActiveWalk::set_se3_ref(const pinocchio::SE3& init, const pinocchio::SE3& final, const std::string& task_name, const std::string& contact_name, const double& trajectory_duration, const int& index)
             {
                 tsid::trajectories::TrajectorySample sample_ref(12, 6);
                 Eigen::VectorXd ref_vec(12);
@@ -138,7 +123,7 @@ namespace inria_wbc {
                 }
             }
 
-            Eigen::VectorXd ActiveWalk2::set_com_ref(const Eigen::VectorXd& init, const Eigen::VectorXd& final, const double& trajectory_duration, const int& index)
+            Eigen::VectorXd ActiveWalk::set_com_ref(const Eigen::VectorXd& init, const Eigen::VectorXd& final, const double& trajectory_duration, const int& index)
             {
                 tsid::trajectories::TrajectorySample sample_ref(3, 3);
                 auto ref = trajs::min_jerk_trajectory(init, final, dt_, trajectory_duration, index);
@@ -160,17 +145,17 @@ namespace inria_wbc {
                 return (total_cop * (other_foot_f + f) - other_foot_cop * other_foot_f) * (1 / f);
             }
 
-            void ActiveWalk2::update(const controllers::SensorData& sensor_data)
+            void ActiveWalk::update(const controllers::SensorData& sensor_data)
             {
 
                 if (sensor_data.find("lf_force") == sensor_data.end())
-                    IWBC_ERROR("ActiveWalk2 needs the LF force");
+                    IWBC_ERROR("ActiveWalk needs the LF force");
 
                 if (sensor_data.find("rf_force") == sensor_data.end())
-                    IWBC_ERROR("ActiveWalk2 needs the LF force");
+                    IWBC_ERROR("ActiveWalk needs the LF force");
 
                 if (sensor_data.find("positions") == sensor_data.end())
-                    IWBC_ERROR("ActiveWalk2 needs the positions");
+                    IWBC_ERROR("ActiveWalk needs the positions");
 
                 auto controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
 
@@ -182,7 +167,7 @@ namespace inria_wbc {
                         if (!(std::abs(positions(i, 0)) < 1e-10 && std::abs(q_tsid[i + 7]) > 1e-10))
                             q_tsid[i + 7] = positions(i, 0);
                     }
-                    if ((q_tsid - controller->q_tsid()).norm() > error_posture_) {
+                    if ((q_tsid - controller->q_tsid()).norm() > error_posture_ && activate_error_posture_) {
                         controller->posture_task()->setReference(trajs::to_sample(q_tsid.tail(controller->robot()->na())));
                     }
 
@@ -231,7 +216,7 @@ namespace inria_wbc {
                             auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
                             lift_foot_up_ = ref(1) < com_foot_up_ || lift_foot_up_;
                             if (lift_foot_up_) {
-                                if (remove_contacts_ && controller->activated_contacts_forces().find("contact_lfoot") != controller->activated_contacts_forces().end()) {
+                                if (controller->activated_contacts_forces().find("contact_lfoot") != controller->activated_contacts_forces().end()) {
                                     controller->remove_contact("contact_lfoot");
                                     remove_contact_index_ = index_;
                                 }
@@ -304,9 +289,7 @@ namespace inria_wbc {
                             if (stop_state_ == state_)
                                 stop_ = true;
 
-                            if (remove_contacts_) {
-                                controller->add_contact("contact_lfoot");
-                            }
+                            controller->add_contact("contact_lfoot");
 
                             if (cycle_count_ == num_cycles_) {
                                 next_state_ = States::GO_TO_MIDDLE;
@@ -375,7 +358,7 @@ namespace inria_wbc {
                             auto ref = set_com_ref(com_init_, com_final_, traj_foot_duration_, index_);
                             lift_foot_up_ = ref(1) > com_foot_up_ || lift_foot_up_;
                             if (lift_foot_up_) {
-                                if (remove_contacts_ && controller->activated_contacts_forces().find("contact_rfoot") != controller->activated_contacts_forces().end()) {
+                                if (controller->activated_contacts_forces().find("contact_rfoot") != controller->activated_contacts_forces().end()) {
                                     controller->remove_contact("contact_rfoot");
                                     remove_contact_index_ = index_;
                                 }
@@ -450,8 +433,7 @@ namespace inria_wbc {
                             if (stop_state_ == state_)
                                 stop_ = true;
 
-                            if (remove_contacts_)
-                                controller->add_contact("contact_rfoot");
+                            controller->add_contact("contact_rfoot");
                             begin_ = true;
                             cycle_count_++;
 

@@ -1,5 +1,5 @@
-#ifndef IWBC_HUMANOID_ACTIVEWALK2_HPP
-#define IWBC_HUMANOID_ACTIVEWALK2_HPP
+#ifndef IWBC_HUMANOID_ACTIVEWALK_HPP
+#define IWBC_HUMANOID_ACTIVEWALK_HPP
 #include <chrono>
 #include <iostream>
 #include <signal.h>
@@ -12,11 +12,11 @@
 namespace inria_wbc {
     namespace behaviors {
         namespace humanoid {
-            class ActiveWalk2 : public Behavior {
+            class ActiveWalk : public Behavior {
             public:
-                ActiveWalk2(const controller_ptr_t& controller, const YAML::Node& config);
-                ActiveWalk2() = delete;
-                ActiveWalk2(const ActiveWalk2& other) = default;
+                ActiveWalk(const controller_ptr_t& controller, const YAML::Node& config);
+                ActiveWalk() = delete;
+                ActiveWalk(const ActiveWalk& other) = default;
                 void update(const controllers::SensorData& sensor_data = {}) override;
 
                 std::string behavior_type() const override { return controllers::behavior_types::SINGLE_SUPPORT; };
@@ -62,21 +62,17 @@ namespace inria_wbc {
 
                 std::string left_sole_name_;
                 std::string right_sole_name_;
-                bool remove_contacts_ = true;
                 int num_cycles_ = -1;
                 int cycle_count_ = 0;
                 float com_percentage_ref_ = 0.5;
                 float com_percentage_foot_up_ = 0.5;
                 bool send_vel_acc_ = false;
-                bool one_foot_ = false;
-                float force_treshold_ = inria_wbc::estimators::FMIN;
-                float error_cop_ = 0.0;
                 float error_posture_ = 0.0;
 
                 std::ofstream file_{"/home/pal/my_file"};
                 int k = 0;
 
-                bool activate_error_cop_ = false;
+                bool activate_error_posture_ = false;
 
                 enum States {
                     GO_TO_RF = 0,

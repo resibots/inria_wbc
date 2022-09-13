@@ -162,10 +162,6 @@ namespace inria_wbc {
             }
 
             auto com_ref = com_task()->getReference();
-            Eigen::Vector3d cop_ref = Eigen::Vector3d::Zero();
-            if (this->has_task("cop")) {
-                cop_ref = cop_task("cop")->getReference();
-            }
             auto left_ankle_ref = get_full_se3_ref("lf");
             auto right_ankle_ref = get_full_se3_ref("rf");
             auto torso_ref = get_full_se3_ref("torso");
@@ -228,11 +224,6 @@ namespace inria_wbc {
                     stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                     _stabilizer_samples["com"] = com_sample;
-                    if (this->has_task("cop")) {
-                        stabilizer::cop_admittance(dt_, _stabilizer_configs[behavior_type_].cop_gains, valid_cop.value(), model_current_com, cop_ref, cop_out);
-                        set_cop_ref(cop_out, "cop");
-                        _stabilizer_vector3["cop"] = cop_out;
-                    }
                 }
 
                 //zmp admittance
@@ -321,9 +312,6 @@ namespace inria_wbc {
             // set the CoM back (useful if the behavior does not the set the ref at each timestep)
             if (_use_stabilizer) {
                 set_com_ref(com_ref);
-                if (this->has_task("cop")) {
-                    set_cop_ref(cop_ref, "cop");
-                }
                 set_se3_ref(left_ankle_ref, "lf");
                 set_se3_ref(right_ankle_ref, "rf");
                 set_se3_ref(torso_ref, "torso");
