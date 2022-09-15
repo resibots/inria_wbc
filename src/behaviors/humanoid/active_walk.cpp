@@ -189,7 +189,6 @@ namespace inria_wbc {
                     //GO_TO_RF: PUT COM ON RF
                     if (state_ == States::GO_TO_RF) {
                         if (begin_) {
-                            std::cout << "GO_TO_RF" << std::endl;
                             com_init_ = controller->com();
                             com_final_ = com_init_;
                             com_final_(0) = controller->model_frame_pos(right_sole_name_).translation()(0);
@@ -241,7 +240,6 @@ namespace inria_wbc {
                     if (state_ == States::MOVE_RF_FORWARD) {
 
                         if (begin_) {
-                            std::cout << "MOVE_RF_FORWARD" << std::endl;
                             rf_init_ = controller->model_frame_pos(right_sole_name_);
                             rf_final_ = rf_init_;
                             if (first_step_ && cycle_count_ != num_cycles_)
@@ -270,7 +268,6 @@ namespace inria_wbc {
                     if (state_ == States::LIFT_DOWN_LF) {
 
                         if (begin_) {
-                            std::cout << "LIFT_DOWN_LF" << std::endl;
                             lf_init_ = controller->model_frame_pos(left_sole_name_);
                             lf_final_ = lf_init_;
                             lf_final_.translation()(2) = 0.0;
@@ -307,7 +304,6 @@ namespace inria_wbc {
                     //GO_TO_MIDDLE: PUT COM BETWEEN THE TWO FEET
                     if (state_ == States::GO_TO_MIDDLE) {
                         if (begin_) {
-                            std::cout << "GO_TO_MIDDLE" << std::endl;
                             com_init_ = controller->com();
                             com_final_ = com_init_;
                             com_final_.head(2) = 0.5 * (controller->model_frame_pos(left_sole_name_).translation().head(2) + controller->model_frame_pos(right_sole_name_).translation().head(2));
@@ -329,7 +325,6 @@ namespace inria_wbc {
 
                     if (state_ == States::GO_TO_LF) {
                         if (begin_) {
-                            std::cout << "GO_TO_LF" << std::endl;
                             com_init_ = controller->com();
                             com_final_ = com_init_;
                             com_final_(0) = controller->model_frame_pos(left_sole_name_).translation()(0);
@@ -383,7 +378,6 @@ namespace inria_wbc {
                     if (state_ == States::MOVE_LF_FORWARD) {
 
                         if (begin_) {
-                            std::cout << "MOVE_LF_FORWARD" << std::endl;
                             lf_init_ = controller->model_frame_pos(left_sole_name_);
                             lf_final_ = lf_init_;
                             if (first_step_ && cycle_count_ != num_cycles_)
