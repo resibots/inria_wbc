@@ -105,6 +105,7 @@ void test_behavior(utest::test_t test,
     const std::string& actuator_type,
     const y::Node& ref,
     bool enable_stabilizer,
+    std::string task_yaml,
     std::shared_ptr<y::Emitter> yout,
     bool verbose = false)
 {
@@ -117,6 +118,7 @@ void test_behavior(utest::test_t test,
     c_config["CONTROLLER"]["urdf"] = robot->model_filename();
     c_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
     c_config["CONTROLLER"]["verbose"] = verbose;
+    c_config["CONTROLLER"]["tasks"] = task_yaml;
 
     // get the controller
     auto controller_name = IWBC_CHECK(c_config["CONTROLLER"]["name"].as<std::string>());
@@ -397,6 +399,7 @@ void test_behavior(utest::test_t test,
     std::string coll,
     std::string enable_stabilizer,
     std::string urdf,
+    std::string task_yaml,
     y::Node ref,
     std::shared_ptr<y::Emitter> yout)
 {
@@ -435,7 +438,7 @@ void test_behavior(utest::test_t test,
 #endif
 
     try {
-        test_behavior(test, controller_path, behavior_path, simu, robot, actuators, node, stabilizer, yout);
+        test_behavior(test, controller_path, behavior_path, simu, robot, actuators, node, stabilizer, task_yaml, yout);
     }
     catch (std::exception& e) {
         UTEST_ERROR(test, std::string("exception when running the behavior:") + e.what());
@@ -454,7 +457,7 @@ int main(int argc, char** argv)
         desc.add_options()
         ("generate_ref,g", "generate a reference file")
         ("n_threads,n", po::value<int>()->default_value(-1), "run tests in parallel (default = number of cores)")
-        ("single,s", po::value<std::vector<std::string> >()->multitoken(), "run a single test, args: controller_path behavior_path actuators coll enable_stabilizer urdf")
+        ("single,s", po::value<std::vector<std::string> >()->multitoken(), "run a single test, args: controller_path behavior_path actuators coll enable_stabilizer urdf task_yaml")
         ;
     // clang-format on
     po::variables_map vm;
@@ -514,24 +517,26 @@ int main(int argc, char** argv)
         std::cout << "Single test:" << name << std::endl;
         auto test1 = utest::make_test(name);
 #ifdef GRAPHIC
-        test_behavior(test1, args[0], args[1], args[2], args[3], args[4], args[5], ref, std::shared_ptr<y::Emitter>());
+        test_behavior(test1, args[0], args[1], args[2], args[3], args[4], args[5], args[6], ref, std::shared_ptr<y::Emitter>());
 #else
-        UTEST_REGISTER(test_suite, test1, test_behavior(test1, args[0], args[1], args[2], args[3], args[4], args[5], ref, std::shared_ptr<y::Emitter>()));
+        UTEST_REGISTER(test_suite, test1, test_behavior(test1, args[0], args[1], args[2], args[3], args[4], args[5], args[6], ref, std::shared_ptr<y::Emitter>()));
         test_suite.run(1, true);
         utest::write_report(test_suite, std::cout, true);
 #endif
-            return 0;
-    } else {
+        return 0;
+    }
+    else {
 #ifdef GRAPHIC
-    IWBC_ERROR("GRAPHICS is possible only in single mode (-s ...)");
+        IWBC_ERROR("GRAPHICS is possible only in single mode (-s ...)");
 #endif
     }
-    
+
     ///// the default behavior is to run all the combinations in different threads
 
     // this is relative to the "tests" directory
     std::string controller = "../../etc/talos/talos_pos_tracker.yaml";
-    auto behaviors = {"../../etc/talos/arm.yaml", "../../etc/talos/squat.yaml", "../../etc/talos/clapping.yaml", "../../etc/talos/walk_on_spot.yaml"};
+    std::vector<std::string> behaviors = {"../../etc/talos/arm.yaml", "../../etc/talos/squat.yaml", "../../etc/talos/clapping.yaml", "../../etc/talos/walk_on_spot.yaml", "../../etc/talos/active_walk.yaml"};
+    std::vector<std::string> task_file = {"tasks.yaml", "tasks.yaml", "tasks.yaml", "tasks.yaml", "tasks_walk.yaml"};
     auto collision = {"fcl", "dart"};
     auto actuators = {"servo", "torque", "velocity", "spd"};
     std::vector<std::string> stabilized = {"true", "false"};
@@ -539,7 +544,9 @@ int main(int argc, char** argv)
     std::vector<int> frequency = {500, 1000};
 
     (*yout) << y::Key << controller << y::Value << y::BeginMap;
-    for (auto& b : behaviors) {
+    for (int i = 0; i < behaviors.size(); i++) {
+        auto b = behaviors[i];
+        auto t = task_file[i];
         (*yout) << y::Key << b << y::Value << y::BeginMap;
         for (auto& a : actuators) {
             (*yout) << y::Key << a << y::Value << y::BeginMap;
@@ -558,14 +565,14 @@ int main(int argc, char** argv)
 
                         if (vm.count("generate_ref")) {
                             std::cout << "generating..." << std::endl;
-                            test_behavior(test1, controller, b, a, c, s, urdfs[1], ref, yout);
+                            test_behavior(test1, controller, b, a, c, s, urdfs[1], t, ref, yout);
                             if (c != std::string("dart"))
-                                test_behavior(test2, controller, b, a, c, s, urdfs[0], ref, yout);
+                                test_behavior(test2, controller, b, a, c, s, urdfs[0], t, ref, yout);
                         }
                         else {
-                            UTEST_REGISTER(test_suite, test1, test_behavior(test1, controller, b, a, c, s, urdfs[1], ref, std::shared_ptr<y::Emitter>()));
+                            UTEST_REGISTER(test_suite, test1, test_behavior(test1, controller, b, a, c, s, urdfs[1], t, ref, std::shared_ptr<y::Emitter>()));
                             if (c != std::string("dart"))
-                                UTEST_REGISTER(test_suite, test2, test_behavior(test2, controller, b, a, c, s, urdfs[0], ref, std::shared_ptr<y::Emitter>()));
+                                UTEST_REGISTER(test_suite, test2, test_behavior(test2, controller, b, a, c, s, urdfs[0], t, ref, std::shared_ptr<y::Emitter>()));
                         }
                         (*yout) << y::EndMap;
                     }
@@ -588,9 +595,9 @@ int main(int argc, char** argv)
         utest::write_report(test_suite, std::cout, true);
         std::cout << "------------ SUMMARY ------------" << std::endl;
         utest::write_report(test_suite, std::cout, false);
-        if(test_suite.success())
+        if (test_suite.success())
             return 0;
-        else 
+        else
             return 1;
     }
     return 0;

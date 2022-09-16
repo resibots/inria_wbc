@@ -10,8 +10,8 @@
 
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robots/franka.hpp>
-#include <robot_dart/robots/talos.hpp>
 #include <robot_dart/robots/icub.hpp>
+#include <robot_dart/robots/talos.hpp>
 #include <robot_dart/robots/tiago.hpp>
 
 #include "inria_wbc/behaviors/behavior.hpp"
@@ -41,8 +41,8 @@ namespace cst {
 namespace y = YAML;
 
 // this is the only part that is robot specific
-inria_wbc::controllers::SensorData sensor_data_franka(const std::shared_ptr<robot_dart::Robot>& robot, 
-std::shared_ptr<inria_wbc::controllers::Controller>& controller)
+inria_wbc::controllers::SensorData sensor_data_franka(const std::shared_ptr<robot_dart::Robot>& robot,
+    std::shared_ptr<inria_wbc::controllers::Controller>& controller)
 {
     robot->fix_to_world(); // this is robot-specific too
 
@@ -93,7 +93,6 @@ inria_wbc::controllers::SensorData sensor_data_talos(const std::shared_ptr<robot
     return sensor_data;
 }
 
-
 // this is the only part that is robot specific
 inria_wbc::controllers::SensorData sensor_data_icub(const std::shared_ptr<robot_dart::Robot>& r, std::shared_ptr<inria_wbc::controllers::Controller>& c)
 {
@@ -101,7 +100,7 @@ inria_wbc::controllers::SensorData sensor_data_icub(const std::shared_ptr<robot_
     assert(controller);
     auto robot = std::dynamic_pointer_cast<robot_dart::robots::ICub>(r);
     assert(robot);
-    
+
     inria_wbc::controllers::SensorData sensor_data;
 
     sensor_data["lf_torque"] = robot->ft_foot_left().torque();
@@ -117,17 +116,14 @@ inria_wbc::controllers::SensorData sensor_data_icub(const std::shared_ptr<robot_
     sensor_data["imu_vel"] = robot->imu().angular_velocity();
     sensor_data["imu_acc"] = robot->imu().linear_acceleration();
 
-
     return sensor_data;
 }
-
-
 
 // this is the only part that is robot specific
 inria_wbc::controllers::SensorData sensor_data_tiago(const std::shared_ptr<robot_dart::Robot>& r, std::shared_ptr<inria_wbc::controllers::Controller>& c)
 {
     inria_wbc::controllers::SensorData sensor_data;
-    sensor_data["positions"] =  r->positions(c->controllable_dofs(false));
+    sensor_data["positions"] = r->positions(c->controllable_dofs(false));
     sensor_data["joint_velocities"] = r->velocities(c->controllable_dofs(false));
     return sensor_data;
 }
@@ -137,6 +133,7 @@ void test_behavior(utest::test_t test,
     const std::string& base_path,
     const std::string& controller_path,
     const std::string& behavior_path,
+    const std::string& task_file,
     const std::shared_ptr<robot_dart::Robot>& robot,
     const FData& fdata,
     bool expect_collision,
@@ -162,6 +159,7 @@ void test_behavior(utest::test_t test,
         c_config["CONTROLLER"]["urdf"] = robot->model_filename();
         c_config["CONTROLLER"]["mimic_dof_names"] = robot->mimic_dof_names();
         c_config["CONTROLLER"]["verbose"] = verbose;
+        c_config["CONTROLLER"]["tasks"] = task_file;
 
         // get the controller
         auto controller_name = IWBC_CHECK(c_config["CONTROLLER"]["name"].as<std::string>());
@@ -172,7 +170,7 @@ void test_behavior(utest::test_t test,
         UTEST_CHECK(test, !p_controller->tasks().empty());
 
         // get the behavior (trajectories)
-        UTEST_INFO(test, "Behavior path:" +  base_path + behavior_path);
+        UTEST_INFO(test, "Behavior path:" + base_path + behavior_path);
         y::Node b_config = IWBC_CHECK(y::LoadFile(base_path + behavior_path));
         auto behavior_name = IWBC_CHECK(b_config["BEHAVIOR"]["name"].as<std::string>());
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, b_config);
@@ -268,40 +266,50 @@ int main(int argc, char** argv)
     std::string path = "../../etc/";
     std::string robot = vm["robot"].as<std::string>();
     /////////// Franka robot
-    if(robot == "all" || robot == "franka") {
+    if (robot == "all" || robot == "franka") {
         std::string base_path = path + "/franka/";
         std::string name = "franka";
         std::string controller_path = "pos_tracker.yaml";
+        std::string task_file = "tasks.yaml";
         auto behaviors = {"cartesian_line.yaml"};
         bool expect_collision = false;
         for (auto& behavior_path : behaviors) {
             auto test1 = utest::make_test("[" + name + "] " + behavior_path);
             auto franka = std::make_shared<robot_dart::robots::Franka>();
-            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, franka, sensor_data_franka, expect_collision, verbose));
+            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, task_file, franka, sensor_data_franka, expect_collision, verbose));
         }
     }
     /////////// Talos robot
-    if(robot == "all" || robot == "talos") {
+    if (robot == "all" || robot == "talos") {
         std::string base_path = path + "/talos/";
         std::string controller_path = "talos_pos_tracker.yaml";
-        auto behaviors = { "arm.yaml",
+        std::vector<std::string> behaviors = {"arm.yaml",
             "clapping.yaml",
             "squat.yaml",
             "walk.yaml",
             "walk_on_spot.yaml",
-            "traj_teleop1.yaml"};
+            "traj_teleop1.yaml",
+            "active_walk.yaml"};
+        std::vector<std::string> task_files = {"tasks.yaml",
+            "tasks.yaml",
+            "tasks.yaml",
+            "tasks.yaml",
+            "tasks.yaml",
+            "tasks.yaml",
+            "tasks_walk.yaml"};
         std::string name = "talos";
-        for (auto& behavior_path : behaviors) {
+        for (int i = 0; i < behaviors.size(); i++) {
+            auto behavior_path = behaviors[i];
+            auto task_file = task_files[i];
             auto test1 = utest::make_test("[" + name + "] " + behavior_path);
             auto talos = std::make_shared<robot_dart::robots::Talos>();
             bool expect_collision = (behavior_path == std::string("clapping.yaml")) ? true : false;
-
-            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, talos, sensor_data_talos, expect_collision, verbose));
+            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, task_file, talos, sensor_data_talos, expect_collision, verbose));
         }
     }
 
     /////////// Icub robot
-    if(robot == "all" || robot == "icub") {
+    if (robot == "all" || robot == "icub") {
         std::string base_path = path + "/icub/";
         std::string controller_path = "humanoid_pos_tracker.yaml";
         auto behaviors = {"arm.yaml",
@@ -309,26 +317,28 @@ int main(int argc, char** argv)
             "walk.yaml",
             "walk_on_spot.yaml",
             "traj_teleop1.yaml"};
+        std::string task_file = "tasks.yaml";
         std::string name = "icub";
         for (auto& behavior_path : behaviors) {
             auto test1 = utest::make_test("[" + name + "] " + behavior_path);
             auto icub = std::make_shared<robot_dart::robots::ICub>();
             bool expect_collision = false;
-            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, icub, sensor_data_icub, expect_collision, verbose));
+            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, task_file, icub, sensor_data_icub, expect_collision, verbose));
         }
     }
 
     /////////// Tiago robot
-    if(robot == "all" || robot == "tiago") {
+    if (robot == "all" || robot == "tiago") {
         std::string base_path = path + "/tiago/";
         std::string controller_path = "pos_tracker.yaml";
         auto behaviors = {"cartesian_line.yaml"};
+        std::string task_file = "tasks.yaml";
         std::string name = "tiago";
         for (auto& behavior_path : behaviors) {
             auto test1 = utest::make_test("[" + name + "] " + behavior_path);
             auto tiago = std::make_shared<robot_dart::robots::Tiago>(1000, "tiago/tiago_steel_no_wheel.urdf");
             bool expect_collision = false;
-            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, tiago, sensor_data_tiago, expect_collision, verbose));
+            UTEST_REGISTER(test_suite, test1, test_behavior(test1, base_path, controller_path, behavior_path, task_file, tiago, sensor_data_tiago, expect_collision, verbose));
         }
     }
     ///////// RUN everything

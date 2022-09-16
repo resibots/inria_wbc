@@ -268,7 +268,6 @@ namespace inria_wbc {
 
             std::vector<Eigen::Vector3d> refs;
             for (auto& contact_name : contact_names) {
-                std::cout << contact_name << std::endl;
                 IWBC_ASSERT(contact_map.find(contact_name) != contact_map.end(), "cop task : contact : ", contact_name, " is not inside the contact map");
                 auto contact_ref = robot->framePosition(tsid->data(), contact_map.at(contact_name)->getMotionTask().frame_id()).translation();
                 contact_ref[2] = 0.0;
@@ -280,7 +279,6 @@ namespace inria_wbc {
                 ref += r;
             }
             ref = ref / refs.size();
-            std::cout << ref << std::endl;
             // create the task
             auto task = std::make_shared<tsid::tasks::TaskCopEquality>(task_name, *robot);
 
