@@ -1,3 +1,21 @@
+head:
+    type: se3
+    tracked: head_1_joint
+    weight: 1.0
+    kp: 1.0
+    mask: 110000
+head_pitch:
+    type: se3
+    tracked: head_1_joint
+    weight: 100.0
+    kp: 30.0
+    mask: 000010
+head_yaw:
+    type: se3
+    tracked: head_2_joint
+    weight: 100.0
+    kp: 30.0
+    mask: 000001
 lh:
     type: se3
     tracked: gripper_left_joint
@@ -26,30 +44,32 @@ rf:
     type: se3
     tracked: leg_right_6_joint
     weight: 1000.0
-    kp: 30.0     
+    kp: 30.0
     mask: 111111
 com:
     type: com
     weight: 1000.0
     kp: 30.0
     mask: 111
-momentum:
-    type: momentum
-    weight: 0.0
-    kp: 300.0
-    mask: 111111
 posture:
     type: posture
     weight: 1.75
     kp: 10.0
     ref: inria_start
+momentum: #!!!!!WARNING IS DISZBLED FOR SINGLE SUPPORT cf parse_stabiliser !!!!!!!!!!!
+    type: momentum
+    weight: 1000.0
+    kp: 30.0
+    mask: 000110
 bounds:
     type: bounds
     weight: 10000
-    dt: 0.001
+actuation_bounds:
+    type: actuation-bounds
+    weight: 10000
 contact_lfoot:
     type: contact
-    joint: leg_left_6_joint
+    tracked: leg_left_6_joint
     kp: 30.0
     lxp: 0.1   # foot length in positive x direction
     lxn: 0.11  # foot length in negative x direction
@@ -62,7 +82,7 @@ contact_lfoot:
     normal: [0, 0, 1]
 contact_rfoot:
     type: contact
-    joint: leg_right_6_joint
+    tracked: leg_right_6_joint
     kp: 30.0
     lxp: 0.1   # foot length in positive x direction
     lxn: 0.11  # foot length in negative x direction
@@ -77,11 +97,11 @@ self_collision-left:
     type: self-collision
     tracked: gripper_left_joint
     radius: 0.1
-    avoided: 
+    avoided:
         gripper_right_joint: 0.1
         arm_right_5_joint: 0.05
         v_leg_right_3: 0.15
-        v_leg_left_3: 0.15        
+        v_leg_left_3: 0.15
         torso_2_joint: 0.1
         base_link: 0.15
         v_base_link_left: 0.115
@@ -90,18 +110,20 @@ self_collision-left:
         leg_left_1_joint: 0.15
         leg_right_4_joint: 0.1
         leg_left_4_joint: 0.1
-    weight: 50
-    kp: 500.0
-    p: 4
+    weight: 2000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
 self_collision-right:
     type: self-collision
     tracked: gripper_right_joint
     radius: 0.1
-    avoided: 
+    avoided:
         gripper_left_joint: 0.1
         arm_left_5_joint: 0.05
         v_leg_right_3: 0.15
-        v_leg_left_3: 0.15        
+        v_leg_left_3: 0.15
         torso_2_joint: 0.1
         base_link: 0.15
         v_base_link_left: 0.115
@@ -110,10 +132,12 @@ self_collision-right:
         leg_left_1_joint: 0.15
         leg_right_4_joint: 0.1
         leg_left_4_joint: 0.1
-    weight: 50
-    kp: 500.0
-    p: 4
-self_collision-arm-right:
+    weight: 2000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-elbow-right:
     type: self-collision
     tracked: arm_right_4_joint
     radius: 0.15
@@ -121,10 +145,12 @@ self_collision-arm-right:
         base_link: 0.15
         v_base_link_left: 0.115
         v_base_link_right: 0.115
-    weight: 10
-    kp: 10.0
-    p: 4
-self_collision-arm-left:
+    weight: 1000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-elbow-left:
     type: self-collision
     tracked: arm_left_4_joint
     radius: 0.15
@@ -132,6 +158,34 @@ self_collision-arm-left:
         base_link: 0.15
         v_base_link_left: 0.115
         v_base_link_right: 0.115
-    weight: 10
-    kp: 10.0
-    p: 4
+    weight: 1000
+    kp: 150.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-wrist-right:
+    type: self-collision
+    tracked: arm_right_5_joint
+    radius: 0.10
+    avoided:
+        base_link: 0.15
+        v_base_link_left: 0.115
+        v_base_link_right: 0.115
+    weight: 1000
+    kp: 50.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2
+self_collision-wrist-left:
+    type: self-collision
+    tracked: arm_left_5_joint
+    radius: 0.10
+    avoided:
+        base_link: 0.15
+        v_base_link_left: 0.115
+        v_base_link_right: 0.115
+    weight: 1000
+    kp: 150.0
+    kd: 250.0
+    margin: 0.02
+    m: 0.2

@@ -30,6 +30,19 @@
 namespace tsid {
     namespace tasks {
 
+
+        /// \begin{eqnarray}
+        ///     D_p &=& p - p_0 \textrm{     \emph{(3D-vectors)}}\\
+        ///     N_p &=& ||D_p|| = ||p - p_0|| = \sqrt{(x-a)^2 + (y-b)^2 + (z-c)^2}\\
+        ///     E_p &=& \exp(k (N_p-d))\\
+        ///     c(p) &=& \frac{1}{1 + E_p}\\
+        ///     \nabla c(p) &=& - \frac{k E_p}{N_p (1 + E_p)^2} D_p\\
+        ///     \mathcal{H}c(p)&=& \left(\frac{2 k^2 E_p^2}{N^2 (E_p+1)^3}
+        ///     - \frac{k^2 E_p}{N^2 (E_p+1)^2}
+        ///     - \frac{k E_p}{N^{3/2} (E_p+1)^2 }\right)
+        ///     D_p D_p^T 
+        ///     - \frac{k E_p}{N_p (E_P+1)^2} I
+        /// \end{eqnarray}
         class TaskSelfCollision : public TaskMotion {
         public:
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -45,7 +58,8 @@ namespace tsid {
                 const std::string& frameName,
                 const std::unordered_map<std::string, double>& frames,
                 double radius,
-                double p);
+                double margin,
+                double m);
             virtual ~TaskSelfCollision() {}
 
             int dim() const;
@@ -64,6 +78,9 @@ namespace tsid {
             void Kd(const double kd) { m_Kd = kd; }
             Index frame_id() const;
 
+            const pinocchio::SE3& tracked_frame_position() const {
+               return m_tracked_frame_position;
+            }
             const std::vector<Vector3>& avoided_frames_positions() const { return m_avoided_frames_positions; }
             const std::vector<double>& avoided_frames_r0s() const { return m_avoided_frames_r0s; }
             bool collision(int i) const { return m_collisions[i]; }
@@ -86,8 +103,9 @@ namespace tsid {
             Vector3 m_grad_C;
             Eigen::Matrix<double, 3, 3> m_Hessian_C;
 
-            double m_p;
-            double m_radius;
+            double m_margin; // zone of influece
+            double m_radius; // radius around the body
+            double m_m = 0.2;// exponent of the asymetric sigmoid, smaller = more asymetric 
             ConstraintEquality m_constraint;
 
             Vector3 m_drift;
@@ -95,7 +113,7 @@ namespace tsid {
             std::vector<Matrix6x> m_Js; // jacobian of the other frames
 
             std::vector<Vector3> m_avoided_frames_positions;
-
+            pinocchio::SE3 m_tracked_frame_position;
             std::vector<bool> m_collisions;
 
             Eigen::MatrixXd m_A;

@@ -1,4 +1,7 @@
 BEHAVIOR:
-  name: humanoid::squat
-  trajectory_duration: 6
-  motion_size: 0.2
+  name: humanoid::move_com
+  trajectory_duration: 2
+  targets: [[0, 0, -0.2]]
+  mask: 001
+  absolute: false
+  loop: true

@@ -1,0 +1,16 @@
+BEHAVIOR:
+  name: humanoid::active_walk
+  transition_duration: 5 # duration of trajectories moving the com
+  traj_foot_duration: 1 # duration of trajectories moving a foot
+  step_height: 0.05 # height of the step
+  step_length: 0.05 # lenght of the step
+  step_lateral: 0.0 # lateral lenght of the step
+  com_percentage_ref: 0.5 # put the com reference inside the foot (at com_percentage*(external_foot_border - internal_foot_border) + internal_foot_border)
+  com_percentage_foot_up: 0.25 # put the com reference inside the foot (at com_percentage*(external_foot_border - internal_foot_border) + internal_foot_border)
+  num_cycles: 10 # put -1 for infinite
+  send_vel_acc: false # if true it will give vel and acc references to the tasks
+  activate_error_posture: false
+  error_posture: 0.0
+  stop_state: -1 # DO_NOT_STOP = -1, GO_TO_RF = 0, MOVE_LF_FORWARD = 1, LIFT_DOWN_LF = 2, GO_TO_MIDDLE = 3, GO_TO_LF = 4, MOVE_RF_FORWARD = 5, LIFT_DOWN_RF = 6,
+  customize_task_weights:
+    momentum: 0.0

@@ -5,3 +5,4 @@ BEHAVIOR:
   step_height: 0.1
   customize_task_weights:
     momentum: 0.0
+    cop: 0.0

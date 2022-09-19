@@ -16,7 +16,7 @@
 #include <tsid/solvers/solver-HQP-eiquadprog.hpp>
 
 #ifdef TSID_QPMAD_FOUND
-    #include <tsid/solvers/solver-HQP-qpmad.hpp>
+#include <tsid/solvers/solver-HQP-qpmad.hpp>
 #endif
 
 #include <tsid/solvers/solver-HQP-factory.hxx>
@@ -65,6 +65,8 @@ namespace inria_wbc {
             auto ref_map = robot_->model().referenceConfigurations;
             IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
             q_tsid_ = ref_map[ref_config];
+            if (verbose_)
+                std::cout << "q_tsid ref:" << q_tsid_.transpose() << "[" << q_tsid_.size() << "]" << std::endl;
 
             if (floating_base_) {
                 //q0_ is in "Dart format" for the floating base
@@ -83,23 +85,20 @@ namespace inria_wbc {
             ////////////////////Create an HQP solver /////////////////////////////////////
             using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
 
-            if(solver_to_use_ == "qpmad")
-            {
-        #ifdef TSID_QPMAD_FOUND
+            if (solver_to_use_ == "qpmad") {
+#ifdef TSID_QPMAD_FOUND
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
-        #else
+#else
                 IWBC_ERROR("'qpmad' solver is not available in tsid or in the system.");
-        #endif
+#endif
             }
-            else if(solver_to_use_ == "eiquadprog")
-            {
+            else if (solver_to_use_ == "eiquadprog") {
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
             }
-            else
-            {
+            else {
                 IWBC_ERROR("solver in configuration file must be either 'eiquadprog' or 'qpmad'.");
             }
-            
+
             solver_->resize(tsid_->nVar(), tsid_->nEq(), tsid_->nIn());
 
             ////////////////////Compute Problem Data at init /////////////////////////////
@@ -175,9 +174,9 @@ namespace inria_wbc {
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
-                else {
+                else if (type.find("contact-") == std::string::npos) {
                     // the task is added automatically to TSID by the factory
-                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config);
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, {});
                     tasks_[name] = task;
                     activated_tasks_.push_back(name);
                 }
@@ -185,8 +184,21 @@ namespace inria_wbc {
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
                 task_count++;
             }
-            if (verbose_)
-                std::cout << "Number of parsed tasks " << task_count << std::endl;
+            for (auto it = task_list.begin(); it != task_list.end(); ++it) {
+                auto name = IWBC_CHECK(it->first.as<std::string>());
+                auto type = IWBC_CHECK(it->second["type"].as<std::string>());
+                if (type.find("contact-") != std::string::npos) {
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, contacts_);
+                    tasks_[name] = task;
+                    activated_tasks_.push_back(name);
+                }
+                if (verbose_)
+                    std::cout << "added task/contact:" << name << " type:" << type << std::endl;
+                task_count++;
+
+                if (verbose_)
+                    std::cout << "Number of parsed tasks " << task_count << std::endl;
+            }
         }
 
         void PosTracker::parse_frames(const std::string& path)
@@ -227,7 +239,7 @@ namespace inria_wbc {
 
         void PosTracker::set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name)
         {
-            auto c = contact(contact_name);
+            auto c = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
             auto sample = trajs::to_sample(ref);
             c->setReference(sample);
         }
@@ -236,6 +248,12 @@ namespace inria_wbc {
         {
             auto task = se3_task(task_name);
             task->setReference(sample);
+        }
+
+        void PosTracker::set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name)
+        {
+            auto c = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
+            c->setReference(sample);
         }
 
         void PosTracker::remove_contact(const std::string& contact_name)
@@ -257,45 +275,30 @@ namespace inria_wbc {
             activated_contacts_.push_back(contact_name);
         }
         //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
-        //it corresponds to the force of contact(contact_name)->Contact6d::setForceReference(force);
-        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& foot)
+        //when we supress foot mass it corresponds to F/T sensor data
+        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& contact_name, float foot_mass, const std::string& sole_frame)
         {
-            IWBC_ASSERT(foot == "left" || foot == "right", "foot must be left or right");
-
-            std::string ct_name, tau_x_name, tau_y_name;
-            if (foot == "left") {
-                ct_name = "contact_lfoot";
-                tau_x_name = "leg_left_6_joint";
-                tau_y_name = "leg_left_5_joint";
-            }
-            if (foot == "right") {
-                ct_name = "contact_rfoot";
-                tau_x_name = "leg_right_6_joint";
-                tau_y_name = "leg_right_5_joint";
-            }
-
             Eigen::Matrix<double, 6, 1> force_tsid;
             force_tsid.setZero();
 
-            IWBC_ASSERT(activated_contacts_forces_.find(ct_name) != activated_contacts_forces_.end(), ct_name, "not in activated_contacts_forces_");
-            auto contact_force = activated_contacts_forces_[ct_name];
-            int n_contact_points = contact_force.size() / 3;
-            for (int i = 0; i < n_contact_points; i++) {
-                force_tsid(0) += -contact_force(0 + i * 3);
-                force_tsid(1) += -contact_force(1 + i * 3);
-                force_tsid(2) += -contact_force(2 + i * 3);
+            IWBC_ASSERT(activated_contacts_forces_.find(contact_name) != activated_contacts_forces_.end(), contact_name, " not in activated_contacts_forces_");
+            auto contact_force = activated_contacts_forces_[contact_name];
+            auto generatorMatrix = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name))->Contact6d::getForceGeneratorMatrix();
+            force_tsid = generatorMatrix * contact_force;
+
+            if (foot_mass > 1e-5) {
+                // we retrieve the tracked frame from the contact task
+                auto contact_frame = robot_->model().frames[contact(contact_name)->getMotionTask().frame_id()].name;
+                IWBC_ASSERT(robot_->model().existFrame(contact_frame), "Frame " + contact_frame + " does not exist in model.");
+                IWBC_ASSERT(robot_->model().existFrame(sole_frame), "Frame " + sole_frame + " does not exist in model.");
+
+                auto contact_world = tsid_->data().oMi[robot_->model().getJointId(contact_frame)];
+                auto sole_world = tsid_->data().oMf[robot_->model().getFrameId(sole_frame)];
+
+                force_tsid.head(3) += foot_mass * robot_->model().gravity.linear();
+                Eigen::Vector3d tmp = force_tsid.head(3);
+                force_tsid.tail(3) -= (contact_world.translation() - sole_world.translation()).cross(tmp);
             }
-
-            auto tau_vec = tau(false);
-            auto dofs_names = all_dofs(false);
-
-            auto it = std::find(dofs_names.begin(), dofs_names.end(), tau_x_name);
-            IWBC_ASSERT(it != dofs_names.end(), tau_x_name, "not in dofs_names");
-            force_tsid(3) = -tau_vec[std::distance(dofs_names.begin(), it)];
-            it = std::find(dofs_names.begin(), dofs_names.end(), tau_y_name);
-            IWBC_ASSERT(it != dofs_names.end(), tau_y_name, "not in dofs_names");
-            force_tsid(4) = tau_vec[std::distance(dofs_names.begin(), it)];
-
             return force_tsid;
         }
 

@@ -27,9 +27,11 @@ set(INRIA_WBC_SOURCES
     src/behaviors/behavior.cpp
     src/behaviors/generic/cartesian.cpp
     src/behaviors/generic/cartesian_traj.cpp
-    src/behaviors/humanoid/squat.cpp
+    src/behaviors/humanoid/move_com.cpp
+    src/behaviors/humanoid/move_feet.cpp
     src/behaviors/humanoid/walk_on_spot.cpp
     src/behaviors/humanoid/walk.cpp
+    src/behaviors/humanoid/active_walk.cpp
     src/behaviors/humanoid/clapping.cpp
     src/safety/torque_collision_detection.cpp
     src/stabilizers/stabilizer.cpp

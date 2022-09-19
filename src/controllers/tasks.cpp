@@ -1,6 +1,7 @@
 #include <tsid/tasks/task-actuation-bounds.hpp>
 #include <tsid/tasks/task-actuation-equality.hpp>
 #include <tsid/tasks/task-angular-momentum-equality.hpp>
+#include <tsid/tasks/task-capture-point-inequality.hpp>
 #include <tsid/tasks/task-com-equality.hpp>
 #include <tsid/tasks/task-cop-equality.hpp>
 #include <tsid/tasks/task-joint-bounds.hpp>
@@ -38,7 +39,8 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_se3(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
 
             // retrieve parameters from YAML
@@ -63,9 +65,10 @@ namespace inria_wbc {
             // we need to check if this is a joint or a frame
             bool joint = robot->model().existJointName(tracked);
             bool body = robot->model().existBodyName(tracked);
+            bool frame = robot->model().existFrame(tracked);
             if (joint && body)
                 throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
-            if (!joint && !body)
+            if (!joint && !body && !frame)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
             pinocchio::SE3 ref;
 
@@ -88,7 +91,8 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_com(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -122,7 +126,8 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_momentum(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -152,36 +157,12 @@ namespace inria_wbc {
         }
         RegisterYAML<tsid::tasks::TaskMEquality> __register_linear_momentum_equality("momentum", make_momentum);
 
-        ////// COP task //////
-        std::shared_ptr<tsid::tasks::TaskBase> make_cop(
-            const std::shared_ptr<robots::RobotWrapper>& robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
-        {
-            assert(tsid);
-            assert(robot);
-
-            // parse yaml
-            auto weight = node["weight"].as<double>();
-
-            // create the task
-            auto task = std::make_shared<tsid::tasks::TaskCopEquality>(task_name, *robot);
-
-            // set the reference
-            task->setReference(Eigen::Vector3d(0, 0, 0));
-
-            // add to TSID
-            tsid->addForceTask(*task, weight, 1);
-
-            return task;
-        }
-        RegisterYAML<tsid::tasks::TaskCopEquality> __register_cop_equality("cop", make_cop);
-
         ////// Posture //////
         std::shared_ptr<tsid::tasks::TaskBase> make_posture(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -227,7 +208,8 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_torque(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -252,7 +234,7 @@ namespace inria_wbc {
             }
             task->mask(mask_post);
 
-            if (node["scaling"]){
+            if (node["scaling"]) {
                 auto scaling = IWBC_CHECK(node["scaling"].as<std::vector<double>>());
                 IWBC_ASSERT(scaling.size() == n_actuated, "wrong size in torque scaling, expected:", n_actuated, " got:", scaling.size());
                 Eigen::VectorXd scaling_post = Eigen::VectorXd::Map(scaling.data(), scaling.size());
@@ -270,11 +252,135 @@ namespace inria_wbc {
         }
         RegisterYAML<tsid::tasks::TaskActuationEquality> __register_torque("torque", make_torque);
 
+        ////// COP task //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_cop_equality(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto contact_names = IWBC_CHECK(node["contact_name"].as<std::vector<std::string>>());
+
+            std::vector<Eigen::Vector3d> refs;
+            for (auto& contact_name : contact_names) {
+                IWBC_ASSERT(contact_map.find(contact_name) != contact_map.end(), "cop task : contact : ", contact_name, " is not inside the contact map");
+                auto contact_ref = robot->framePosition(tsid->data(), contact_map.at(contact_name)->getMotionTask().frame_id()).translation();
+                contact_ref[2] = 0.0;
+                refs.push_back(contact_ref);
+            }
+
+            Eigen::Vector3d ref = Eigen::Vector3d::Zero();
+            for (auto& r : refs) {
+                ref += r;
+            }
+            ref = ref / refs.size();
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskCopEquality>(task_name, *robot);
+
+            // set the reference in our case the initial position has the cop at the middle of the convex hull
+            task->setReference(ref);
+
+            // add to TSID
+            tsid->addForceTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskCopEquality> __register_cop_equality("contact-cop-equality", make_cop_equality);
+
+        ////// Task contact force equality not added in the task factory because it needs already created contacts //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_contact_force_equality(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            double kp = IWBC_CHECK(node["kp"].as<double>());
+            double kd = IWBC_CHECK(node["kd"].as<double>());
+            double ki = IWBC_CHECK(node["ki"].as<double>());
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto dt = IWBC_CHECK(controller_node["CONTROLLER"]["dt"].as<double>());
+            std::string contact_name = IWBC_CHECK(node["contact_name"].as<std::string>());
+
+            bool floating_base_flag = (robot->na() == robot->nv()) ? false : true;
+            IWBC_ASSERT(contact_map.find(contact_name) != contact_map.end(), "contact force equality : contact : ", contact_name, " is not inside the contact map");
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskContactForceEquality>(task_name, *robot, dt, *contact_map.at(contact_name));
+
+            Vector mask_force(6);
+            if (!node["mask"]) {
+                mask_force = Vector::Ones(6);
+            }
+            else {
+                auto mask = IWBC_CHECK(node["mask"].as<std::string>());
+                IWBC_ASSERT(mask.size() == 6, "wrong size in torque mask, expected:", 6, " got:", mask.size());
+                mask_force = convert_mask<Eigen::Dynamic>(mask);
+            }
+
+            task->Kp(kp * mask_force);
+            task->Kd(kd * mask_force);
+            task->Ki(ki * mask_force);
+
+            // set the reference to nothing, it will not work until we give it the correct ref + measurment
+
+            // add the task
+            tsid->addForceTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskContactForceEquality> __register_contact_force_equality("contact-force-equality", make_contact_force_equality);
+
+        // ////// CP inequality constraint //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_cp_inequality(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto x_margin = IWBC_CHECK(node["x_margin"].as<double>());
+            auto y_margin = IWBC_CHECK(node["y_margin"].as<double>());
+            auto x_max = IWBC_CHECK(node["x_max"].as<double>());
+            auto x_min = IWBC_CHECK(node["x_min"].as<double>());
+            auto y_max = IWBC_CHECK(node["y_max"].as<double>());
+            auto y_min = IWBC_CHECK(node["y_min"].as<double>());
+            auto factor = IWBC_CHECK(node["factor"].as<double>());
+            auto dt = IWBC_CHECK(controller_node["CONTROLLER"]["dt"].as<double>());
+
+            if (factor < 1.0)
+                IWBC_ERROR("cp inequality bound : factor should be more than 1.0");
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskCapturePointInequality>(task_name, *robot, factor * dt);
+            task->setSafetyMargin(x_margin, y_margin);
+            task->setSupportLimitsXAxis(x_min, x_max);
+            task->setSupportLimitsYAxis(y_min, y_max);
+
+            // add to TSID
+            tsid->addMotionTask(*task, weight, 0);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskCapturePointInequality> __register_cp_inequality("contact-cp-inequality", make_cp_inequality);
+
         ////// Bounds //////
         std::shared_ptr<tsid::tasks::TaskBase> make_bounds(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -303,7 +409,8 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_actuation_bounds(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contacts)
         {
             assert(tsid);
             assert(robot);
@@ -323,7 +430,6 @@ namespace inria_wbc {
         }
         RegisterYAML<tsid::tasks::TaskActuationBounds> __register_actuation_bounds("actuation-bounds", make_actuation_bounds);
 
-
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
         std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
@@ -336,7 +442,7 @@ namespace inria_wbc {
 
             // parse yaml
             auto kp = IWBC_CHECK(node["kp"].as<double>());
-            auto joint_name = IWBC_CHECK(node["joint"].as<std::string>());
+            auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
             auto lxn = IWBC_CHECK(node["lxn"].as<double>());
             auto lyn = IWBC_CHECK(node["lyn"].as<double>());
             auto lxp = IWBC_CHECK(node["lxp"].as<double>());
@@ -347,7 +453,14 @@ namespace inria_wbc {
             auto fmin = IWBC_CHECK(node["fmin"].as<double>());
             auto fmax = IWBC_CHECK(node["fmax"].as<double>());
             IWBC_ASSERT(normal.size() == 3, "normal size:", normal.size());
-            IWBC_ASSERT(robot->model().existFrame(joint_name), joint_name, " does not exist!");
+
+            bool joint = robot->model().existJointName(tracked);
+            bool body = robot->model().existBodyName(tracked);
+            bool frame = robot->model().existFrame(tracked);
+            if (joint && body)
+                throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
+            if (!joint && !body && !frame)
+                throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
 
             // create the task
             Matrix3x contact_points(3, 4);
@@ -355,10 +468,17 @@ namespace inria_wbc {
                 -lyn, lyp, -lyn, lyp,
                 lz, lz, lz, lz;
             Eigen::Vector3d contact_normal(normal.data());
-            auto contact_task = std::make_shared<tsid::contacts::Contact6dExt>(task_name, *robot, joint_name, contact_points, contact_normal, mu, fmin, fmax);
+            auto contact_task = std::make_shared<tsid::contacts::Contact6dExt>(task_name, *robot, tracked, contact_points, contact_normal, mu, fmin, fmax);
             contact_task->Kp(kp * Vector::Ones(6));
             contact_task->Kd(2.0 * contact_task->Kp().cwiseSqrt());
-            auto contact_ref = robot->position(tsid->data(), robot->model().getJointId(joint_name));
+
+            pinocchio::SE3 contact_ref;
+
+            if (joint)
+                contact_ref = robot->position(tsid->data(), robot->model().getJointId(tracked));
+            else
+                contact_ref = robot->framePosition(tsid->data(), robot->model().getFrameId(tracked));
+
             contact_task->Contact6d::setReference(contact_ref);
 
             // add the task
@@ -371,14 +491,17 @@ namespace inria_wbc {
         std::shared_ptr<tsid::tasks::TaskBase> make_self_collision(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
 
             // retrieve parameters from YAML
             double kp = IWBC_CHECK(node["kp"].as<double>());
+            double kd = IWBC_CHECK(node["kd"].as<double>());
+            double m = IWBC_CHECK(node["m"].as<double>());
             auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
             auto weight = IWBC_CHECK(node["weight"].as<double>());
-            auto p = IWBC_CHECK(node["p"].as<double>());
+            auto margin = IWBC_CHECK(node["margin"].as<double>());
             auto radius = IWBC_CHECK(node["radius"].as<double>());
 
             std::unordered_map<std::string, double> avoided;
@@ -390,9 +513,9 @@ namespace inria_wbc {
             // create the task
             assert(tsid);
             assert(robot);
-            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, p);
+            auto task = std::make_shared<tsid::tasks::TaskSelfCollision>(task_name, *robot, tracked, avoided, radius, margin, m);
             task->Kp(kp);
-            task->Kd(2.0 * sqrt(task->Kp()));
+            task->Kd(kd);
 
             // add the task to TSID (side effect, be careful)
             tsid->addMotionTask(*task, weight, 1);

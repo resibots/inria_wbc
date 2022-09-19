@@ -17,6 +17,9 @@ namespace inria_wbc {
                 IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "Walk on spot: a contact_lfoot task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "Walk on spot: a contact_rfoot task is required");
 
+                if (h_controller->has_task("rf_sole") || h_controller->has_task("lf_sole"))
+                    IWBC_ERROR("Watch out this behavior is commanding the ankles and not the soles. Please give the correct task yaml.");
+
                 // load parameters
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
                 traj_com_duration_ = IWBC_CHECK(c["traj_com_duration"].as<float>());
@@ -76,32 +79,32 @@ namespace inria_wbc {
                         _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
                         _com_trajs.push_back(
                             trajs::to_sample_trajectory(
-                                trajs::min_jerk_trajectory(com_init, com_rf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory(com_init, com_rf, dt_, traj_com_duration_) /*,
                                 trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_init, com_rf, dt_, traj_com_duration_),
                                 trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_init, com_rf, dt_, traj_com_duration_)
-                            */)
-                        );
+                            */
+                                ));
                         break;
                     case States::LIFT_UP_LF:
                         _rf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_foot_duration_)));
                         _lf_trajs.push_back(
                             trajs::to_sample_trajectory(
-                                trajs::min_jerk_trajectory(lf_low, lf_high, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory(lf_low, lf_high, dt_, traj_foot_duration_) /*,
                                 trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lf_low, lf_high, dt_, traj_foot_duration_),
                                 trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lf_low, lf_high, dt_, traj_foot_duration_)
-                            */)
-                        );
+                            */
+                                ));
                         _com_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(com_rf, dt_, traj_foot_duration_)));
                         break;
                     case States::LIFT_DOWN_LF:
                         _rf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(rf_low, dt_, traj_foot_duration_)));
                         _lf_trajs.push_back(
                             trajs::to_sample_trajectory(
-                                trajs::min_jerk_trajectory(lf_high, lf_low, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory(lf_high, lf_low, dt_, traj_foot_duration_) /*,
                                 trajs::min_jerk_trajectory<trajs::d_order::FIRST>(lf_high, lf_low, dt_, traj_foot_duration_),
                                 trajs::min_jerk_trajectory<trajs::d_order::SECOND>(lf_high, lf_low, dt_, traj_foot_duration_)
-                            */)
-                        );
+                            */
+                                ));
                         _com_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(com_rf, dt_, traj_foot_duration_)));
                         break;
                     case States::MOVE_COM_LEFT:
@@ -109,31 +112,31 @@ namespace inria_wbc {
                         _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
                         _com_trajs.push_back(
                             trajs::to_sample_trajectory(
-                                trajs::min_jerk_trajectory(com_rf, com_lf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory(com_rf, com_lf, dt_, traj_com_duration_) /*,
                                 trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_rf, com_lf, dt_, traj_com_duration_),
                                 trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_rf, com_lf, dt_, traj_com_duration_)
-                            */)
-                        );
+                            */
+                                ));
                         break;
                     case States::LIFT_UP_RF:
                         _rf_trajs.push_back(
                             trajs::to_sample_trajectory(
-                                trajs::min_jerk_trajectory(rf_low, rf_high, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory(rf_low, rf_high, dt_, traj_foot_duration_) /*,
                                 trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rf_low, rf_high, dt_, traj_foot_duration_),
                                 trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rf_low, rf_high, dt_, traj_foot_duration_)
-                            */)
-                        );
+                            */
+                                ));
                         _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_foot_duration_)));
                         _com_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(com_lf, dt_, traj_foot_duration_)));
                         break;
                     case States::LIFT_DOWN_RF:
                         _rf_trajs.push_back(
                             trajs::to_sample_trajectory(
-                                trajs::min_jerk_trajectory(rf_high, rf_low, dt_, traj_foot_duration_)/*,
+                                trajs::min_jerk_trajectory(rf_high, rf_low, dt_, traj_foot_duration_) /*,
                                 trajs::min_jerk_trajectory<trajs::d_order::FIRST>(rf_high, rf_low, dt_, traj_foot_duration_),
                                 trajs::min_jerk_trajectory<trajs::d_order::SECOND>(rf_high, rf_low, dt_, traj_foot_duration_)
-                            */)
-                        );
+                            */
+                                ));
                         _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_foot_duration_)));
                         _com_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(com_lf, dt_, traj_foot_duration_)));
                         break;
@@ -142,11 +145,11 @@ namespace inria_wbc {
                         _lf_trajs.push_back(trajs::to_sample_trajectory(trajs::constant_traj(lf_low, dt_, traj_com_duration_)));
                         _com_trajs.push_back(
                             trajs::to_sample_trajectory(
-                                trajs::min_jerk_trajectory(com_lf, com_rf, dt_, traj_com_duration_)/*,
+                                trajs::min_jerk_trajectory(com_lf, com_rf, dt_, traj_com_duration_) /*,
                                 trajs::min_jerk_trajectory<trajs::d_order::FIRST>(com_lf, com_rf, dt_, traj_com_duration_),
                                 trajs::min_jerk_trajectory<trajs::d_order::SECOND>(com_lf, com_rf, dt_, traj_com_duration_)
-                            */)
-                        );
+                            */
+                                ));
                         break;
                     default:
                         assert(0 && "unknown state");
@@ -162,23 +165,19 @@ namespace inria_wbc {
                 auto controller = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_);
 
                 // add and remove contacts
-                if (time_ == 0 && state_ == States::LIFT_UP_LF)
-                {
+                if (time_ == 0 && state_ == States::LIFT_UP_LF) {
                     controller->set_behavior_type(controllers::behavior_types::SINGLE_SUPPORT);
                     controller->remove_contact("contact_lfoot");
                 }
-                if (time_ == 0 && state_ == States::LIFT_UP_RF)
-                {
+                if (time_ == 0 && state_ == States::LIFT_UP_RF) {
                     controller->set_behavior_type(controllers::behavior_types::SINGLE_SUPPORT);
                     controller->remove_contact("contact_rfoot");
                 }
-                if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_LF)
-                {
+                if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_LF) {
                     controller->set_behavior_type(controllers::behavior_types::DOUBLE_SUPPORT);
                     controller->add_contact("contact_lfoot");
                 }
-                if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_RF)
-                {
+                if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_RF) {
                     controller->set_behavior_type(controllers::behavior_types::DOUBLE_SUPPORT);
                     controller->add_contact("contact_rfoot");
                 }

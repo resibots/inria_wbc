@@ -1,0 +1,17 @@
+BEHAVIOR:
+  name : humanoid::move-feet
+
+  lf_task_name: lf_sole
+  rf_task_name: rf_sole
+  lf_contact_name: contact_lfoot
+  rf_contact_name: contact_rfoot
+
+  lf_relative_targets_pos: [[0.0, 0.02, 0.05], [0.05, 0.0, 0.0], [0.0, 0.0, -0.05]] # empty sublist for no target es. [[1,2,0], []]
+  lf_relative_targets_rpy: [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0],[0.0, 0.0, 0.0]] # empty sublist for no target es. [[], [3.14,0,0]]
+
+  rf_relative_targets_pos: [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]] # empty sublist for no target es. [[1,2,0], []]
+  rf_relative_targets_rpy: [[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]] # empty sublist for no target es. [[], [3.14,0,0]]
+
+  trajectory_duration: 4
+  loop: false
+  

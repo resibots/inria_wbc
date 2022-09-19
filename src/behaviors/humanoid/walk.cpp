@@ -7,7 +7,7 @@ namespace inria_wbc {
 
             Walk::Walk(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config)
             {
-                  // check that the controller is compatible
+                // check that the controller is compatible
                 auto h_controller = std::dynamic_pointer_cast<inria_wbc::controllers::HumanoidPosTracker>(controller_);
                 IWBC_ASSERT(h_controller != NULL, "Walk: the controllers needs to be a HumanoidPosTracker (or related)!");
                 IWBC_ASSERT(h_controller->has_task("lf"), "Walk: an lf task is required (left foot)");
@@ -17,6 +17,9 @@ namespace inria_wbc {
                 IWBC_ASSERT(h_controller->has_task("com"), "Walk: a com task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_lfoot"), "Walk: a contact_lfoot task is required");
                 IWBC_ASSERT(h_controller->has_contact("contact_rfoot"), "Walk: a contact_rfoot task is required");
+
+                if (h_controller->has_task("rf_sole") || h_controller->has_task("lf_sole"))
+                    IWBC_ERROR("Watch out this behavior is commanding the ankles and not the soles. Please give the correct task yaml.");
 
                 // load the parameters
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
@@ -193,23 +196,19 @@ namespace inria_wbc {
                 if (run_) {
 
                     // add and remove contacts
-                    if (time_ == 0 && (state_ == States::LIFT_UP_LF || state_ == States::LF_INIT))
-                    {
+                    if (time_ == 0 && (state_ == States::LIFT_UP_LF || state_ == States::LF_INIT)) {
                         controller->set_behavior_type(controllers::behavior_types::SINGLE_SUPPORT);
                         controller->remove_contact("contact_lfoot");
                     }
-                    if (time_ == 0 && state_ == States::LIFT_UP_RF)
-                    {
+                    if (time_ == 0 && state_ == States::LIFT_UP_RF) {
                         controller->set_behavior_type(controllers::behavior_types::SINGLE_SUPPORT);
                         controller->remove_contact("contact_rfoot");
                     }
-                    if (time_ == _com_trajs[_current_traj].size() - 1 && (state_ == States::LIFT_DOWN_LF || state_ == LIFT_DOWN_LF_FINAL))
-                    {
+                    if (time_ == _com_trajs[_current_traj].size() - 1 && (state_ == States::LIFT_DOWN_LF || state_ == LIFT_DOWN_LF_FINAL)) {
                         controller->set_behavior_type(controllers::behavior_types::DOUBLE_SUPPORT);
                         controller->add_contact("contact_lfoot");
                     }
-                    if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_RF)
-                    {
+                    if (time_ == _com_trajs[_current_traj].size() - 1 && state_ == States::LIFT_DOWN_RF) {
                         controller->set_behavior_type(controllers::behavior_types::DOUBLE_SUPPORT);
                         controller->add_contact("contact_rfoot");
                     }

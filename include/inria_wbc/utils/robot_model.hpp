@@ -60,6 +60,19 @@ namespace utils {
         pinocchio::Data::Matrix6x jacobian(const std::string& joint_name, const pinocchio::ReferenceFrame& reference_frame = pinocchio::WORLD);
         pinocchio::Data::Tensor3x hessian(const std::string& joint_name, const pinocchio::ReferenceFrame& reference_frame = pinocchio::WORLD);
 
+        //Compute torques from sensor_data external forces.
+        //It is here done for the two foot contacts but it could be generalized to less or more contacts if needed
+        //You could directly use pinocchio rnea if there is no external forces or no foot mass to add
+        Eigen::VectorXd compute_rnea_double_support(const std::map<std::string, Eigen::MatrixXd>& sensor_data,
+            const Eigen::VectorXd& q, 
+            const Eigen::VectorXd& v,
+            const Eigen::VectorXd& a, 
+            bool add_foot_mass,
+            const std::string& left_ft_frame,
+            const std::string& right_ft_frame,
+            const std::string& left_sole_frame,
+            const std::string& right_sole_frame);
+
     protected:
 
         Configuration _config;

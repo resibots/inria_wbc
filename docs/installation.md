@@ -14,6 +14,26 @@ mkdir install
 sudo apt-get install libyaml-cpp-dev
 ```
 
+## boost-program-options-dev
+
+```
+sudo apt-get install libboost-program-options-dev
+```
+
+## assimp 5.0
+
+```
+git clone --depth 1 https://github.com/assimp/assimp.git
+cd assimp
+git checkout v5.0.0
+mkdir build
+cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+make clean
+```
+
 ## pinocchio
 
 More information on pinnochio [here](https://github.com/stack-of-tasks/pinocchio)

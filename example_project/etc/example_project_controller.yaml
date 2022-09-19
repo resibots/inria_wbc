@@ -1,5 +1,6 @@
 CONTROLLER:
   name: ex-controller
+  solver: eiquadprog
   base_path: "/home/pal/inria_wbc/example_project/etc"
   tasks: tasks_example.yaml
   urdf: talos/talos.urdf
@@ -14,6 +15,8 @@ CONTROLLER:
   # and our robot does not have a very good estimator yet
   closed_loop: false
   verbose: true
+  check_model_collisions: true
+  collision_path: example_collisions_margin.yaml
   mimic_dof_names : ["gripper_left_inner_double_joint",
                      "gripper_left_fingertip_1_joint",
                      "gripper_left_fingertip_2_joint",
