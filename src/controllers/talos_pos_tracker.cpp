@@ -36,7 +36,16 @@ namespace inria_wbc {
 
         TalosPosTracker::TalosPosTracker(const YAML::Node& config) : HumanoidPosTracker(config)
         {
+
+            _torque_collision_joints = {
+                "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint",
+                "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
+                "torso_1_joint", "torso_2_joint",
+                "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
+                "arm_right_1_joint", "arm_right_2_joint", "arm_right_3_joint", "arm_right_4_joint"};
+
             parse_torque_safety(config["CONTROLLER"]);
+            parse_compliance(config["CONTROLLER"]);
 
             //set the _torso_max_roll in the bounds for safety (for the stabilizer)
             auto names = robot_->model().names;
@@ -59,6 +68,66 @@ namespace inria_wbc {
             bound_task()->setPositionBounds(q_lb, q_ub);
         }
 
+        void TalosPosTracker::parse_compliance(const YAML::Node& config)
+        {
+
+            auto all_dof_names = this->all_dofs(false); //do not filter out mimics, include floating base (6dofs)
+
+            if (_torque_collision_joints.size() == 0)
+                IWBC_ERROR("You need to define _torque_collision_joints before calling parse_compliance");
+
+            for (const auto& joint : _torque_collision_joints) {
+                auto it = std::find(all_dof_names.begin(), all_dof_names.end(), joint);
+                _torque_collision_joints_with_mimics_ids.push_back(std::distance(all_dof_names.begin(), it));
+            }
+
+            auto c = IWBC_CHECK(config["compliance_posture"]);
+            _use_compliance_posture = IWBC_CHECK(c["activated"].as<bool>());
+            _compliance_posture_mode = IWBC_CHECK(c["mode"].as<std::string>());
+            _compliance_posture_kp = IWBC_CHECK(c["kp"].as<double>());
+            _compliance_posture_div = IWBC_CHECK(c["div"].as<double>());
+            auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
+            if (_use_compliance_posture) {
+                IWBC_ASSERT(this->has_task("compliance_posture"), "talos_pos_tracker compliance_posture task is needed.");
+                IWBC_ASSERT(_compliance_posture_mode == "proportional" || _compliance_posture_mode == "dynamic",
+                    "talos_pos_tracker compliance_posture mode must be \"proportional\" or \"dynamic\".");
+
+                auto compliance_posture_task = this->task<tsid::tasks::TaskJointPosture>("compliance_posture");
+
+                // check mask: create mask from torque collision joints index and execute logic-and with desired one
+                Eigen::VectorXd valid_mask = Eigen::VectorXd::Zero(robot_->na());
+                for (size_t id : _torque_collision_joints_with_mimics_ids)
+                    valid_mask(id - 6) = 1; // -6 to not consider floating base
+
+                Eigen::VectorXd compliance_mask = compliance_posture_task->getMask();
+                Eigen::VectorXd valid_compliance_mask = compliance_mask.cwiseProduct(valid_mask);
+
+                if (compliance_mask != valid_compliance_mask) {
+                    if (verbose_)
+                        std::clog << "Non valid mask for compliance_posture task" << std::endl
+                                  << "Joints without torque sensors have been masked" << std::endl;
+                    compliance_posture_task->setMask(valid_compliance_mask);
+                }
+
+                _joints_torque_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
+                _joints_torque_filter->reset();
+
+                if (verbose_) {
+                    std::clog << "compliance posture: " << (_use_compliance_posture ? "true" : "false") << std::endl;
+                    if (_use_compliance_posture) {
+                        std::clog << "\tmode: " << _compliance_posture_mode << std::endl;
+                        std::clog << "\tkp: " << _compliance_posture_kp << std::endl;
+                        std::clog << "\tdiv: " << _compliance_posture_div << std::endl;
+                        std::clog << "\tfilter size: " << filter_window_size << std::endl;
+
+                        for (int i = 0; i < valid_compliance_mask.size(); ++i)
+                            if (valid_compliance_mask(i) == 1)
+                                std::clog << "compliance_posture acting on : " << all_dof_names[i + 6] << std::endl;
+                    }
+                }
+            }
+        }
+
         void TalosPosTracker::parse_torque_safety(const YAML::Node& config)
         {
             // init collision detection
@@ -67,101 +136,44 @@ namespace inria_wbc {
                 _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
                 auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
                 auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
+                if (_use_torque_collision_detection) {
+                    if (_torque_collision_joints.size() == 0)
+                        IWBC_ERROR("You need to define _torque_collision_joints before calling parse_compliance");
 
-                _torque_collision_joints = {
-                    "leg_left_1_joint", "leg_left_2_joint", "leg_left_3_joint", "leg_left_4_joint", "leg_left_5_joint", "leg_left_6_joint",
-                    "leg_right_1_joint", "leg_right_2_joint", "leg_right_3_joint", "leg_right_4_joint", "leg_right_5_joint", "leg_right_6_joint",
-                    "torso_1_joint", "torso_2_joint",
-                    "arm_left_1_joint", "arm_left_2_joint", "arm_left_3_joint", "arm_left_4_joint",
-                    "arm_right_1_joint", "arm_right_2_joint", "arm_right_3_joint", "arm_right_4_joint"};
-
-                auto filtered_dof_names = this->all_dofs(true); // filter out mimics, include floating base (6dofs)
-                for (const auto& joint : _torque_collision_joints) {
-                    auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
-                    _torque_collision_joints_ids.push_back(std::distance(filtered_dof_names.begin(), it));
-                }
-
-                _torque_collision_threshold.resize(_torque_collision_joints.size());
-                _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
-                    3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
-                    1e+01, 1e+01,
-                    1e+01, 1e+01, 1e+01, 1e+01,
-                    1e+01, 1e+01, 1e+01, 1e+01;
-
-                // update thresholds from file (if any)
-                if (c["thresholds"]) {
-                    auto path = IWBC_CHECK(config["base_path"].as<std::string>());
-                    auto p_thresh = IWBC_CHECK(path + "/" + c["thresholds"].as<std::string>());
-                    parse_collision_thresholds(p_thresh);
-                }
-
-                _torque_collision_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
-
-                _torque_collision_detection = safety::TorqueCollisionDetection(_torque_collision_threshold);
-                _torque_collision_detection.set_max_consecutive_invalid(max_invalid);
-                _torque_collision_detection.set_filter(_torque_collision_filter);
-
-                if (verbose_) {
-                    std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
-                    std::cout << "with thresholds" << std::endl;
-                    for (size_t id = 0; id < _torque_collision_joints.size(); ++id)
-                        std::cout << _torque_collision_joints[id] << ": " << _torque_collision_threshold(id) << std::endl;
-                }
-            }
-
-            // parse compliance posture
-            {
-                auto c = IWBC_CHECK(config["compliance_posture"]);
-                _use_compliance_posture = IWBC_CHECK(c["activated"].as<bool>());
-                _compliance_posture_mode = IWBC_CHECK(c["mode"].as<std::string>());
-                _compliance_posture_kp = IWBC_CHECK(c["kp"].as<double>());
-                _compliance_posture_div = IWBC_CHECK(c["div"].as<double>());
-                auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
-
-                // IWBC_ASSERT(_compliance_posture_div >= 0 && _compliance_posture_div <= 1, "compliance_posture div must be in [0,1].");
-                IWBC_ASSERT(this->has_task("compliance_posture"), "talos_pos_tracker compliance_posture task is needed.");
-                IWBC_ASSERT(_compliance_posture_mode == "proportional" || _compliance_posture_mode == "dynamic", 
-                    "talos_pos_tracker compliance_posture mode must be \"proportional\" or \"dynamic\"." );
-                
-                auto compliance_posture_task = this->task<tsid::tasks::TaskJointPosture>("compliance_posture");
-                auto filtered_dof_names = this->all_dofs(true); // filter out mimics, !!! include floating base (6dofs)
-
-                // check mask: create mask from torque collision joints index and execute logic-and with desired one
-                Eigen::VectorXd valid_mask = Eigen::VectorXd::Zero(robot_->na());
-                for(size_t id : _torque_collision_joints_ids)
-                    valid_mask(id-6) = 1; // -6 to not consider floating base
-                    
-                Eigen::VectorXd compliance_mask = compliance_posture_task->getMask();
-                Eigen::VectorXd valid_compliance_mask = compliance_mask.cwiseProduct(valid_mask);         
-
-                if(compliance_mask != valid_compliance_mask)
-                {
-                    if(verbose_)
-                        std::clog << "Non valid mask for compliance_posture task" << std::endl
-                            << "Joints without torque sensors have been masked" << std::endl;
-                    compliance_posture_task->setMask(valid_compliance_mask);
-                }
-
-                _joints_torque_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
-                _joints_torque_filter->reset();
-
-                if(verbose_)
-                {
-                    std::clog << "compliance posture: " << (_use_compliance_posture ? "true" : "false") << std::endl;
-                    if(_use_compliance_posture)
-                    {
-                        std::clog << "\tmode: " << _compliance_posture_mode << std::endl;
-                        std::clog << "\tkp: " << _compliance_posture_kp << std::endl;
-                        std::clog << "\tdiv: " << _compliance_posture_div << std::endl;
-                        std::clog << "\tfilter size: " << filter_window_size << std::endl;
-
-                        for(int i=0; i < valid_compliance_mask.size(); ++i)
-                            if(valid_compliance_mask(i) == 1)
-                                std::clog << "compliance_posture acting on : " << filtered_dof_names[i+6] << std::endl;
+                    auto filtered_dof_names = this->all_dofs(true); // filter out mimics, include floating base (6dofs)
+                    for (const auto& joint : _torque_collision_joints) {
+                        auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
+                        _torque_collision_joints_ids.push_back(std::distance(filtered_dof_names.begin(), it));
                     }
-                }        
-            }
 
+                    _torque_collision_threshold.resize(_torque_collision_joints.size());
+                    _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                        3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                        1e+01, 1e+01,
+                        1e+01, 1e+01, 1e+01, 1e+01,
+                        1e+01, 1e+01, 1e+01, 1e+01;
+
+                    // update thresholds from file (if any)
+                    if (c["thresholds"]) {
+                        auto path = IWBC_CHECK(config["base_path"].as<std::string>());
+                        auto p_thresh = IWBC_CHECK(path + "/" + c["thresholds"].as<std::string>());
+                        parse_collision_thresholds(p_thresh);
+                    }
+
+                    _torque_collision_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
+
+                    _torque_collision_detection = safety::TorqueCollisionDetection(_torque_collision_threshold);
+                    _torque_collision_detection.set_max_consecutive_invalid(max_invalid);
+                    _torque_collision_detection.set_filter(_torque_collision_filter);
+
+                    if (verbose_) {
+                        std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
+                        std::cout << "with thresholds" << std::endl;
+                        for (size_t id = 0; id < _torque_collision_joints.size(); ++id)
+                            std::cout << _torque_collision_joints[id] << ": " << _torque_collision_threshold(id) << std::endl;
+                    }
+                }
+            }
         }
 
         void TalosPosTracker::parse_collision_thresholds(const std::string& config_path)
@@ -178,40 +190,38 @@ namespace inria_wbc {
 
         void TalosPosTracker::update(const SensorData& sensor_data)
         {
-            if(_use_compliance_posture)
-            {
+            if (_use_compliance_posture) {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "compliance_posture task needs torque sensor measurements");
 
-                Eigen::VectorXd actual_q = this->q(true);
-                Eigen::VectorXd actual_tau = this->tau(true);
-                
+                Eigen::VectorXd actual_q = this->q(false); //do not filter mimics
+                Eigen::VectorXd actual_tau = this->tau(false); //do not filter mimics
+
                 Eigen::VectorXd compliance_mask = this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask();
 
                 const Eigen::VectorXd& joints_torque_raw = sensor_data.at("joints_torque");
                 Eigen::VectorXd joints_torque = _joints_torque_filter->filter(joints_torque_raw);
-                
+
                 Eigen::VectorXd error = Eigen::VectorXd::Zero(actual_tau.size());
-                for(int i=0; i < _torque_collision_joints_ids.size(); ++i)
-                {
-                    auto idx = _torque_collision_joints_ids[i];
-                    error(idx) = (joints_torque[i] - actual_tau(idx)) * compliance_mask(idx-6);
+                for (int i = 0; i < _torque_collision_joints_with_mimics_ids.size(); ++i) {
+                    auto idx = _torque_collision_joints_with_mimics_ids[i];
+                    error(idx) = (joints_torque[i] - actual_tau(idx)) * compliance_mask(idx - 6);
                 }
 
                 Eigen::VectorXd ref;
-                if(_compliance_posture_mode == "proportional") // method 1
+                if (_compliance_posture_mode == "proportional") // method 1
                     ref = actual_q - (_compliance_posture_kp * error);
                 else // method 2 (using dynamic model)
                     ref = actual_q - _compliance_posture_div * (robot_->mass(tsid_->data()).inverse() * error); // method 2
 
                 // update only valid dofs (not needed for method1 since error is already masked)
                 Eigen::VectorXd ref_no_fb = ref.tail(actual_q.size() - 6);
-                for(int i=6; i < actual_q.size(); ++i)
-                    if(this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask()(i-6) != 1)
-                        ref_no_fb(i-6) = actual_q(i);
-                
+                for (int i = 6; i < actual_q.size(); ++i)
+                    if (this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->getMask()(i - 6) != 1)
+                        ref_no_fb(i - 6) = actual_q(i);
+
                 this->task<tsid::tasks::TaskJointPosture>("compliance_posture")->setReference(trajs::to_sample(ref_no_fb));
             }
-            
+
             if (_use_torque_collision_detection) {
                 IWBC_ASSERT(sensor_data.find("joints_torque") != sensor_data.end(), "torque collision detection requires torque sensor data");
                 IWBC_ASSERT(sensor_data.at("joints_torque").size() == _torque_collision_joints.size(), "torque sensor data has a wrong size. call torque_sensor_joints() for needed values");

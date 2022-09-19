@@ -204,6 +204,55 @@ namespace inria_wbc {
         }
         RegisterYAML<tsid::tasks::TaskJointPosture> __register_posture("posture", make_posture);
 
+        ////// Posture //////
+        std::shared_ptr<tsid::tasks::TaskBase> make_posture_compliance(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // parse yaml
+            double kp = IWBC_CHECK(node["kp"].as<double>());
+            auto weight = IWBC_CHECK(node["weight"].as<double>());
+            auto ref_name = IWBC_CHECK(node["ref"].as<std::string>());
+            auto joint_names = IWBC_CHECK(node["joint_names"].as<std::vector<std::string>>());
+
+            IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
+            auto ref_q = robot->model().referenceConfigurations[ref_name];
+
+            bool floating_base_flag = (robot->na() == robot->nv()) ? false : true;
+            int n_actuated = floating_base_flag ? robot->nv() - 6 : robot->nv();
+            Vector mask_post = Vector::Zero(n_actuated);
+            if (node["mask"])
+                IWBC_ERROR("Do not put a mask in a posture-compliance task. It is automatically added from joint_names");
+
+            auto robot_names = robot->model().names;
+
+            for (auto& jt : joint_names) {
+                auto it = std::find(robot_names.begin(), robot_names.end(), jt);
+                if (it == robot_names.end())
+                    IWBC_ERROR(jt, " is not in the urdf");
+                int index = it - robot_names.begin();
+                mask_post(index - 2) = 1;
+            }
+
+            // create the task
+            auto task = std::make_shared<tsid::tasks::TaskJointPosture>(task_name, *robot);
+            task->setMask(mask_post);
+
+            // set the reference to the current position of the robot
+            task->setReference(trajs::to_sample(ref_q.tail(robot->na())));
+
+            // add the task
+            tsid->addMotionTask(*task, weight, 1);
+
+            return task;
+        }
+        RegisterYAML<tsid::tasks::TaskJointPosture> __register_posture_compliance("posture-compliance", make_posture_compliance);
+
         ////// Torques //////
         std::shared_ptr<tsid::tasks::TaskBase> make_torque(
             const std::shared_ptr<robots::RobotWrapper>& robot,

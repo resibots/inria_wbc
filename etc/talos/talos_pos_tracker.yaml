@@ -2,7 +2,7 @@ CONTROLLER:
   name: talos-pos-tracker
   solver: eiquadprog #qpmad
   base_path: /home/pal/inria_wbc/etc/talos
-  tasks: tasks_walk.yaml
+  tasks: tasks.yaml
   urdf: talos/talos.urdf
   configurations: configurations.srdf 
   ref_config: inria_start
@@ -38,7 +38,7 @@ CONTROLLER:
     params_fixed_base: stab_fixed_base.yaml
   compliance_posture:
     activated: true
-    mode: dynamic #dynamic # proportial
+    mode: proportional #dynamic # proportial
     kp: 0.05      # used by proportional mode
     div: 0.01     # used by dynamic mode
     filter_size: 10

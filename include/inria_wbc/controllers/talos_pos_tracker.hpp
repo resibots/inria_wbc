@@ -37,7 +37,7 @@ namespace inria_wbc {
             estimators::Filter::Ptr _joints_torque_filter;
 
 
-            //torque collision
+            void parse_compliance(const YAML::Node& config);
             void parse_torque_safety(const YAML::Node& config);
             void parse_collision_thresholds(const std::string& config_path);
 
@@ -45,7 +45,8 @@ namespace inria_wbc {
             bool _collision_detected = false;
             safety::TorqueCollisionDetection _torque_collision_detection;
             estimators::Filter::Ptr _torque_collision_filter;
-            std::vector<std::string> _torque_collision_joints;
+            std::vector<std::string> _torque_collision_joints;            
+            std::vector<int> _torque_collision_joints_with_mimics_ids;
             std::vector<int> _torque_collision_joints_ids;
             Eigen::VectorXd _torque_collision_threshold;
 
