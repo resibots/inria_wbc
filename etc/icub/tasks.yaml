@@ -36,7 +36,6 @@ posture:
     type: posture
     weight: 0.05
     kp: 10.0
-    ref: inria_start
 torso:
     type: se3
     tracked: chest

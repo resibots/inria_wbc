@@ -170,7 +170,7 @@ namespace inria_wbc {
             // parse yaml
             double kp = IWBC_CHECK(node["kp"].as<double>());
             auto weight = IWBC_CHECK(node["weight"].as<double>());
-            auto ref_name = IWBC_CHECK(node["ref"].as<std::string>());
+            auto ref_name = IWBC_CHECK(controller_node["CONTROLLER"]["ref_config"].as<std::string>());
 
             IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
             auto ref_q = robot->model().referenceConfigurations[ref_name];
@@ -217,7 +217,7 @@ namespace inria_wbc {
             // parse yaml
             double kp = IWBC_CHECK(node["kp"].as<double>());
             auto weight = IWBC_CHECK(node["weight"].as<double>());
-            auto ref_name = IWBC_CHECK(node["ref"].as<std::string>());
+            auto ref_name = IWBC_CHECK(controller_node["CONTROLLER"]["ref_config"].as<std::string>());
             auto joint_names = IWBC_CHECK(node["joint_names"].as<std::vector<std::string>>());
 
             IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
