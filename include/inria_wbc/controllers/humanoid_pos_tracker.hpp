@@ -38,7 +38,6 @@ namespace inria_wbc {
             virtual void set_behavior_type(const std::string& bt) override;
 
         protected:
-
             void init_com();
             virtual void parse_stabilizer(const YAML::Node& config);
 
@@ -61,6 +60,7 @@ namespace inria_wbc {
             std::map<std::string, inria_wbc::stabilizer::StabConfig> _stabilizer_configs;
             bool _use_stabilizer = false;
             bool _is_ss = false;
+            
         };
 
     } // namespace controllers

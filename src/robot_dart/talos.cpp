@@ -371,7 +371,7 @@ int main(int argc, char* argv[])
                 Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
                 for (size_t i = 0; i < controller->controllable_dofs(false).size(); ++i) {
                     auto name = controller->controllable_dofs(false)[i];
-                    if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0) {
+                    if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0 && name != "gripper_left_joint" && name != "gripper_right_joint") {
                         positions(i) = robot->positions({name})[0];
                         velocities(i) = robot->velocities({name})[0];
                     }
@@ -493,8 +493,16 @@ int main(int argc, char* argv[])
                     timer.report(*x.second, simu->scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
+                else if (x.first == "task_com")
+                    (*x.second) << controller_pos->get_com_ref().transpose() << std::endl;
+                else if (((x.first == "task_cop") && controller_pos->has_task("cop")))
+                    (*x.second) << controller_pos->get_cop_ref("cop").transpose() << std::endl;
                 else if (x.first == "tau")
                     (*x.second) << controller->tau().transpose() << std::endl;
+                else if (x.first == "q_tsid")
+                    (*x.second) << controller->q_tsid().transpose() << std::endl;
+                else if (x.first == "positions")
+                    (*x.second) << sensor_data["positions"].transpose() << std::endl;
                 else if (x.first == "com") // the real com
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
@@ -506,6 +514,11 @@ int main(int argc, char* argv[])
                 else if (x.first == "ft")
                     (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
                                 << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
+                else if (x.first == "ft_sol")
+                    (*x.second) << controller_pos->force_torque_from_solution("contact_lfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_left_6_link")].mass(), "left_sole_link").tail(3).transpose() << " "
+                                << controller_pos->force_torque_from_solution("contact_lfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_left_6_link")].mass(), "left_sole_link").head(3).transpose() << " "
+                                << controller_pos->force_torque_from_solution("contact_rfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_right_6_link")].mass(), "right_sole_link").tail(3).transpose() << " "
+                                << controller_pos->force_torque_from_solution("contact_rfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_right_6_link")].mass(), "right_sole_link").head(3).transpose() << std::endl;
                 else if (x.first == "force") // the cop according to controller
                     (*x.second) << ft_sensor_left->force().transpose() << " "
                                 << controller->lf_force_filtered().transpose() << " "
@@ -554,6 +567,29 @@ int main(int argc, char* argv[])
                     (*x.second) << ref.getValue().transpose() << " "
                                 << ref.getDerivative().transpose() << " "
                                 << ref.getSecondDerivative().transpose() << std::endl;
+                }
+                else if (x.first.find("contact_") != std::string::npos) // e.g. task_lh
+                {
+                    auto ref = controller_pos->contact(x.first)->getMotionTask().getReference();
+                    (*x.second) << ref.getValue().transpose() << " "
+                                << ref.getDerivative().transpose() << " "
+                                << ref.getSecondDerivative().transpose() << std::endl;
+                }
+                else if (x.first.find("stab_") != std::string::npos) {
+                    auto task_name = x.first.substr(strlen("stab_"));
+                    auto it = controller_pos->stabilizer_samples().find(task_name);
+
+                    if (it != controller_pos->stabilizer_samples().end()) {
+                        auto ref = controller_pos->stabilizer_samples().at(task_name);
+                        (*x.second) << ref.getValue().transpose() << " "
+                                    << ref.getDerivative().transpose() << " "
+                                    << ref.getSecondDerivative().transpose() << std::endl;
+                    }
+                    auto it2 = controller_pos->stabilizer_vector3().find(task_name);
+                    if (it2 != controller_pos->stabilizer_vector3().end()) {
+                        auto ref = controller_pos->stabilizer_vector3().at(task_name);
+                        (*x.second) << ref.transpose() << " " << std::endl;
+                    }
                 }
                 else if (robot->body_node(x.first) != nullptr) {
                     pinocchio::SE3 frame;

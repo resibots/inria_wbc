@@ -37,7 +37,6 @@ namespace inria_wbc {
                 std::vector<std::vector<pinocchio::SE3>> _lh_trajs;
                 std::vector<std::vector<pinocchio::SE3>> _rh_trajs;
 
-
                 float traj_com_duration_ = 3; //will be changed if specified in yaml
                 float traj_foot_duration_ = 3; //will be changed if specified in yaml
                 float step_height_ = 0.1;

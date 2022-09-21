@@ -69,7 +69,7 @@ actuation_bounds:
     weight: 10000
 contact_lfoot:
     type: contact
-    joint: leg_left_6_joint
+    tracked: leg_left_6_joint
     kp: 30.0
     lxp: 0.1   # foot length in positive x direction
     lxn: 0.11  # foot length in negative x direction
@@ -82,7 +82,7 @@ contact_lfoot:
     normal: [0, 0, 1]
 contact_rfoot:
     type: contact
-    joint: leg_right_6_joint
+    tracked: leg_right_6_joint
     kp: 30.0
     lxp: 0.1   # foot length in positive x direction
     lxn: 0.11  # foot length in negative x direction

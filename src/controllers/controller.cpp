@@ -17,6 +17,7 @@
 
 #include <tsid/contacts/contact-6d-ext.hpp>
 #include <tsid/contacts/contact-point.hpp>
+#include <tsid/contacts/contact-base.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/utils.hpp>
 #include <tsid/robots/fwd.hpp>

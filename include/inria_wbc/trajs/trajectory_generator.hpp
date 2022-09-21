@@ -77,6 +77,15 @@ namespace trajs {
         return trajectory;
     }
 
+    template <uint16_t ORDER = d_order::ZERO>
+    inline Eigen::VectorXd min_jerk_trajectory(const Eigen::VectorXd& start, const Eigen::VectorXd& dest, double dt, double trajectory_duration, int i)
+    {
+        if(ORDER > d_order::SECOND)
+            IWBC_ERROR("min_jerk_trajectory is not implemented for derivative of order " + std::to_string(ORDER) + ".");
+        
+        return minimum_jerk_polynom<ORDER>(start, dest, dt * i, trajectory_duration);
+    }
+
     template<uint16_t ORDER>
     inline std::vector<Eigen::VectorXd> min_jerk_trajectory(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration)
     {
@@ -114,6 +123,37 @@ namespace trajs {
         return trajectory;
     }
 
+    template<uint16_t ORDER>
+    inline Eigen::VectorXd min_jerk_trajectory(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration, int i)
+    {
+        if(ORDER > d_order::SECOND || ORDER < d_order::FIRST)
+            IWBC_ERROR("min_jerk_trajectory is not implemented for derivative of order " + std::to_string(ORDER) + ".");
+
+        Eigen::Vector3d pos_start, pos_dest, pos_d_xt;
+        pos_start = start.translation();
+        pos_dest = dest.translation();
+
+        Eigen::AngleAxisd aa_rot(start.rotation().transpose() * dest.rotation());
+        const Eigen::Vector3d& rot_axis = aa_rot.axis();
+        double rot_angle = aa_rot.angle();
+
+        // Interpolate time as min jerk to use in slerp routine (otherwise slerp gives constant angular velocity result)
+        Eigen::VectorXd ang_start(1), ang_dest(1), ang_d_xt(1);
+        ang_start << 0.;
+        ang_dest << rot_angle;
+
+        Eigen::Matrix<double,6,1> d_vec;
+
+        // Min jerk trajectory for translation
+        pos_d_xt = minimum_jerk_polynom<ORDER>(pos_start, pos_dest, dt * i, trajectory_duration);
+        ang_d_xt = minimum_jerk_polynom<ORDER>(ang_start, ang_dest, dt * i, trajectory_duration);
+
+        d_vec.head<3>() = pos_d_xt;
+        d_vec.tail<3>() = start.rotation() * (ang_d_xt(0) * rot_axis);
+            
+        return d_vec;
+    }
+
     inline std::vector<pinocchio::SE3> min_jerk_trajectory(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration)
     {
         Eigen::Vector3d pos_start, pos_dest, pos_xt;
@@ -144,6 +184,30 @@ namespace trajs {
             trajectory.push_back(xt);
         }
         return trajectory;
+    }
+
+    inline pinocchio::SE3 min_jerk_trajectory(const pinocchio::SE3& start, const pinocchio::SE3& dest, double dt, double trajectory_duration, int i)
+    {
+        Eigen::Vector3d pos_start, pos_dest, pos_xt;
+        pos_start = start.translation();
+        pos_dest = dest.translation();
+
+        Eigen::AngleAxisd aa_rot(start.rotation().transpose() * dest.rotation());
+        const Eigen::Vector3d& rot_axis = aa_rot.axis();
+        double rot_angle = aa_rot.angle();
+
+        // Interpolate time as min jerk to use in slerp routine (otherwise slerp gives constant angular velocity result)
+        Eigen::VectorXd ang_start(1), ang_dest(1), ang_xt(1);
+        ang_start << 0.;
+        ang_dest << rot_angle;
+
+        // Min jerk trajectory for translation and rotation
+        pos_xt = minimum_jerk_polynom(pos_start, pos_dest, dt * i, trajectory_duration);
+        ang_xt = minimum_jerk_polynom(ang_start, ang_dest, dt * i, trajectory_duration);
+
+        Eigen::Matrix3d rot_xt = start.rotation() * Eigen::AngleAxisd(ang_xt(0), rot_axis).toRotationMatrix();
+
+        return pinocchio::SE3(rot_xt, pos_xt);
     }
 
     template <typename T>

@@ -54,7 +54,7 @@ bounds:
     weight: 1000.0
 contact_lfoot:
     type: contact
-    joint: l_ankle_roll
+    tracked: l_ankle_roll
     kp: 30.0
     lxp: 0.14   # foot length in positive x direction
     lxn: 0.06  # foot length in negative x direction
@@ -67,7 +67,7 @@ contact_lfoot:
     normal: [0, 0, -1]
 contact_rfoot:
     type: contact
-    joint: r_ankle_roll
+    tracked: r_ankle_roll
     kp: 30.0
     lxp: 0.14   # foot length in positive x direction
     lxn: 0.06  # foot length in negative x direction

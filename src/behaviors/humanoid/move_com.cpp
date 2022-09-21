@@ -19,14 +19,12 @@ namespace inria_wbc {
                 auto absolute = IWBC_CHECK(c["absolute"].as<bool>());
                 IWBC_ASSERT(mask.size() == 3, "The mask for the CoM should be 3-dimensional");
 
-
                 Eigen::VectorXd task_init = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_com_ref();
                 if (loop_)
                     if (absolute)
                         targets.push_back({task_init(0), task_init(1), task_init(2)});
                     else
                         targets.push_back({0., 0., 0.});
-       
 
                 Eigen::VectorXd start = task_init;
                 for (size_t i = 0; i < targets.size(); ++i) {
@@ -47,17 +45,23 @@ namespace inria_wbc {
 
             void MoveCom::update(const controllers::SensorData& sensor_data)
             {
+                auto pos_controller = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_);
                 tsid::trajectories::TrajectorySample sample_ref(3, 3);
                 sample_ref.setValue(trajectory_[time_]);
                 sample_ref.setDerivative(trajectory_d_[time_]);
                 sample_ref.setSecondDerivative(trajectory_dd_[time_]);
-                std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_com_ref(sample_ref);
+                pos_controller->set_com_ref(sample_ref);
                 controller_->update(sensor_data);
+                if (pos_controller->has_task("cop")) {
+                    Eigen::Vector3d zmp = sample_ref.getValue();
+                    zmp(2) = 0.0;
+                    pos_controller->set_cop_ref(zmp, "cop");
+                }
                 time_++;
                 if (loop_)
                     time_ = time_ % trajectory_.size();
                 else
-                    time_ = std::min(time_, (int)  trajectory_.size() - 1);
+                    time_ = std::min(time_, (int)trajectory_.size() - 1);
             }
         } // namespace humanoid
     } // namespace behaviors
