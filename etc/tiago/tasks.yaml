@@ -14,7 +14,6 @@ posture:
     type: posture
     weight: 0.1
     kp: 10.0
-    ref: start
 bounds:
     type: bounds
     weight: 10000

@@ -170,7 +170,7 @@ namespace inria_wbc {
             // parse yaml
             double kp = IWBC_CHECK(node["kp"].as<double>());
             auto weight = IWBC_CHECK(node["weight"].as<double>());
-            auto ref_name = IWBC_CHECK(node["ref"].as<std::string>());
+            auto ref_name = IWBC_CHECK(controller_node["CONTROLLER"]["ref_config"].as<std::string>());
 
             IWBC_ASSERT(robot->model().referenceConfigurations.count(ref_name) == 1, "Reference name ", ref_name, " not found");
             auto ref_q = robot->model().referenceConfigurations[ref_name];
@@ -184,8 +184,28 @@ namespace inria_wbc {
             task->Kp(kp * Vector::Ones(n_actuated));
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             Vector mask_post(n_actuated);
+
+            if (node["mask"] && node["joint_names"])
+                IWBC_ERROR("You need to specify mask or joint_names to create a mask. Not both.");
+
             if (!node["mask"]) {
-                mask_post = Vector::Ones(n_actuated);
+                if (node["joint_names"]) {
+                    mask_post = Vector::Zero(n_actuated);
+
+                    auto joint_names = IWBC_CHECK(node["joint_names"].as<std::vector<std::string>>());
+                    auto robot_names = robot->model().names;
+
+                    for (auto& jt : joint_names) {
+                        auto it = std::find(robot_names.begin(), robot_names.end(), jt);
+                        if (it == robot_names.end())
+                            IWBC_ERROR(jt, " is not in the urdf");
+                        int index = it - robot_names.begin();
+                        mask_post(index - 2) = 1;
+                    }
+                }
+                else {
+                    mask_post = Vector::Ones(n_actuated);
+                }
             }
             else {
                 auto mask = IWBC_CHECK(node["mask"].as<std::string>());
