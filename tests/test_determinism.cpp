@@ -65,6 +65,7 @@ void subtest(utest::test_t test, int nexp, const std::string& controller_path, c
     for (int i = 0; i < nexp; i++) {
         y::Node c_config = IWBC_CHECK(y::LoadFile(controller_path));
         c_config["CONTROLLER"]["stabilizer"]["activated"] = false;
+        c_config["CONTROLLER"]["compliance_posture"]["activated"] = false;
         c_config["CONTROLLER"]["collision_detection"]["activated"] = false;
         c_config["CONTROLLER"]["closed_loop"] = false;
         c_config["CONTROLLER"]["base_path"] = "../../etc/talos/";
