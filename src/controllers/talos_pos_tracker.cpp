@@ -136,42 +136,40 @@ namespace inria_wbc {
                 _use_torque_collision_detection = IWBC_CHECK(c["activated"].as<bool>());
                 auto filter_window_size = IWBC_CHECK(c["filter_size"].as<int>());
                 auto max_invalid = IWBC_CHECK(c["max_invalid"].as<int>());
-                if (_use_torque_collision_detection) {
-                    if (_torque_collision_joints.size() == 0)
-                        IWBC_ERROR("You need to define _torque_collision_joints before calling parse_compliance");
+                if (_torque_collision_joints.size() == 0)
+                    IWBC_ERROR("You need to define _torque_collision_joints before calling parse_compliance");
 
-                    auto filtered_dof_names = this->all_dofs(true); // filter out mimics, include floating base (6dofs)
-                    for (const auto& joint : _torque_collision_joints) {
-                        auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
-                        _torque_collision_joints_ids.push_back(std::distance(filtered_dof_names.begin(), it));
-                    }
+                auto filtered_dof_names = this->all_dofs(true); // filter out mimics, include floating base (6dofs)
+                for (const auto& joint : _torque_collision_joints) {
+                    auto it = std::find(filtered_dof_names.begin(), filtered_dof_names.end(), joint);
+                    _torque_collision_joints_ids.push_back(std::distance(filtered_dof_names.begin(), it));
+                }
 
-                    _torque_collision_threshold.resize(_torque_collision_joints.size());
-                    _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
-                        3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
-                        1e+01, 1e+01,
-                        1e+01, 1e+01, 1e+01, 1e+01,
-                        1e+01, 1e+01, 1e+01, 1e+01;
+                _torque_collision_threshold.resize(_torque_collision_joints.size());
+                _torque_collision_threshold << 3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                    3.5e+05, 3.9e+05, 2.9e+05, 4.4e+05, 5.7e+05, 2.4e+05,
+                    1e+01, 1e+01,
+                    1e+01, 1e+01, 1e+01, 1e+01,
+                    1e+01, 1e+01, 1e+01, 1e+01;
 
-                    // update thresholds from file (if any)
-                    if (c["thresholds"]) {
-                        auto path = IWBC_CHECK(config["base_path"].as<std::string>());
-                        auto p_thresh = IWBC_CHECK(path + "/" + c["thresholds"].as<std::string>());
-                        parse_collision_thresholds(p_thresh);
-                    }
+                // update thresholds from file (if any)
+                if (c["thresholds"]) {
+                    auto path = IWBC_CHECK(config["base_path"].as<std::string>());
+                    auto p_thresh = IWBC_CHECK(path + "/" + c["thresholds"].as<std::string>());
+                    parse_collision_thresholds(p_thresh);
+                }
 
-                    _torque_collision_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
+                _torque_collision_filter = std::make_shared<estimators::MovingAverageFilter>(_torque_collision_joints.size(), filter_window_size);
 
-                    _torque_collision_detection = safety::TorqueCollisionDetection(_torque_collision_threshold);
-                    _torque_collision_detection.set_max_consecutive_invalid(max_invalid);
-                    _torque_collision_detection.set_filter(_torque_collision_filter);
+                _torque_collision_detection = safety::TorqueCollisionDetection(_torque_collision_threshold);
+                _torque_collision_detection.set_max_consecutive_invalid(max_invalid);
+                _torque_collision_detection.set_filter(_torque_collision_filter);
 
-                    if (verbose_) {
-                        std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
-                        std::cout << "with thresholds" << std::endl;
-                        for (size_t id = 0; id < _torque_collision_joints.size(); ++id)
-                            std::cout << _torque_collision_joints[id] << ": " << _torque_collision_threshold(id) << std::endl;
-                    }
+                if (verbose_) {
+                    std::cout << "Collision detection:" << _use_torque_collision_detection << std::endl;
+                    std::cout << "with thresholds" << std::endl;
+                    for (size_t id = 0; id < _torque_collision_joints.size(); ++id)
+                        std::cout << _torque_collision_joints[id] << ": " << _torque_collision_threshold(id) << std::endl;
                 }
             }
         }
