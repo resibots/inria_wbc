@@ -22,7 +22,7 @@
 
 // #include <tsid/tasks/task-joint-posVelAcc-bounds.hpp>
 
-#include "inria_wbc/controllers/talos_pos_tracker.hpp"
+#include "inria_wbc/controllers/humanoid_pos_tracker.hpp"
 #include "inria_wbc/controllers/tasks.hpp"
 #include "inria_wbc/stabilizers/stabilizer.hpp"
 #include "inria_wbc/utils/utils.hpp"
