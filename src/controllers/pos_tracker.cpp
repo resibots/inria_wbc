@@ -274,6 +274,7 @@ namespace inria_wbc {
             tsid_->addRigidContact(*c, tasks::cst::w_force_feet);
             activated_contacts_.push_back(contact_name);
         }
+
         //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
         //when we supress foot mass it corresponds to F/T sensor data
         Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& contact_name, float foot_mass, const std::string& sole_frame)
@@ -300,6 +301,25 @@ namespace inria_wbc {
                 force_tsid.tail(3) -= (contact_world.translation() - sole_world.translation()).cross(tmp);
             }
             return force_tsid;
+        }
+
+        // void DhmController::remove_contact(const std::string& measured_force_name)
+        // {
+        //     if (verbose_)
+        //         std::cout << "removing measured_force:" << measured_force_name << std::endl;
+        //     IWBC_ASSERT(measured_forces_.find(measured_force_name) != measured_forces_.end(), "Trying to remove an contact:", measured_force_name);
+        //     bool res = tsid_->removeRigidContact(measured_force_name);
+        //     IWBC_ASSERT(res, " contact ", measured_force_name, " not found");
+        //     // activated_contacts_.erase(std::remove(activated_contacts_.begin(), activated_contacts_.end(), contact_name), activated_contacts_.end());
+        // }
+
+        void PosTracker::add_measured_force(const std::string& measured_force_name)
+        {
+            if (verbose_)
+                std::cout << "adding measured_force:" << measured_force_name << std::endl;
+            auto c = measured_force(measured_force_name);
+            tsid_->addMeasuredForce(*c);
+            // activated_contacts_.push_back(contact_name);
         }
 
         void PosTracker::remove_task(const std::string& task_name, double transition_duration)

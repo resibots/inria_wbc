@@ -33,6 +33,13 @@ namespace inria_wbc {
                 IWBC_ASSERT(it != contacts_.end(), "Contact [", str, "] not found");
                 return it->second;
             }
+
+            std::shared_ptr<tsid::measuredForces::MeasuredForceBase> measured_force(const std::string& str) const
+            {
+                auto it = measured_forces_.find(str);
+                IWBC_ASSERT(it != measured_forces_.end(), "Measured Force [", str, "] not found");
+                return it->second;
+            }
             bool has_task(const std::string& str) const { return tasks_.find(str) != tasks_.end(); }
             bool has_contact(const std::string& str) const { return contacts_.find(str) != contacts_.end(); }
             std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> bound_task() { return task<tsid::tasks::TaskJointPosVelAccBounds>("bounds"); }
@@ -67,7 +74,10 @@ namespace inria_wbc {
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
             Eigen::VectorXd force_torque_from_solution(const std::string& contact_name, float foot_mass = 0.0, const std::string& sole_frame = "");
-
+            
+            // void remove_measured_force(const std::string& measured_force_name);
+            void add_measured_force(const std::string& measured_force_name);
+            
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
             // therefore you can re-add it later by using its name
             void remove_task(const std::string& task_name, double transition_duration = 0.0);
@@ -84,6 +94,8 @@ namespace inria_wbc {
             std::vector<std::string> activated_tasks_;
             // contacts are not tasks in tsid
             std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> contacts_;
+            // measured forces are not tasks in tsid
+            std::unordered_map<std::string, std::shared_ptr<tsid::measuredForces::MeasuredForceBase>> measured_forces_;
 
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
 
