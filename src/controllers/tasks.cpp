@@ -544,5 +544,34 @@ namespace inria_wbc {
         }
         RegisterYAML<tsid::tasks::TaskSelfCollision> __register_self_collision("self-collision", make_self_collision);
 
+        ///// measured_force is not a task
+        std::shared_ptr<tsid::measuredForces::MeasuredForce6Dwrench> make_measured_force(
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::measuredForces::MeasuredForceBase>>& measured_force_map)
+        {
+            assert(tsid);
+            assert(robot);
+
+            // retrieve parameters from YAML
+            auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
+            
+            bool joint = robot->model().existJointName(tracked);
+            bool body = robot->model().existBodyName(tracked);
+            bool frame = robot->model().existFrame(tracked);
+            if (joint && body)
+                throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
+            if (!joint && !body && !frame)
+                throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
+
+            auto measured_force = std::make_shared<tsid::measuredForces::MeasuredForce6Dwrench>(task_name, robot, tracked);
+
+            // add the measured force 
+            tsid->addMeasuredForce(*measured_force);
+
+            return measured_force;
+        }
+
     } // namespace tasks
 } // namespace inria_wbc
