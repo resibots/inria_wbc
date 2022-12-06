@@ -548,8 +548,7 @@ namespace inria_wbc {
         std::shared_ptr<tsid::measuredForces::MeasuredForce6Dwrench> make_measured_force(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::measuredForces::MeasuredForceBase>>& measured_force_map)
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
@@ -565,7 +564,7 @@ namespace inria_wbc {
             if (!joint && !body && !frame)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
 
-            auto measured_force = std::make_shared<tsid::measuredForces::MeasuredForce6Dwrench>(task_name, robot, tracked);
+            auto measured_force = std::make_shared<tsid::measuredForces::MeasuredForce6Dwrench>(task_name, *robot, tracked);
 
             // add the measured force 
             tsid->addMeasuredForce(*measured_force);

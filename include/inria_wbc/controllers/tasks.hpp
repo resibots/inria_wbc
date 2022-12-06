@@ -34,8 +34,7 @@ namespace inria_wbc {
             std::string, //the name of the task
             YAML::Node, // the task node to parse
             YAML::Node, // the controller node to parse
-            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>, //already added contacts,
-            std::unordered_map<std::string, std::shared_ptr<tsid::measuredForces::MeasuredForceBase>>
+            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> //already added contacts,
             >;
         template <typename T>
         using RegisterYAML = FactoryYAML::AutoRegister<T>;

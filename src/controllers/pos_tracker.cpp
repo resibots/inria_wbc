@@ -176,7 +176,7 @@ namespace inria_wbc {
                 }
                 else if (type.find("contact-") == std::string::npos) {
                     // the task is added automatically to TSID by the factory
-                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, {}, {});
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, {});
                     tasks_[name] = task;
                     activated_tasks_.push_back(name);
                 }
@@ -188,7 +188,7 @@ namespace inria_wbc {
                 auto name = IWBC_CHECK(it->first.as<std::string>());
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
                 if (type.find("contact-") != std::string::npos) {
-                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, contacts_, measured_forces_);
+                    auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, contacts_);
                     tasks_[name] = task;
                     activated_tasks_.push_back(name);
                 }
