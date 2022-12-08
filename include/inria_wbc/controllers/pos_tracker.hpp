@@ -67,6 +67,7 @@ namespace inria_wbc {
             void set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name);
             void set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name);
             void set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name);
+            void set_measured_force_ref(tsid::math::Vector6& ref, const std::string& task_name);
 
             std::map<std::string, tsid::trajectories::TrajectorySample> stabilizer_samples() { return _stabilizer_samples; }
             std::map<std::string, Eigen::Vector3d> stabilizer_vector3() { return _stabilizer_vector3; }
@@ -77,7 +78,7 @@ namespace inria_wbc {
             
             // void remove_measured_force(const std::string& measured_force_name);
             void add_measured_force(const std::string& measured_force_name);
-            
+
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
             // therefore you can re-add it later by using its name
             void remove_task(const std::string& task_name, double transition_duration = 0.0);

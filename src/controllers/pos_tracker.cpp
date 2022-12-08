@@ -174,6 +174,10 @@ namespace inria_wbc {
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
+                else if (type == "measured-force") {
+                    auto task = tasks::make_measured_force(robot_, tsid_, name, it->second, config);
+                    measured_forces_[name] = task;
+                }
                 else if (type.find("contact-") == std::string::npos) {
                     // the task is added automatically to TSID by the factory
                     auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, {});
@@ -254,6 +258,12 @@ namespace inria_wbc {
         {
             auto c = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
             c->setReference(sample);
+        }
+
+        void PosTracker::set_measured_force_ref(tsid::math::Vector6& ref, const std::string& task_name)
+        {
+            auto task = std::dynamic_pointer_cast<tsid::measuredForces::MeasuredForce6Dwrench>(measured_force(task_name));
+            task->setMeasuredContactForce(ref);
         }
 
         void PosTracker::remove_contact(const std::string& contact_name)
