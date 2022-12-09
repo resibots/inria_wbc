@@ -13,6 +13,7 @@
 #include <tsid/contacts/contact-base.hpp>
 #include <tsid/measuredForces/measured-force-base.hpp>
 #include <tsid/measuredForces/measured-force-6Dwrench.hpp>
+#include <tsid/measuredForces/measured-force-3Dforce.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/fwd.hpp>
 #include <tsid/math/utils.hpp>
@@ -212,8 +213,7 @@ namespace inria_wbc {
             tsid::math::Vector tau_tsid_; // tsid joint torques
             tsid::math::Vector momentum_; // momentum
             std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces_; //tsid contact forces of the activated contacts
-            std::unordered_map<std::string, tsid::math::Vector6> measured_forces; //tsid measured forces 
-
+            
             tsid::math::Vector q_tsid_prev_; // latest sent tsid joint positions 
             tsid::math::Vector v_tsid_prev_; // latest sent tsid joint positions 
             std::shared_ptr<pinocchio::Data> data_prev_; // latest sent  pinocchio data 

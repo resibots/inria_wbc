@@ -67,7 +67,8 @@ namespace inria_wbc {
             void set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name);
             void set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name);
             void set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name);
-            void set_measured_force_ref(tsid::math::Vector6& ref, const std::string& task_name);
+            void set_measured_force_6Dwrench(tsid::math::Vector6& f_ext, const std::string& measured_force_name);
+            void set_measured_force_3Dforce(tsid::math::Vector3& f_ext, const std::string& measured_force_name);
 
             std::map<std::string, tsid::trajectories::TrajectorySample> stabilizer_samples() { return _stabilizer_samples; }
             std::map<std::string, Eigen::Vector3d> stabilizer_vector3() { return _stabilizer_vector3; }
@@ -76,7 +77,7 @@ namespace inria_wbc {
             void add_contact(const std::string& contact_name);
             Eigen::VectorXd force_torque_from_solution(const std::string& contact_name, float foot_mass = 0.0, const std::string& sole_frame = "");
             
-            // void remove_measured_force(const std::string& measured_force_name);
+            void remove_measured_force(const std::string& measured_force_name);
             void add_measured_force(const std::string& measured_force_name);
 
             // this only removes the task from the TSID list of tasks (the task is not destroyed)

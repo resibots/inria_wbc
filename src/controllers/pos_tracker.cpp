@@ -260,10 +260,16 @@ namespace inria_wbc {
             c->setReference(sample);
         }
 
-        void PosTracker::set_measured_force_ref(tsid::math::Vector6& ref, const std::string& task_name)
+        void PosTracker::set_measured_force_6Dwrench(tsid::math::Vector6& f_ext, const std::string& measured_force_name)
         {
-            auto task = std::dynamic_pointer_cast<tsid::measuredForces::MeasuredForce6Dwrench>(measured_force(task_name));
-            task->setMeasuredContactForce(ref);
+            auto object = std::dynamic_pointer_cast<tsid::measuredForces::MeasuredForce6Dwrench>(measured_force(measured_force_name));
+            object->setMeasuredContactForce(f_ext);
+        }
+
+        void PosTracker::set_measured_force_3Dforce(tsid::math::Vector3& f_ext, const std::string& measured_force_name)
+        {
+            auto object = std::dynamic_pointer_cast<tsid::measuredForces::MeasuredForce3Dforce>(measured_force(measured_force_name));
+            object->setMeasuredContactForce(f_ext);
         }
 
         void PosTracker::remove_contact(const std::string& contact_name)
@@ -313,15 +319,15 @@ namespace inria_wbc {
             return force_tsid;
         }
 
-        // void DhmController::remove_contact(const std::string& measured_force_name)
-        // {
-        //     if (verbose_)
-        //         std::cout << "removing measured_force:" << measured_force_name << std::endl;
-        //     IWBC_ASSERT(measured_forces_.find(measured_force_name) != measured_forces_.end(), "Trying to remove an contact:", measured_force_name);
-        //     bool res = tsid_->removeRigidContact(measured_force_name);
-        //     IWBC_ASSERT(res, " contact ", measured_force_name, " not found");
-        //     // activated_contacts_.erase(std::remove(activated_contacts_.begin(), activated_contacts_.end(), contact_name), activated_contacts_.end());
-        // }
+        void PosTracker::remove_measured_force(const std::string& measured_force_name)
+        {
+            if (verbose_)
+                std::cout << "removing measured_force:" << measured_force_name << std::endl;
+            IWBC_ASSERT(measured_forces_.find(measured_force_name) != measured_forces_.end(), "Trying to remove a measured_force:", measured_force_name);
+            bool res = tsid_->removeMeasuredForce(measured_force_name);
+            IWBC_ASSERT(res, " measured_force ", measured_force_name, " not found");
+            // activated_contacts_.erase(std::remove(activated_contacts_.begin(), activated_contacts_.end(), contact_name), activated_contacts_.end());
+        }
 
         void PosTracker::add_measured_force(const std::string& measured_force_name)
         {
@@ -329,7 +335,6 @@ namespace inria_wbc {
                 std::cout << "adding measured_force:" << measured_force_name << std::endl;
             auto c = measured_force(measured_force_name);
             tsid_->addMeasuredForce(*c);
-            // activated_contacts_.push_back(contact_name);
         }
 
         void PosTracker::remove_task(const std::string& task_name, double transition_duration)

@@ -556,13 +556,9 @@ namespace inria_wbc {
             // retrieve parameters from YAML
             auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
             
-            bool joint = robot->model().existJointName(tracked);
-            bool body = robot->model().existBodyName(tracked);
             bool frame = robot->model().existFrame(tracked);
-            if (joint && body)
-                throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
-            if (!joint && !body && !frame)
-                throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
+            if (!frame)
+                throw IWBC_EXCEPTION("Unknown frame [", tracked, "]");
 
             auto measured_force = std::make_shared<tsid::measuredForces::MeasuredForce6Dwrench>(task_name, *robot, tracked);
 
