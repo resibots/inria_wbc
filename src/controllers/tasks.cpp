@@ -545,27 +545,38 @@ namespace inria_wbc {
         RegisterYAML<tsid::tasks::TaskSelfCollision> __register_self_collision("self-collision", make_self_collision);
 
         ///// measured_force is not a task
-        std::shared_ptr<tsid::measuredForces::MeasuredForce6Dwrench> make_measured_force(
+        std::shared_ptr<tsid::measuredForces::MeasuredForceBase> make_measured_force(
             const std::shared_ptr<robots::RobotWrapper>& robot,
             const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
+            const std::string& force_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
 
             // retrieve parameters from YAML
             auto tracked = IWBC_CHECK(node["tracked"].as<std::string>());
-            
             bool frame = robot->model().existFrame(tracked);
             if (!frame)
                 throw IWBC_EXCEPTION("Unknown frame [", tracked, "]");
 
-            auto measured_force = std::make_shared<tsid::measuredForces::MeasuredForce6Dwrench>(task_name, *robot, tracked);
+            auto dimension = IWBC_CHECK(node["dimension"].as<std::string>());
+            if (dimension == "force")
+            {
+              auto measured_force = std::make_shared<tsid::measuredForces::MeasuredForce3Dforce>(force_name, *robot, tracked);
+              // add the measured force
+              tsid->addMeasuredForce(*measured_force);
+              return measured_force;
+            }
+            else if (dimension == "wrench")
+            {
+              auto measured_force = std::make_shared<tsid::measuredForces::MeasuredForce6Dwrench>(force_name, *robot, tracked);
+              // add the measured force
+              tsid->addMeasuredForce(*measured_force);
+              return measured_force;
+            }
+            else
+                throw IWBC_EXCEPTION("Unknown dimension [", dimension, "]. Must be 'force' or 'wrench'");
 
-            // add the measured force 
-            tsid->addMeasuredForce(*measured_force);
-
-            return measured_force;
         }
 
     } // namespace tasks
