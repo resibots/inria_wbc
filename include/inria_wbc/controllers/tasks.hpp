@@ -3,14 +3,14 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <inria_wbc/utils/factory.hpp>
 #include <pinocchio/spatial/se3.hpp>
+
 #include <tsid/contacts/contact-6d-ext.hpp>
 #include <tsid/contacts/contact-base.hpp>
 #include <tsid/contacts/contact-point.hpp>
+#include <tsid/contacts/measured-force-base.hpp>
 #include <tsid/contacts/measured-3Dforce.hpp>
 #include <tsid/contacts/measured-6Dwrench.hpp>
-#include <tsid/contacts/measured-force-base.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/fwd.hpp>
 #include <tsid/math/utils.hpp>
@@ -19,44 +19,43 @@
 #include <tsid/tasks/task-contact-force-equality.hpp>
 #include <tsid/trajectories/trajectory-base.hpp>
 
-namespace inria_wbc {
+#include <inria_wbc/utils/factory.hpp>
 
-namespace tasks {
-namespace cst {
-static constexpr double w_force_feet =
-    1e-3;  // regularization force for contacts TODO CHANGE FOR STABILIZATION!
-}
+namespace inria_wbc
+{
 
-using FactoryYAML = utils::Factory<
-    tsid::tasks::TaskBase,  // we create generic task (and downcast if needed)
-    std::shared_ptr<tsid::robots::RobotWrapper>,                // robot
-    std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>,  // tsid
-    std::string,  // the name of the task
-    YAML::Node,   // the task node to parse
-    YAML::Node,   // the controller node to parse
-    std::unordered_map<
-        std::string, std::shared_ptr<tsid::contacts::ContactBase>>  // already
-                                                                    // added
-                                                                    // contacts,
-    >;
-template <typename T>
-using RegisterYAML = FactoryYAML::AutoRegister<T>;
+    namespace tasks
+    {
+        namespace cst
+        {
+            static constexpr double w_force_feet = 1e-3; // regularization force for contacts TODO CHANGE FOR STABILIZATION!
+        }
 
-// contacts cannot be in the same factory
-std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
-    const std::shared_ptr<tsid::robots::RobotWrapper> &robot,
-    const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> &tsid,
-    const std::string &task_name, const YAML::Node &node,
-    const YAML::Node &controller_node);
+        using FactoryYAML = utils::Factory<
+            tsid::tasks::TaskBase,                                                        // we create generic task (and downcast if needed)
+            std::shared_ptr<tsid::robots::RobotWrapper>,                                  // robot
+            std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>,                    // tsid
+            std::string,                                                                  // the name of the task
+            YAML::Node,                                                                   // the task node to parse
+            YAML::Node,                                                                   // the controller node to parse
+            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> // already added contacts,
+            >;
+        template <typename T>
+        using RegisterYAML = FactoryYAML::AutoRegister<T>;
 
-// measured forces cannot be in the same factory
-std::shared_ptr<tsid::contacts::MeasuredForceBase> make_measured_force(
-    const std::shared_ptr<tsid::robots::RobotWrapper> &robot,
-    const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> &tsid,
-    const std::string &force_name, const YAML::Node &node,
-    const YAML::Node &controller_node);
+        // contacts cannot be in the same factory
+        std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
+            const std::shared_ptr<tsid::robots::RobotWrapper> &robot,
+            const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> &tsid,
+            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node);
 
-}  // namespace tasks
-}  // namespace inria_wbc
+        // measured forces cannot be in the same factory
+        std::shared_ptr<tsid::contacts::MeasuredForceBase> make_measured_force(
+            const std::shared_ptr<tsid::robots::RobotWrapper> &robot,
+            const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> &tsid,
+            const std::string &force_name, const YAML::Node &node, const YAML::Node &controller_node);
+
+    } // namespace tasks
+} // namespace inria_wbc
 
 #endif
