@@ -68,7 +68,7 @@ namespace inria_wbc {
             bool frame = robot->model().existFrame(tracked);
             if (joint && body)
                 throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
-            if (!joint && !body& & !frame)
+            if (!joint && !body && !frame)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
             pinocchio::SE3 ref;
 

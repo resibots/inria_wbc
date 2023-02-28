@@ -212,11 +212,11 @@ namespace inria_wbc {
             tsid::math::Vector a_tsid_; // tsid joint accelerations
             tsid::math::Vector tau_tsid_; // tsid joint torques
             tsid::math::Vector momentum_; // momentum
-            std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces_; // tsid contact forces of the activated contacts
+            std::unordered_map<std::string, tsid::math::Vector> activated_contacts_forces_; //tsid contact forces of the activated contacts
 
-            tsid::math::Vector q_tsid_prev_; // latest sent tsid joint positions
-            tsid::math::Vector v_tsid_prev_; // latest sent tsid joint positions
-            std::shared_ptr<pinocchio::Data> data_prev_; // latest sent  pinocchio data
+            tsid::math::Vector q_tsid_prev_; // latest sent tsid joint positions 
+            tsid::math::Vector v_tsid_prev_; // latest sent tsid joint positions 
+            std::shared_ptr<pinocchio::Data> data_prev_; // latest sent  pinocchio data 
 
             //---- Dart conventions for the floating base: axis-angle
             Eigen::VectorXd q0_; // tsid joint positions resized for dart
