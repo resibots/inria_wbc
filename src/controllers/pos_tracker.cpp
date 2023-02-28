@@ -33,13 +33,11 @@
 using namespace tsid;
 using namespace tsid::math;
 
-namespace inria_wbc
-{
-    namespace controllers
-    {
+namespace inria_wbc {
+    namespace controllers {
         static Register<PosTracker> __generic_pos_tracker("pos-tracker");
 
-        PosTracker::PosTracker(const YAML::Node &config) : Controller(config)
+        PosTracker::PosTracker(const YAML::Node& config) : Controller(config)
         {
             // we only care about the CONTROLLER section
             YAML::Node c = IWBC_CHECK(config["CONTROLLER"]);
@@ -51,8 +49,7 @@ namespace inria_wbc
             auto path = IWBC_CHECK(c["base_path"].as<std::string>());
 
             // create additional frames if needed (optional)
-            if (c["frames"])
-            {
+            if (c["frames"]) {
                 auto p_frames = path + "/" + c["frames"].as<std::string>();
                 parse_frames(p_frames);
             }
@@ -71,16 +68,14 @@ namespace inria_wbc
             if (verbose_)
                 std::cout << "q_tsid ref:" << q_tsid_.transpose() << "[" << q_tsid_.size() << "]" << std::endl;
 
-            if (floating_base_)
-            {
+            if (floating_base_) {
                 // q0_ is in "Dart format" for the floating base
                 Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                 Eigen::AngleAxisd aaxis(quat);
                 q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
                 q_tsid_.segment(3, 4) << quat.normalized().coeffs();
             }
-            else
-            {
+            else {
                 q0_ = q_tsid_;
             }
 
@@ -90,20 +85,17 @@ namespace inria_wbc
             ////////////////////Create an HQP solver /////////////////////////////////////
             using solver_t = std::shared_ptr<solvers::SolverHQPBase>;
 
-            if (solver_to_use_ == "qpmad")
-            {
+            if (solver_to_use_ == "qpmad") {
 #ifdef TSID_QPMAD_FOUND
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_QPMAD, "solver-qpmad"));
 #else
                 IWBC_ERROR("'qpmad' solver is not available in tsid or in the system.");
 #endif
             }
-            else if (solver_to_use_ == "eiquadprog")
-            {
+            else if (solver_to_use_ == "eiquadprog") {
                 solver_ = solver_t(solvers::SolverHQPFactory::createNewSolver(solvers::SOLVER_HQP_EIQUADPROG_FAST, "solver-eiquadprog"));
             }
-            else
-            {
+            else {
                 IWBC_ERROR("solver in configuration file must be either 'eiquadprog' or 'qpmad'.");
             }
 
@@ -121,8 +113,7 @@ namespace inria_wbc
             parse_tasks(p.string(), config);
 
             ///////////// check if joint range of motion has to be reduced //////////////////////////
-            if (c["joint_range_reduction"])
-            {
+            if (c["joint_range_reduction"]) {
                 double reduction_rads = IWBC_CHECK(c["joint_range_reduction"].as<double>()) / 180 * M_PI;
                 if (reduction_rads < 0)
                     IWBC_ERROR("Joint range reduction: reduction must be positive.");
@@ -135,8 +126,7 @@ namespace inria_wbc
 
                 auto q = q0_.tail(robot_->na());
 
-                for (size_t i = 0; i < robot_->na(); ++i)
-                {
+                for (size_t i = 0; i < robot_->na(); ++i) {
                     if (q_ub[i] - q_lb[i] < 2 * reduction_rads)
                         IWBC_ERROR("Joint range reduction: reduction cannot be greater than actual range of motion");
 
@@ -157,8 +147,7 @@ namespace inria_wbc
                 bound_task()->setPositionBounds(q_lb, q_ub);
             }
 
-            if (verbose_)
-            {
+            if (verbose_) {
                 std::cout << "--------- Solver size info ---------" << std::endl;
                 std::cout << "Solver : " << solver_to_use_ << std::endl;
                 std::cout << "total number of variable (acceleration + contact-force) : " << tsid_->nVar() << std::endl;
@@ -169,32 +158,28 @@ namespace inria_wbc
             }
         }
 
-        void PosTracker::parse_tasks(const std::string &path, const YAML::Node &config)
+        void PosTracker::parse_tasks(const std::string& path, const YAML::Node& config)
         {
             int task_count = 0;
             if (verbose_)
                 std::cout << "parsing task file:" << path << std::endl;
             YAML::Node task_list = IWBC_CHECK(YAML::LoadFile(path));
-            for (auto it = task_list.begin(); it != task_list.end(); ++it)
-            {
+            for (auto it = task_list.begin(); it != task_list.end(); ++it) {
                 auto name = IWBC_CHECK(it->first.as<std::string>());
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
-                if (type == "contact")
-                {
+                if (type == "contact") {
                     // the task is added to tsid by make_contact
                     auto task = tasks::make_contact_task(robot_, tsid_, name, it->second, config);
                     contacts_[name] = task;
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
-                else if (type == "measured-force")
-                {
+                else if (type == "measured-force") {
                     auto force = tasks::make_measured_force(robot_, tsid_, name, it->second, config);
                     measured_forces_[name] = force;
                     activated_measured_forces_.push_back(name);
                 }
-                else if (type.find("contact-") == std::string::npos)
-                {
+                else if (type.find("contact-") == std::string::npos) {
                     // the task is added automatically to TSID by the factory
                     auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, {});
                     tasks_[name] = task;
@@ -204,12 +189,10 @@ namespace inria_wbc
                     std::cout << "added task/contact:" << name << " type:" << type << std::endl;
                 task_count++;
             }
-            for (auto it = task_list.begin(); it != task_list.end(); ++it)
-            {
+            for (auto it = task_list.begin(); it != task_list.end(); ++it) {
                 auto name = IWBC_CHECK(it->first.as<std::string>());
                 auto type = IWBC_CHECK(it->second["type"].as<std::string>());
-                if (type.find("contact-") != std::string::npos)
-                {
+                if (type.find("contact-") != std::string::npos) {
                     auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, contacts_);
                     tasks_[name] = task;
                     activated_tasks_.push_back(name);
@@ -223,13 +206,12 @@ namespace inria_wbc
             }
         }
 
-        void PosTracker::parse_frames(const std::string &path)
+        void PosTracker::parse_frames(const std::string& path)
         {
             if (verbose_)
                 std::cout << "Parsing virtual frame file:" << path << std::endl;
             YAML::Node node = IWBC_CHECK(YAML::LoadFile(path));
-            for (auto it = node.begin(); it != node.end(); ++it)
-            {
+            for (auto it = node.begin(); it != node.end(); ++it) {
                 auto name = IWBC_CHECK(it->first.as<std::string>());
                 auto ref = IWBC_CHECK(it->second["ref"].as<std::string>());
                 auto pos = IWBC_CHECK(it->second["pos"].as<std::vector<double>>());
@@ -237,14 +219,14 @@ namespace inria_wbc
                 pinocchio::SE3 p(1);
                 p.translation() = pinocchio::SE3::LinearType(pos[0], pos[1], pos[2]);
                 auto parent_frame_id = robot_->model().getFrameId(ref);
-                auto &frame = robot_->model().frames[parent_frame_id];
+                auto& frame = robot_->model().frames[parent_frame_id];
                 robot_->model().addFrame(pinocchio::Frame(name, frame.parent, parent_frame_id,
                                                           frame.placement * p, pinocchio::FIXED_JOINT));
                 assert(robot_->model().existFrame(name));
             }
         }
 
-        pinocchio::SE3 PosTracker::get_se3_ref(const std::string &task_name)
+        pinocchio::SE3 PosTracker::get_se3_ref(const std::string& task_name)
         {
             auto task = se3_task(task_name);
             pinocchio::SE3 se3;
@@ -253,45 +235,45 @@ namespace inria_wbc
             return se3;
         }
 
-        void PosTracker::set_se3_ref(const pinocchio::SE3 &ref, const std::string &task_name)
+        void PosTracker::set_se3_ref(const pinocchio::SE3& ref, const std::string& task_name)
         {
             auto task = se3_task(task_name);
             auto sample = trajs::to_sample(ref);
             task->setReference(sample);
         }
 
-        void PosTracker::set_contact_se3_ref(const pinocchio::SE3 &ref, const std::string &contact_name)
+        void PosTracker::set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name)
         {
             auto c = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
             auto sample = trajs::to_sample(ref);
             c->setReference(sample);
         }
 
-        void PosTracker::set_se3_ref(tsid::trajectories::TrajectorySample &sample, const std::string &task_name)
+        void PosTracker::set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name)
         {
             auto task = se3_task(task_name);
             task->setReference(sample);
         }
 
-        void PosTracker::set_contact_se3_ref(tsid::trajectories::TrajectorySample &sample, const std::string &contact_name)
+        void PosTracker::set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name)
         {
             auto c = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
             c->setReference(sample);
         }
 
-        void PosTracker::set_measured_6Dwrench(const tsid::math::Vector6 &f_ext, const std::string &measured_force_name)
+        void PosTracker::set_measured_6Dwrench(const tsid::math::Vector6& f_ext, const std::string& measured_force_name)
         {
             auto force = std::dynamic_pointer_cast<tsid::contacts::Measured6Dwrench>(measured_force(measured_force_name));
             force->setMeasuredContactForce(f_ext);
         }
 
-        void PosTracker::set_measured_3Dforce(const tsid::math::Vector3 &f_ext, const std::string &measured_force_name)
+        void PosTracker::set_measured_3Dforce(const tsid::math::Vector3& f_ext, const std::string& measured_force_name)
         {
             auto force = std::dynamic_pointer_cast<tsid::contacts::Measured3Dforce>(measured_force(measured_force_name));
             force->setMeasuredContactForce(f_ext);
         }
 
-        void PosTracker::remove_contact(const std::string &contact_name)
+        void PosTracker::remove_contact(const std::string& contact_name)
         {
             if (verbose_)
                 std::cout << "removing contact:" << contact_name << std::endl;
@@ -301,7 +283,7 @@ namespace inria_wbc
             activated_contacts_.erase(std::remove(activated_contacts_.begin(), activated_contacts_.end(), contact_name), activated_contacts_.end());
         }
 
-        void PosTracker::add_contact(const std::string &contact_name)
+        void PosTracker::add_contact(const std::string& contact_name)
         {
             if (verbose_)
                 std::cout << "adding contact:" << contact_name << std::endl;
@@ -310,9 +292,9 @@ namespace inria_wbc
             activated_contacts_.push_back(contact_name);
         }
 
-        // returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
-        // when we supress foot mass it corresponds to F/T sensor data
-        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string &contact_name, float foot_mass, const std::string &sole_frame)
+        //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
+        //when we supress foot mass it corresponds to F/T sensor data
+        Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& contact_name, float foot_mass, const std::string& sole_frame)
         {
             Eigen::Matrix<double, 6, 1> force_tsid;
             force_tsid.setZero();
@@ -322,8 +304,7 @@ namespace inria_wbc
             auto generatorMatrix = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name))->Contact6d::getForceGeneratorMatrix();
             force_tsid = generatorMatrix * contact_force;
 
-            if (foot_mass > 1e-5)
-            {
+            if (foot_mass > 1e-5) {
                 // we retrieve the tracked frame from the contact task
                 auto contact_frame = robot_->model().frames[contact(contact_name)->getMotionTask().frame_id()].name;
                 IWBC_ASSERT(robot_->model().existFrame(contact_frame), "Frame " + contact_frame + " does not exist in model.");
@@ -339,7 +320,7 @@ namespace inria_wbc
             return force_tsid;
         }
 
-        void PosTracker::remove_measured_force(const std::string &measured_force_name)
+        void PosTracker::remove_measured_force(const std::string& measured_force_name)
         {
             if (verbose_)
                 std::cout << "removing measured_force: " << measured_force_name << std::endl;
@@ -349,7 +330,7 @@ namespace inria_wbc
             activated_measured_forces_.erase(std::remove(activated_measured_forces_.begin(), activated_measured_forces_.end(), measured_force_name), activated_measured_forces_.end());
         }
 
-        void PosTracker::add_measured_force(const std::string &measured_force_name)
+        void PosTracker::add_measured_force(const std::string& measured_force_name)
         {
             if (verbose_)
                 std::cout << "adding measured_force: " << measured_force_name << std::endl;
@@ -358,7 +339,7 @@ namespace inria_wbc
             activated_measured_forces_.push_back(measured_force_name);
         }
 
-        void PosTracker::remove_task(const std::string &task_name, double transition_duration)
+        void PosTracker::remove_task(const std::string& task_name, double transition_duration)
         {
             if (verbose_)
                 std::cout << "removing task:" << task_name << std::endl;
@@ -372,18 +353,16 @@ namespace inria_wbc
         {
             // we count all the tasks with a priority >= 1 (since it does not matter for 0)
             size_t k = 0;
-            for (auto &x : tsid_->m_taskMotions)
+            for (auto& x : tsid_->m_taskMotions)
                 if (x->priority > 0)
                     ++k;
             return k;
         }
-        void PosTracker::update_task_weights(const std::vector<double> &new_weights)
+        void PosTracker::update_task_weights(const std::vector<double>& new_weights)
         {
             int i = 0;
-            for (auto &x : tsid_->m_taskMotions)
-            {
-                if (x->priority > 0)
-                {
+            for (auto& x : tsid_->m_taskMotions) {
+                if (x->priority > 0) {
                     IWBC_ASSERT(i < new_weights.size(), i, " vs ", new_weights.size());
                     tsid_->updateTaskWeight(x->task.name(), new_weights[i]);
                     ++i;

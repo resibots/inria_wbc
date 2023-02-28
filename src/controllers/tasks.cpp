@@ -17,17 +17,15 @@
 using namespace tsid;
 using namespace tsid::math;
 
-namespace inria_wbc
-{
-    namespace tasks
-    {
+namespace inria_wbc {
+    namespace tasks {
         // note on levels: everything is level 1 except the constraints:
         // - the bounds (level 0)
         // - the contacts (level 0)
         // future versions of TSID might have more levels (but not for now, 2020)
 
         template <int S>
-        Eigen::Array<double, S, 1> convert_mask(const std::string &mask_str)
+        Eigen::Array<double, S, 1> convert_mask(const std::string& mask_str)
         {
             assert(S == Eigen::Dynamic || mask_str.size() == S);
             Eigen::Array<double, S, 1> mask;
@@ -39,10 +37,10 @@ namespace inria_wbc
 
         ////// SE3 (warning: add the task to TSID!) //////
         std::shared_ptr<tsid::tasks::TaskBase> make_se3(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
 
             // retrieve parameters from YAML
@@ -68,9 +66,9 @@ namespace inria_wbc
             bool joint = robot->model().existJointName(tracked);
             bool body = robot->model().existBodyName(tracked);
             bool frame = robot->model().existFrame(tracked);
-            if (joint && body)
+            if (joint& & body)
                 throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
-            if (!joint && !body && !frame)
+            if (!joint& & !body& & !frame)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
             pinocchio::SE3 ref;
 
@@ -91,10 +89,10 @@ namespace inria_wbc
 
         ////// CoM (center of mass) //////
         std::shared_ptr<tsid::tasks::TaskBase> make_com(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -126,10 +124,10 @@ namespace inria_wbc
 
         ////// Momentum //////
         std::shared_ptr<tsid::tasks::TaskBase> make_momentum(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -161,10 +159,10 @@ namespace inria_wbc
 
         ////// Posture //////
         std::shared_ptr<tsid::tasks::TaskBase> make_posture(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -187,20 +185,17 @@ namespace inria_wbc
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             Vector mask_post(n_actuated);
 
-            if (node["mask"] && node["joint_names"])
+            if (node["mask"]& & node["joint_names"])
                 IWBC_ERROR("You need to specify mask or joint_names to create a mask. Not both.");
 
-            if (!node["mask"])
-            {
-                if (node["joint_names"])
-                {
+            if (!node["mask"]) {
+                if (node["joint_names"]) {
                     mask_post = Vector::Zero(n_actuated);
 
                     auto joint_names = IWBC_CHECK(node["joint_names"].as<std::vector<std::string>>());
                     auto robot_names = robot->model().names;
 
-                    for (auto &jt : joint_names)
-                    {
+                    for (auto& jt : joint_names) {
                         auto it = std::find(robot_names.begin(), robot_names.end(), jt);
                         if (it == robot_names.end())
                             IWBC_ERROR(jt, " is not in the urdf");
@@ -208,13 +203,11 @@ namespace inria_wbc
                         mask_post(index - 2) = 1;
                     }
                 }
-                else
-                {
+                else {
                     mask_post = Vector::Ones(n_actuated);
                 }
             }
-            else
-            {
+            else {
                 auto mask = IWBC_CHECK(node["mask"].as<std::string>());
                 IWBC_ASSERT(mask.size() == mask_post.size(), "wrong size in posture mask, expected:", mask_post.size(), " got:", mask.size());
                 mask_post = convert_mask<Eigen::Dynamic>(mask);
@@ -233,10 +226,10 @@ namespace inria_wbc
 
         ////// Torques //////
         std::shared_ptr<tsid::tasks::TaskBase> make_torque(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -251,20 +244,17 @@ namespace inria_wbc
             auto task = std::make_shared<tsid::tasks::TaskActuationEquality>(task_name, *robot);
 
             Vector mask_post(n_actuated);
-            if (!node["mask"])
-            {
+            if (!node["mask"]) {
                 mask_post = Vector::Ones(n_actuated);
             }
-            else
-            {
+            else {
                 auto mask = IWBC_CHECK(node["mask"].as<std::string>());
                 IWBC_ASSERT(mask.size() == mask_post.size(), "wrong size in torque mask, expected:", mask_post.size(), " got:", mask.size());
                 mask_post = convert_mask<Eigen::Dynamic>(mask);
             }
             task->mask(mask_post);
 
-            if (node["scaling"])
-            {
+            if (node["scaling"]) {
                 auto scaling = IWBC_CHECK(node["scaling"].as<std::vector<double>>());
                 IWBC_ASSERT(scaling.size() == n_actuated, "wrong size in torque scaling, expected:", n_actuated, " got:", scaling.size());
                 Eigen::VectorXd scaling_post = Eigen::VectorXd::Map(scaling.data(), scaling.size());
@@ -284,10 +274,10 @@ namespace inria_wbc
 
         ////// COP task //////
         std::shared_ptr<tsid::tasks::TaskBase> make_cop_equality(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -297,8 +287,7 @@ namespace inria_wbc
             auto contact_names = IWBC_CHECK(node["contact_name"].as<std::vector<std::string>>());
 
             std::vector<Eigen::Vector3d> refs;
-            for (auto &contact_name : contact_names)
-            {
+            for (auto& contact_name : contact_names) {
                 IWBC_ASSERT(contact_map.find(contact_name) != contact_map.end(), "cop task : contact : ", contact_name, " is not inside the contact map");
                 auto contact_ref = robot->framePosition(tsid->data(), contact_map.at(contact_name)->getMotionTask().frame_id()).translation();
                 contact_ref[2] = 0.0;
@@ -306,8 +295,7 @@ namespace inria_wbc
             }
 
             Eigen::Vector3d ref = Eigen::Vector3d::Zero();
-            for (auto &r : refs)
-            {
+            for (auto& r : refs) {
                 ref += r;
             }
             ref = ref / refs.size();
@@ -326,10 +314,10 @@ namespace inria_wbc
 
         ////// Task contact force equality not added in the task factory because it needs already created contacts //////
         std::shared_ptr<tsid::tasks::TaskBase> make_contact_force_equality(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -348,12 +336,10 @@ namespace inria_wbc
             auto task = std::make_shared<tsid::tasks::TaskContactForceEquality>(task_name, *robot, dt, *contact_map.at(contact_name));
 
             Vector mask_force(6);
-            if (!node["mask"])
-            {
+            if (!node["mask"]) {
                 mask_force = Vector::Ones(6);
             }
-            else
-            {
+            else {
                 auto mask = IWBC_CHECK(node["mask"].as<std::string>());
                 IWBC_ASSERT(mask.size() == 6, "wrong size in torque mask, expected:", 6, " got:", mask.size());
                 mask_force = convert_mask<Eigen::Dynamic>(mask);
@@ -374,10 +360,10 @@ namespace inria_wbc
 
         // ////// CP inequality constraint //////
         std::shared_ptr<tsid::tasks::TaskBase> make_cp_inequality(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -411,10 +397,10 @@ namespace inria_wbc
 
         ////// Bounds //////
         std::shared_ptr<tsid::tasks::TaskBase> make_bounds(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
             assert(tsid);
             assert(robot);
@@ -441,10 +427,10 @@ namespace inria_wbc
 
         ////// Actuation Bounds //////
         std::shared_ptr<tsid::tasks::TaskBase> make_actuation_bounds(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contacts)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contacts)
         {
             assert(tsid);
             assert(robot);
@@ -467,9 +453,9 @@ namespace inria_wbc
         ////// Contacts //////
         /// this looks like a task, but this does not derive from tsid::task::TaskBase
         std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
@@ -491,9 +477,9 @@ namespace inria_wbc
             bool joint = robot->model().existJointName(tracked);
             bool body = robot->model().existBodyName(tracked);
             bool frame = robot->model().existFrame(tracked);
-            if (joint && body)
+            if (joint& & body)
                 throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
-            if (!joint && !body && !frame)
+            if (!joint& & !body& & !frame)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
 
             // create the task
@@ -523,10 +509,10 @@ namespace inria_wbc
 
         ////// Self-collision (warning: add the task to TSID!) //////
         std::shared_ptr<tsid::tasks::TaskBase> make_self_collision(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node,
-            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> &contact_map)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node,
+            const std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>>& contact_map)
         {
 
             // retrieve parameters from YAML
@@ -539,8 +525,7 @@ namespace inria_wbc
             auto radius = IWBC_CHECK(node["radius"].as<double>());
 
             std::unordered_map<std::string, double> avoided;
-            for (const auto &a : IWBC_CHECK(node["avoided"]))
-            {
+            for (const auto& a : IWBC_CHECK(node["avoided"])) {
                 IWBC_ASSERT(robot->model().existFrame(a.first.as<std::string>()), "Frame ", a.first.as<std::string>(), " in ", task_name, " does not exists.");
                 avoided[a.first.as<std::string>()] = a.second.as<double>();
             }
@@ -561,9 +546,9 @@ namespace inria_wbc
 
         ///// measured_force is not a task
         std::shared_ptr<tsid::contacts::MeasuredForceBase> make_measured_force(
-            const std::shared_ptr<robots::RobotWrapper> &robot,
-            const std::shared_ptr<InverseDynamicsFormulationAccForce> &tsid,
-            const std::string &force_name, const YAML::Node &node, const YAML::Node &controller_node)
+            const std::shared_ptr<robots::RobotWrapper>& robot,
+            const std::shared_ptr<InverseDynamicsFormulationAccForce>& tsid,
+            const std::string& force_name, const YAML::Node& node, const YAML::Node& controller_node)
         {
             assert(tsid);
             assert(robot);
@@ -575,15 +560,13 @@ namespace inria_wbc
                 throw IWBC_EXCEPTION("Unknown frame [", tracked, "]");
 
             auto dimension = IWBC_CHECK(node["dimension"].as<std::string>());
-            if (dimension == "force")
-            {
+            if (dimension == "force") {
                 auto measured_force = std::make_shared<tsid::contacts::Measured3Dforce>(force_name, *robot, tracked);
                 // add the measured force
                 tsid->addMeasuredForce(*measured_force);
                 return measured_force;
             }
-            else if (dimension == "wrench")
-            {
+            else if (dimension == "wrench") {
                 auto measured_force = std::make_shared<tsid::contacts::Measured6Dwrench>(force_name, *robot, tracked);
                 // add the measured force
                 tsid->addMeasuredForce(*measured_force);

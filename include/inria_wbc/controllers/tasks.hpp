@@ -21,23 +21,20 @@
 
 #include <inria_wbc/utils/factory.hpp>
 
-namespace inria_wbc
-{
+namespace inria_wbc {
 
-    namespace tasks
-    {
-        namespace cst
-        {
+    namespace tasks {
+        namespace cst {
             static constexpr double w_force_feet = 1e-3; // regularization force for contacts TODO CHANGE FOR STABILIZATION!
         }
 
         using FactoryYAML = utils::Factory<
-            tsid::tasks::TaskBase,                                                        // we create generic task (and downcast if needed)
-            std::shared_ptr<tsid::robots::RobotWrapper>,                                  // robot
-            std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>,                    // tsid
-            std::string,                                                                  // the name of the task
-            YAML::Node,                                                                   // the task node to parse
-            YAML::Node,                                                                   // the controller node to parse
+            tsid::tasks::TaskBase, // we create generic task (and downcast if needed)
+            std::shared_ptr<tsid::robots::RobotWrapper>, // robot
+            std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>, // tsid
+            std::string, // the name of the task
+            YAML::Node, // the task node to parse
+            YAML::Node, // the controller node to parse
             std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> // already added contacts,
             >;
         template <typename T>
