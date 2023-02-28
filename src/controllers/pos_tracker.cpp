@@ -55,13 +55,13 @@ namespace inria_wbc {
             }
 
             ////////////////////Gather Initial Pose //////////////////////////////////////
-            // the srdf contains initial joint positions
+            //the srdf contains initial joint positions
             auto srdf_file = IWBC_CHECK(c["configurations"].as<std::string>());
             auto ref_config = IWBC_CHECK(c["ref_config"].as<std::string>());
             auto p_srdf = path + "/" + srdf_file;
             pinocchio::srdf::loadReferenceConfigurations(robot_->model(), p_srdf, verbose_);
 
-            // q_tsid_ for talos is of size 37 (pos+quat+nactuated)
+            //q_tsid_ for talos is of size 37 (pos+quat+nactuated)
             auto ref_map = robot_->model().referenceConfigurations;
             IWBC_ASSERT(ref_map.find(ref_config) != ref_map.end(), "The following reference config is not in ref_map : ", ref_config);
             q_tsid_ = ref_map[ref_config];
@@ -69,7 +69,7 @@ namespace inria_wbc {
                 std::cout << "q_tsid ref:" << q_tsid_.transpose() << "[" << q_tsid_.size() << "]" << std::endl;
 
             if (floating_base_) {
-                // q0_ is in "Dart format" for the floating base
+                //q0_ is in "Dart format" for the floating base
                 Eigen::Quaterniond quat(q_tsid_(6), q_tsid_(3), q_tsid_(4), q_tsid_(5));
                 Eigen::AngleAxisd aaxis(quat);
                 q0_ << q_tsid_.head(3), aaxis.angle() * aaxis.axis(), q_tsid_.tail(robot_->na());
@@ -221,7 +221,7 @@ namespace inria_wbc {
                 auto parent_frame_id = robot_->model().getFrameId(ref);
                 auto& frame = robot_->model().frames[parent_frame_id];
                 robot_->model().addFrame(pinocchio::Frame(name, frame.parent, parent_frame_id,
-                                                          frame.placement * p, pinocchio::FIXED_JOINT));
+                    frame.placement * p, pinocchio::FIXED_JOINT));
                 assert(robot_->model().existFrame(name));
             }
         }

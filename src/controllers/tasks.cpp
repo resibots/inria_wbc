@@ -66,9 +66,9 @@ namespace inria_wbc {
             bool joint = robot->model().existJointName(tracked);
             bool body = robot->model().existBodyName(tracked);
             bool frame = robot->model().existFrame(tracked);
-            if (joint& & body)
+            if (joint && body)
                 throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
-            if (!joint& & !body& & !frame)
+            if (!joint && !body& & !frame)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
             pinocchio::SE3 ref;
 
@@ -185,7 +185,7 @@ namespace inria_wbc {
             task->Kd(2.0 * task->Kp().cwiseSqrt());
             Vector mask_post(n_actuated);
 
-            if (node["mask"]& & node["joint_names"])
+            if (node["mask"] && node["joint_names"])
                 IWBC_ERROR("You need to specify mask or joint_names to create a mask. Not both.");
 
             if (!node["mask"]) {
@@ -477,9 +477,9 @@ namespace inria_wbc {
             bool joint = robot->model().existJointName(tracked);
             bool body = robot->model().existBodyName(tracked);
             bool frame = robot->model().existFrame(tracked);
-            if (joint& & body)
+            if (joint && body)
                 throw IWBC_EXCEPTION("Ambiguous name to track for task ", task_name, ": this is both a joint and a frame [", tracked, "]");
-            if (!joint& & !body& & !frame)
+            if (!joint && !body && !frame)
                 throw IWBC_EXCEPTION("Unknown frame or joint [", tracked, "]");
 
             // create the task
