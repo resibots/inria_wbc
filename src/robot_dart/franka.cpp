@@ -1,6 +1,5 @@
 
 #include <algorithm>
-#include <boost/program_options.hpp>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -21,6 +20,8 @@
 #include "inria_wbc/exceptions.hpp"
 #include "inria_wbc/robot_dart/cmd.hpp"
 #include "inria_wbc/utils/timer.hpp"
+
+#include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
 
 int main(int argc, char* argv[])
 {
