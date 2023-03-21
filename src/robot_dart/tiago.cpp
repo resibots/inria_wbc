@@ -1,6 +1,5 @@
 
 #include <algorithm>
-#include <boost/program_options.hpp>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -24,6 +23,8 @@
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "inria_wbc/robot_dart/utils.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
+
+#include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
 
 int main(int argc, char* argv[])
 {

@@ -5,9 +5,6 @@
 #include <stdio.h>
 #include <vector>
 
-#include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
-
 #include <robot_dart/robot_dart_simu.hpp>
 #include <robot_dart/robots/franka.hpp>
 #include <robot_dart/robots/icub.hpp>
@@ -27,6 +24,9 @@
 #include "inria_wbc/robot_dart/self_collision_detector.hpp"
 #include "inria_wbc/robot_dart/utils.hpp"
 #include "inria_wbc/utils/timer.hpp"
+
+#include <boost/filesystem.hpp> // Boost need to be always included after pinocchio & inria_wbc
+#include <boost/program_options.hpp>
 
 #include "utest.hpp"
 
