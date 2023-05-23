@@ -33,6 +33,12 @@ namespace inria_wbc {
                 IWBC_ASSERT(it != contacts_.end(), "Contact [", str, "] not found");
                 return it->second;
             }
+            std::shared_ptr<tsid::contacts::MeasuredForceBase> measured_force(const std::string& str) const
+            {
+                auto it = measured_forces_.find(str);
+                IWBC_ASSERT(it != measured_forces_.end(), "Measured Force [", str, "] not found");
+                return it->second;
+            }
             bool has_task(const std::string& str) const { return tasks_.find(str) != tasks_.end(); }
             bool has_contact(const std::string& str) const { return contacts_.find(str) != contacts_.end(); }
             std::shared_ptr<tsid::tasks::TaskJointPosVelAccBounds> bound_task() { return task<tsid::tasks::TaskJointPosVelAccBounds>("bounds"); }
@@ -60,6 +66,8 @@ namespace inria_wbc {
             void set_contact_se3_ref(const pinocchio::SE3& ref, const std::string& contact_name);
             void set_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& task_name);
             void set_contact_se3_ref(tsid::trajectories::TrajectorySample& sample, const std::string& contact_name);
+            void set_measured_6Dwrench(const tsid::math::Vector6& f_ext, const std::string& measured_force_name);
+            void set_measured_3Dforce(const tsid::math::Vector3& f_ext, const std::string& measured_force_name);
 
             std::map<std::string, tsid::trajectories::TrajectorySample> stabilizer_samples() { return _stabilizer_samples; }
             std::map<std::string, Eigen::Vector3d> stabilizer_vector3() { return _stabilizer_vector3; }
@@ -67,6 +75,11 @@ namespace inria_wbc {
             void remove_contact(const std::string& contact_name);
             void add_contact(const std::string& contact_name);
             Eigen::VectorXd force_torque_from_solution(const std::string& contact_name, float foot_mass = 0.0, const std::string& sole_frame = "");
+
+            // this only removes the measured force from the TSID dynamic model equation (the measured_force is not destroyed)
+            // therefore you can re-add it later by using its name
+            void remove_measured_force(const std::string& measured_force_name);
+            void add_measured_force(const std::string& measured_force_name);
 
             // this only removes the task from the TSID list of tasks (the task is not destroyed)
             // therefore you can re-add it later by using its name
@@ -82,8 +95,11 @@ namespace inria_wbc {
             // the list of all the tasks
             std::unordered_map<std::string, std::shared_ptr<tsid::tasks::TaskBase>> tasks_;
             std::vector<std::string> activated_tasks_;
+            std::vector<std::string> activated_measured_forces_;
             // contacts are not tasks in tsid
             std::unordered_map<std::string, std::shared_ptr<tsid::contacts::ContactBase>> contacts_;
+            // measured forces are not tasks in tsid
+            std::unordered_map<std::string, std::shared_ptr<tsid::contacts::MeasuredForceBase>> measured_forces_;
 
             std::map<std::string, double> opt_params_; // the parameters that we can tune with an optimizer (e.g., task weights)
 

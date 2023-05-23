@@ -174,6 +174,11 @@ namespace inria_wbc {
                     activated_contacts_.push_back(name);
                     all_contacts_.push_back(name);
                 }
+                else if (type == "measured-force") {
+                    auto force = tasks::make_measured_force(robot_, tsid_, name, it->second, config);
+                    measured_forces_[name] = force;
+                    activated_measured_forces_.push_back(name);
+                }
                 else if (type.find("contact-") == std::string::npos) {
                     // the task is added automatically to TSID by the factory
                     auto task = tasks::FactoryYAML::instance().create(type, robot_, tsid_, name, it->second, config, {});
@@ -256,6 +261,18 @@ namespace inria_wbc {
             c->setReference(sample);
         }
 
+        void PosTracker::set_measured_6Dwrench(const tsid::math::Vector6& f_ext, const std::string& measured_force_name)
+        {
+            auto force = std::dynamic_pointer_cast<tsid::contacts::Measured6Dwrench>(measured_force(measured_force_name));
+            force->setMeasuredContactForce(f_ext);
+        }
+
+        void PosTracker::set_measured_3Dforce(const tsid::math::Vector3& f_ext, const std::string& measured_force_name)
+        {
+            auto force = std::dynamic_pointer_cast<tsid::contacts::Measured3Dforce>(measured_force(measured_force_name));
+            force->setMeasuredContactForce(f_ext);
+        }
+
         void PosTracker::remove_contact(const std::string& contact_name)
         {
             if (verbose_)
@@ -274,6 +291,7 @@ namespace inria_wbc {
             tsid_->addRigidContact(*c, tasks::cst::w_force_feet);
             activated_contacts_.push_back(contact_name);
         }
+
         //returns output = [fx,fy,fz,tau_x,tau_y,tau_z] from  tsid solution
         //when we supress foot mass it corresponds to F/T sensor data
         Eigen::VectorXd PosTracker::force_torque_from_solution(const std::string& contact_name, float foot_mass, const std::string& sole_frame)
@@ -300,6 +318,25 @@ namespace inria_wbc {
                 force_tsid.tail(3) -= (contact_world.translation() - sole_world.translation()).cross(tmp);
             }
             return force_tsid;
+        }
+
+        void PosTracker::remove_measured_force(const std::string& measured_force_name)
+        {
+            if (verbose_)
+                std::cout << "removing measured_force: " << measured_force_name << std::endl;
+            IWBC_ASSERT(measured_forces_.find(measured_force_name) != measured_forces_.end(), "Trying to remove a measured_force: ", measured_force_name);
+            bool res = tsid_->removeMeasuredForce(measured_force_name);
+            IWBC_ASSERT(res, " measured_force ", measured_force_name, " not found");
+            activated_measured_forces_.erase(std::remove(activated_measured_forces_.begin(), activated_measured_forces_.end(), measured_force_name), activated_measured_forces_.end());
+        }
+
+        void PosTracker::add_measured_force(const std::string& measured_force_name)
+        {
+            if (verbose_)
+                std::cout << "adding measured_force: " << measured_force_name << std::endl;
+            auto f = measured_force(measured_force_name);
+            tsid_->addMeasuredForce(*f);
+            activated_measured_forces_.push_back(measured_force_name);
         }
 
         void PosTracker::remove_task(const std::string& task_name, double transition_duration)

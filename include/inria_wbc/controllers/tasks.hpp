@@ -8,6 +8,9 @@
 #include <tsid/contacts/contact-6d-ext.hpp>
 #include <tsid/contacts/contact-base.hpp>
 #include <tsid/contacts/contact-point.hpp>
+#include <tsid/contacts/measured-force-base.hpp>
+#include <tsid/contacts/measured-3Dforce.hpp>
+#include <tsid/contacts/measured-6Dwrench.hpp>
 #include <tsid/formulations/inverse-dynamics-formulation-acc-force.hpp>
 #include <tsid/math/fwd.hpp>
 #include <tsid/math/utils.hpp>
@@ -39,9 +42,15 @@ namespace inria_wbc {
 
         // contacts cannot be in the same factory
         std::shared_ptr<tsid::contacts::Contact6dExt> make_contact_task(
-            const std::shared_ptr<tsid::robots::RobotWrapper>& robot,
-            const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce>& tsid,
-            const std::string& task_name, const YAML::Node& node, const YAML::Node& controller_node);
+            const std::shared_ptr<tsid::robots::RobotWrapper> &robot,
+            const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> &tsid,
+            const std::string &task_name, const YAML::Node &node, const YAML::Node &controller_node);
+
+        // measured forces cannot be in the same factory
+        std::shared_ptr<tsid::contacts::MeasuredForceBase> make_measured_force(
+            const std::shared_ptr<tsid::robots::RobotWrapper> &robot,
+            const std::shared_ptr<tsid::InverseDynamicsFormulationAccForce> &tsid,
+            const std::string &force_name, const YAML::Node &node, const YAML::Node &controller_node);
 
     } // namespace tasks
 } // namespace inria_wbc
