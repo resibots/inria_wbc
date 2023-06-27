@@ -1,25 +1,12 @@
 BEHAVIOR:
-  name : generic::cartesian
+  name : generic::cartesian_sequential
   task_names: [lh, rh]
 
-  #first exercise
-  relative_targets_pos: [[1.0, 1.0, 0.2], [0, 0, 0.2]] # empty sublist for no target es. [[1,2,0], []]
-  relative_targets_rpy: [[0, -0.6, 0.2], [0, -0.6, 0]] # empty sublist for no target es. [[], [3.14,0,0]]
-  trajectory_duration: 1
+  trajectory_duration: 3
 
-  name : generic::cartesian
-  task_names: [lh, rh]
-  #second exercise
-  relative_targets_pos: [[0, 0.7, -3.5], [0, -0.7, -3.5]] # empty sublist for no target es. [[1,2,0], []]
-  relative_targets_rpy: [[0, 0.0, 0.0], [0, 0.0, 0.0]] # empty sublist for no target es. [[], [3.14,0,0]]
-  trajectory_duration: 5
-
-  name : generic::cartesian
-  task_names: [lh, rh]
-  #third exercise
-  relative_targets_pos2: [[-0.30, 0.0, 1], [-0.3, 0.0, 1]] # empty sublist for no target es. [[1,2,0], []]
-  relative_targets_rpy2: [[0, 0.0, 0.0], [0, 0.0, 0.0]] # empty sublist for no target es. [[], [3.14,0,0]]
-  trajectory_duration: 5
+  rh_targetpositions: [[0,0,0.2],[0,0,-0.6]]
+  lh_targetpositions: [[1.0,1.0,0.2],[0,0,-0.6]]
 
   loop: true
+  absolute: false
   
