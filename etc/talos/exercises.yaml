@@ -2,11 +2,10 @@ BEHAVIOR:
   name : generic::cartesian_sequential
   task_names: [lh, rh]
 
-  trajectory_duration: 3
+  trajectory_duration: 2
 
-  rh_targetpositions: [[0,0,0.2],[0,0,-0.6]]
-  lh_targetpositions: [[1.0,1.0,0.2],[0,0,-0.6]]
+  rh_targetpositions: [[1.0,-1.0,1.0],[0,-1.0,-4.6],[-3.0,-1.0,0]]
+  lh_targetpositions: [[1.0,1.0,1.0],[0,1.0,-4.6],[-3.0,1.0,0]]
 
   loop: true
-  absolute: false
   

@@ -32,6 +32,7 @@
 #include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/utils/timer.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
+#include "inria_wbc/behaviors/generic/cartesian_sequential.hpp"
 
 #include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
 
@@ -196,6 +197,32 @@ int main(int argc, char* argv[])
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
         IWBC_ASSERT(behavior, "invalid behavior");
 
+        //HERE /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //trying to see if it's a cartesian sequential behavior
+        auto behavior_cs = std::dynamic_pointer_cast<inria_wbc::behaviors::generic::CartesianSequential>(behavior);
+        IWBC_ASSERT(behavior_cs,"cannot cast behavior to cartesian sequential. Wrong type of behavior"); //if not, the program stops
+
+        //if so, create a sphere for both right and left hands
+
+        //get the informations needed
+        int traj_selector = behavior_cs->get_traj_selector();
+        auto rh_point = behavior_cs->get_rh_targets()[traj_selector];
+        auto lh_point = behavior_cs->get_lh_targets()[traj_selector];
+        auto iso_right = Eigen::Isometry3d(Eigen::Translation3d(rh_point[0],rh_point[1],rh_point[2]));
+        auto iso_left = Eigen::Isometry3d(Eigen::Translation3d(lh_point[0],lh_point[1],lh_point[2]));
+
+        //CREATE THE SPHERES
+        auto sphere_r = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.1, 0.1, 0.1), iso_right, "fixed", 1, Eigen::Vector4d(0, 0, 1, 0.5));
+        auto sphere_l = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.1, 0.1, 0.1), iso_left, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5));
+        sphere_r->set_color_mode("aspect");
+        sphere_l->set_color_mode("aspect");
+
+        //add them to the simulator
+        simu->add_visual_robot(sphere_r);
+        simu->add_visual_robot(sphere_l);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
+
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;
         floating_base.resize(6);
@@ -285,6 +312,8 @@ int main(int argc, char* argv[])
         std::vector<std::shared_ptr<robot_dart::Robot>> spheres;
         bool is_colliding = false;
 
+
+        //BEGINNING OF THE LOOP /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
 
             if (vm["damage"].as<bool>()) {

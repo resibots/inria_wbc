@@ -19,16 +19,22 @@ namespace inria_wbc{
                 CartesianSequential(const controller_ptr_t& controller, const YAML::Node& config);
                 CartesianSequential() = delete;
                 CartesianSequential(const CartesianSequential&) = delete;
-                virtual ~CartesianSequential();
+                virtual ~CartesianSequential() {};
                 void update(const controllers::SensorData& sensor_data = {}) override;
                 std::string behavior_type() const override { return controllers::behavior_types::DOUBLE_SUPPORT; };
+                
+                std::vector<std::vector<double>> get_rh_targets() const {return rh_targets;}
+                std::vector<std::vector<double>> get_lh_targets() const {return lh_targets;}
+
+                int get_traj_selector() const { return traj_selector_; }
 
             private:
                 int time_ = 0;
                 int traj_selector_ = 0;
-                int task_number = 0;
 
                 //right hand
+                std::vector<std::vector<double>> rh_targets;
+                std::vector<std::vector<double>> lh_targets;
                 std::vector<std::vector<pinocchio::SE3>> trajectories_r_;
                 std::vector<std::vector<Eigen::VectorXd>> trajectories_d_r_;
                 std::vector<std::vector<Eigen::VectorXd>> trajectories_dd_r_;

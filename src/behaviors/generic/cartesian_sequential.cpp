@@ -1,28 +1,35 @@
 //include the corresponding hpp file
-#include "/inria_wbc/behaviors/generic/cartesian_sequential.hpp"
+#include "inria_wbc/behaviors/generic/cartesian_sequential.hpp"
 
 namespace inria_wbc{
     namespace behaviors{
         namespace generic{
+
+            //Registers the behavior into the factory
+            static Register<CartesianSequential> __talos_move_sequential("generic::cartesian_sequential"); 
+
             CartesianSequential::CartesianSequential(const controller_ptr_t& controller, const YAML::Node& config) : Behavior(controller, config),traj_selector_(0){
 
                 //initialization of both the parameters and the controller using the data collected from the yaml file
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
                 loop_ = IWBC_CHECK(c["loop"].as<bool>());
                 task_names_ = IWBC_CHECK(c["task_names"].as<std::vector<std::string>>());
+                trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
                 behavior_type_ = this->behavior_type();
                 controller_->set_behavior_type(behavior_type_);
 
                 //get the points to achieve for both hands
-                auto rh_targets = IWBC_CHECK(c["rh_targetpositions"].as<std::vector<std::vector<double>>>());
-                auto lh_targets = IWBC_CHECK(c["lh_targetpositions"].as<std::vector<std::vector<double>>>());
+                rh_targets = IWBC_CHECK(c["rh_targetpositions"].as<std::vector<std::vector<double>>>());
+                lh_targets = IWBC_CHECK(c["lh_targetpositions"].as<std::vector<std::vector<double>>>());
+
+                //std::cout << rh_targets.size() << " " << lh_targets.size() << std::endl;
 
                 if (rh_targets.size() != lh_targets.size()) //looking if tasks are correctly defined
                 {
                     IWBC_ERROR("error: right hand and left hand don't have the same number of tasks.");
                 }
 
-                //get the number of tasks
+                //get the number of targets
                 number_of_targets = rh_targets.size();
 
                 //initialization of both right and left hands tasks
@@ -42,9 +49,25 @@ namespace inria_wbc{
                 std::vector<std::vector<Eigen::VectorXd>> trajectory_dd_l;
                 //...........................
 
-                //initialiazing final stacks for iteration ("for" loop below)
+                //initialiazing final tasks for iteration ("for" loop below)
                 auto task_final_right = task_init_right;
                 auto task_final_left = task_init_left;
+
+                for (auto& element : rh_targets)
+                {
+                    for (int i = 0;i < element.size();i++){
+                        std::cout << i <<"-ieme coordonnee droite: " << element[i] << std::endl;
+                    }
+                }
+
+                for (auto& element : lh_targets)
+                {
+                    for (int i = 0;i < element.size();i++){
+                        std::cout << i <<"-ieme coordonnee gauche: " << element[i] << std::endl;
+                    }
+                }
+                
+
 
                 //construction of two vectors containing the different positions of respectively right and left hands
                 for (int i = 0;i < number_of_targets;i++){
@@ -58,22 +81,23 @@ namespace inria_wbc{
 
                     if(lh_targets[i].size() == 3) //same
                         task_final_left.translation() = Eigen::Vector3d::Map(lh_targets[i].data()) + old_task_left.translation(); //same
-                    
-                    //calculating optimized right hand's trajectory for the i-th point
-                    trajectory_r.push_back(trajs::min_jerk_trajectory(task_init_right, task_final_right, controller_->dt(), trajectory_duration_));
-                    trajectory_d_r.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(task_init_right, task_final_right, controller_->dt(), trajectory_duration_));
-                    trajectory_dd_r.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(task_init_right, task_final_right, controller_->dt(), trajectory_duration_));
+
+                    //calculating optimized right hand's trajectory from the (i-1)-th to the i-th point
+                    trajectory_r.push_back(trajs::min_jerk_trajectory(old_task_right, task_final_right, controller_->dt(), trajectory_duration_));
+                    trajectory_d_r.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(old_task_right, task_final_right, controller_->dt(), trajectory_duration_));
+                    trajectory_dd_r.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(old_task_right, task_final_right, controller_->dt(), trajectory_duration_));
                     
                     //doing the same for left hand
-                    trajectory_l.push_back(trajs::min_jerk_trajectory(task_init_left, task_final_left, controller_->dt(), trajectory_duration_));
-                    trajectory_d_l.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(task_init_left, task_final_left, controller_->dt(), trajectory_duration_));
-                    trajectory_dd_l.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(task_init_left, task_final_left, controller_->dt(), trajectory_duration_));
+                    trajectory_l.push_back(trajs::min_jerk_trajectory(old_task_left, task_final_left, controller_->dt(), trajectory_duration_));
+                    trajectory_d_l.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(old_task_left, task_final_left, controller_->dt(), trajectory_duration_));
+                    trajectory_dd_l.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(old_task_left, task_final_left, controller_->dt(), trajectory_duration_));
 
                 }
 
                 //considering the loop
                 if (loop_)
                 {
+
                     trajectory_r.push_back(trajs::min_jerk_trajectory(task_final_right, task_init_right, controller_->dt(), trajectory_duration_));
                     trajectory_d_r.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(task_final_right, task_init_right, controller_->dt(), trajectory_duration_));
                     trajectory_dd_r.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(task_final_right, task_init_right, controller_->dt(), trajectory_duration_));
@@ -81,6 +105,8 @@ namespace inria_wbc{
                     trajectory_l.push_back(trajs::min_jerk_trajectory(task_final_left, task_init_left, controller_->dt(), trajectory_duration_));
                     trajectory_d_l.push_back(trajs::min_jerk_trajectory<trajs::d_order::FIRST>(task_final_left, task_init_left, controller_->dt(), trajectory_duration_));
                     trajectory_dd_l.push_back(trajs::min_jerk_trajectory<trajs::d_order::SECOND>(task_final_left, task_init_left, controller_->dt(), trajectory_duration_));
+
+                    
                 }
 
                 //stocking them
@@ -92,9 +118,16 @@ namespace inria_wbc{
                 trajectories_d_l_ = trajectory_d_l;
                 trajectories_dd_l_ = trajectory_dd_l;
 
+                std::cout << "number of point to achieve: " << trajectories_r_.size() << std::endl;
+
             } //end of CartesianSequential's constructor
 
             void CartesianSequential::update(const controllers::SensorData& sensor_data){
+
+                /*std::cout << trajectories_l_[traj_selector_].size() << " "
+                        << trajectories_d_l_[traj_selector_].size() << " "
+                        << trajectories_dd_l_[traj_selector_].size() << " "
+                        << std::endl;*/
                 
                 if (traj_selector_ < trajectories_r_.size()) {
 
