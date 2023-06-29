@@ -36,6 +36,8 @@
 
 #include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
 
+#include <typeinfo>
+
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
 static const std::string bold = "\x1B[1m";
@@ -197,7 +199,7 @@ int main(int argc, char* argv[])
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
         IWBC_ASSERT(behavior, "invalid behavior");
 
-        //HERE /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //HERE to see the code to see the targets /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //trying to see if it's a cartesian sequential behavior
         auto behavior_cs = std::dynamic_pointer_cast<inria_wbc::behaviors::generic::CartesianSequential>(behavior);
         IWBC_ASSERT(behavior_cs,"cannot cast behavior to cartesian sequential. Wrong type of behavior"); //if not, the program stops
@@ -206,14 +208,44 @@ int main(int argc, char* argv[])
 
         //get the informations needed
         int traj_selector = behavior_cs->get_traj_selector();
-        auto rh_point = behavior_cs->get_rh_targets()[traj_selector];
-        auto lh_point = behavior_cs->get_lh_targets()[traj_selector];
+        auto rh_targets = behavior_cs->get_rh_targets();
+        auto lh_targets = behavior_cs->get_lh_targets();
+        auto loop = behavior_cs->get_loop();
+
+        //get the initial positions of the hands
+        auto task_init_right = controller_pos->get_se3_ref("rh");
+        auto task_init_left = controller_pos->get_se3_ref("lh");
+
+
+        //if loop
+        if (loop)
+        {
+            //create the point 0 to make the loop graphically work
+            std::vector<double> vec;
+            vec.push_back(0);
+            vec.push_back(0);
+            vec.push_back(0);
+
+            //then add it to both rh and lh targets
+            rh_targets.push_back(vec);
+            lh_targets.push_back(vec);
+        }
+        
+        //get the current right and left points to check
+        auto rh_point = rh_targets[traj_selector];
+        auto lh_point = lh_targets[traj_selector];
+
+        //create the corresponding isometries (the centers of the spheres)
         auto iso_right = Eigen::Isometry3d(Eigen::Translation3d(rh_point[0],rh_point[1],rh_point[2]));
         auto iso_left = Eigen::Isometry3d(Eigen::Translation3d(lh_point[0],lh_point[1],lh_point[2]));
 
+        //translate to move into hands respectives referentials
+        iso_right.translation() += task_init_right.translation();
+        iso_left.translation() += task_init_left.translation();
+
         //CREATE THE SPHERES
-        auto sphere_r = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.1, 0.1, 0.1), iso_right, "fixed", 1, Eigen::Vector4d(0, 0, 1, 0.5));
-        auto sphere_l = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.1, 0.1, 0.1), iso_left, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5));
+        auto sphere_r = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2, 0.2, 0.2), iso_right, "fixed", 1, Eigen::Vector4d(0, 0, 1, 0.5));
+        auto sphere_l = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2, 0.2, 0.2), iso_left, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5));
         sphere_r->set_color_mode("aspect");
         sphere_l->set_color_mode("aspect");
 
@@ -222,6 +254,52 @@ int main(int argc, char* argv[])
         simu->add_visual_robot(sphere_l);
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
+
+        // code to see the trajectories /////////////////////////////////////////////////////////////////////////////////////////////
+
+        //create a vector to stock all the spheres of the trajectories
+        std::vector<std::shared_ptr<robot_dart::Robot>> traj_spheres_right;
+        std::vector<std::shared_ptr<robot_dart::Robot>> traj_spheres_left;
+
+        //get the trajectories
+        auto trajectories_right = behavior_cs->get_trajectories_right();
+        auto trajectories_left = behavior_cs->get_trajectories_left();
+
+        std::cout << "< > " << trajectories_right.size() << std::endl;
+
+        //create the spheres
+        int i = 0;
+        while (i < trajectories_right[traj_selector].size())
+        {
+            auto translation_right = trajectories_right[traj_selector][i].translation();
+            auto translation_left = trajectories_left[traj_selector][i].translation();
+
+            //std::cout << "< > " << trajectories_right[traj_selector].size() << std::endl;
+
+            auto iso_traj_right = Eigen::Isometry3d(Eigen::Translation3d(translation_right[0],translation_right[1],translation_right[2]));
+            auto iso_traj_left = Eigen::Isometry3d(Eigen::Translation3d(translation_left[0],translation_left[1],translation_left[2]));
+
+            //create the spheres for trajectories
+            auto s_r = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.05, 0.05, 0.05), iso_traj_right, "fixed", 1, Eigen::Vector4d(1, 1, 0, 0.5));
+            auto s_l = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.05, 0.05, 0.05), iso_traj_left, "fixed", 1, Eigen::Vector4d(1, 0, 1, 0.5));
+            s_r->set_color_mode("aspect");
+            s_l->set_color_mode("aspect");
+
+            //add them to the dedicated vector
+            traj_spheres_right.push_back(s_r);
+            traj_spheres_left.push_back(s_l);
+            i += 100;
+        }
+        
+
+        //add all the spheres to the simulator
+        for (auto& element : traj_spheres_right)
+            simu->add_visual_robot(element);
+
+        for (auto& element : traj_spheres_left)
+            simu->add_visual_robot(element);
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;
@@ -490,6 +568,41 @@ int main(int argc, char* argv[])
                         robot->clear_external_forces();
                 }
             }
+
+            //HERE ////////////////////////////////////////////////////////////////////
+            //update the position of the targets for cartesian sequential
+            traj_selector = behavior_cs->get_traj_selector(); //the module is just here to avoid traj_selector being equal to 3 or higher, which makes the program crash
+            rh_point = rh_targets[traj_selector];
+            lh_point = lh_targets[traj_selector];
+            iso_right = Eigen::Isometry3d(Eigen::Translation3d(rh_point[0],rh_point[1],rh_point[2]));
+            iso_left = Eigen::Isometry3d(Eigen::Translation3d(lh_point[0],lh_point[1],lh_point[2]));
+
+            //translate to move into hands respectives referentials
+            iso_right.translation() += task_init_right.translation();
+            iso_left.translation() += task_init_left.translation();
+
+            //refresh the centers of the spheres
+            sphere_r->set_base_pose(iso_right);
+            sphere_l->set_base_pose(iso_left);
+
+            //refresh the good trajectories
+            i = 0;
+            while (i < trajectories_left[traj_selector].size())
+            {
+                auto translation_right = trajectories_right[traj_selector][i].translation();
+                auto translation_left = trajectories_left[traj_selector][i].translation();
+
+                //std::cout << "< > " << trajectories_right[traj_selector].size() << std::endl;
+
+                auto iso_traj_right = Eigen::Isometry3d(Eigen::Translation3d(translation_right[0],translation_right[1],translation_right[2]));
+                auto iso_traj_left = Eigen::Isometry3d(Eigen::Translation3d(translation_left[0],translation_left[1],translation_left[2]));
+
+                traj_spheres_right[i/100]->set_base_pose(iso_traj_right);
+                traj_spheres_left[i/100]->set_base_pose(iso_traj_left);
+
+                i += 100;
+            }
+            
 
             // step the simulation
             {

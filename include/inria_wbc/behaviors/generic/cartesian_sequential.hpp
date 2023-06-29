@@ -26,7 +26,11 @@ namespace inria_wbc{
                 std::vector<std::vector<double>> get_rh_targets() const {return rh_targets;}
                 std::vector<std::vector<double>> get_lh_targets() const {return lh_targets;}
 
+                std::vector<std::vector<pinocchio::SE3>> get_trajectories_right() const { return trajectories_r_; }
+                std::vector<std::vector<pinocchio::SE3>> get_trajectories_left() const { return trajectories_l_; }
+
                 int get_traj_selector() const { return traj_selector_; }
+                bool get_loop() const { return loop_; }
 
             private:
                 int time_ = 0;
@@ -35,6 +39,10 @@ namespace inria_wbc{
                 //right hand
                 std::vector<std::vector<double>> rh_targets;
                 std::vector<std::vector<double>> lh_targets;
+
+                std::vector<std::vector<double>> rh_rots;
+                std::vector<std::vector<double>> lh_rots;
+
                 std::vector<std::vector<pinocchio::SE3>> trajectories_r_;
                 std::vector<std::vector<Eigen::VectorXd>> trajectories_d_r_;
                 std::vector<std::vector<Eigen::VectorXd>> trajectories_dd_r_;
@@ -49,6 +57,7 @@ namespace inria_wbc{
                 float trajectory_duration_; // from YAML
                 std::vector<std::string> task_names_; // from YAML
                 bool loop_; // from YAML
+                bool absolute_; //form YAML
                 int number_of_targets; //defined exploiting te YAML file
             };
 

@@ -19,13 +19,13 @@ head_yaw:
 lh:
     type: se3
     tracked: gripper_left_joint
-    weight: 10.0
+    weight: 1000.0
     kp: 30.0
     mask: 111111 # xyz
 rh:
     type: se3
     tracked: gripper_right_joint
-    weight: 10.0
+    weight: 1000.0
     kp: 30.0
     mask: 111111
 torso:
