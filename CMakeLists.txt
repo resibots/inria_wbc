@@ -27,6 +27,7 @@ set(INRIA_WBC_SOURCES
     src/behaviors/behavior.cpp
     src/behaviors/generic/cartesian.cpp
     src/behaviors/generic/cartesian_traj.cpp
+    src/behaviors/generic/cartesian_sequential.cpp
     src/behaviors/humanoid/move_com.cpp
     src/behaviors/humanoid/move_feet.cpp
     src/behaviors/humanoid/walk_on_spot.cpp

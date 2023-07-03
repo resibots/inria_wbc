@@ -32,8 +32,11 @@
 #include "inria_wbc/trajs/saver.hpp"
 #include "inria_wbc/utils/timer.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
+#include "inria_wbc/behaviors/generic/cartesian_sequential.hpp"
 
 #include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
+
+#include <typeinfo>
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -116,7 +119,6 @@ int main(int argc, char* argv[])
         std::cout << oss_conf.str();
         std::cout << "--------------------------" << std::endl;
         // clang-format on
-
         bool verbose = (vm.count("verbose") != 0);
         std::map<std::string, std::shared_ptr<std::ofstream>> log_files;
         for (auto& x : vm["log"].as<std::vector<std::string>>())
@@ -129,6 +131,8 @@ int main(int argc, char* argv[])
 
         //////////////////// INIT DART ROBOT //////////////////////////////////////
         std::srand(std::time(NULL));
+
+
         // std::vector<std::pair<std::string, std::string>> packages = {{"talos_data", "/home/pal/talos_data"}};
         // std::string urdf = vm.count("fast") ? "talos/talos_fast.urdf" : "talos/talos.urdf";
         // urdf = "/home/pal/talos_data/example-robot-data/robots/talos_data/robots/talos_full_v2.urdf";
@@ -141,12 +145,18 @@ int main(int argc, char* argv[])
         else
             robot->set_actuator_types(vm["actuators"].as<std::string>());
 
+        
+
+
         //////////////////// INIT DART SIMULATION WORLD //////////////////////////////////////
         auto simu = std::make_shared<robot_dart::RobotDARTSimu>(dt);
         simu->set_collision_detector(vm["collision"].as<std::string>());
 
+        
+
 #ifdef GRAPHIC
         robot_dart::gui::magnum::GraphicsConfiguration configuration;
+
         if (vm.count("big_window")) {
             configuration.width = 1280;
             configuration.height = 960;
@@ -157,13 +167,19 @@ int main(int argc, char* argv[])
         }
 
         auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(configuration);
+        //bug la //////////////////////////////////////////////////////////////
         simu->set_graphics(graphics);
+        /////////////////////////////////////////////////////////////////////////
+        std::cout << "aaaaaaaaaaaaaaaaaaaaaaaa " << std::endl;
         graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
         if (vm.count("mp4"))
             graphics->record_video(vm["mp4"].as<std::string>());
 #endif
+std::cout << "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " << std::endl;
         simu->add_robot(robot);
         auto floor = simu->add_checkerboard_floor();
+
+        
 
         ///// CONTROLLER
         auto controller_path = vm["controller"].as<std::string>();
@@ -195,6 +211,108 @@ int main(int argc, char* argv[])
         auto behavior_name = IWBC_CHECK(behavior_config["BEHAVIOR"]["name"].as<std::string>());
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
         IWBC_ASSERT(behavior, "invalid behavior");
+
+        //HERE to see the code to see the targets /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //trying to see if it's a cartesian sequential behavior
+        auto behavior_cs = std::dynamic_pointer_cast<inria_wbc::behaviors::generic::CartesianSequential>(behavior);
+        IWBC_ASSERT(behavior_cs,"cannot cast behavior to cartesian sequential. Wrong type of behavior"); //if not, the program stops
+
+        //if so, create a sphere for both right and left hands
+
+        //get the informations needed
+        int traj_selector = behavior_cs->get_traj_selector();
+        auto rh_targets = behavior_cs->get_rh_targets();
+        auto lh_targets = behavior_cs->get_lh_targets();
+        auto loop = behavior_cs->get_loop();
+
+        //get the initial positions of the hands
+        auto task_init_right = controller_pos->get_se3_ref("rh");
+        auto task_init_left = controller_pos->get_se3_ref("lh");
+
+
+        //if loop
+        if (loop)
+        {
+            //create the point 0 to make the loop graphically work
+            std::vector<double> vec;
+            vec.push_back(0);
+            vec.push_back(0);
+            vec.push_back(0);
+
+            //then add it to both rh and lh targets
+            rh_targets.push_back(vec);
+            lh_targets.push_back(vec);
+        }
+        
+        //get the current right and left points to check
+        auto rh_point = rh_targets[traj_selector];
+        auto lh_point = lh_targets[traj_selector];
+
+        //create the corresponding isometries (the centers of the spheres)
+        auto iso_right = Eigen::Isometry3d(Eigen::Translation3d(rh_point[0],rh_point[1],rh_point[2]));
+        auto iso_left = Eigen::Isometry3d(Eigen::Translation3d(lh_point[0],lh_point[1],lh_point[2]));
+
+        //translate to move into hands respectives referentials
+        iso_right.translation() += task_init_right.translation();
+        iso_left.translation() += task_init_left.translation();
+
+        //CREATE THE SPHERES
+        auto sphere_r = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2, 0.2, 0.2), iso_right, "fixed", 1, Eigen::Vector4d(0, 0, 1, 0.5));
+        auto sphere_l = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2, 0.2, 0.2), iso_left, "fixed", 1, Eigen::Vector4d(0, 1, 0, 0.5));
+        sphere_r->set_color_mode("aspect");
+        sphere_l->set_color_mode("aspect");
+
+        //add them to the simulator
+        simu->add_visual_robot(sphere_r);
+        simu->add_visual_robot(sphere_l);
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
+
+        // code to see the trajectories /////////////////////////////////////////////////////////////////////////////////////////////
+
+        //create a vector to stock all the spheres of the trajectories
+        std::vector<std::shared_ptr<robot_dart::Robot>> traj_spheres_right;
+        std::vector<std::shared_ptr<robot_dart::Robot>> traj_spheres_left;
+
+        //get the trajectories
+        auto trajectories_right = behavior_cs->get_trajectories_right();
+        auto trajectories_left = behavior_cs->get_trajectories_left();
+
+        std::cout << "< > " << trajectories_right.size() << std::endl;
+
+        //create the spheres
+        int i = 0;
+        while (i < trajectories_right[traj_selector].size())
+        {
+            auto translation_right = trajectories_right[traj_selector][i].translation();
+            auto translation_left = trajectories_left[traj_selector][i].translation();
+
+            //std::cout << "< > " << trajectories_right[traj_selector].size() << std::endl;
+
+            auto iso_traj_right = Eigen::Isometry3d(Eigen::Translation3d(translation_right[0],translation_right[1],translation_right[2]));
+            auto iso_traj_left = Eigen::Isometry3d(Eigen::Translation3d(translation_left[0],translation_left[1],translation_left[2]));
+
+            //create the spheres for trajectories
+            auto s_r = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.05, 0.05, 0.05), iso_traj_right, "fixed", 1, Eigen::Vector4d(1, 1, 0, 0.5));
+            auto s_l = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.05, 0.05, 0.05), iso_traj_left, "fixed", 1, Eigen::Vector4d(1, 0, 1, 0.5));
+            s_r->set_color_mode("aspect");
+            s_l->set_color_mode("aspect");
+
+            //add them to the dedicated vector
+            traj_spheres_right.push_back(s_r);
+            traj_spheres_left.push_back(s_l);
+            i += 100;
+        }
+        
+
+        //add all the spheres to the simulator
+        for (auto& element : traj_spheres_right)
+            simu->add_visual_robot(element);
+
+        for (auto& element : traj_spheres_left)
+            simu->add_visual_robot(element);
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;
@@ -285,6 +403,8 @@ int main(int argc, char* argv[])
         std::vector<std::shared_ptr<robot_dart::Robot>> spheres;
         bool is_colliding = false;
 
+
+        //BEGINNING OF THE LOOP /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
 
             if (vm["damage"].as<bool>()) {
@@ -371,7 +491,7 @@ int main(int argc, char* argv[])
                 Eigen::VectorXd velocities = Eigen::VectorXd::Zero(controller->controllable_dofs(false).size());
                 for (size_t i = 0; i < controller->controllable_dofs(false).size(); ++i) {
                     auto name = controller->controllable_dofs(false)[i];
-                    if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0 && name != "gripper_left_joint" && name != "gripper_right_joint") {
+                    if (std::count(active_dofs_controllable.begin(), active_dofs_controllable.end(), name) > 0) {
                         positions(i) = robot->positions({name})[0];
                         velocities(i) = robot->velocities({name})[0];
                     }
@@ -453,7 +573,7 @@ int main(int argc, char* argv[])
                 auto pforce = vm["norm_force"].as<float>();
                 for (auto& p : pv) {
                     if (simu->scheduler().current_time() > p && simu->scheduler().current_time() < p + 0.5) {
-                        robot->set_external_force("arm_right_7_link", Eigen::Vector3d(0, pforce, 0));
+                        robot->set_external_force("base_link", Eigen::Vector3d(0, pforce, 0));
                         // robot->set_external_force("base_link", Eigen::Vector3d(pforce, 0, 0));
                         push = true;
                     }
@@ -461,6 +581,41 @@ int main(int argc, char* argv[])
                         robot->clear_external_forces();
                 }
             }
+
+            //HERE ////////////////////////////////////////////////////////////////////
+            //update the position of the targets for cartesian sequential
+            traj_selector = behavior_cs->get_traj_selector(); //the module is just here to avoid traj_selector being equal to 3 or higher, which makes the program crash
+            rh_point = rh_targets[traj_selector];
+            lh_point = lh_targets[traj_selector];
+            iso_right = Eigen::Isometry3d(Eigen::Translation3d(rh_point[0],rh_point[1],rh_point[2]));
+            iso_left = Eigen::Isometry3d(Eigen::Translation3d(lh_point[0],lh_point[1],lh_point[2]));
+
+            //translate to move into hands respectives referentials
+            iso_right.translation() += task_init_right.translation();
+            iso_left.translation() += task_init_left.translation();
+
+            //refresh the centers of the spheres
+            sphere_r->set_base_pose(iso_right);
+            sphere_l->set_base_pose(iso_left);
+
+            //refresh the good trajectories
+            i = 0;
+            while (i < trajectories_left[traj_selector].size())
+            {
+                auto translation_right = trajectories_right[traj_selector][i].translation();
+                auto translation_left = trajectories_left[traj_selector][i].translation();
+
+                //std::cout << "< > " << trajectories_right[traj_selector].size() << std::endl;
+
+                auto iso_traj_right = Eigen::Isometry3d(Eigen::Translation3d(translation_right[0],translation_right[1],translation_right[2]));
+                auto iso_traj_left = Eigen::Isometry3d(Eigen::Translation3d(translation_left[0],translation_left[1],translation_left[2]));
+
+                traj_spheres_right[i/100]->set_base_pose(iso_traj_right);
+                traj_spheres_left[i/100]->set_base_pose(iso_traj_left);
+
+                i += 100;
+            }
+            
 
             // step the simulation
             {
@@ -493,16 +648,8 @@ int main(int argc, char* argv[])
                     timer.report(*x.second, simu->scheduler().current_time());
                 else if (x.first == "cmd")
                     (*x.second) << cmd.transpose() << std::endl;
-                else if (x.first == "task_com")
-                    (*x.second) << controller_pos->get_com_ref().transpose() << std::endl;
-                else if (((x.first == "task_cop") && controller_pos->has_task("cop")))
-                    (*x.second) << controller_pos->get_cop_ref("cop").transpose() << std::endl;
                 else if (x.first == "tau")
                     (*x.second) << controller->tau().transpose() << std::endl;
-                else if (x.first == "q_tsid")
-                    (*x.second) << controller->q_tsid().transpose() << std::endl;
-                else if (x.first == "positions")
-                    (*x.second) << sensor_data["positions"].transpose() << std::endl;
                 else if (x.first == "com") // the real com
                     (*x.second) << robot->com().transpose() << std::endl;
                 else if (x.first == "controller_com") // the com according to controller
@@ -514,11 +661,6 @@ int main(int argc, char* argv[])
                 else if (x.first == "ft")
                     (*x.second) << ft_sensor_left->torque().transpose() << " " << ft_sensor_left->force().transpose() << " "
                                 << ft_sensor_right->torque().transpose() << " " << ft_sensor_right->force().transpose() << std::endl;
-                else if (x.first == "ft_sol")
-                    (*x.second) << controller_pos->force_torque_from_solution("contact_lfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_left_6_link")].mass(), "left_sole_link").tail(3).transpose() << " "
-                                << controller_pos->force_torque_from_solution("contact_lfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_left_6_link")].mass(), "left_sole_link").head(3).transpose() << " "
-                                << controller_pos->force_torque_from_solution("contact_rfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_right_6_link")].mass(), "right_sole_link").tail(3).transpose() << " "
-                                << controller_pos->force_torque_from_solution("contact_rfoot", controller->robot()->model().inertias[controller->robot()->model().getJointId("leg_right_6_link")].mass(), "right_sole_link").head(3).transpose() << std::endl;
                 else if (x.first == "force") // the cop according to controller
                     (*x.second) << ft_sensor_left->force().transpose() << " "
                                 << controller->lf_force_filtered().transpose() << " "
@@ -567,29 +709,6 @@ int main(int argc, char* argv[])
                     (*x.second) << ref.getValue().transpose() << " "
                                 << ref.getDerivative().transpose() << " "
                                 << ref.getSecondDerivative().transpose() << std::endl;
-                }
-                else if (x.first.find("contact_") != std::string::npos) // e.g. task_lh
-                {
-                    auto ref = controller_pos->contact(x.first)->getMotionTask().getReference();
-                    (*x.second) << ref.getValue().transpose() << " "
-                                << ref.getDerivative().transpose() << " "
-                                << ref.getSecondDerivative().transpose() << std::endl;
-                }
-                else if (x.first.find("stab_") != std::string::npos) {
-                    auto task_name = x.first.substr(strlen("stab_"));
-                    auto it = controller_pos->stabilizer_samples().find(task_name);
-
-                    if (it != controller_pos->stabilizer_samples().end()) {
-                        auto ref = controller_pos->stabilizer_samples().at(task_name);
-                        (*x.second) << ref.getValue().transpose() << " "
-                                    << ref.getDerivative().transpose() << " "
-                                    << ref.getSecondDerivative().transpose() << std::endl;
-                    }
-                    auto it2 = controller_pos->stabilizer_vector3().find(task_name);
-                    if (it2 != controller_pos->stabilizer_vector3().end()) {
-                        auto ref = controller_pos->stabilizer_vector3().at(task_name);
-                        (*x.second) << ref.transpose() << " " << std::endl;
-                    }
                 }
                 else if (robot->body_node(x.first) != nullptr) {
                     pinocchio::SE3 frame;
