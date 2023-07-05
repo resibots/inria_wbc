@@ -54,9 +54,12 @@ if (Utheque_FOUND)
   set(UTHEQUE_LIB Utheque)
 endif()
 
+link_directories(/opt/ros/melodic/lib)
+
 target_link_libraries(inria_wbc PUBLIC 
 			pinocchio::pinocchio
 			tsid::tsid
+      /opt/ros/melodic/lib/libroscpp.so
 			${YAML_CPP_LIBRARIES}
       ${UTHEQUE_LIB})
 
@@ -71,6 +74,7 @@ target_include_directories(inria_wbc PUBLIC
 		$<BUILD_INTERFACE:${inria_wbc_BINARY_DIR}/include>
 		$<BUILD_INTERFACE:${inria_wbc_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:include>
+    /opt/ros/melodic/include
 )
 
 generate_export_header(inria_wbc)
