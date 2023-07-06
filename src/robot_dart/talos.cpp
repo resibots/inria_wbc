@@ -33,6 +33,7 @@
 #include "inria_wbc/utils/timer.hpp"
 #include "tsid/tasks/task-self-collision.hpp"
 #include "inria_wbc/behaviors/generic/cartesian_sequential.hpp"
+#include "inria_wbc/utils/ViveTracking.hpp"
 
 #include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
 
@@ -41,6 +42,26 @@
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
 static const std::string bold = "\x1B[1m";
+
+void initialize_vive(inria::ViveTracking& vive){
+    //wait for the tracking system to be initialized
+        auto it1 = vive.get().find("LHR-9ABF6D66");
+        auto it2 = vive.get().find("LHR-4F5A9AC8"); 
+        std::cout << "waiting for vive's initialization process to complete... " << std::endl;
+        while (it1 == vive.get().end() || it2 == vive.get().end()){
+            vive.update();
+            it1 = vive.get().find("LHR-9ABF6D66");
+            it2 = vive.get().find("LHR-4F5A9AC8");
+            
+        }
+
+        std::cout << "vive initialized successfully, waiting for a valid position... " << std::endl;
+        
+        //waiting to get the first valid position
+        while(!vive.get().at("LHR-9ABF6D66").isValid || !vive.get().at("LHR-4F5A9AC8").isValid){vive.update();std::cout << "pas valide " << std::endl;}
+
+        std::cout << "valid position found, initializing the tracking simulation process... \n" << std::endl;
+}
 
 int main(int argc, char* argv[])
 {
@@ -298,6 +319,81 @@ int main(int argc, char* argv[])
 
         for (auto& element : traj_spheres_left)
             simu->add_visual_robot(element);
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //initialize the vive tracking system////////////////////////////////////////////////////////////////////////////////////////
+        inria::ViveTracking vive;
+        vive.init("127.0.0.1","127.0.0.1");
+        vive.update();
+
+        //get both hands positions
+            //LHR-9ABF6D66 is for right tracker
+            //LHR-4F5A9AC8 is for left tracker
+
+        //vive initialization
+        initialize_vive(vive);
+
+        //then we can go forward
+        //positions
+        auto pos_vive_r = vive.get().at("LHR-9ABF6D66").posHand;
+        auto pos_vive_l = vive.get().at("LHR-4F5A9AC8").posHand;
+
+        //vive positions are not in the same referential as the robot, so we have to rotate them by a certain angle (different for each hand)
+
+        //rotations
+        auto rot_vive_r = vive.get().at("LHR-9ABF6D66").matHand;
+        auto rot_vive_l = vive.get().at("LHR-4F5A9AC8").matHand;
+
+        //put the positions and the rotations into the correct referentials
+        
+
+        std::cout << "right hand beginning: \n" << behavior_cs->get_init_right() << std::endl;
+        std::cout << "left hand beginning: \n" << behavior_cs->get_init_left() << std::endl;
+
+        //get robot's hands rotations
+        auto rot_right_hand = behavior_cs->get_init_rot_right();
+        auto rot_left_hand = behavior_cs->get_init_rot_left();
+
+        //get the transformation matrix for both sides
+        Eigen::Matrix3d transform_right = rot_right_hand*rot_vive_r.transpose();
+        Eigen::Matrix3d transform_left = rot_left_hand*rot_vive_l.transpose();
+
+        //get the euler's angles from the transformations
+        Eigen::Vector3d angle_tr_right = transform_right.eulerAngles(0,1,2);
+        Eigen::Vector3d angle_tr_left = transform_left.eulerAngles(0,1,2);
+
+        //only yaw angle interests us
+        double const yaw_right = (double)angle_tr_right(2);
+        double const yaw_left = (double)angle_tr_left(2);
+
+        //finally get the reference rotations for each hand
+        Eigen::Matrix3d rot_ref_r = Eigen::AngleAxisd(yaw_right,Eigen::Vector3d::UnitZ()).toRotationMatrix();
+        Eigen::Matrix3d rot_ref_l = Eigen::AngleAxisd(yaw_left,Eigen::Vector3d::UnitZ()).toRotationMatrix();
+
+        //then we rotate
+        pos_vive_r = rot_ref_r*pos_vive_r;
+        pos_vive_l = rot_ref_l*pos_vive_l;
+
+        //we save the init positions of vive trackers
+        auto init_pos_vive_r = pos_vive_r;
+        auto init_pose_vive_l = pos_vive_l;
+
+        //and we translate
+        pos_vive_r += behavior_cs->get_init_right() - init_pos_vive_r;
+        pos_vive_l += behavior_cs->get_init_left() - init_pose_vive_l;
+
+        //create the spheres
+        auto iso_vive_right = Eigen::Isometry3d(Eigen::Translation3d(pos_vive_r.coeff(0),pos_vive_r.coeff(1),pos_vive_r.coeff(2)));
+        auto iso_vive_left = Eigen::Isometry3d(Eigen::Translation3d(pos_vive_l.coeff(0),pos_vive_l.coeff(1),pos_vive_l.coeff(2)));
+        auto vive_s_r = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.1,0.3,0.3),iso_vive_right,"fixed",1,Eigen::Vector4d(1, 0, 0, 0.5));
+        auto vive_s_l = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.1,0.3,0.3),iso_vive_left,"fixed",1,Eigen::Vector4d(0.5, 1, 1, 0.5));
+        vive_s_l->set_color_mode("aspect");
+        vive_s_r->set_color_mode("aspect");
+
+        //add spheres to the simulator
+        simu->add_visual_robot(vive_s_r);
+        simu->add_visual_robot(vive_s_l);
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -602,7 +698,56 @@ int main(int argc, char* argv[])
 
                 i += 100;
             }
-            
+
+            //update tracking motion of each hand only if corresponding trigger is pulled
+            vive.update();
+            std::cout << "droite: " << vive.get().at("LHR-9ABF6D66").isButtonTrigger << " gauche: " << vive.get().at("LHR-4F5A9AC8").isButtonTrigger << std::endl;
+
+            //if new calculated right position is valid
+            if (vive.get().at("LHR-9ABF6D66").isButtonTrigger && vive.get().at("LHR-9ABF6D66").isValid){
+                //then update the spheres positions in the simulator
+                pos_vive_r = vive.get().at("LHR-9ABF6D66").posHand;
+
+                pos_vive_r = rot_ref_r*pos_vive_r;
+
+                //put the positions into the correct referentials
+                pos_vive_r += behavior_cs->get_init_right() - init_pos_vive_r;
+
+                //same for rotations
+                rot_vive_r = rot_vive_r*behavior_cs->get_init_rot_right();
+
+                // std::cout << "positions right: \n" << pos_vive_r << std::endl;
+                // std::cout << "positions left: \n" << pos_vive_l << std::endl;
+
+                iso_vive_right = Eigen::Isometry3d(Eigen::Translation3d(pos_vive_r.coeff(0),pos_vive_r.coeff(1),pos_vive_r.coeff(2)));
+
+                //update vive spheres positions
+                vive_s_r->set_base_pose(iso_vive_right);
+            }
+
+            //if new calculated left position is valid
+            if (vive.get().at("LHR-4F5A9AC8").isValid && vive.get().at("LHR-4F5A9AC8").isButtonTrigger){
+                //then update the spheres positions in the simulator
+                pos_vive_l = vive.get().at("LHR-4F5A9AC8").posHand;
+
+                pos_vive_l = rot_ref_l*pos_vive_l;
+
+                //put the positions into the correct referentials
+                pos_vive_l += behavior_cs->get_init_left() - init_pose_vive_l;
+
+                //same for rotations
+                rot_vive_l = rot_vive_l*behavior_cs->get_init_rot_left();
+
+                // std::cout << "positions right: \n" << pos_vive_r << std::endl;
+                // std::cout << "positions left: \n" << pos_vive_l << std::endl;
+
+                iso_vive_left = Eigen::Isometry3d(Eigen::Translation3d(pos_vive_l.coeff(0),pos_vive_l.coeff(1),pos_vive_l.coeff(2)));
+
+                //update vive spheres positions
+                vive_s_l->set_base_pose(iso_vive_left);
+            }
+
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             // step the simulation
             {

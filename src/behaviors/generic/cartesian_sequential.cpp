@@ -44,6 +44,13 @@ namespace inria_wbc{
                 //initialiazing final tasks for iteration ("for" loop below)
                 auto task_final_right = task_init_right;
                 auto task_final_left = task_init_left;
+
+                //save init positions and rotations of both hands
+                _init_right = task_init_right.translation();
+                _init_left = task_final_left.translation();
+
+                _init_rot_right = task_final_right.rotation();
+                _init_rot_left = task_final_left.rotation();
                 
 
                 //construction of two vectors containing the different positions of respectively right and left hands

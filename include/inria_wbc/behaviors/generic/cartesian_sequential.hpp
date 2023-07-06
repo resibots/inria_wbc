@@ -32,6 +32,12 @@ namespace inria_wbc{
                 int get_traj_selector() const { return traj_selector_; }
                 bool get_loop() const { return loop_; }
 
+                Eigen::Vector3d get_init_right(){return _init_right;}
+                Eigen::Vector3d get_init_left(){return _init_left;}
+
+                Eigen::Matrix3d get_init_rot_right(){return _init_rot_right;}
+                Eigen::Matrix3d get_init_rot_left(){return _init_rot_left;}
+
             private:
                 int time_ = 0;
                 int traj_selector_ = 0;
@@ -53,6 +59,14 @@ namespace inria_wbc{
                 std::vector<std::vector<Eigen::VectorXd>> trajectories_d_l_;
                 std::vector<std::vector<Eigen::VectorXd>> trajectories_dd_l_;
                 //.......................................
+
+                //intitial hands positions
+                Eigen::Vector3d _init_right;
+                Eigen::Vector3d _init_left;
+
+                //initial hands rotations
+                Eigen::Matrix3d _init_rot_right;
+                Eigen::Matrix3d _init_rot_left;
 
                 float trajectory_duration_; // from YAML
                 std::vector<std::string> task_names_; // from YAML

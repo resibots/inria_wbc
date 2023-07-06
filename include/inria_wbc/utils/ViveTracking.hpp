@@ -42,6 +42,7 @@ class ViveTracking
             bool isButtonGrip;
             //Pose of hand on the controller handle in world
             Eigen::Vector3d posHand;
+            //rotation of hand on the controller handle in world
             Eigen::Matrix3d matHand;
             //Vive time at last transition 
             //from not valid to valid

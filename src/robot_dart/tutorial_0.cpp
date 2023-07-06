@@ -1,38 +1,62 @@
+//file to test if vive tracking is working correctly
+#include "inria_wbc/utils/ViveTracking.hpp"
 #include <iostream>
-#include <signal.h>
 
-#include "inria_wbc/behaviors/humanoid/move_com.hpp"
-#include "inria_wbc/controllers/pos_tracker.hpp"
-#include "inria_wbc/exceptions.hpp"
-
-volatile sig_atomic_t stop;
-void user_interrupt(int signum)
-{
-    stop = 1;
+void print_matrix(Eigen::Matrix3d mat){
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            std::cout << mat.coeff(i,j) << "       ";
+        }
+        std::cout << std::endl;
+    }
+    
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char const *argv[])
 {
-    signal(SIGINT, user_interrupt);
+    std::cout << "Hello World! " << std::endl;
 
-    //Don't forget to set the content of yaml files before running
-    //You might need to set base_path and urdf
+    //tracker initialization
+    inria::ViveTracking vive;
+    vive.init("127.0.0.1","127.0.0.1");
+    int cont = 1;
+    int k = 0;
 
-    //First construct the controller from the controller config file
-    std::string controller_conf_path = "../etc/talos/talos_pos_tracker.yaml";
-    auto controller_yaml = IWBC_CHECK(YAML::LoadFile(controller_conf_path));
+    for (auto const& it : vive.get())
+        std::cout << it.first << std::endl;
 
-    //PosTracker do not need external sensor_data because it doesn't have stabilization
-    auto controller = std::make_shared<inria_wbc::controllers::PosTracker>(controller_yaml);
+    //printing coordinates and rotations received from the vive tracking system while the user wants to continue
+    while (cont == 1)
+    {
+        k = (k+1)%1000;
 
-    //Now contruct the behavior, the behavior will send reference trajectories to the controller
-    std::string behavior_conf_path = "../etc/talos/squat.yaml";
-    auto behavior_yaml = IWBC_CHECK(YAML::LoadFile(behavior_conf_path));
-    auto behavior = std::make_shared<inria_wbc::behaviors::humanoid::MoveCom>(controller, behavior_yaml);
+        if (k == 999){
+            vive.update();
+            //for each tracker perceived
+            for (const auto& it : vive.get())
+            {
+                Eigen::Vector3d positions = it.second.posHand;
+                Eigen::Matrix3d rotations = it.second.matHand;
+                std::cout << it.first << std::endl;
+                // //print the positions
+                // std::cout << "position x: "
+                //     << positions[0] << std::endl
+                //     << "position y: "
+                //     << positions[1] << std::endl
+                //     << "position z: "
+                //     << positions[2] << std::endl << std::endl;
 
-    while (!stop) {
-        behavior->update();
-        auto q = controller->q();
-        std::cout << "new command to send has been successfully computed !" << std::endl;
+                // //print the rotation matrix
+                // print_matrix(rotations);
+                // std::cout << "is valid? " << it.second.isValid << std::endl;
+                
+            }
+        }
+
     }
+    
+
+    return 0;
 }

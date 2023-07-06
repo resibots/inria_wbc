@@ -1,0 +1,6 @@
+BEHAVIOR:
+  name: humanoid::follow_trackers
+  task_names: [lh,rh]
+
+  absolute: true
+  trajectory_duration: 2
