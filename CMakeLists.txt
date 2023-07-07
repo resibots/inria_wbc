@@ -24,16 +24,16 @@ set(INRIA_WBC_SOURCES
     src/controllers/talos_pos_tracker.cpp
     src/trajs/saver.cpp
     src/trajs/loader.cpp
+    src/utils/ViveTracking.cpp
     src/behaviors/behavior.cpp
     src/behaviors/generic/cartesian.cpp
-    src/utils/ViveTracking.cpp
     src/behaviors/generic/cartesian_traj.cpp
     src/behaviors/generic/cartesian_sequential.cpp
+    src/behaviors/humanoid/follow_trackers.cpp
     src/behaviors/humanoid/move_com.cpp
     src/behaviors/humanoid/walk_on_spot.cpp
     src/behaviors/humanoid/walk.cpp
     src/behaviors/humanoid/clapping.cpp
-    #src/behaviors/humanoid/follow_trackers.cpp
     src/safety/torque_collision_detection.cpp
     src/stabilizers/stabilizer.cpp
     src/estimators/cop.cpp

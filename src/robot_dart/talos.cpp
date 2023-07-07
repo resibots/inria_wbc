@@ -34,6 +34,7 @@
 #include "tsid/tasks/task-self-collision.hpp"
 #include "inria_wbc/behaviors/generic/cartesian_sequential.hpp"
 #include "inria_wbc/utils/ViveTracking.hpp"
+#include "inria_wbc/behaviors/humanoid/follow_trackers.hpp"
 
 #include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
 
@@ -45,20 +46,20 @@ static const std::string bold = "\x1B[1m";
 
 void initialize_vive(inria::ViveTracking& vive){
     //wait for the tracking system to be initialized
-        auto it1 = vive.get().find("LHR-9ABF6D66");
-        auto it2 = vive.get().find("LHR-4F5A9AC8"); 
+        auto it1 = vive.get().find("LHR-FC2F90A4");
+        auto it2 = vive.get().find("LHR-21C1BC92"); 
         std::cout << "waiting for vive's initialization process to complete... " << std::endl;
         while (it1 == vive.get().end() || it2 == vive.get().end()){
             vive.update();
-            it1 = vive.get().find("LHR-9ABF6D66");
-            it2 = vive.get().find("LHR-4F5A9AC8");
+            it1 = vive.get().find("LHR-FC2F90A4");
+            it2 = vive.get().find("LHR-21C1BC92");
             
         }
 
         std::cout << "vive initialized successfully, waiting for a valid position... " << std::endl;
         
         //waiting to get the first valid position
-        while(!vive.get().at("LHR-9ABF6D66").isValid || !vive.get().at("LHR-4F5A9AC8").isValid){vive.update();std::cout << "pas valide " << std::endl;}
+        while(!vive.get().at("LHR-FC2F90A4").isValid || !vive.get().at("LHR-21C1BC92").isValid){vive.update();std::cout << "pas valide " << std::endl;}
 
         std::cout << "valid position found, initializing the tracking simulation process... \n" << std::endl;
 }
@@ -220,18 +221,22 @@ int main(int argc, char* argv[])
         auto behavior = inria_wbc::behaviors::Factory::instance().create(behavior_name, controller, behavior_config);
         IWBC_ASSERT(behavior, "invalid behavior");
 
+        auto behavior_ = std::dynamic_pointer_cast<inria_wbc::behaviors::humanoid::FollowTrackers>(behavior);
+
+        //uncomment to see spheres and trajectories of the robot
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!! ONLY FOR CARTESIAN SEQUENTIAL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        /*
         //HERE to see the code to see the targets /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //trying to see if it's a cartesian sequential behavior
-        auto behavior_cs = std::dynamic_pointer_cast<inria_wbc::behaviors::generic::CartesianSequential>(behavior);
-        IWBC_ASSERT(behavior_cs,"cannot cast behavior to cartesian sequential. Wrong type of behavior"); //if not, the program stops
+        IWBC_ASSERT(behavior_,"cannot cast behavior to cartesian sequential. Wrong type of behavior"); //if not, the program stops
 
         //if so, create a sphere for both right and left hands
 
         //get the informations needed
-        int traj_selector = behavior_cs->get_traj_selector();
-        auto rh_targets = behavior_cs->get_rh_targets();
-        auto lh_targets = behavior_cs->get_lh_targets();
-        auto loop = behavior_cs->get_loop();
+        int traj_selector = behavior_->get_traj_selector();
+        auto rh_targets = behavior_->get_rh_targets();
+        auto lh_targets = behavior_->get_lh_targets();
+        auto loop = behavior_->get_loop();
 
         //get the initial positions of the hands
         auto task_init_right = controller_pos->get_se3_ref("rh");
@@ -283,8 +288,8 @@ int main(int argc, char* argv[])
         std::vector<std::shared_ptr<robot_dart::Robot>> traj_spheres_left;
 
         //get the trajectories
-        auto trajectories_right = behavior_cs->get_trajectories_right();
-        auto trajectories_left = behavior_cs->get_trajectories_left();
+        auto trajectories_right = behavior_->get_trajectories_right();
+        auto trajectories_left = behavior_->get_trajectories_left();
 
         std::cout << "< > " << trajectories_right.size() << std::endl;
 
@@ -321,6 +326,7 @@ int main(int argc, char* argv[])
             simu->add_visual_robot(element);
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        */
 
         //initialize the vive tracking system////////////////////////////////////////////////////////////////////////////////////////
         inria::ViveTracking vive;
@@ -328,32 +334,32 @@ int main(int argc, char* argv[])
         vive.update();
 
         //get both hands positions
-            //LHR-9ABF6D66 is for right tracker
-            //LHR-4F5A9AC8 is for left tracker
+            //LHR-FC2F90A4 is for right tracker
+            //LHR-21C1BC92 is for left tracker
 
         //vive initialization
         initialize_vive(vive);
 
         //then we can go forward
         //positions
-        auto pos_vive_r = vive.get().at("LHR-9ABF6D66").posHand;
-        auto pos_vive_l = vive.get().at("LHR-4F5A9AC8").posHand;
+        auto pos_vive_r = vive.get().at("LHR-FC2F90A4").posHand;
+        auto pos_vive_l = vive.get().at("LHR-21C1BC92").posHand;
 
         //vive positions are not in the same referential as the robot, so we have to rotate them by a certain angle (different for each hand)
 
         //rotations
-        auto rot_vive_r = vive.get().at("LHR-9ABF6D66").matHand;
-        auto rot_vive_l = vive.get().at("LHR-4F5A9AC8").matHand;
+        auto rot_vive_r = vive.get().at("LHR-FC2F90A4").matHand;
+        auto rot_vive_l = vive.get().at("LHR-21C1BC92").matHand;
 
         //put the positions and the rotations into the correct referentials
         
 
-        std::cout << "right hand beginning: \n" << behavior_cs->get_init_right() << std::endl;
-        std::cout << "left hand beginning: \n" << behavior_cs->get_init_left() << std::endl;
+        std::cout << "right hand beginning: \n" << behavior_->get_init_right() << std::endl;
+        std::cout << "left hand beginning: \n" << behavior_->get_init_left() << std::endl;
 
         //get robot's hands rotations
-        auto rot_right_hand = behavior_cs->get_init_rot_right();
-        auto rot_left_hand = behavior_cs->get_init_rot_left();
+        auto rot_right_hand = behavior_->get_init_rot_right();
+        auto rot_left_hand = behavior_->get_init_rot_left();
 
         //get the transformation matrix for both sides
         Eigen::Matrix3d transform_right = rot_right_hand*rot_vive_r.transpose();
@@ -369,7 +375,7 @@ int main(int argc, char* argv[])
 
         //finally get the reference rotations for each hand
         Eigen::Matrix3d rot_ref_r = Eigen::AngleAxisd(yaw_right,Eigen::Vector3d::UnitZ()).toRotationMatrix();
-        Eigen::Matrix3d rot_ref_l = Eigen::AngleAxisd(yaw_left,Eigen::Vector3d::UnitZ()).toRotationMatrix();
+        Eigen::Matrix3d rot_ref_l = Eigen::AngleAxisd(yaw_left+M_PI,Eigen::Vector3d::UnitZ()).toRotationMatrix();//pi needed because left hand is somehow reversed
 
         //then we rotate
         pos_vive_r = rot_ref_r*pos_vive_r;
@@ -380,8 +386,8 @@ int main(int argc, char* argv[])
         auto init_pose_vive_l = pos_vive_l;
 
         //and we translate
-        pos_vive_r += behavior_cs->get_init_right() - init_pos_vive_r;
-        pos_vive_l += behavior_cs->get_init_left() - init_pose_vive_l;
+        pos_vive_r += behavior_->get_init_right() - init_pos_vive_r;
+        pos_vive_l += behavior_->get_init_left() - init_pose_vive_l;
 
         //create the spheres
         auto iso_vive_right = Eigen::Isometry3d(Eigen::Translation3d(pos_vive_r.coeff(0),pos_vive_r.coeff(1),pos_vive_r.coeff(2)));
@@ -394,6 +400,8 @@ int main(int argc, char* argv[])
         //add spheres to the simulator
         simu->add_visual_robot(vive_s_r);
         simu->add_visual_robot(vive_s_l);
+
+        behavior_->update_trajectories(pos_vive_r,pos_vive_l,rot_vive_r,rot_vive_l);
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -665,9 +673,12 @@ int main(int argc, char* argv[])
                 }
             }
 
+            //uncomment to see spheres and trajectories of the robot
+            //!!!!!!!!!!!!!!!!!!!!!!!!!!!! ONLY FOR CARTESIAN SEQUENTIAL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            /*
             //HERE ////////////////////////////////////////////////////////////////////
             //update the position of the targets for cartesian sequential
-            traj_selector = behavior_cs->get_traj_selector(); //the module is just here to avoid traj_selector being equal to 3 or higher, which makes the program crash
+            traj_selector = behavior_->get_traj_selector(); //the module is just here to avoid traj_selector being equal to 3 or higher, which makes the program crash
             rh_point = rh_targets[traj_selector];
             lh_point = lh_targets[traj_selector];
             iso_right = Eigen::Isometry3d(Eigen::Translation3d(rh_point[0],rh_point[1],rh_point[2]));
@@ -698,23 +709,24 @@ int main(int argc, char* argv[])
 
                 i += 100;
             }
+            */
 
             //update tracking motion of each hand only if corresponding trigger is pulled
             vive.update();
-            std::cout << "droite: " << vive.get().at("LHR-9ABF6D66").isButtonTrigger << " gauche: " << vive.get().at("LHR-4F5A9AC8").isButtonTrigger << std::endl;
+            std::cout << "droite: " << vive.get().at("LHR-FC2F90A4").isButtonTrigger << " gauche: " << vive.get().at("LHR-21C1BC92").isButtonTrigger << std::endl;
 
             //if new calculated right position is valid
-            if (vive.get().at("LHR-9ABF6D66").isButtonTrigger && vive.get().at("LHR-9ABF6D66").isValid){
+            if (vive.get().at("LHR-FC2F90A4").isButtonTrigger && vive.get().at("LHR-FC2F90A4").isValid){
                 //then update the spheres positions in the simulator
-                pos_vive_r = vive.get().at("LHR-9ABF6D66").posHand;
+                pos_vive_r = vive.get().at("LHR-FC2F90A4").posHand;
 
                 pos_vive_r = rot_ref_r*pos_vive_r;
 
                 //put the positions into the correct referentials
-                pos_vive_r += behavior_cs->get_init_right() - init_pos_vive_r;
+                pos_vive_r += behavior_->get_init_right() - init_pos_vive_r;
 
                 //same for rotations
-                rot_vive_r = rot_vive_r*behavior_cs->get_init_rot_right();
+                rot_vive_r = rot_vive_r*behavior_->get_init_rot_right();
 
                 // std::cout << "positions right: \n" << pos_vive_r << std::endl;
                 // std::cout << "positions left: \n" << pos_vive_l << std::endl;
@@ -726,17 +738,17 @@ int main(int argc, char* argv[])
             }
 
             //if new calculated left position is valid
-            if (vive.get().at("LHR-4F5A9AC8").isValid && vive.get().at("LHR-4F5A9AC8").isButtonTrigger){
+            if (vive.get().at("LHR-21C1BC92").isValid && vive.get().at("LHR-21C1BC92").isButtonTrigger){
                 //then update the spheres positions in the simulator
-                pos_vive_l = vive.get().at("LHR-4F5A9AC8").posHand;
+                pos_vive_l = vive.get().at("LHR-21C1BC92").posHand;
 
                 pos_vive_l = rot_ref_l*pos_vive_l;
 
                 //put the positions into the correct referentials
-                pos_vive_l += behavior_cs->get_init_left() - init_pose_vive_l;
+                pos_vive_l += behavior_->get_init_left() - init_pose_vive_l;
 
                 //same for rotations
-                rot_vive_l = rot_vive_l*behavior_cs->get_init_rot_left();
+                rot_vive_l = rot_vive_l*behavior_->get_init_rot_left();
 
                 // std::cout << "positions right: \n" << pos_vive_r << std::endl;
                 // std::cout << "positions left: \n" << pos_vive_l << std::endl;
@@ -746,6 +758,8 @@ int main(int argc, char* argv[])
                 //update vive spheres positions
                 vive_s_l->set_base_pose(iso_vive_left);
             }
+
+            behavior_->update_trajectories(pos_vive_r,pos_vive_l,rot_vive_r,rot_vive_l);
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

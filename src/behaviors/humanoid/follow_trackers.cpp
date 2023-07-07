@@ -17,18 +17,24 @@ namespace inria_wbc
                 task_names_ = IWBC_CHECK(c["task_names"].as<std::vector<std::string>>());
                 trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
                 behavior_type_ = this->behavior_type();
-                controller_->set_behavior_type(behavior_type_);
-                absolute_ = IWBC_CHECK(c["absolute"].as<bool>());
+                _rh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[1]);
+                _lh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[0]);
+
+                trajectory_duration_ = controller_->dt();
 
                 //get current positions
-                auto task_init_right = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[1]);
-                auto task_init_left = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[0]);
-                _rh_current_pos = task_init_right.translation();
-                _lh_current_pos = task_init_left.translation();
+                _rh_current_pos = _rh_current_task.translation();
+                _lh_current_pos = _lh_current_task.translation();
 
                 //get current rotations
-                _rh_current_rot = task_init_right.rotation();
-                _lh_current_rot = task_init_left.rotation();
+                _rh_current_rot = _rh_current_task.rotation();
+                _lh_current_rot = _lh_current_task.rotation();
+
+                //also initial btw
+                _rh_init_pos = _rh_current_pos;
+                _lh_init_pos = _lh_current_pos;
+                _rh_init_rot = _rh_current_rot;
+                _lh_init_rot = _lh_current_rot;
 
                 //just to initialize the target pos and rot
                 _rh_target_pos = _rh_current_pos;
@@ -37,7 +43,87 @@ namespace inria_wbc
                 _rh_target_rot = _rh_current_rot;
                 _lh_target_rot = _lh_current_rot;
 
+
+                //same for the tasks
+                _rh_target_task = _rh_current_task;
+                _lh_target_task = _lh_current_task;
+
+                //calculate the optimized trajectories (should be 0 here because targets and currents are the same)
+                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
+
+                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
+
+
             }
+
+
+            void FollowTrackers::update_trajectories(const Eigen::Vector3d& target_right_pos,const Eigen::Vector3d& target_left_pos,
+                                        const Eigen::Matrix3d& target_right_rot,const Eigen::Matrix3d& target_left_rot){
+                
+                // get target pos
+                _rh_target_task.translation() = target_right_pos;
+                _lh_target_task.translation() = target_left_pos;
+
+                // //get target rot
+                // _rh_target_task.rotation() = target_right_rot;
+                // _lh_target_task.rotation() = target_left_rot;
+
+                //calculate the optimized trajectories
+                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
+
+                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
+
+            }
+
+            void FollowTrackers::update(const controllers::SensorData& sensor_data){
+                
+
+                //set the ref for right hand
+                auto ref_r = _trajectory_right[_time];
+                Eigen::VectorXd ref_vec_r(12);
+                tsid::math::SE3ToVector(ref_r, ref_vec_r);
+
+                tsid::trajectories::TrajectorySample sample_ref_r(12,6);
+                sample_ref_r.setValue(ref_vec_r);
+                sample_ref_r.setDerivative( _trajectory_right_d[_time] );
+                sample_ref_r.setSecondDerivative( _trajectory_right_dd[_time] );
+
+                std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref_r, task_names_[1]);
+                /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                //set the ref for left hand
+                auto ref_l = _trajectory_left[_time];
+                Eigen::VectorXd ref_vec_l(12);
+                tsid::math::SE3ToVector(ref_l, ref_vec_l);
+
+                tsid::trajectories::TrajectorySample sample_ref_l(12,6);
+                sample_ref_l.setValue(ref_vec_l);
+                sample_ref_l.setDerivative( _trajectory_left_d[_time] );
+                sample_ref_l.setSecondDerivative( _trajectory_left_dd[_time] );
+
+
+                std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->set_se3_ref(sample_ref_l, task_names_[0]);
+                /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                //update the controller's data
+                controller_->update(sensor_data);
+
+                //increment time, go to the next point of trajectory
+                _time = (_time+1)%_trajectory_left.size(); //don't go over the trajectory vector's size
+
+                //get current rh and lh tasks
+                _rh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[1]);
+                _lh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[0]);
+            }
+            
         } // namespace humanoid
         
     } // namespace behaviors
