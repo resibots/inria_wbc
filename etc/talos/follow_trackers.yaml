@@ -3,4 +3,3 @@ BEHAVIOR:
   task_names: [lh,rh]
 
   absolute: true
-  trajectory_duration: 0.1

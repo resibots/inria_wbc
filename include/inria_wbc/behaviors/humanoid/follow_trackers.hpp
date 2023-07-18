@@ -33,6 +33,7 @@ namespace inria_wbc
                 Eigen::Vector3d get_init_left(){return _lh_init_pos;}
                 Eigen::Matrix3d get_init_rot_right(){return _rh_init_rot;}
                 Eigen::Matrix3d get_init_rot_left(){return _lh_init_rot;}
+                Eigen::Matrix3d get_abs_rot(){return _abs_rot;}
 
             private:
             //target positions
@@ -58,6 +59,7 @@ namespace inria_wbc
             //initial rotations
                 Eigen::Matrix3d _rh_init_rot;
                 Eigen::Matrix3d _lh_init_rot;
+                Eigen::Matrix3d _abs_rot;
 
             //current tasks
                 pinocchio::SE3 _rh_current_task;

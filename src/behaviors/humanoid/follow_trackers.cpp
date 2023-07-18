@@ -15,11 +15,10 @@ namespace inria_wbc
                 //initialization of both the parameters and the controller using the data collected from the yaml file
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
                 task_names_ = IWBC_CHECK(c["task_names"].as<std::vector<std::string>>());
-                trajectory_duration_ = IWBC_CHECK(c["trajectory_duration"].as<float>());
                 behavior_type_ = this->behavior_type();
                 _rh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[1]);
                 _lh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[0]);
-
+                _abs_rot = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref("head").rotation();
                 trajectory_duration_ = controller_->dt();
 
                 //get current positions
@@ -49,13 +48,13 @@ namespace inria_wbc
                 _lh_target_task = _lh_current_task;
 
                 //calculate the optimized trajectories (should be 0 here because targets and currents are the same)
-                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
-                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
-                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
 
-                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
-                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
-                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
 
 
             }
@@ -68,18 +67,18 @@ namespace inria_wbc
                 _rh_target_task.translation() = target_right_pos;
                 _lh_target_task.translation() = target_left_pos;
 
-                // //get target rot
-                // _rh_target_task.rotation() = target_right_rot;
-                // _lh_target_task.rotation() = target_left_rot;
+                //get target rot
+                _rh_target_task.rotation() = target_right_rot;
+                _lh_target_task.rotation() = target_left_rot;
 
                 //calculate the optimized trajectories
-                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
-                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
-                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
 
-                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
-                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
-                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt()/2, trajectory_duration_);
+                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
 
             }
 
