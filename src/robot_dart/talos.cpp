@@ -109,6 +109,23 @@ void update_ref(const Eigen::Vector3d& center,const Eigen::Matrix3d& rotation,
     s_list[3]->set_base_pose(iso_cz);
 }
 
+Eigen::Vector3d MatrixToEulerIntrinsic(const Eigen::Matrix3d& mat)
+{
+    //Eigen euler angles and with better range)
+    Eigen::Vector3d angles;
+    //Roll
+    angles.x() = std::atan2(mat(2, 1), mat(2, 2));
+    //Pitch
+    angles.y() = std::atan2(-mat(2, 0), 
+        sqrt(mat(0, 0)*mat(0, 0) 
+            + mat(1, 0)*mat(1, 0)));
+    //Yaw
+    angles.z() = std::atan2(mat(1, 0), mat(0, 0));
+
+    return angles;
+}
+
+
 int main(int argc, char* argv[])
 {
     try {
@@ -405,6 +422,7 @@ int main(int argc, char* argv[])
         //positions
         Eigen::Vector3d pos_vive_r = vive.get().at("LHR-FC2F90A4").posHand;
         Eigen::Vector3d pos_vive_l = vive.get().at("LHR-21C1BC92").posHand;
+
         // Eigen::Vector3d pos_vive_l = Eigen::Vector3d(1.70+sin_t[counter],1.85,0.42);
         // Eigen::Vector3d pos_vive_r = Eigen::Vector3d(1.20+sin_t[counter],1.63,0.77);
 
@@ -422,65 +440,72 @@ int main(int argc, char* argv[])
 
         // Eigen::Matrix3d rot_vive_l = Eigen::AngleAxisd(1,Eigen::Vector3d::UnitY()).toRotationMatrix()
         //                             *Eigen::AngleAxisd(M_PI/4,Eigen::Vector3d::UnitZ()).toRotationMatrix();
-        //simulate the coordinates received in vive referentials
-        // pos_vive_r = rot_vive_r*pos_vive_r;
-        // pos_vive_l = rot_vive_l*pos_vive_l;
 
         //put the positions and the rotations into the correct referentials //////////
         std::cout << "right hand beginning: \n" << behavior_->get_init_right() << std::endl;
         std::cout << "left hand beginning: \n" << behavior_->get_init_left() << std::endl;
 
-        Eigen::Vector3d pos_rh = pos_vive_r;
-        Eigen::Vector3d pos_lh = pos_vive_l;
-
-        //save init offsets
-        Eigen::Vector3d init_offset_r = pos_vive_r - behavior_->get_init_right();
-        Eigen::Vector3d init_offset_l = pos_vive_l - behavior_->get_init_left();
-
-        //recenter rh and lh positions
-        pos_rh -= init_offset_r;
-        pos_lh -= init_offset_l;
-
         //get robot's hands rotations
         Eigen::Matrix3d rot_rh = behavior_->get_init_rot_right();
         Eigen::Matrix3d rot_lh = behavior_->get_init_rot_left();
+
+        //rot by pi to follow the good wrist rotations, to avoid flipping by pi the real wrist
+        Eigen::Matrix3d rot_pi_rh = Eigen::AngleAxisd(M_PI,rot_rh*Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
         //get transformations for hands rotations
         Eigen::Matrix3d trans_r = rot_rh*rot_vive_r.transpose();
         Eigen::Matrix3d trans_l = rot_lh*rot_vive_l.transpose();
 
+        //get euler angles of vive rot because vie referentials are rotated by some theta in Z axis
+        double yaw_right = (double)MatrixToEulerIntrinsic(rot_vive_r).z();
+        double yaw_left = (double)MatrixToEulerIntrinsic(rot_vive_l).z();
 
-        //create the spheres
-        auto iso_vive_right = Eigen::Isometry3d(Eigen::Translation3d(pos_rh.coeff(0),pos_rh.coeff(1),pos_rh.coeff(2)));
-        auto iso_vive_left = Eigen::Isometry3d(Eigen::Translation3d(pos_lh.coeff(0),pos_lh.coeff(1),pos_lh.coeff(2)));
+        std::cout << "yaw right: " << yaw_right << " yaw left: " << yaw_left << std::endl;
 
-        //add spheres to the simulator
-        // simu->add_visual_robot(vive_s_r);
-        // simu->add_visual_robot(vive_s_l);
+        Eigen::Matrix3d rot_ref_r = Eigen::AngleAxisd(-yaw_right,Eigen::Vector3d::UnitZ()).toRotationMatrix();
+        Eigen::Matrix3d rot_ref_l = Eigen::AngleAxisd(-yaw_left,Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
-        // simu->remove_robot(vive_s_l);
-        // simu->remove_robot(vive_s_r);
+        Eigen::Vector3d pos_rh = rot_ref_r*pos_vive_r;
+        Eigen::Vector3d pos_lh = rot_ref_l*pos_vive_l;
+
+        //save init offsets
+        Eigen::Vector3d init_offset_r = rot_ref_r*pos_vive_r - behavior_->get_init_right();
+        Eigen::Vector3d init_offset_l = rot_ref_l*pos_vive_l - behavior_->get_init_left();
+
+        //recenter rh and lh positions
+        pos_rh -= init_offset_r;
+        pos_lh -= init_offset_l;
 
         //create spheres to represent the referentials
 
+        //colors
         Eigen::Vector4d color_r(1,0,0,0.5);
         Eigen::Vector4d color_l(0,1,0,0.5);
+        Eigen::Vector4d color_ref(0,0,1,0.5);
 
         //create spheres lists for both hands referentials
         std::vector<std::shared_ptr<robot_dart::Robot>> s_r_list;
-        draw_ref(pos_rh,rot_rh,color_r,s_r_list);
+        draw_ref(pos_rh,rot_pi_rh*rot_rh,color_r,s_r_list);
         std::vector<std::shared_ptr<robot_dart::Robot>> s_l_list;
         draw_ref(pos_lh,rot_lh,color_l,s_l_list);
 
         //non calibrated referentials
         std::vector<std::shared_ptr<robot_dart::Robot>> s_r_nc_list;
         std::vector<std::shared_ptr<robot_dart::Robot>> s_l_nc_list;
+
+        //hands
         std::vector<std::shared_ptr<robot_dart::Robot>> s_rh_list;
         std::vector<std::shared_ptr<robot_dart::Robot>> s_lh_list;
+
+        //reference
+        std::vector<std::shared_ptr<robot_dart::Robot>> s_ref_list;
+
+        //draw them all
         draw_ref(pos_vive_r+Eigen::Vector3d(0,0,3),rot_vive_r,color_r,s_r_nc_list);
         draw_ref(pos_vive_l+Eigen::Vector3d(0,0,3),rot_vive_l,color_l,s_l_nc_list);
-        draw_ref(behavior_->get_init_right(),behavior_->get_init_rot_right(),color_r,s_rh_list);
+        draw_ref(behavior_->get_init_right(),rot_pi_rh*behavior_->get_init_rot_right(),color_r,s_rh_list);
         draw_ref(behavior_->get_init_left(),behavior_->get_init_rot_left(),color_l,s_lh_list);
+        draw_ref(Eigen::Vector3d(0,0,2.5),Eigen::Matrix3d::Identity(),color_ref,s_ref_list);
 
         
         //add them to the simulator
@@ -491,6 +516,7 @@ int main(int argc, char* argv[])
             simu->add_visual_robot(s_l_nc_list[i]);
             simu->add_visual_robot(s_rh_list[i]);
             simu->add_visual_robot(s_lh_list[i]);
+            simu->add_visual_robot(s_ref_list[i]);
         }
 
         //while(1){}
@@ -608,7 +634,7 @@ int main(int argc, char* argv[])
 
 
         //BEGINNING OF THE LOOP /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        while (simu->scheduler().next_time() < vm["duration"].as<int>() && !simu->graphics()->done()) {
+        while (simu->scheduler().next_time() < 1000 /*vm["duration"].as<int>()*/ && !simu->graphics()->done()) {
 
             if (vm["damage"].as<bool>()) {
                 try {
@@ -840,11 +866,12 @@ int main(int argc, char* argv[])
                 //             *Eigen::AngleAxisd(M_PI/4,Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
                 //pos_vive_r = rot_vive_r*pos_vive_r;
-                //put position in the good rotation and then substract the offset
-                pos_rh = pos_vive_r - init_offset_r;
-
+                
                 //robot's right hand rotation matrix
-                rot_rh = trans_r*rot_vive_r;
+                rot_rh = rot_pi_rh*trans_r*rot_vive_r;
+
+                //put position in the good rotation and then substract the offset
+                pos_rh = rot_ref_r*pos_vive_r - init_offset_r;
 
                 //log data in file
                 if (test)
@@ -868,12 +895,11 @@ int main(int argc, char* argv[])
 
                 //pos_vive_l = rot_vive_l*pos_vive_l;
 
-
-                //put vive position in the good rotation and then substract the offset
-                pos_lh = pos_vive_l - init_offset_l;
-
                 //left hand's rotation matrix
                 rot_lh = trans_l*rot_vive_l;
+
+                //put vive position in the good rotation and then substract the offset
+                pos_lh = rot_ref_l*pos_vive_l - init_offset_l;
 
                 //log data in file
                 logfile_l << "x: " << pos_lh.coeff(0)
@@ -883,7 +909,7 @@ int main(int argc, char* argv[])
             
             }
 
-            std::cout << "right vive pose:\n" << pos_vive_r << "\n\n\nleft vive pose:\n" << pos_vive_l << std::endl;
+            std::cout << "\ntest\n" << "\nright vive pose:\n" << pos_vive_r << "\n\nleft vive pose:\n" << pos_vive_l << std::endl;
 
             //update vive spheres positions
             update_ref(pos_rh,rot_rh,s_r_list);
