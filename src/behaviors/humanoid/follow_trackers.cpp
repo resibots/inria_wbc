@@ -19,7 +19,7 @@ namespace inria_wbc
                 _rh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[1]);
                 _lh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[0]);
                 _abs_rot = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref("head").rotation();
-                trajectory_duration_ = controller_->dt();
+                trajectory_duration_ = 20*controller_->dt();
 
                 //get current positions
                 _rh_current_pos = _rh_current_task.translation();
@@ -28,6 +28,11 @@ namespace inria_wbc
                 //get current rotations
                 _rh_current_rot = _rh_current_task.rotation();
                 _lh_current_rot = _lh_current_task.rotation();
+
+                //rot by pi to follow the good wrist rotations, to avoid flipping by pi the real wrist
+                // Eigen::Matrix3d rot_pi_rh = Eigen::AngleAxisd(M_PI,_rh_current_rot*Eigen::Vector3d::UnitZ()).toRotationMatrix();
+                // _rh_current_rot = rot_pi_rh*_rh_current_rot;
+                // _rh_current_task.rotation() = rot_pi_rh*_rh_current_task.rotation();
 
                 //also initial btw
                 _rh_init_pos = _rh_current_pos;
@@ -121,6 +126,10 @@ namespace inria_wbc
                 //get current rh and lh tasks
                 _rh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[1]);
                 _lh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[0]);
+                
+                //rot by pi to follow the good wrist rotations, to avoid flipping by pi the real wrist
+                // Eigen::Matrix3d rot_pi_rh = Eigen::AngleAxisd(M_PI,_rh_current_task.rotation()*Eigen::Vector3d::UnitZ()).toRotationMatrix();
+                //_rh_current_task.rotation() = rot_pi_rh*_rh_current_task.rotation();
             }
             
         } // namespace humanoid

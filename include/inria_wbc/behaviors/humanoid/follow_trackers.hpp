@@ -27,8 +27,8 @@ namespace inria_wbc
                 void update_trajectories(const Eigen::Vector3d& target_right_pos,const Eigen::Vector3d& target_left_pos,
                                             const Eigen::Matrix3d& target_right_rot,const Eigen::Matrix3d& target_left_rot);
 
-                Eigen::Vector3d get_rh_pos(){return _rh_target_pos;}
-                Eigen::Vector3d get_lh_pos(){return _lh_target_pos;}
+                Eigen::Vector3d get_rh_pos(){return _rh_current_task.translation();}
+                Eigen::Vector3d get_lh_pos(){return _lh_current_task.translation();}
                 Eigen::Vector3d get_init_right(){return _rh_init_pos;}
                 Eigen::Vector3d get_init_left(){return _lh_init_pos;}
                 Eigen::Matrix3d get_init_rot_right(){return _rh_init_rot;}
@@ -76,6 +76,9 @@ namespace inria_wbc
                 std::vector<pinocchio::SE3> _trajectory_left;
                 std::vector<Eigen::VectorXd> _trajectory_left_d;
                 std::vector<Eigen::VectorXd> _trajectory_left_dd;
+
+                std::vector<pinocchio::SE3> _last_trajectory_right;
+                std::vector<pinocchio::SE3> _last_trajectory_left;
 
                 int _time = 0;
 

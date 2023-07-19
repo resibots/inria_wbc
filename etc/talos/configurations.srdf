@@ -34,7 +34,7 @@
 		<joint name="arm_right_2_joint" value="-0.566321" />
 		<joint name="arm_right_3_joint" value="0.582227" />
 		<joint name="arm_right_4_joint" value="-1.41689" />
-		<joint name="arm_right_5_joint" value="-0.315343" />
+		<joint name="arm_right_5_joint" value="2.215343" />
 		<joint name="arm_right_6_joint" value="-0.0617214" />
 		<joint name="arm_right_7_joint" value="-0.146588" />
 		<joint name="gripper_right_inner_double_joint" value="-2e-1" />

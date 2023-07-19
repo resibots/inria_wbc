@@ -125,6 +125,36 @@ Eigen::Vector3d MatrixToEulerIntrinsic(const Eigen::Matrix3d& mat)
     return angles;
 }
 
+Eigen::Matrix3d get_trans(const std::shared_ptr<inria_wbc::behaviors::humanoid::FollowTrackers>& behavior,
+                            const inria::ViveTracking& vive,const std::string vive_controller){
+    if (vive_controller == "LHR-FC2F90A4")
+        return behavior->get_init_rot_right()*vive.get().at(vive_controller).matHand.transpose();
+    else if (vive_controller == "LHR-21C1BC92")
+        return behavior->get_init_rot_left()*vive.get().at(vive_controller).matHand.transpose();
+}
+
+Eigen::Matrix3d get_rot_ref(const inria::ViveTracking& vive,const std::string vive_controller){
+    double yaw = (double) MatrixToEulerIntrinsic(vive.get().at(vive_controller).matHand).z();
+    return Eigen::AngleAxisd(-yaw,Eigen::Vector3d::UnitZ()).toRotationMatrix();
+}
+
+Eigen::Vector3d get_init_offset(const Eigen::Vector3d hand_init_pos,
+                                const inria::ViveTracking& vive,const std::string vive_controller)
+{
+    return get_rot_ref(vive,vive_controller)*vive.get().at(vive_controller).posHand - hand_init_pos;
+}
+
+Eigen::Vector3d vive_pos_processing(const inria::ViveTracking& vive,const std::string vive_controller,const Eigen::Vector3d init_offset,
+                                    const Eigen::Matrix3d rot_ref)
+{
+    return rot_ref*vive.get().at(vive_controller).posHand - init_offset;
+}
+
+Eigen::Matrix3d vive_rot_processing(const inria::ViveTracking& vive,const std::string vive_controller,
+                                    const Eigen::Matrix3d trans)
+{
+    return trans*vive.get().at(vive_controller).matHand;
+}
 
 int main(int argc, char* argv[])
 {
@@ -409,7 +439,7 @@ int main(int argc, char* argv[])
             cos_t[i] = 0.2*std::cos(t[i]);
         ///////////////////////////////////
 
-        //get both hands positions
+        //get both hands controllers
             //LHR-FC2F90A4 is for right tracker
             //LHR-21C1BC92 is for left tracker
 
@@ -431,53 +461,36 @@ int main(int argc, char* argv[])
         //rotations
         Eigen::Matrix3d rot_vive_r = vive.get().at("LHR-FC2F90A4").matHand;
         Eigen::Matrix3d rot_vive_l = vive.get().at("LHR-21C1BC92").matHand;
-        // Eigen::Matrix3d rot_vive_r = Eigen::AngleAxisd(1,Eigen::Vector3d::UnitY()).toRotationMatrix()
-        //                             *Eigen::AngleAxisd(M_PI/4,Eigen::Vector3d::UnitZ()).toRotationMatrix();
-
-        // // Eigen::AngleAxisd(rand()%6,Eigen::Vector3d::UnitZ()).toRotationMatrix()*
-        // //                             Eigen::AngleAxisd(rand()%6,Eigen::Vector3d::UnitY()).toRotationMatrix()*
-        // //                             Eigen::AngleAxisd(rand()%6,Eigen::Vector3d::UnitX()).toRotationMatrix();
+                             Eigen::AngleAxisd(rand()%6,Eigen::Vector3d::UnitX()).toRotationMatrix();
 
         // Eigen::Matrix3d rot_vive_l = Eigen::AngleAxisd(1,Eigen::Vector3d::UnitY()).toRotationMatrix()
         //                             *Eigen::AngleAxisd(M_PI/4,Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
         //put the positions and the rotations into the correct referentials //////////
-        std::cout << "right hand beginning: \n" << behavior_->get_init_right() << std::endl;
-        std::cout << "left hand beginning: \n" << behavior_->get_init_left() << std::endl;
-
-        //get robot's hands rotations
-        Eigen::Matrix3d rot_rh = behavior_->get_init_rot_right();
-        Eigen::Matrix3d rot_lh = behavior_->get_init_rot_left();
-
         //rot by pi to follow the good wrist rotations, to avoid flipping by pi the real wrist
-        Eigen::Matrix3d rot_pi_rh = Eigen::AngleAxisd(M_PI,rot_rh*Eigen::Vector3d::UnitZ()).toRotationMatrix();
+        Eigen::Matrix3d rot_pi_rh = Eigen::AngleAxisd(M_PI,behavior_->get_init_rot_right()*Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
         //get transformations for hands rotations
-        Eigen::Matrix3d trans_r = rot_rh*rot_vive_r.transpose();
-        Eigen::Matrix3d trans_l = rot_lh*rot_vive_l.transpose();
+        Eigen::Matrix3d trans_r = get_trans(behavior_,vive,"LHR-FC2F90A4");
+        Eigen::Matrix3d trans_l = get_trans(behavior_,vive,"LHR-21C1BC92");
 
         //get euler angles of vive rot because vie referentials are rotated by some theta in Z axis
-        double yaw_right = (double)MatrixToEulerIntrinsic(rot_vive_r).z();
-        double yaw_left = (double)MatrixToEulerIntrinsic(rot_vive_l).z();
-
-        std::cout << "yaw right: " << yaw_right << " yaw left: " << yaw_left << std::endl;
-
-        Eigen::Matrix3d rot_ref_r = Eigen::AngleAxisd(-yaw_right,Eigen::Vector3d::UnitZ()).toRotationMatrix();
-        Eigen::Matrix3d rot_ref_l = Eigen::AngleAxisd(-yaw_left,Eigen::Vector3d::UnitZ()).toRotationMatrix();
-
-        Eigen::Vector3d pos_rh = rot_ref_r*pos_vive_r;
-        Eigen::Vector3d pos_lh = rot_ref_l*pos_vive_l;
+        Eigen::Matrix3d rot_ref_r = get_rot_ref(vive,"LHR-FC2F90A4");
+        Eigen::Matrix3d rot_ref_l = get_rot_ref(vive,"LHR-21C1BC92");
 
         //save init offsets
-        Eigen::Vector3d init_offset_r = rot_ref_r*pos_vive_r - behavior_->get_init_right();
-        Eigen::Vector3d init_offset_l = rot_ref_l*pos_vive_l - behavior_->get_init_left();
+        Eigen::Vector3d init_offset_r = get_init_offset(behavior_->get_init_right(),vive,"LHR-FC2F90A4");
+        Eigen::Vector3d init_offset_l = get_init_offset(behavior_->get_init_left(),vive,"LHR-21C1BC92");
 
         //recenter rh and lh positions
-        pos_rh -= init_offset_r;
-        pos_lh -= init_offset_l;
+        Eigen::Vector3d pos_rh = vive_pos_processing(vive,"LHR-FC2F90A4",init_offset_r,rot_ref_r);
+        Eigen::Vector3d pos_lh = vive_pos_processing(vive,"LHR-21C1BC92",init_offset_l,rot_ref_l);
+
+        //get robot's hands rotations
+        Eigen::Matrix3d rot_rh = vive_rot_processing(vive,"LHR-FC2F90A4",trans_r);
+        Eigen::Matrix3d rot_lh = vive_rot_processing(vive,"LHR-21C1BC92",trans_l);
 
         //create spheres to represent the referentials
-
         //colors
         Eigen::Vector4d color_r(1,0,0,0.5);
         Eigen::Vector4d color_l(0,1,0,0.5);
@@ -485,9 +498,7 @@ int main(int argc, char* argv[])
 
         //create spheres lists for both hands referentials
         std::vector<std::shared_ptr<robot_dart::Robot>> s_r_list;
-        draw_ref(pos_rh,rot_pi_rh*rot_rh,color_r,s_r_list);
         std::vector<std::shared_ptr<robot_dart::Robot>> s_l_list;
-        draw_ref(pos_lh,rot_lh,color_l,s_l_list);
 
         //non calibrated referentials
         std::vector<std::shared_ptr<robot_dart::Robot>> s_r_nc_list;
@@ -501,11 +512,13 @@ int main(int argc, char* argv[])
         std::vector<std::shared_ptr<robot_dart::Robot>> s_ref_list;
 
         //draw them all
+        draw_ref(pos_rh,rot_rh,color_r,s_r_list);
+        draw_ref(pos_lh,rot_lh,color_l,s_l_list);
         draw_ref(pos_vive_r+Eigen::Vector3d(0,0,3),rot_vive_r,color_r,s_r_nc_list);
         draw_ref(pos_vive_l+Eigen::Vector3d(0,0,3),rot_vive_l,color_l,s_l_nc_list);
-        draw_ref(behavior_->get_init_right(),rot_pi_rh*behavior_->get_init_rot_right(),color_r,s_rh_list);
+        draw_ref(behavior_->get_init_right(),behavior_->get_init_rot_right(),color_r,s_rh_list);
         draw_ref(behavior_->get_init_left(),behavior_->get_init_rot_left(),color_l,s_lh_list);
-        draw_ref(Eigen::Vector3d(0,0,2.5),Eigen::Matrix3d::Identity(),color_ref,s_ref_list);
+        draw_ref(Eigen::Vector3d(0,0,2.3),Eigen::Matrix3d::Identity(),color_ref,s_ref_list);
 
         
         //add them to the simulator
@@ -868,17 +881,11 @@ int main(int argc, char* argv[])
                 //pos_vive_r = rot_vive_r*pos_vive_r;
                 
                 //robot's right hand rotation matrix
-                rot_rh = rot_pi_rh*trans_r*rot_vive_r;
+                rot_rh = vive_rot_processing(vive,"LHR-FC2F90A4",trans_r);
 
                 //put position in the good rotation and then substract the offset
-                pos_rh = rot_ref_r*pos_vive_r - init_offset_r;
+                pos_rh = vive_pos_processing(vive,"LHR-FC2F90A4",init_offset_r,rot_ref_r);
 
-                //log data in file
-                if (test)
-                    logfile_r << "x: " << pos_rh.coeff(0)
-                        << " y: " << pos_rh.coeff(1)
-                        << " z: " << pos_rh.coeff(2)
-                        << " valid: " << vive.get().at("LHR-FC2F90A4").isValid << std::endl;
             }
 
             //if new calculated left position is valid
@@ -896,18 +903,28 @@ int main(int argc, char* argv[])
                 //pos_vive_l = rot_vive_l*pos_vive_l;
 
                 //left hand's rotation matrix
-                rot_lh = trans_l*rot_vive_l;
+                rot_lh = vive_rot_processing(vive,"LHR-21C1BC92",trans_l);
 
                 //put vive position in the good rotation and then substract the offset
-                pos_lh = rot_ref_l*pos_vive_l - init_offset_l;
-
-                //log data in file
-                logfile_l << "x: " << pos_lh.coeff(0)
-                        << " y: " << pos_lh.coeff(1)
-                        << " z: " << pos_lh.coeff(2)
-                        << " valide: " << vive.get().at("LHR-21C1BC92").isValid << std::endl;
-            
+                pos_lh = vive_pos_processing(vive,"LHR-21C1BC92",init_offset_l,rot_ref_l);
             }
+
+            // log data in files
+            logfile_l << "x: " << pos_lh.coeff(0)
+                      << " y: " << pos_lh.coeff(1)
+                      << " z: " << pos_lh.coeff(2)
+                      << " hx: " << behavior_->get_lh_pos().coeff(0)
+                      << " hy: " << behavior_->get_lh_pos().coeff(1)
+                      << " hz: " << behavior_->get_lh_pos().coeff(2)
+                      << " valide: " << vive.get().at("LHR-21C1BC92").isValid << std::endl;
+
+            logfile_r << "x: " << pos_rh.coeff(0)
+                      << " y: " << pos_rh.coeff(1)
+                      << " z: " << pos_rh.coeff(2)
+                      << " hx: " << behavior_->get_rh_pos().coeff(0)
+                      << " hy: " << behavior_->get_rh_pos().coeff(1)
+                      << " hz: " << behavior_->get_rh_pos().coeff(2)
+                      << " valid: " << vive.get().at("LHR-FC2F90A4").isValid << std::endl;
 
             std::cout << "\ntest\n" << "\nright vive pose:\n" << pos_vive_r << "\n\nleft vive pose:\n" << pos_vive_l << std::endl;
 
@@ -917,8 +934,8 @@ int main(int argc, char* argv[])
             update_ref(pos_vive_r+Eigen::Vector3d(0,0,3),rot_vive_r,s_r_nc_list);
             update_ref(pos_vive_l+Eigen::Vector3d(0,0,3),rot_vive_l,s_l_nc_list);
 
-            // if (test)
-            //     behavior_->update_trajectories(pos_rh,pos_lh,rot_rh,rot_lh);
+            if (test)
+                behavior_->update_trajectories(pos_rh,pos_lh,rot_rh,rot_lh);
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
