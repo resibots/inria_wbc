@@ -15,11 +15,15 @@ namespace inria_wbc
                 //initialization of both the parameters and the controller using the data collected from the yaml file
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
                 task_names_ = IWBC_CHECK(c["task_names"].as<std::vector<std::string>>());
+                auto ex_rh_ = IWBC_CHECK(c["exercises_rh"].as<std::vector<std::vector<double>>>());
+                auto ex_lh_ = IWBC_CHECK(c["exercises_lh"].as<std::vector<std::vector<double>>>());
                 behavior_type_ = this->behavior_type();
                 _rh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[1]);
                 _lh_current_task = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref(task_names_[0]);
                 _abs_rot = std::static_pointer_cast<inria_wbc::controllers::PosTracker>(controller_)->get_se3_ref("head").rotation();
                 trajectory_duration_ = 20*controller_->dt();
+
+               
 
                 //get current positions
                 _rh_current_pos = _rh_current_task.translation();
@@ -51,6 +55,18 @@ namespace inria_wbc
                 //same for the tasks
                 _rh_target_task = _rh_current_task;
                 _lh_target_task = _lh_current_task;
+
+                //exercises treatment
+                for (auto& elt : ex_rh_)
+                {
+                    exercises_rh_.push_back(Eigen::Vector3d::Map(elt.data()) + _rh_init_pos);
+                }
+
+                for (auto& elt : ex_lh_)
+                {
+                    exercises_lh_.push_back(Eigen::Vector3d::Map(elt.data()) + _lh_init_pos);
+                }
+                
 
                 //calculate the optimized trajectories (should be 0 here because targets and currents are the same)
                 _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
@@ -130,6 +146,13 @@ namespace inria_wbc
                 //rot by pi to follow the good wrist rotations, to avoid flipping by pi the real wrist
                 // Eigen::Matrix3d rot_pi_rh = Eigen::AngleAxisd(M_PI,_rh_current_task.rotation()*Eigen::Vector3d::UnitZ()).toRotationMatrix();
                 //_rh_current_task.rotation() = rot_pi_rh*_rh_current_task.rotation();
+            }
+
+            std::vector<std::vector<Eigen::Vector3d>> FollowTrackers::get_exercises(){
+                std::vector<std::vector<Eigen::Vector3d>> exercises;
+                exercises.push_back(this->exercises_rh_);
+                exercises.push_back(this->exercises_lh_);
+                return exercises;
             }
             
         } // namespace humanoid

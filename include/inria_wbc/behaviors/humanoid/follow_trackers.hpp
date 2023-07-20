@@ -35,6 +35,10 @@ namespace inria_wbc
                 Eigen::Matrix3d get_init_rot_left(){return _lh_init_rot;}
                 Eigen::Matrix3d get_abs_rot(){return _abs_rot;}
 
+                std::vector<Eigen::Vector3d> get_exercises_rh(){ return exercises_rh_; }
+                std::vector<Eigen::Vector3d> get_exercises_lh(){ return exercises_lh_; }
+                std::vector<std::vector<Eigen::Vector3d>> get_exercises();
+
             private:
             //target positions
                 Eigen::Vector3d _rh_target_pos;
@@ -85,6 +89,8 @@ namespace inria_wbc
                 std::vector<std::string> task_names_;
                 float trajectory_duration_;
                 bool absolute_;
+                std::vector<Eigen::Vector3d> exercises_rh_;
+                std::vector<Eigen::Vector3d> exercises_lh_;
             };
             
             

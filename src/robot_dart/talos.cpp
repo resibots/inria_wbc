@@ -156,6 +156,32 @@ Eigen::Matrix3d vive_rot_processing(const inria::ViveTracking& vive,const std::s
     return trans*vive.get().at(vive_controller).matHand;
 }
 
+void draw_obj(std::vector<std::shared_ptr<robot_dart::Robot>>& s_obj_list,
+                const std::vector<std::vector<Eigen::Vector3d>>& exercises,const int index)
+{
+    Eigen::Isometry3d obj_right = Eigen::Isometry3d(Eigen::Translation3d(exercises[0][index].coeff(0),exercises[0][index].coeff(1),exercises[0][index].coeff(2)));
+    Eigen::Isometry3d obj_left = Eigen::Isometry3d(Eigen::Translation3d(exercises[1][index].coeff(0),exercises[1][index].coeff(1),exercises[1][index].coeff(2)));
+    auto s_obj_right = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2,0.2,0.2),obj_right,"fixed",1,Eigen::Vector4d(1,1,0,0.5));
+    auto s_obj_left = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2,0.2,0.2),obj_left,"fixed",1,Eigen::Vector4d(1,1,0,0.5));
+
+    s_obj_list.push_back(s_obj_right);
+    s_obj_list.push_back(s_obj_left);
+}
+
+void update_obj(std::vector<std::shared_ptr<robot_dart::Robot>>& s_obj_list,
+                const std::vector<std::vector<Eigen::Vector3d>>& exercises,const int index)
+{
+    Eigen::Isometry3d obj_right = Eigen::Isometry3d(Eigen::Translation3d(exercises[0][index].coeff(0),exercises[0][index].coeff(1),exercises[0][index].coeff(2)));
+    Eigen::Isometry3d obj_left = Eigen::Isometry3d(Eigen::Translation3d(exercises[1][index].coeff(0),exercises[1][index].coeff(1),exercises[1][index].coeff(2)));
+
+    s_obj_list[0]->set_base_pose(obj_right);
+    s_obj_list[1]->set_base_pose(obj_left);
+}
+
+bool is_obj_achieved(Eigen::Vector3d obj,Eigen::Vector3d current_pos,double epsilon){
+    return (obj - current_pos).norm() < epsilon;
+}
+
 int main(int argc, char* argv[])
 {
     try {
@@ -525,10 +551,10 @@ int main(int argc, char* argv[])
         for (int i = 0;i < s_r_list.size();i++){
             simu->add_visual_robot(s_r_list[i]);
             simu->add_visual_robot(s_l_list[i]);
-            simu->add_visual_robot(s_r_nc_list[i]);
-            simu->add_visual_robot(s_l_nc_list[i]);
-            simu->add_visual_robot(s_rh_list[i]);
-            simu->add_visual_robot(s_lh_list[i]);
+            // simu->add_visual_robot(s_r_nc_list[i]);
+            // simu->add_visual_robot(s_l_nc_list[i]);
+            // simu->add_visual_robot(s_rh_list[i]);
+            // simu->add_visual_robot(s_lh_list[i]);
             simu->add_visual_robot(s_ref_list[i]);
         }
 
@@ -537,6 +563,18 @@ int main(int argc, char* argv[])
         //behavior_->update_trajectories(pos_vive_r,pos_vive_l,rot_right_hand,rot_left_hand);
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //generate exercises sequence /////////////////////////////////////////////////////////////////////////////
+        std::vector<std::vector<Eigen::Vector3d>> exercises = behavior_->get_exercises();
+        int index = 0;
+        std::vector<std::shared_ptr<robot_dart::Robot>> s_obj_list;
+        draw_obj(s_obj_list,exercises,index);
+
+        double epsilon = 1e-1; //accepts an error of 10cm maximum
+
+        for (auto& elt : s_obj_list){
+            simu->add_visual_robot(elt);
+        }
 
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;
@@ -647,7 +685,7 @@ int main(int argc, char* argv[])
 
 
         //BEGINNING OF THE LOOP /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        while (simu->scheduler().next_time() < 1000 /*vm["duration"].as<int>()*/ && !simu->graphics()->done()) {
+        while (simu->scheduler().next_time() < 1000 /*vm["duration"].as<int>()*/ && !simu->graphics()->done() && index < exercises[0].size()) {
 
             if (vm["damage"].as<bool>()) {
                 try {
@@ -913,17 +951,17 @@ int main(int argc, char* argv[])
             logfile_l << "x: " << pos_lh.coeff(0)
                       << " y: " << pos_lh.coeff(1)
                       << " z: " << pos_lh.coeff(2)
-                      << " hx: " << behavior_->get_lh_pos().coeff(0)
-                      << " hy: " << behavior_->get_lh_pos().coeff(1)
-                      << " hz: " << behavior_->get_lh_pos().coeff(2)
+                      << " hx: " << robot->body_pose_vec("gripper_left_inner_double_link").tail<3>().coeff(0)
+                      << " hy: " << robot->body_pose_vec("gripper_left_inner_double_link").tail<3>().coeff(1)
+                      << " hz: " << robot->body_pose_vec("gripper_left_inner_double_link").tail<3>().coeff(2)
                       << " valide: " << vive.get().at("LHR-21C1BC92").isValid << std::endl;
 
             logfile_r << "x: " << pos_rh.coeff(0)
                       << " y: " << pos_rh.coeff(1)
                       << " z: " << pos_rh.coeff(2)
-                      << " hx: " << behavior_->get_rh_pos().coeff(0)
-                      << " hy: " << behavior_->get_rh_pos().coeff(1)
-                      << " hz: " << behavior_->get_rh_pos().coeff(2)
+                      << " hx: " << robot->body_pose_vec("gripper_right_inner_double_link").tail<3>().coeff(0)
+                      << " hy: " << robot->body_pose_vec("gripper_right_inner_double_link").tail<3>().coeff(1)
+                      << " hz: " << robot->body_pose_vec("gripper_right_inner_double_link").tail<3>().coeff(2)
                       << " valid: " << vive.get().at("LHR-FC2F90A4").isValid << std::endl;
 
             std::cout << "\ntest\n" << "\nright vive pose:\n" << pos_vive_r << "\n\nleft vive pose:\n" << pos_vive_l << std::endl;
@@ -936,6 +974,14 @@ int main(int argc, char* argv[])
 
             if (test)
                 behavior_->update_trajectories(pos_rh,pos_lh,rot_rh,rot_lh);
+
+            //if objective achieved, go to the next one (it loops)
+            if (is_obj_achieved(exercises[0][index],robot->body_pose_vec("gripper_right_inner_double_link").tail<3>(),epsilon) 
+                && is_obj_achieved(exercises[1][index],robot->body_pose_vec("gripper_left_inner_double_link").tail<3>(),epsilon))
+            {
+                index++;
+                update_obj(s_obj_list,exercises,index);
+            }     
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
