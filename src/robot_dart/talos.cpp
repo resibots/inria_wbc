@@ -139,15 +139,16 @@ Eigen::Matrix3d get_rot_ref(const inria::ViveTracking& vive,const std::string vi
 }
 
 Eigen::Vector3d get_init_offset(const Eigen::Vector3d hand_init_pos,
-                                const inria::ViveTracking& vive,const std::string vive_controller)
+                                const inria::ViveTracking& vive,const std::string vive_controller,
+                                const Eigen::Matrix3d K)
 {
-    return get_rot_ref(vive,vive_controller)*vive.get().at(vive_controller).posHand - hand_init_pos;
+    return K*get_rot_ref(vive,vive_controller)*vive.get().at(vive_controller).posHand - hand_init_pos;
 }
 
 Eigen::Vector3d vive_pos_processing(const inria::ViveTracking& vive,const std::string vive_controller,const Eigen::Vector3d init_offset,
-                                    const Eigen::Matrix3d rot_ref)
+                                    const Eigen::Matrix3d rot_ref,const Eigen::Matrix3d K)
 {
-    return rot_ref*vive.get().at(vive_controller).posHand - init_offset;
+    return K*rot_ref*vive.get().at(vive_controller).posHand - init_offset;
 }
 
 Eigen::Matrix3d vive_rot_processing(const inria::ViveTracking& vive,const std::string vive_controller,
@@ -161,8 +162,8 @@ void draw_obj(std::vector<std::shared_ptr<robot_dart::Robot>>& s_obj_list,
 {
     Eigen::Isometry3d obj_right = Eigen::Isometry3d(Eigen::Translation3d(exercises[0][index].coeff(0),exercises[0][index].coeff(1),exercises[0][index].coeff(2)));
     Eigen::Isometry3d obj_left = Eigen::Isometry3d(Eigen::Translation3d(exercises[1][index].coeff(0),exercises[1][index].coeff(1),exercises[1][index].coeff(2)));
-    auto s_obj_right = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2,0.2,0.2),obj_right,"fixed",1,Eigen::Vector4d(1,1,0,0.5));
-    auto s_obj_left = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2,0.2,0.2),obj_left,"fixed",1,Eigen::Vector4d(1,1,0,0.5));
+    auto s_obj_right = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2,0.2,0.2),obj_right,"fixed",1,Eigen::Vector4d(1,1,0,1));
+    auto s_obj_left = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2,0.2,0.2),obj_left,"fixed",1,Eigen::Vector4d(1,1,0,1));
 
     s_obj_list.push_back(s_obj_right);
     s_obj_list.push_back(s_obj_left);
@@ -180,6 +181,37 @@ void update_obj(std::vector<std::shared_ptr<robot_dart::Robot>>& s_obj_list,
 
 bool is_obj_achieved(Eigen::Vector3d obj,Eigen::Vector3d current_pos,double epsilon){
     return (obj - current_pos).norm() < epsilon;
+}
+
+std::vector<std::shared_ptr<robot_dart::Robot>> draw_dist_between_two_pos(const Eigen::Vector3d pos1,
+                                                                    const Eigen::Vector3d pos2,const int nb_pts)
+{
+    Eigen::Vector3d dist;
+    std::vector<std::shared_ptr<robot_dart::Robot>> spheres_to_cover_dist;
+    Eigen::Isometry3d current_pos;
+
+    dist = pos2 - pos1;
+    for (int i = 0;i < nb_pts;i++){
+        Eigen::Vector3d temp = pos1 + i*dist/nb_pts;
+        current_pos = Eigen::Isometry3d(Eigen::Translation3d(temp.x(),temp.y(),temp.z()));
+        std::shared_ptr<robot_dart::Robot> sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.02,0.02,0.02),current_pos,"fixed",1,Eigen::Vector4d(0,1,1,0.5));
+        spheres_to_cover_dist.push_back(sphere);
+    }
+    return spheres_to_cover_dist;
+}
+
+void update_dist_between_two_pos(Eigen::Vector3d pos1,Eigen::Vector3d pos2,
+                                std::vector<std::shared_ptr<robot_dart::Robot>>& s_to_cov_dist)
+{
+    Eigen::Vector3d dist = pos2 - pos1;
+    Eigen::Isometry3d current_pos;
+    int nb_pts = s_to_cov_dist.size();
+
+    for (int i = 0;i < nb_pts;i++){
+        Eigen::Vector3d temp = pos1 + i*dist/nb_pts;
+        current_pos = Eigen::Isometry3d(Eigen::Translation3d(temp.x(),temp.y(),temp.z()));
+        s_to_cov_dist[i]->set_base_pose(current_pos);
+    }
 }
 
 int main(int argc, char* argv[])
@@ -301,7 +333,7 @@ int main(int argc, char* argv[])
 
         auto graphics = std::make_shared<robot_dart::gui::magnum::Graphics>(configuration);
         simu->set_graphics(graphics);
-        graphics->look_at({3.5, -2, 2.2}, {0., 0., 1.4});
+        graphics->look_at({-2.5, 0.7, 3.2}, {0., 0., 1.4});
         if (vm.count("mp4"))
             graphics->record_video(vm["mp4"].as<std::string>());
 #endif
@@ -446,6 +478,18 @@ int main(int argc, char* argv[])
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         */
 
+        //random gains to see their effect on the 3 directions (will be determine at last by a BO algorithm) //////////////////////////////////////////////////////////
+        
+        double Kx = 1.2;
+        double Ky = 1;
+        double Kz = 1.5;
+
+        //for calculus, matrix version
+        Eigen::Matrix3d K = Eigen::DiagonalMatrix<double, Eigen::Dynamic>(Eigen::Vector3d(Kx,Ky,Kz));
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
         //initialize the vive tracking system////////////////////////////////////////////////////////////////////////////////////////
         inria::ViveTracking vive;
         vive.init("127.0.0.1","127.0.0.1");
@@ -487,7 +531,6 @@ int main(int argc, char* argv[])
         //rotations
         Eigen::Matrix3d rot_vive_r = vive.get().at("LHR-FC2F90A4").matHand;
         Eigen::Matrix3d rot_vive_l = vive.get().at("LHR-21C1BC92").matHand;
-                             Eigen::AngleAxisd(rand()%6,Eigen::Vector3d::UnitX()).toRotationMatrix();
 
         // Eigen::Matrix3d rot_vive_l = Eigen::AngleAxisd(1,Eigen::Vector3d::UnitY()).toRotationMatrix()
         //                             *Eigen::AngleAxisd(M_PI/4,Eigen::Vector3d::UnitZ()).toRotationMatrix();
@@ -505,12 +548,12 @@ int main(int argc, char* argv[])
         Eigen::Matrix3d rot_ref_l = get_rot_ref(vive,"LHR-21C1BC92");
 
         //save init offsets
-        Eigen::Vector3d init_offset_r = get_init_offset(behavior_->get_init_right(),vive,"LHR-FC2F90A4");
-        Eigen::Vector3d init_offset_l = get_init_offset(behavior_->get_init_left(),vive,"LHR-21C1BC92");
+        Eigen::Vector3d init_offset_r = get_init_offset(behavior_->get_init_right(),vive,"LHR-FC2F90A4",K);
+        Eigen::Vector3d init_offset_l = get_init_offset(behavior_->get_init_left(),vive,"LHR-21C1BC92",K);
 
         //recenter rh and lh positions
-        Eigen::Vector3d pos_rh = vive_pos_processing(vive,"LHR-FC2F90A4",init_offset_r,rot_ref_r);
-        Eigen::Vector3d pos_lh = vive_pos_processing(vive,"LHR-21C1BC92",init_offset_l,rot_ref_l);
+        Eigen::Vector3d pos_rh = vive_pos_processing(vive,"LHR-FC2F90A4",init_offset_r,rot_ref_r,K);
+        Eigen::Vector3d pos_lh = vive_pos_processing(vive,"LHR-21C1BC92",init_offset_l,rot_ref_l,K);
 
         //get robot's hands rotations
         Eigen::Matrix3d rot_rh = vive_rot_processing(vive,"LHR-FC2F90A4",trans_r);
@@ -548,15 +591,15 @@ int main(int argc, char* argv[])
 
         
         //add them to the simulator
-        for (int i = 0;i < s_r_list.size();i++){
-            simu->add_visual_robot(s_r_list[i]);
-            simu->add_visual_robot(s_l_list[i]);
-            // simu->add_visual_robot(s_r_nc_list[i]);
-            // simu->add_visual_robot(s_l_nc_list[i]);
-            // simu->add_visual_robot(s_rh_list[i]);
-            // simu->add_visual_robot(s_lh_list[i]);
-            simu->add_visual_robot(s_ref_list[i]);
-        }
+        // for (int i = 0;i < s_r_list.size();i++){
+        //     // simu->add_visual_robot(s_r_list[i]);
+        //     // simu->add_visual_robot(s_l_list[i]);
+        //     // simu->add_visual_robot(s_r_nc_list[i]);
+        //     // simu->add_visual_robot(s_l_nc_list[i]);
+        //     // simu->add_visual_robot(s_rh_list[i]);
+        //     // simu->add_visual_robot(s_lh_list[i]);
+        //     // simu->add_visual_robot(s_ref_list[i]);
+        // }
 
         //while(1){}
 
@@ -575,6 +618,18 @@ int main(int argc, char* argv[])
         for (auto& elt : s_obj_list){
             simu->add_visual_robot(elt);
         }
+
+        //draw distance between hand pose and goal
+        std::vector<std::vector<std::shared_ptr<robot_dart::Robot>>> spheres_to_exercises;
+        spheres_to_exercises.push_back(draw_dist_between_two_pos(exercises[0][index],robot->body_pose_vec("gripper_right_inner_double_link").tail<3>(),10));
+        spheres_to_exercises.push_back(draw_dist_between_two_pos(exercises[1][index],robot->body_pose_vec("gripper_left_inner_double_link").tail<3>(),10));
+
+        for (auto& sub_vec : spheres_to_exercises){
+            for (auto& elt : sub_vec){
+                simu->add_visual_robot(elt);
+            }
+        }
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         auto all_dofs = controller->all_dofs();
         auto floating_base = all_dofs;
@@ -922,8 +977,8 @@ int main(int argc, char* argv[])
                 rot_rh = vive_rot_processing(vive,"LHR-FC2F90A4",trans_r);
 
                 //put position in the good rotation and then substract the offset
-                pos_rh = vive_pos_processing(vive,"LHR-FC2F90A4",init_offset_r,rot_ref_r);
-
+                pos_rh = vive_pos_processing(vive,"LHR-FC2F90A4",init_offset_r,rot_ref_r,K);
+                
             }
 
             //if new calculated left position is valid
@@ -944,7 +999,8 @@ int main(int argc, char* argv[])
                 rot_lh = vive_rot_processing(vive,"LHR-21C1BC92",trans_l);
 
                 //put vive position in the good rotation and then substract the offset
-                pos_lh = vive_pos_processing(vive,"LHR-21C1BC92",init_offset_l,rot_ref_l);
+                pos_lh = vive_pos_processing(vive,"LHR-21C1BC92",init_offset_l,rot_ref_l,K);
+
             }
 
             // log data in files
@@ -967,10 +1023,10 @@ int main(int argc, char* argv[])
             std::cout << "\ntest\n" << "\nright vive pose:\n" << pos_vive_r << "\n\nleft vive pose:\n" << pos_vive_l << std::endl;
 
             //update vive spheres positions
-            update_ref(pos_rh,rot_rh,s_r_list);
-            update_ref(pos_lh,rot_lh,s_l_list);
-            update_ref(pos_vive_r+Eigen::Vector3d(0,0,3),rot_vive_r,s_r_nc_list);
-            update_ref(pos_vive_l+Eigen::Vector3d(0,0,3),rot_vive_l,s_l_nc_list);
+            // update_ref(pos_rh,rot_rh,s_r_list);
+            // update_ref(pos_lh,rot_lh,s_l_list);
+            // update_ref(pos_vive_r+Eigen::Vector3d(0,0,3),rot_vive_r,s_r_nc_list);
+            // update_ref(pos_vive_l+Eigen::Vector3d(0,0,3),rot_vive_l,s_l_nc_list);
 
             if (test)
                 behavior_->update_trajectories(pos_rh,pos_lh,rot_rh,rot_lh);
@@ -981,7 +1037,11 @@ int main(int argc, char* argv[])
             {
                 index++;
                 update_obj(s_obj_list,exercises,index);
-            }     
+            }
+
+            //update distance between hand pose and goal
+            update_dist_between_two_pos(exercises[0][index],robot->body_pose_vec("gripper_right_inner_double_link").tail<3>(),spheres_to_exercises[0]);
+            update_dist_between_two_pos(exercises[1][index],robot->body_pose_vec("gripper_left_inner_double_link").tail<3>(),spheres_to_exercises[1]);
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1108,6 +1168,9 @@ int main(int argc, char* argv[])
         }
         logfile_r.close();
         logfile_l.close();
+
+        if (index == exercises[0].size())
+            std::cout << "you completed all the exercises, congrats!!!!\n" << std::endl;
     }
     catch (YAML::RepresentationException& e) {
         std::cout << red << bold << "YAML Parse error (missing key in YAML file?): " << rst << e.what() << std::endl;
