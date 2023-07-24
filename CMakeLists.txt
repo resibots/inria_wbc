@@ -14,6 +14,7 @@ find_package(pinocchio REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(Utheque) # optional
 find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
+find_package(Boost OPTIONAL_COMPONENTS stacktrace_basic)
 
 
 set(INRIA_WBC_SOURCES
@@ -43,6 +44,8 @@ set(INRIA_WBC_SOURCES
     src/utils/robot_model.cpp
 )
 
+add_definitions(-DUSE_NLOPT -DUSE_LIBCMAES)
+
 add_library(inria_wbc SHARED ${INRIA_WBC_SOURCES})
 target_compile_definitions(inria_wbc PUBLIC BOOST_MATH_DISABLE_FLOAT128=1)
 IF(APPLE)
@@ -61,6 +64,7 @@ target_link_libraries(inria_wbc PUBLIC
 			pinocchio::pinocchio
 			tsid::tsid
       /opt/ros/melodic/lib/libroscpp.so
+      /usr/local/lib/libnlopt_cxx.so
 			${YAML_CPP_LIBRARIES}
       ${UTHEQUE_LIB})
 
@@ -76,6 +80,7 @@ target_include_directories(inria_wbc PUBLIC
 		$<BUILD_INTERFACE:${inria_wbc_SOURCE_DIR}/include>
 		$<INSTALL_INTERFACE:include>
     /opt/ros/melodic/include
+    /home/pal/limbo/src
 )
 
 generate_export_header(inria_wbc)

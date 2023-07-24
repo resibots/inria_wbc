@@ -6,6 +6,7 @@ set(EXAMPLE_LIST
     tiago.cpp
     tutorial_1.cpp
     icub.cpp
+    test_limbo.cpp
 )
 
 set(NODART_EXAMPLE_LIST

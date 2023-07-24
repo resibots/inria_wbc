@@ -1,0 +1,16 @@
+from waflib.Configure import conf
+
+def options(opt):
+    pass
+
+@conf
+def configure(blah):
+    pass
+
+def build(bld):
+    bld(features='cxx cxxprogram',
+        source='main.cpp',
+        includes='. ../../src',
+        target='myExp',
+        uselib='BOOST EIGEN TBB LIBCMAES NLOPT',
+        use='limbo')

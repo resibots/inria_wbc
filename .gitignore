@@ -1,5 +1,6 @@
 build
-CMakeCache.txt
+#CMakeCache.txt
 CMakeFiles
 .vscode/
 etc/talos/randomize.yaml
+.gitignore
