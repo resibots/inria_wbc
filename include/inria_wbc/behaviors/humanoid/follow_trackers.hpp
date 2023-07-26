@@ -39,6 +39,8 @@ namespace inria_wbc
                 std::vector<Eigen::Vector3d> get_exercises_lh(){ return exercises_lh_; }
                 std::vector<std::vector<Eigen::Vector3d>> get_exercises();
 
+                float get_max_duration(){return _max_duration;}
+
             private:
             //target positions
                 Eigen::Vector3d _rh_target_pos;
@@ -91,6 +93,7 @@ namespace inria_wbc
                 bool absolute_;
                 std::vector<Eigen::Vector3d> exercises_rh_;
                 std::vector<Eigen::Vector3d> exercises_lh_;
+                double _max_duration;
             };
             
             

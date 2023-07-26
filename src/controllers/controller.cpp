@@ -304,7 +304,7 @@ namespace inria_wbc {
                     error += " => Uknown status";
                 }
                 error += " (t=" + std::to_string(t_) + ")";
-                throw IWBC_EXCEPTION(error);
+                //throw IWBC_EXCEPTION(error);
             }
             if (check_model_collisions_)
                 is_model_colliding_ = collision_check_.is_colliding(robot_->model(), tsid_->data());

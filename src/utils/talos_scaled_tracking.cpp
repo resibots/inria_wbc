@@ -1,45 +1,4 @@
-#include <algorithm>
-#include <chrono>
-#include <cstdlib>
-#include <iostream>
-#include <signal.h>
-#include <fstream>
-
-#include <dart/collision/CollisionObject.hpp>
-#include <dart/constraint/ConstraintSolver.hpp>
-#include <dart/dynamics/BodyNode.hpp>
-
-#include <robot_dart/control/pd_control.hpp>
-#include <robot_dart/robot.hpp>
-#include <robot_dart/robot_dart_simu.hpp>
-#include <robot_dart/sensor/force_torque.hpp>
-#include <robot_dart/sensor/imu.hpp>
-#include <robot_dart/sensor/torque.hpp>
-
-#ifdef GRAPHIC
-#include <robot_dart/gui/magnum/graphics.hpp>
-#endif
-
-#include "inria_wbc/behaviors/behavior.hpp"
-#include "inria_wbc/controllers/pos_tracker.hpp"
-#include "inria_wbc/controllers/talos_pos_tracker.hpp"
-#include "inria_wbc/exceptions.hpp"
-#include "inria_wbc/robot_dart/cmd.hpp"
-#include "inria_wbc/robot_dart/damages.hpp"
-#include "inria_wbc/robot_dart/external_collision_detector.hpp"
-#include "inria_wbc/robot_dart/self_collision_detector.hpp"
-#include "inria_wbc/robot_dart/utils.hpp"
-#include "inria_wbc/trajs/loader.hpp"
-#include "inria_wbc/trajs/saver.hpp"
-#include "inria_wbc/utils/timer.hpp"
-#include "tsid/tasks/task-self-collision.hpp"
-#include "inria_wbc/behaviors/generic/cartesian_sequential.hpp"
-#include "inria_wbc/utils/ViveTracking.hpp"
-#include "inria_wbc/behaviors/humanoid/follow_trackers.hpp"
-
-#include <boost/program_options.hpp> // Boost need to be always included after pinocchio & inria_wbc
-
-#include <typeinfo>
+#include "inria_wbc/utils/talos_scaled_tracking.hpp"
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -131,6 +90,8 @@ Eigen::Matrix3d get_trans(const std::shared_ptr<inria_wbc::behaviors::humanoid::
         return behavior->get_init_rot_right()*vive.get().at(vive_controller).matHand.transpose();
     else if (vive_controller == "LHR-21C1BC92")
         return behavior->get_init_rot_left()*vive.get().at(vive_controller).matHand.transpose();
+    else
+        return Eigen::Matrix3d::Identity();
 }
 
 Eigen::Matrix3d get_rot_ref(const inria::ViveTracking& vive,const std::string vive_controller){
@@ -1083,10 +1044,3 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
     }
 }
 
-int main(int argc, char* argv[])
-{
-    Eigen::Matrix3d K = Eigen::DiagonalMatrix<double,Eigen::Dynamic>(Eigen::Vector3d(1.2,1.0,1.5));
-    double nt = talos_scaled_tracking(argc,argv,K);
-    std::cout << "note granted: " << nt << std::endl;
-    return 0;
-}

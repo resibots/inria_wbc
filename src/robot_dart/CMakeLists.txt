@@ -7,6 +7,7 @@ set(EXAMPLE_LIST
     tutorial_1.cpp
     icub.cpp
     test_limbo.cpp
+    BOtalos_tracking.cpp
 )
 
 set(NODART_EXAMPLE_LIST
