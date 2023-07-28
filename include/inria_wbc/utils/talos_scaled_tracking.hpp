@@ -87,5 +87,5 @@ void update_dist_between_two_pos(Eigen::Vector3d pos1,Eigen::Vector3d pos2,
 
 double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K);
 
-double note(double time,int numb_of_penalties,double dist_error);
+double note(double time,int numb_of_penalties,double dist_error,int numb_of_tasks,double max_dur);
 #endif

@@ -218,8 +218,8 @@ double calculate_dist_error_by_dir(const Eigen::Vector3d pt1,const Eigen::Vector
     return (pt1 - pt2).lpNorm<1>();
 }
 
-double note(double time,int number_of_penalties,double dist_error){
-    return time + 10*number_of_penalties + 10*dist_error;
+double note(double time,int number_of_penalties,double dist_error,int numb_of_tasks,double max_dur,double max_dist_error){
+    return (time + 10*number_of_penalties + 10*dist_error)/(max_dur*numb_of_tasks + 10*max_dist_error);
 }
 
 double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
@@ -510,6 +510,8 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
         double max_duration = behavior_->get_max_duration();
         int number_of_penalties = 0;
         double dist_error = 0;
+        double max_dist_error = 0;
+
         std::vector<std::shared_ptr<robot_dart::Robot>> s_obj_list;
         draw_obj(s_obj_list,exercises,index);
 
@@ -529,6 +531,10 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
                 simu->add_visual_robot(elt);
             }
         }
+
+        max_dist_error += calculate_dist_error_by_dir(exercises[0][index], robot->body_pose_vec("gripper_right_inner_double_link").tail<3>());
+        max_dist_error += calculate_dist_error_by_dir(exercises[1][index], robot->body_pose_vec("gripper_left_inner_double_link").tail<3>());
+
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         auto all_dofs = controller->all_dofs();
@@ -693,7 +699,7 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
             //check if has fallen
             if (robot->body_pose_vec("head_1_link").tail<3>().coeff(2) < 0.5)
             {
-                return 100000;
+                return 1;
             }
             
 
@@ -795,9 +801,9 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
                 }
             }
 
-            //add a penalty if robot is supposedly colliding
-            if (is_colliding)
-                number_of_penalties++;
+            // //add a penalty if robot is supposedly colliding
+            // if (is_colliding)
+            //     number_of_penalties++;
 
             if (simu->schedule(simu->graphics_freq()) && vm.count("collisions")) {
                 auto controller_pos = std::dynamic_pointer_cast<inria_wbc::controllers::PosTracker>(controller);
@@ -902,7 +908,6 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
                       << " valid: " << vive.get().at("LHR-FC2F90A4").isValid << std::endl;
 
             //update vive spheres positions
-            // update_ref(pos_rh,rot_rh,s_r_list);
             // update_ref(pos_lh,rot_lh,s_l_list);
             // update_ref(pos_vive_r+Eigen::Vector3d(0,0,3),rot_vive_r,s_r_nc_list);
             // update_ref(pos_vive_l+Eigen::Vector3d(0,0,3),rot_vive_l,s_l_nc_list);
@@ -911,17 +916,22 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
                 behavior_->update_trajectories(pos_rh,pos_lh,rot_rh,rot_lh);
 
             //if objective achieved, go to the next one (it loops)
-            if ((is_obj_achieved(exercises[0][index],robot->body_pose_vec("gripper_right_inner_double_link").tail<3>(),epsilon) 
-                && is_obj_achieved(exercises[1][index],robot->body_pose_vec("gripper_left_inner_double_link").tail<3>(),epsilon))
+            if ((is_obj_achieved(exercises[0][index], robot->body_pose_vec("gripper_right_inner_double_link").tail<3>(), epsilon) && is_obj_achieved(exercises[1][index], robot->body_pose_vec("gripper_left_inner_double_link").tail<3>(), epsilon)) 
                 || (double)simu->scheduler().current_time() - save_time > max_duration)
             {
-                dist_error += calculate_dist_error_by_dir(exercises[0][index],robot->body_pose_vec("gripper_right_inner_double_link").tail<3>());
-                dist_error += calculate_dist_error_by_dir(exercises[1][index],robot->body_pose_vec("gripper_left_inner_double_link").tail<3>());
+                dist_error += calculate_dist_error_by_dir(exercises[0][index], robot->body_pose_vec("gripper_right_inner_double_link").tail<3>());
+                dist_error += calculate_dist_error_by_dir(exercises[1][index], robot->body_pose_vec("gripper_left_inner_double_link").tail<3>());
 
                 index++;
-                if ((double)simu->scheduler().current_time() - save_time > max_duration){
-                    number_of_penalties++;
+
+                if (index < exercises[0].size())
+                {
+                    max_dist_error += calculate_dist_error_by_dir(exercises[0][index], robot->body_pose_vec("gripper_right_inner_double_link").tail<3>());
+                    max_dist_error += calculate_dist_error_by_dir(exercises[1][index], robot->body_pose_vec("gripper_left_inner_double_link").tail<3>());
                 }
+                // if ((double)simu->scheduler().current_time() - save_time > max_duration){
+                //     number_of_penalties++;
+                // }
                 save_time = (double) simu->scheduler().current_time();
                 update_obj(s_obj_list,exercises,index);
             }
@@ -1070,7 +1080,7 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
         if (index == exercises[0].size())
             std::cout << "you completed all the exercises, congrats!!!!\n" << std::endl;
 
-        return note(time_spent,number_of_penalties,dist_error);
+        return note(time_spent,number_of_penalties,dist_error,exercises[0].size(),max_duration,max_dist_error);
     }
     catch (YAML::RepresentationException& e) {
         std::cout << red << bold << "YAML Parse error (missing key in YAML file?): " << rst << e.what() << std::endl;
