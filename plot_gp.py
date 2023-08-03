@@ -29,7 +29,7 @@ for index in range(len(list_gp)-2):
 
     figures[inc_r,inc_c].plot(data[:,0], data[:,1])
     figures[inc_r,inc_c].fill_between(data[:,0], data[:,1] - data[:,2], data[:,1] + data[:,2],alpha=0.2)
-    figures[inc_r,inc_c].plot(samples[0:index + 3,1], observations[0:index + 3,1], 'o')
+    figures[inc_r,inc_c].plot(samples[0:index + 4,1], observations[0:index + 4,1], 'o')
     # figures[inc_r,inc_c].ylim(-100, 120)
     # figures[inc_r,inc_c].savefig('gp.pdf')
     figures[inc_r,inc_c].set_title("plot for gp_"+str(index)+"'s results")

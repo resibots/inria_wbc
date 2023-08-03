@@ -37,9 +37,17 @@ namespace inria_wbc
 
                 std::vector<Eigen::Vector3d> get_exercises_rh(){ return exercises_rh_; }
                 std::vector<Eigen::Vector3d> get_exercises_lh(){ return exercises_lh_; }
-                std::vector<std::vector<Eigen::Vector3d>> get_exercises();
+                std::map<std::string,std::vector<Eigen::Vector3d>> get_exercises(){return exercises_;};
 
                 float get_max_duration(){return _max_duration;}
+
+                std::map<std::string,std::string> get_vive_map(){return _vive_map;};
+
+                std::map<std::string,Eigen::Matrix3d> get_task_init_rot_by_vive_name(){return _task_init_rot_by_vive_name;}
+                Eigen::Matrix3d get_task_init_rot_for(std::string v_name){return _task_init_rot_by_vive_name.at(v_name);}
+
+                std::map<std::string,Eigen::Vector3d> get_task_init_pos_by_vive_name(){return _task_init_pos_by_vive_name;}
+                Eigen::Vector3d get_task_init_pos_for(std::string v_name){return _task_init_pos_by_vive_name.at(v_name);}
 
             private:
             //target positions
@@ -91,9 +99,20 @@ namespace inria_wbc
                 std::vector<std::string> task_names_;
                 float trajectory_duration_;
                 bool absolute_;
+
+                //everything we need to stock initial information required
                 std::vector<Eigen::Vector3d> exercises_rh_;
                 std::vector<Eigen::Vector3d> exercises_lh_;
+                std::map<std::string,std::vector<Eigen::Vector3d>> exercises_;
                 double _max_duration;
+
+                std::string _rh_vive_name;
+                std::string _lh_vive_name;
+
+                std::map<std::string,std::string> _vive_map;
+
+                std::map<std::string,Eigen::Matrix3d> _task_init_rot_by_vive_name;
+                std::map<std::string,Eigen::Vector3d> _task_init_pos_by_vive_name;
             };
             
             

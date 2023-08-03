@@ -15,6 +15,8 @@ namespace inria_wbc
                 //initialization of both the parameters and the controller using the data collected from the yaml file
                 auto c = IWBC_CHECK(config["BEHAVIOR"]);
                 task_names_ = IWBC_CHECK(c["task_names"].as<std::vector<std::string>>());
+                _rh_vive_name = IWBC_CHECK(c["rh_vive"].as<std::string>());
+                _lh_vive_name = IWBC_CHECK(c["lh_vive"].as<std::string>());
                 auto ex_rh_ = IWBC_CHECK(c["exercises_rh"].as<std::vector<std::vector<double>>>());
                 auto ex_lh_ = IWBC_CHECK(c["exercises_lh"].as<std::vector<std::vector<double>>>());
                 _max_duration = IWBC_CHECK(c["max_duration_per_ex"].as<float>());
@@ -57,6 +59,14 @@ namespace inria_wbc
                 _rh_target_task = _rh_current_task;
                 _lh_target_task = _lh_current_task;
 
+                //fulfill the vive map
+                _vive_map.insert(std::make_pair("rh_vive_name",_rh_vive_name));
+                _vive_map.insert(std::make_pair("lh_vive_name",_lh_vive_name));
+
+                for (auto& pair : _vive_map){
+                    std::cout << "key: " << pair.first << " value: " << pair.second << std::endl;
+                }
+
                 //exercises treatment
                 for (auto& elt : ex_rh_)
                 {
@@ -68,6 +78,17 @@ namespace inria_wbc
                     exercises_lh_.push_back(Eigen::Vector3d::Map(elt.data()) + _lh_init_pos);
                 }
                 
+                //fulfill the exercises vector
+                exercises_.insert(std::make_pair(_rh_vive_name,exercises_rh_));
+                exercises_.insert(std::make_pair(_lh_vive_name,exercises_lh_));
+
+                //fulfill init tasks rot by vive controller names
+                _task_init_rot_by_vive_name.insert(std::make_pair(_rh_vive_name,_rh_init_rot));
+                _task_init_rot_by_vive_name.insert(std::make_pair(_lh_vive_name,_lh_init_rot));
+
+                //fulfill init tasks pos by vive controller names
+                _task_init_pos_by_vive_name.insert(std::make_pair(_rh_vive_name,_rh_init_pos));
+                _task_init_pos_by_vive_name.insert(std::make_pair(_lh_vive_name,_lh_init_pos));
 
                 //calculate the optimized trajectories (should be 0 here because targets and currents are the same)
                 _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
@@ -93,21 +114,14 @@ namespace inria_wbc
                 _rh_target_task.rotation() = target_right_rot;
                 _lh_target_task.rotation() = target_left_rot;
 
-                if ((_rh_current_task.translation() - _rh_target_task.translation()).norm() <= 0.15)
-                {
+                // calculate the optimized trajectories
+                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
 
-                    // calculate the optimized trajectories
-                    _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
-                    _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
-                    _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
-                }
-
-                if ((_lh_current_task.translation() - _lh_target_task.translation()).norm() <= 0.15)
-                {
-                    _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
-                    _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
-                    _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
-                }
+                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
             }
 
             void FollowTrackers::update(const controllers::SensorData& sensor_data){
@@ -153,13 +167,6 @@ namespace inria_wbc
                 //rot by pi to follow the good wrist rotations, to avoid flipping by pi the real wrist
                 // Eigen::Matrix3d rot_pi_rh = Eigen::AngleAxisd(M_PI,_rh_current_task.rotation()*Eigen::Vector3d::UnitZ()).toRotationMatrix();
                 //_rh_current_task.rotation() = rot_pi_rh*_rh_current_task.rotation();
-            }
-
-            std::vector<std::vector<Eigen::Vector3d>> FollowTrackers::get_exercises(){
-                std::vector<std::vector<Eigen::Vector3d>> exercises;
-                exercises.push_back(this->exercises_rh_);
-                exercises.push_back(this->exercises_lh_);
-                return exercises;
             }
             
         } // namespace humanoid

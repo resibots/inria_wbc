@@ -29,22 +29,22 @@ struct Params {
     };
 
     struct kernel_exp : public defaults::kernel_exp {
-        BO_PARAM(double, sigma_sq, 2e-1);
+        BO_PARAM(double, sigma_sq, 1e-1);
         BO_PARAM(double, l, 5e-2);
     };
 
     struct mean_constant : public defaults::mean_constant {
-        BO_PARAM(double,constant,-0.2);
+        BO_PARAM(double,constant,-0.25);
     };
 
     // we use 10 random samples to initialize the algorithm
     struct init_randomsampling {
-        BO_PARAM(int, samples, 3);
+        BO_PARAM(int, samples, 4);
     };
 
     // we stop after 10 iterations
     struct stop_maxiterations {
-        BO_PARAM(int, iterations, 5);
+        BO_PARAM(int, iterations, 10);
     };
 
     // struct stop_mintolerance {

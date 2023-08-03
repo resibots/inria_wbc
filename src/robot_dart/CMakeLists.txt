@@ -1,6 +1,6 @@
 
 set(EXAMPLE_LIST
-	talos.cpp
+	#talos.cpp
     talos_load_external.cpp
     franka.cpp
     tiago.cpp
@@ -8,6 +8,7 @@ set(EXAMPLE_LIST
     icub.cpp
     test_limbo.cpp
     BOtalos_tracking.cpp
+    test_talos_scaled_tracking.cpp
 )
 
 set(NODART_EXAMPLE_LIST

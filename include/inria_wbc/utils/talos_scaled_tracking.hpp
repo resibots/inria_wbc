@@ -46,7 +46,7 @@
 
 
 //defining used functions
-void initialize_vive(inria::ViveTracking& vive);
+void initialize_vive(inria::ViveTracking& vive,std::map<std::string,std::string>& vive_names);
 
 void draw_ref(const Eigen::Vector3d& center,const Eigen::Matrix3d& rotation,
             const Eigen::Vector4d& color,std::vector<std::shared_ptr<robot_dart::Robot>>& s_list);
