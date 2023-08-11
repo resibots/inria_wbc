@@ -10,5 +10,8 @@ BEHAVIOR:
 
   rh_vive: LHR-4F5A9AC8
   lh_vive: LHR-21C1BC92
+
+  rh_robot_link: gripper_right_inner_double_link
+  lh_robot_link: gripper_left_inner_double_link
   
   absolute: true

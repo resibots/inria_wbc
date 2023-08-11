@@ -17,6 +17,8 @@ namespace inria_wbc
                 task_names_ = IWBC_CHECK(c["task_names"].as<std::vector<std::string>>());
                 _rh_vive_name = IWBC_CHECK(c["rh_vive"].as<std::string>());
                 _lh_vive_name = IWBC_CHECK(c["lh_vive"].as<std::string>());
+                _rh_robot_link = IWBC_CHECK(c["rh_robot_link"].as<std::string>());
+                _lh_robot_link = IWBC_CHECK(c["lh_robot_link"].as<std::string>());
                 auto ex_rh_ = IWBC_CHECK(c["exercises_rh"].as<std::vector<std::vector<double>>>());
                 auto ex_lh_ = IWBC_CHECK(c["exercises_lh"].as<std::vector<std::vector<double>>>());
                 _max_duration = IWBC_CHECK(c["max_duration_per_ex"].as<float>());
@@ -90,38 +92,43 @@ namespace inria_wbc
                 _task_init_pos_by_vive_name.insert(std::make_pair(_rh_vive_name,_rh_init_pos));
                 _task_init_pos_by_vive_name.insert(std::make_pair(_lh_vive_name,_lh_init_pos));
 
-                //calculate the optimized trajectories (should be 0 here because targets and currents are the same)
-                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
-                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
-                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
+                //fulfill robot link map
+                _robot_link_map.insert(std::make_pair(_rh_vive_name,_rh_robot_link));
+                _robot_link_map.insert(std::make_pair(_lh_vive_name,_lh_robot_link));
 
-                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
-                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
-                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
+                //calculate the optimized trajectories (should be 0 here because targets and currents are the same)
+                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt()/1.5, trajectory_duration_);
+                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt()/1.5, trajectory_duration_);
+                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt()/1.5, trajectory_duration_);
+
+                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt()/1.5, trajectory_duration_);
+                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt()/1.5, trajectory_duration_);
+                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt()/1.5, trajectory_duration_);
 
 
             }
 
+            void FollowTrackers::update_trajectories(const Eigen::Vector3d &target_right_pos, const Eigen::Vector3d &target_left_pos,
+                                                     const Eigen::Matrix3d &target_right_rot, const Eigen::Matrix3d &target_left_rot)
+            {
 
-            void FollowTrackers::update_trajectories(const Eigen::Vector3d& target_right_pos,const Eigen::Vector3d& target_left_pos,
-                                        const Eigen::Matrix3d& target_right_rot,const Eigen::Matrix3d& target_left_rot){
-                
                 // get target pos
                 _rh_target_task.translation() = target_right_pos;
                 _lh_target_task.translation() = target_left_pos;
 
-                //get target rot
+                // get target rot
                 _rh_target_task.rotation() = target_right_rot;
                 _lh_target_task.rotation() = target_left_rot;
 
                 // calculate the optimized trajectories
-                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
-                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
-                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt(), trajectory_duration_);
 
-                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
-                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
-                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt(), trajectory_duration_);
+                _trajectory_right = trajs::min_jerk_trajectory(_rh_current_task, _rh_target_task, controller_->dt()/1.5, trajectory_duration_);
+                _trajectory_right_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_rh_current_task, _rh_target_task, controller_->dt()/1.5, trajectory_duration_);
+                _trajectory_right_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_rh_current_task, _rh_target_task, controller_->dt()/1.5, trajectory_duration_);
+
+                _trajectory_left = trajs::min_jerk_trajectory(_lh_current_task, _lh_target_task, controller_->dt()/1.5, trajectory_duration_);
+                _trajectory_left_d = trajs::min_jerk_trajectory<trajs::d_order::FIRST>(_lh_current_task, _lh_target_task, controller_->dt()/1.5, trajectory_duration_);
+                _trajectory_left_dd = trajs::min_jerk_trajectory<trajs::d_order::SECOND>(_lh_current_task, _lh_target_task, controller_->dt()/1.5, trajectory_duration_);
             }
 
             void FollowTrackers::update(const controllers::SensorData& sensor_data){

@@ -49,6 +49,9 @@ namespace inria_wbc
                 std::map<std::string,Eigen::Vector3d> get_task_init_pos_by_vive_name(){return _task_init_pos_by_vive_name;}
                 Eigen::Vector3d get_task_init_pos_for(std::string v_name){return _task_init_pos_by_vive_name.at(v_name);}
 
+                std::map<std::string,std::string> get_robot_link_map(){return _robot_link_map;}
+                std::string get_corresponding_robot_link(std::string v_name){return _robot_link_map.at(v_name);}
+
             private:
             //target positions
                 Eigen::Vector3d _rh_target_pos;
@@ -109,7 +112,12 @@ namespace inria_wbc
                 std::string _rh_vive_name;
                 std::string _lh_vive_name;
 
+                std::string _rh_robot_link;
+                std::string _lh_robot_link;
+
                 std::map<std::string,std::string> _vive_map;
+
+                std::map<std::string,std::string> _robot_link_map;
 
                 std::map<std::string,Eigen::Matrix3d> _task_init_rot_by_vive_name;
                 std::map<std::string,Eigen::Vector3d> _task_init_pos_by_vive_name;

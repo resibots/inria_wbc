@@ -1,4 +1,5 @@
 #include "inria_wbc/utils/talos_scaled_tracking.hpp"
+#include "inria_wbc/maths/TrajectoryBangBangAcc.hpp"
 
 static const std::string red = "\x1B[31m";
 static const std::string rst = "\x1B[0m";
@@ -124,20 +125,30 @@ void draw_obj(std::vector<std::shared_ptr<robot_dart::Robot>>& s_obj_list,
 {
     for (auto& pair : exercises){
         Eigen::Isometry3d obj = Eigen::Isometry3d(Eigen::Translation3d(pair.second[index].coeff(0),pair.second[index].coeff(1),pair.second[index].coeff(2)));
-        auto s_obj = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2,0.2,0.2),obj,"fixed",1,Eigen::Vector4d(1,1,0,1));
+        auto s_obj = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.2,0.2,0.2),obj,"fixed",1,Eigen::Vector4d(1,1,0,2));
 
         s_obj_list.push_back(s_obj);
     }
 }
 
 void update_obj(std::vector<std::shared_ptr<robot_dart::Robot>>& s_obj_list,
-                const std::map<std::string,std::vector<Eigen::Vector3d>>& exercises,const int index)
+                const std::map<std::string,std::vector<Eigen::Vector3d>>& exercises,const int index,
+                std::map<std::string,Eigen::Vector4d> colors)
 {
     int i = 0;
     for (auto& pair : exercises){
         Eigen::Isometry3d obj = Eigen::Isometry3d(Eigen::Translation3d(pair.second[index].coeff(0),pair.second[index].coeff(1),pair.second[index].coeff(2)));
 
         s_obj_list[i]->set_base_pose(obj);
+
+        //update sphere color over time
+        dart::dynamics::BodyNodePtr bn = s_obj_list[i]->skeleton()->getBodyNode(0);
+        if (bn->getShapeNodes().size() > 0)
+        {
+            bn->getShapeNodes()[0]->getShape()->setDataVariance(dart::dynamics::Shape::DYNAMIC_COLOR); // IMPORTANT TO CHANGE COLORS ONLINE
+            bn->getShapeNodes()[0]->getVisualAspect()->setColor(colors.at(pair.first));
+        }
+
         i++;
     }
 }
@@ -157,7 +168,11 @@ std::vector<std::shared_ptr<robot_dart::Robot>> draw_dist_between_two_pos(const 
     for (int i = 0;i < nb_pts;i++){
         Eigen::Vector3d temp = pos1 + i*dist/nb_pts;
         current_pos = Eigen::Isometry3d(Eigen::Translation3d(temp.x(),temp.y(),temp.z()));
-        std::shared_ptr<robot_dart::Robot> sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.02,0.02,0.02),current_pos,"fixed",1,Eigen::Vector4d(0,1,1,0.5));
+        std::shared_ptr<robot_dart::Robot> sphere;
+        if (i == nb_pts-1)
+            sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.02,0.02,0.02),current_pos,"fixed",1,Eigen::Vector4d(0,0,1,0.5));
+        else            
+            sphere = robot_dart::Robot::create_ellipsoid(Eigen::Vector3d(0.02,0.02,0.02),current_pos,"fixed",1,Eigen::Vector4d(0,1,1,0.5));
         spheres_to_cover_dist.push_back(sphere);
     }
     return spheres_to_cover_dist;
@@ -372,13 +387,25 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
         //     cos_t[i] = 0.2*std::cos(t[i]);
         // ///////////////////////////////////
 
-        //get both hands controllers
-            //LHR-FC2F90A4 is for right tracker
-            //LHR-21C1BC92 is for left tracker
-
         //vive initialization
         std::map<std::string,std::string> vive_names = behavior_->get_vive_map();
         initialize_vive(vive,vive_names);
+
+        //vive time step
+        const double vive_dt = 1/98.8; // 1/98.8 or 1/244.2
+
+        //temporaire pour voir effet du filtre ////////////////////////////////////////////////////////////
+        std::vector<std::shared_ptr<robot_dart::Robot>> s_filter_list;
+        std::vector<std::shared_ptr<robot_dart::Robot>> s_non_filter_list;
+        std::map<std::string,std::vector<Eigen::Vector3d>> pos_spheres_per_task;
+        std::map<std::string,std::vector<Eigen::Vector3d>> pos_non_spheres_per_task;
+        std::map<std::string,Eigen::Vector4d> color_filter;
+        std::map<std::string,Eigen::Vector4d> color_non_filter;
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+        //create positions filters
+        std::map<std::string,inria::FilterBangBangAcc<Eigen::Vector3d>> pos_filters;
 
         //to save tasks poses
         std::map<std::string,Eigen::Vector3d> pos_tasks;
@@ -396,6 +423,10 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
         std::map<std::string,Eigen::Vector3d> offsets;
 
         for (auto& pair : vive_names){ //for each involved tasks
+            //create task's corresponding filter
+            inria::FilterBangBangAcc<Eigen::Vector3d> temp_filter = inria::FilterBangBangAcc<Eigen::Vector3d>(1.5,5);
+            pos_filters.insert(std::make_pair(pair.second,temp_filter));
+
             //get transformation for task rotation
             trans.insert(std::make_pair(pair.second,get_trans(behavior_,vive,pair.second)));
 
@@ -406,48 +437,34 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
             offsets.insert(std::make_pair(pair.second,get_init_offset(behavior_->get_task_init_pos_for(pair.second),vive,pair.second,K)));
 
             Eigen::Vector3d pos_h = vive_pos_processing(vive,pair.second,offsets.at(pair.second),rot_refs.at(pair.second),K);
+            
+            std::vector<Eigen::Vector3d> temp_vec;
+            std::vector<Eigen::Vector3d> temp_vec2;
+
+            temp_vec.push_back(pos_h);
+
+            //apply the filter
+            pos_filters.at(pair.second).update(pos_h,vive_dt);
+            pos_h = pos_filters.at(pair.second).valuePos();
+
+            temp_vec2.push_back(pos_h);
+
+            pos_spheres_per_task.insert(std::make_pair(pair.second,temp_vec2));
+            pos_non_spheres_per_task.insert(std::make_pair(pair.second,temp_vec));
+
             Eigen::Matrix3d rot_h = vive_rot_processing(vive,pair.second,trans.at(pair.second));
 
             //save this in corresponding maps
             pos_tasks.insert(std::make_pair(pair.second,pos_h));
             rot_tasks.insert(std::make_pair(pair.second,rot_h));
+
+            color_filter.insert(std::make_pair(pair.second,Eigen::Vector4d(0,0,1,0.5)));
+            color_non_filter.insert(std::make_pair(pair.second,Eigen::Vector4d(1,0,1,0.5)));
         }
 
-        
-        //int counter = 25;
+        draw_obj(s_non_filter_list,pos_non_spheres_per_task,0);
+        draw_obj(s_filter_list,pos_spheres_per_task,0);
 
-        //then we can go forward
-        //positions
-        Eigen::Vector3d pos_vive_r = vive.get().at(vive_names.at("rh_vive_name")).posHand;
-        Eigen::Vector3d pos_vive_l = vive.get().at(vive_names.at("lh_vive_name")).posHand;
-
-        // Eigen::Vector3d pos_vive_l = Eigen::Vector3d(1.70+sin_t[counter],1.85,0.42);
-        // Eigen::Vector3d pos_vive_r = Eigen::Vector3d(1.20+sin_t[counter],1.63,0.77);
-
-        //vive positions are not in the same referential as the robot, so we have to rotate them by a certain angle (different for each hand)
-
-        //rotations
-        Eigen::Matrix3d rot_vive_r = vive.get().at(vive_names.at("rh_vive_name")).matHand;
-        Eigen::Matrix3d rot_vive_l = vive.get().at(vive_names.at("lh_vive_name")).matHand;
-
-        // Eigen::Matrix3d rot_vive_l = Eigen::AngleAxisd(1,Eigen::Vector3d::UnitY()).toRotationMatrix()
-        //                             *Eigen::AngleAxisd(M_PI/4,Eigen::Vector3d::UnitZ()).toRotationMatrix();
-
-        //put the positions and the rotations into the correct referentials //////////
-        //rot by pi to follow the good wrist rotations, to avoid flipping by pi the real wrist
-        Eigen::Matrix3d rot_pi_rh = Eigen::AngleAxisd(M_PI,behavior_->get_init_rot_right()*Eigen::Vector3d::UnitZ()).toRotationMatrix();
-
-        //get transformations for hands rotations
-        Eigen::Matrix3d trans_r = get_trans(behavior_,vive,vive_names.at("rh_vive_name"));
-        Eigen::Matrix3d trans_l = get_trans(behavior_,vive,vive_names.at("lh_vive_name"));
-
-        //get euler angles of vive rot because vie referentials are rotated by some theta in Z axis
-        Eigen::Matrix3d rot_ref_r = get_rot_ref(vive,vive_names.at("rh_vive_name"));
-        Eigen::Matrix3d rot_ref_l = get_rot_ref(vive,vive_names.at("lh_vive_name"));
-
-        //save init offsets
-        Eigen::Vector3d init_offset_r = get_init_offset(behavior_->get_init_right(),vive,vive_names.at("rh_vive_name"),K);
-        Eigen::Vector3d init_offset_l = get_init_offset(behavior_->get_init_left(),vive,vive_names.at("lh_vive_name"),K);
 
         //recenter rh and lh positions
         Eigen::Vector3d pos_rh = pos_tasks.at(vive_names.at("rh_vive_name"));
@@ -503,7 +520,14 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
 
         //generate exercises sequence /////////////////////////////////////////////////////////////////////////////
         std::map<std::string,std::vector<Eigen::Vector3d>> exercises = behavior_->get_exercises();
+        std::map<std::string,Eigen::Vector4d> color_obj_map; //to update the color of objectives over time
+
+        //initialize objectives colors map
+        for (auto& pair : exercises){
+            color_obj_map.insert(std::make_pair(pair.first,Eigen::Vector4d(1,1,0,0.5)));
+        }
         int index = 0;
+        int counter = 0; //to bring objectives spheres to red over time as much as time spent approaches max_duration
         double save_time = (double) simu->scheduler().current_time();
         double max_duration = behavior_->get_max_duration();
         int number_of_penalties = 0;
@@ -519,16 +543,49 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
             simu->add_visual_robot(elt);
         }
 
+        // for (auto& elt : s_filter_list){
+        //     simu->add_visual_robot(elt);
+        // }
+
+        // for (auto& elt : s_non_filter_list){
+        //     simu->add_visual_robot(elt);
+        // }
+
         //draw distance between hand pose and goal
         std::vector<std::vector<std::shared_ptr<robot_dart::Robot>>> spheres_to_exercises;
         spheres_to_exercises.push_back(draw_dist_between_two_pos(exercises.at(vive_names.at("rh_vive_name"))[index],robot->body_pose_vec("gripper_right_inner_double_link").tail<3>(),10));
         spheres_to_exercises.push_back(draw_dist_between_two_pos(exercises.at(vive_names.at("lh_vive_name"))[index],robot->body_pose_vec("gripper_left_inner_double_link").tail<3>(),10));
+
+        //draw height of exercises and robot's tasks
+        std::vector<std::vector<std::shared_ptr<robot_dart::Robot>>> s_ex_height;
+        std::vector<std::vector<std::shared_ptr<robot_dart::Robot>>> s_tasks_height;
+        for (auto& pair : vive_names){
+            //temporary vectors, useless for the next
+            Eigen::Vector3d temp = exercises.at(pair.second)[index];
+            Eigen::Vector3d temp2 = robot->body_pose_vec(behavior_->get_corresponding_robot_link(pair.second)).tail<3>();
+            s_ex_height.push_back(draw_dist_between_two_pos(temp,Eigen::Vector3d(temp(0),temp(1),0),10));
+            s_tasks_height.push_back(draw_dist_between_two_pos(temp2,Eigen::Vector3d(temp2(0),temp2(1),0),10));
+        }
+
+        //add spheres to visual
+        for (auto& sub_vec : s_ex_height){
+            for (auto& elt : sub_vec){
+                simu->add_visual_robot(elt);
+            }
+        }
+
+        for (auto& sub_vec : s_tasks_height){
+            for (auto& elt : sub_vec){
+                simu->add_visual_robot(elt);
+            }
+        }
 
         for (auto& sub_vec : spheres_to_exercises){
             for (auto& elt : sub_vec){
                 simu->add_visual_robot(elt);
             }
         }
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         max_dist_error += calculate_dist_error_by_dir(exercises.at(vive_names.at("rh_vive_name"))[index], robot->body_pose_vec("gripper_right_inner_double_link").tail<3>());
         max_dist_error += calculate_dist_error_by_dir(exercises.at(vive_names.at("lh_vive_name"))[index], robot->body_pose_vec("gripper_left_inner_double_link").tail<3>());
@@ -648,6 +705,19 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
         }
         else{
             std::cout << "time not open\n";
+            return 0;
+        }
+
+        //temporaire
+        std::ofstream freq_file("/home/pal/inria_wbc/freq.csv");
+
+        if (freq_file)
+        {
+            std::cout << "freq open\n";
+        }
+        else
+        {
+            std::cout << "freq not open\n";
             return 0;
         }
 
@@ -842,26 +912,38 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
 
             //update tracking motion of each hand only if corresponding trigger is pulled
             bool test = vive.update();
+            if (test)
+            {
+                freq_file << (double)simu->scheduler().current_time() << std::endl;
+            }
 
-            for (auto& pair : vive_names){
-                if (vive.get().at(pair.second).isValid && test){
-                    rot_tasks.at(pair.second) = vive_rot_processing(vive,pair.second,trans.at(pair.second));
-                    pos_tasks.at(pair.second) = vive_pos_processing(vive,pair.second,offsets.at(pair.second),rot_refs.at(pair.second),K);
+            for (auto &pair : vive_names)
+            {
+                if (vive.get().at(pair.second).isValid && test)
+                {
+                    rot_tasks.at(pair.second) = vive_rot_processing(vive, pair.second, trans.at(pair.second));
+                    pos_tasks.at(pair.second) = vive_pos_processing(vive, pair.second, offsets.at(pair.second), rot_refs.at(pair.second), K);
+                    
+                    std::vector<Eigen::Vector3d> temp_vec;
+                    std::vector<Eigen::Vector3d> temp_vec2;
+                    temp_vec.push_back(pos_tasks.at(pair.second));
+
+                    // apply the filter
+                    pos_filters.at(pair.second).update(pos_tasks.at(pair.second), vive_dt);
+                    pos_tasks.at(pair.second) = pos_filters.at(pair.second).valuePos();
+
+                    temp_vec2.push_back(pos_tasks.at(pair.second));
+                    pos_non_spheres_per_task.at(pair.second) = temp_vec;
+                    pos_spheres_per_task.at(pair.second) = temp_vec2;
                 }
             }
+
+            update_obj(s_non_filter_list,pos_non_spheres_per_task,0,color_non_filter);
+            update_obj(s_filter_list,pos_spheres_per_task,0,color_filter);
             
             //std::cout << "droite: " << vive.get().at(vive_names.at("rh_vive_name")).isButtonTrigger << " gauche: " << vive.get().at(vive_names.at("lh_vive_name")).isButtonTrigger << std::endl;
             //if new calculated right position is valid
             if (vive.get().at(vive_names.at("rh_vive_name")).isValid && test){
-                //counter = (counter+1)%512;
-                //then update the spheres positions in the simulator
-                pos_vive_r = vive.get().at(vive_names.at("rh_vive_name")).posHand;
-                //pos_vive_r = Eigen::Vector3d(1.20+sin_t[counter],1.63,0.77);
-
-                //same for rotations
-                rot_vive_r = vive.get().at(vive_names.at("rh_vive_name")).matHand;
-                // rot_vive_r = Eigen::AngleAxisd(1,Eigen::Vector3d::UnitY()).toRotationMatrix()
-                //             *Eigen::AngleAxisd(M_PI/4,Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
                 //pos_vive_r = rot_vive_r*pos_vive_r;
                 
@@ -875,15 +957,6 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
 
             //if new calculated left position is valid
             if (vive.get().at(vive_names.at("lh_vive_name")).isValid && test){
-        
-                // //then update the spheres positions in the simulator
-                pos_vive_l = vive.get().at(vive_names.at("lh_vive_name")).posHand;
-                //pos_vive_l = Eigen::Vector3d(1.70+sin_t[counter],1.85,0.42);
-
-                // //same for rotations
-                rot_vive_l = vive.get().at(vive_names.at("lh_vive_name")).matHand;
-                // rot_vive_l = Eigen::AngleAxisd(1,Eigen::Vector3d::UnitY()).toRotationMatrix()
-                //             *Eigen::AngleAxisd(M_PI/4,Eigen::Vector3d::UnitZ()).toRotationMatrix();
 
                 //pos_vive_l = rot_vive_l*pos_vive_l;
 
@@ -913,17 +986,17 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
             logfile_l << "x: " << pos_lh.coeff(0)
                       << " y: " << pos_lh.coeff(1)
                       << " z: " << pos_lh.coeff(2)
-                      << " hx: " << robot->body_pose_vec("gripper_left_inner_double_link").tail<3>().coeff(0)
-                      << " hy: " << robot->body_pose_vec("gripper_left_inner_double_link").tail<3>().coeff(1)
-                      << " hz: " << robot->body_pose_vec("gripper_left_inner_double_link").tail<3>().coeff(2)
+                      << " hx: " << robot->body_pose_vec(behavior_->get_corresponding_robot_link(vive_names.at("lh_vive_name"))).tail<3>().coeff(0)
+                      << " hy: " << robot->body_pose_vec(behavior_->get_corresponding_robot_link(vive_names.at("lh_vive_name"))).tail<3>().coeff(1)
+                      << " hz: " << robot->body_pose_vec(behavior_->get_corresponding_robot_link(vive_names.at("lh_vive_name"))).tail<3>().coeff(2)
                       << " valide: " << vive.get().at(vive_names.at("lh_vive_name")).isValid << std::endl;
 
             logfile_r << "x: " << pos_rh.coeff(0)
                       << " y: " << pos_rh.coeff(1)
                       << " z: " << pos_rh.coeff(2)
-                      << " hx: " << robot->body_pose_vec("gripper_right_inner_double_link").tail<3>().coeff(0)
-                      << " hy: " << robot->body_pose_vec("gripper_right_inner_double_link").tail<3>().coeff(1)
-                      << " hz: " << robot->body_pose_vec("gripper_right_inner_double_link").tail<3>().coeff(2)
+                      << " hx: " << robot->body_pose_vec(behavior_->get_corresponding_robot_link(vive_names.at("rh_vive_name"))).tail<3>().coeff(0)
+                      << " hy: " << robot->body_pose_vec(behavior_->get_corresponding_robot_link(vive_names.at("rh_vive_name"))).tail<3>().coeff(1)
+                      << " hz: " << robot->body_pose_vec(behavior_->get_corresponding_robot_link(vive_names.at("rh_vive_name"))).tail<3>().coeff(2)
                       << " valid: " << vive.get().at(vive_names.at("rh_vive_name")).isValid << std::endl;
 
             //update vive spheres positions
@@ -952,12 +1025,36 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
                 //     number_of_penalties++;
                 // }
                 save_time = (double) simu->scheduler().current_time();
-                update_obj(s_obj_list,exercises,index);
             }
+
+            //update all objectives spheres colors
+            for (auto& pair : exercises){
+                color_obj_map.at(pair.first) = Eigen::Vector4d(1,1 - ((double)simu->scheduler().current_time() - save_time)/max_duration,0,0.5);
+
+                //if objective reached, set corresponding sphere's color to green
+                if (is_obj_achieved(pair.second[index], robot->body_pose_vec(behavior_->get_corresponding_robot_link(pair.first)).tail<3>(), epsilon))
+                {
+                    color_obj_map.at(pair.first) = Eigen::Vector4d(0,1,0,0.5);
+                }
+                
+            }
+
+            //then update the objectives printed
+            update_obj(s_obj_list,exercises,index,color_obj_map);
 
             //update distance between hand pose and goal
             update_dist_between_two_pos(exercises.at(vive_names.at("rh_vive_name"))[index],robot->body_pose_vec("gripper_right_inner_double_link").tail<3>(),spheres_to_exercises[0]);
             update_dist_between_two_pos(exercises.at(vive_names.at("lh_vive_name"))[index],robot->body_pose_vec("gripper_left_inner_double_link").tail<3>(),spheres_to_exercises[1]);
+
+            //update heights of exercises and robot's tasks
+            int count = 0;
+            for (auto& pair : vive_names){
+                //temporary vectors, useless for the next
+                Eigen::Vector3d temp = exercises.at(pair.second)[index];
+                Eigen::Vector3d temp2 = robot->body_pose_vec(behavior_->get_corresponding_robot_link(pair.second)).tail<3>();
+                update_dist_between_two_pos(temp,Eigen::Vector3d(temp(0),temp(1),0),s_ex_height[count]);
+                update_dist_between_two_pos(temp2,Eigen::Vector3d(temp2(0),temp2(1),0),s_tasks_height[count++]);
+            }
 
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
