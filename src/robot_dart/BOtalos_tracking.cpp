@@ -67,7 +67,7 @@ struct Params {
     };
 
     struct stat_gp {
-        BO_PARAM(int, bins, 1000);
+        BO_PARAM(int, bins, 40);
     };
 };
 
@@ -116,9 +116,11 @@ struct eval_func {
     // the function to be optimized
     Eigen::VectorXd operator()(const Eigen::VectorXd& x) const
     {
-        Eigen::Matrix3d K = Eigen::DiagonalMatrix<double,Eigen::Dynamic>(Eigen::Vector3d(1,1,2*x(0)));
+        Eigen::Matrix3d K = Eigen::DiagonalMatrix<double,Eigen::Dynamic>(Eigen::Vector3d(1,1,1));
         // we return a 1-dimensional vector
-        double y = -talos_scaled_tracking(argcc,argvv[0],K);
+        double s = 0.8 + x(0);
+        double acc = (1 + 0)*s;
+        double y = -talos_scaled_tracking(argcc, argvv[0], K, s, 2.5, acc);
         //double y = -x(0)*x(0) + 3*x(0) + 1;
         return tools::make_vector(y);
     }

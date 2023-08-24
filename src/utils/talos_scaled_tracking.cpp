@@ -197,10 +197,22 @@ double calculate_dist_error_by_dir(const Eigen::Vector3d pt1,const Eigen::Vector
 }
 
 double note(double time,int number_of_penalties,double dist_error,int numb_of_tasks,double max_dur,double max_dist_error){
-    return (time + 10*number_of_penalties + 10*dist_error)/(max_dur*numb_of_tasks + 10*max_dist_error);
+    return (time + 10*number_of_penalties + 10*dist_error)/(max_dur*numb_of_tasks + 10*max_dist_error); //currently, number_of_penalties is always 0, increment it in the code below to change that
 }
 
-double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
+double lookup(const double vin,const double& s,const double& v_sat,const double& thr){ //gain transfert function to simulate windows like pointing acceleration
+    // const double thr = thresh; //threshold
+    // const double v_sat = vv_sat; //saturation velocity
+    // const double s = ss; //sensitivity
+
+    //compute alpha
+    const double alpha = (thr - s)/v_sat;
+
+    //compute relative gain
+    return std::min(alpha*vin + s,thr);
+}
+
+double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K,const double s,const double v_sat,const double thr)
 {
     try {
         // program options
@@ -391,8 +403,10 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
         std::map<std::string,std::string> vive_names = behavior_->get_vive_map();
         initialize_vive(vive,vive_names);
 
+        //vive frequency
+        const double vive_f = 98.8;
         //vive time step
-        const double vive_dt = 1/98.8; // 1/98.8 or 1/244.2
+        const double vive_dt = 1/vive_f; // 1/98.8 or 1/244.2
 
         //temporaire pour voir effet du filtre ////////////////////////////////////////////////////////////
         std::vector<std::shared_ptr<robot_dart::Robot>> s_filter_list;
@@ -421,6 +435,12 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
 
         //same for initial offsets
         std::map<std::string,Eigen::Vector3d> offsets;
+
+        //same for previous positions, to compute current velocity to apply windows like pointing acceleration
+        std::map<std::string,Eigen::Vector3d> prev_pos_tasks;
+
+        //same for treated tasks positions by the acceleration process
+        std::map<std::string,Eigen::Vector3d> treated_pos_tasks;
 
         for (auto& pair : vive_names){ //for each involved tasks
             //create task's corresponding filter
@@ -460,6 +480,14 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
 
             color_filter.insert(std::make_pair(pair.second,Eigen::Vector4d(0,0,1,0.5)));
             color_non_filter.insert(std::make_pair(pair.second,Eigen::Vector4d(1,0,1,0.5)));
+
+            if (prev_pos_tasks.count(pair.second) == 0){
+                prev_pos_tasks.insert(std::make_pair(pair.second,Eigen::Vector3d(0,0,0)));
+            }
+
+            if (treated_pos_tasks.count(pair.second) == 0){
+                treated_pos_tasks.insert(std::make_pair(pair.second,pos_tasks.at(pair.second)));
+            }
         }
 
         draw_obj(s_non_filter_list,pos_non_spheres_per_task,0);
@@ -476,13 +504,13 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
 
         // //create spheres to represent the referentials
         // //colors
-        // Eigen::Vector4d color_r(1,0,0,0.5);
-        // Eigen::Vector4d color_l(0,1,0,0.5);
+        Eigen::Vector4d color_r(1,0,0,0.5);
+        Eigen::Vector4d color_l(0,1,0,0.5);
         // Eigen::Vector4d color_ref(0,0,1,0.5);
 
         // //create spheres lists for both hands referentials
-        // std::vector<std::shared_ptr<robot_dart::Robot>> s_r_list;
-        // std::vector<std::shared_ptr<robot_dart::Robot>> s_l_list;
+        std::vector<std::shared_ptr<robot_dart::Robot>> s_r_list;
+        std::vector<std::shared_ptr<robot_dart::Robot>> s_l_list;
 
         // //non calibrated referentials
         // std::vector<std::shared_ptr<robot_dart::Robot>> s_r_nc_list;
@@ -496,8 +524,8 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
         // std::vector<std::shared_ptr<robot_dart::Robot>> s_ref_list;
 
         // //draw them all
-        // draw_ref(pos_rh,rot_rh,color_r,s_r_list);
-        // draw_ref(pos_lh,rot_lh,color_l,s_l_list);
+        draw_ref(pos_rh,rot_rh,color_r,s_r_list);
+        draw_ref(pos_lh,rot_lh,color_l,s_l_list);
         // draw_ref(pos_vive_r+Eigen::Vector3d(0,0,3),rot_vive_r,color_r,s_r_nc_list);
         // draw_ref(pos_vive_l+Eigen::Vector3d(0,0,3),rot_vive_l,color_l,s_l_nc_list);
         // draw_ref(behavior_->get_init_right(),behavior_->get_init_rot_right(),color_r,s_rh_list);
@@ -506,15 +534,15 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
 
         
         //add them to the simulator
-        // for (int i = 0;i < s_r_list.size();i++){
-        //     // simu->add_visual_robot(s_r_list[i]);
-        //     // simu->add_visual_robot(s_l_list[i]);
+        for (int i = 0;i < s_r_list.size();i++){
+            simu->add_visual_robot(s_r_list[i]);
+            simu->add_visual_robot(s_l_list[i]);
         //     // simu->add_visual_robot(s_r_nc_list[i]);
         //     // simu->add_visual_robot(s_l_nc_list[i]);
         //     // simu->add_visual_robot(s_rh_list[i]);
         //     // simu->add_visual_robot(s_lh_list[i]);
         //     // simu->add_visual_robot(s_ref_list[i]);
-        // }
+        }
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -921,16 +949,39 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
             {
                 if (vive.get().at(pair.second).isValid && test)
                 {
+                    prev_pos_tasks.at(pair.second) = pos_tasks.at(pair.second); //save previous tasks positions
+
+                    //refresh task position and rotation
                     rot_tasks.at(pair.second) = vive_rot_processing(vive, pair.second, trans.at(pair.second));
                     pos_tasks.at(pair.second) = vive_pos_processing(vive, pair.second, offsets.at(pair.second), rot_refs.at(pair.second), K);
+
+                    //continue here ///////////////////////////////////////////
+
+                    //n-th iteration distance traveled
+                    Eigen::Vector3d dn = pos_tasks.at(pair.second) - prev_pos_tasks.at(pair.second);
+                    //n-th iteration task velocity (input velocity)
+                    Eigen::Vector3d vn_in = vive_f*dn;
+
+                    //get the corresponding gain
+                    double gain = lookup(vn_in.norm(),s,v_sat,thr);
+                    //std::cout << gain << std::endl;
+                    //then get the output velocity
+                    Eigen::Vector3d vn_out = gain*vn_in;
+
+                    //std::cout << "vin = " << vn_in.norm() << std::endl << std::endl;
+
+                    //eventually increment task position using rectangles formula (can be improved later)
+                    treated_pos_tasks.at(pair.second) += vn_out/vive_f;
+                    
+                    ///////////////////////////////////////////////////////////
                     
                     std::vector<Eigen::Vector3d> temp_vec;
                     std::vector<Eigen::Vector3d> temp_vec2;
                     temp_vec.push_back(pos_tasks.at(pair.second));
 
-                    // apply the filter
-                    pos_filters.at(pair.second).update(pos_tasks.at(pair.second), vive_dt);
-                    pos_tasks.at(pair.second) = pos_filters.at(pair.second).valuePos();
+                    // // apply the filter
+                    // pos_filters.at(pair.second).update(pos_tasks.at(pair.second), vive_dt);
+                    // pos_tasks.at(pair.second) = pos_filters.at(pair.second).valuePos();
 
                     temp_vec2.push_back(pos_tasks.at(pair.second));
                     pos_non_spheres_per_task.at(pair.second) = temp_vec;
@@ -951,7 +1002,7 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
                 rot_rh = rot_tasks.at(vive_names.at("rh_vive_name"));
 
                 //put position in the good rotation and then substract the offset
-                pos_rh = pos_tasks.at(vive_names.at("rh_vive_name"));
+                pos_rh = treated_pos_tasks.at(vive_names.at("rh_vive_name"));
                 
             }
 
@@ -964,7 +1015,7 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
                 rot_lh = rot_tasks.at(vive_names.at("lh_vive_name"));
 
                 //put vive position in the good rotation and then substract the offset
-                pos_lh = pos_tasks.at(vive_names.at("lh_vive_name"));
+                pos_lh = treated_pos_tasks.at(vive_names.at("lh_vive_name"));
 
             }
 
@@ -1000,7 +1051,8 @@ double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K)
                       << " valid: " << vive.get().at(vive_names.at("rh_vive_name")).isValid << std::endl;
 
             //update vive spheres positions
-            // update_ref(pos_lh,rot_lh,s_l_list);
+            update_ref(pos_lh,rot_lh,s_l_list);
+            update_ref(pos_rh,rot_rh,s_r_list);
             // update_ref(pos_vive_r+Eigen::Vector3d(0,0,3),rot_vive_r,s_r_nc_list);
             // update_ref(pos_vive_l+Eigen::Vector3d(0,0,3),rot_vive_l,s_l_nc_list);
 

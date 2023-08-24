@@ -85,7 +85,9 @@ std::vector<std::shared_ptr<robot_dart::Robot>> draw_dist_between_two_pos(const 
 void update_dist_between_two_pos(Eigen::Vector3d pos1,Eigen::Vector3d pos2,
                                 std::vector<std::shared_ptr<robot_dart::Robot>>& s_to_cov_dist);
 
-double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K);
+double talos_scaled_tracking(int argc,char* argv[],const Eigen::Matrix3d K,const double s,const double v_sat,const double thr);
+
+double lookup(const double vin,const double& s,const double& v_sat,const double& thr);
 
 double note(double time,int numb_of_penalties,double dist_error,int numb_of_tasks,double max_dur);
 #endif
