@@ -289,7 +289,9 @@ namespace inria_wbc {
             std::vector<Eigen::Vector3d> refs;
             for (auto& contact_name : contact_names) {
                 IWBC_ASSERT(contact_map.find(contact_name) != contact_map.end(), "cop task : contact : ", contact_name, " is not inside the contact map");
-                auto contact_ref = robot->framePosition(tsid->data(), contact_map.at(contact_name)->getMotionTask().frame_id()).translation();
+
+                auto contact_ptr = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact_map.at(contact_name));
+                auto contact_ref = robot->framePosition(tsid->data(), contact_ptr->getMotionTask().frame_id()).translation();
                 contact_ref[2] = 0.0;
                 refs.push_back(contact_ref);
             }

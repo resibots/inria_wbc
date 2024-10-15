@@ -306,7 +306,8 @@ namespace inria_wbc {
 
             if (foot_mass > 1e-5) {
                 // we retrieve the tracked frame from the contact task
-                auto contact_frame = robot_->model().frames[contact(contact_name)->getMotionTask().frame_id()].name;
+                auto contact_ptr = std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact(contact_name));
+                auto contact_frame = robot_->model().frames[contact_ptr->getMotionTask().frame_id()].name;
                 IWBC_ASSERT(robot_->model().existFrame(contact_frame), "Frame " + contact_frame + " does not exist in model.");
                 IWBC_ASSERT(robot_->model().existFrame(sole_frame), "Frame " + sole_frame + " does not exist in model.");
 

@@ -76,9 +76,10 @@ namespace inria_wbc {
                 torso_link_name_ = h_controller->robot()->model().frames[h_controller->task<tsid::tasks::TaskSE3Equality>("torso")->frame_id()].name;
                 lh_delta_init_ = h_controller->get_se3_ref("lh").translation() - controller->model_frame_pos(torso_link_name_).translation();
                 rh_delta_init_ = h_controller->get_se3_ref("rh").translation() - controller->model_frame_pos(torso_link_name_).translation();
-
-                left_sole_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_lfoot")->getMotionTask().frame_id()].name;
-                right_sole_name_ = h_controller->robot()->model().frames[h_controller->contact("contact_rfoot")->getMotionTask().frame_id()].name;
+                auto contact_left=std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(h_controller->contact("contact_lfoot"));
+                left_sole_name_ = h_controller->robot()->model().frames[contact_left->getMotionTask().frame_id()].name;
+                auto contact_right=std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(h_controller->contact("contact_rfoot"));
+                right_sole_name_ = h_controller->robot()->model().frames[contact_right->getMotionTask().frame_id()].name;
 
                 if (h_controller->robot()->model().frames[h_controller->task<tsid::tasks::TaskSE3Equality>("lf_sole")->frame_id()].name != left_sole_name_)
                     IWBC_ERROR("lf_sole and contact_lfoot should track the same frame");

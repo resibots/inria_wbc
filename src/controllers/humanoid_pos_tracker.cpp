@@ -247,7 +247,8 @@ namespace inria_wbc {
                         model_frame_pos(left_ankle_name), get_full_se3_ref("lf"), contact_sample_ref["contact_lfoot"], lf_se3_sample, lf_contact_sample);
                     set_se3_ref(lf_se3_sample, "lf");
                     _stabilizer_samples["lf"] = lf_se3_sample;
-                    if (robot_->model().frames[contact("contact_lfoot")->getMotionTask().frame_id()].name == left_ankle_name)
+                    auto contact_lfoot=std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact("contact_lfoot"));
+                    if (robot_->model().frames[contact_lfoot->getMotionTask().frame_id()].name == left_ankle_name)
                         contact_lfoot->setReference(lf_contact_sample);
                 }
 
@@ -257,7 +258,8 @@ namespace inria_wbc {
                         model_frame_pos(right_ankle_name), get_full_se3_ref("rf"), contact_sample_ref["contact_rfoot"], rf_se3_sample, rf_contact_sample);
                     set_se3_ref(rf_se3_sample, "rf");
                     _stabilizer_samples["rf"] = rf_se3_sample;
-                    if (robot_->model().frames[contact("contact_rfoot")->getMotionTask().frame_id()].name == right_ankle_name)
+                    auto contact_rfoot=std::dynamic_pointer_cast<tsid::contacts::Contact6dExt>(contact("contact_rfoot"));
+                    if (robot_->model().frames[contact_rfoot->getMotionTask().frame_id()].name == right_ankle_name)
                         contact_rfoot->setReference(rf_contact_sample);
                 }
 
