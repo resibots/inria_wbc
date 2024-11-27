@@ -31,6 +31,7 @@ namespace inria_wbc {
         void com_admittance(
             double dt,
             const Eigen::VectorXd& p,
+            const Eigen::Vector2d& forward,
             const Eigen::Vector2d& cop_filtered,
             const tsid::trajectories::TrajectorySample& model_current_com,
             const tsid::trajectories::TrajectorySample& com_ref,
@@ -41,16 +42,22 @@ namespace inria_wbc {
             if (std::abs(cop_filtered(0)) >= 10 && std::abs(cop_filtered(1)) >= 10)
                 IWBC_ERROR("com_admittance : something is wrong with input cop_filtered, check sensor measurment: ", std::abs(cop_filtered(0)), " ", std::abs(cop_filtered(1)));
 
-            Eigen::Vector2d ref = com_to_zmp(model_current_com); //because this is the target
-            Eigen::Vector2d cor = ref.head(2) - cop_filtered;
+            // x-y gains are wrt transverse plane of robot (not world coordinate)
+            // error is rotated in robot frame, then gains are applied. Finally, the contribution is rotated back in world frame
+            Eigen::Matrix2d fwd_rotation;
+            fwd_rotation.col(0) = forward;                  // x axis
+            fwd_rotation.col(1) << -forward(1), forward(0); // y axis, rotate forward 90 degrees counterclockwise
 
-            Eigen::Vector2d error = p.segment(0, 2).array() * cor.array();
+            Eigen::Vector2d ref = com_to_zmp(model_current_com); //because this is the target
+            Eigen::Vector2d cor = fwd_rotation.transpose() * (ref.head(2) - cop_filtered);
+            
+            Eigen::Vector2d error = fwd_rotation * p.segment(0, 2).cwiseProduct(cor);
             Eigen::VectorXd ref_m = com_ref.getValue() - Eigen::Vector3d(error(0), error(1), 0);
 
-            error = p.segment(2, 2).array() * cor.array();
+            error = fwd_rotation * p.segment(2, 2).cwiseProduct(cor);
             Eigen::VectorXd vref_m = com_ref.getDerivative() - (Eigen::Vector3d(error(0), error(1), 0) / dt);
 
-            error = p.segment(4, 2).array() * cor.array();
+            error = fwd_rotation * p.segment(4, 2).cwiseProduct(cor);
             Eigen::VectorXd aref_m = com_ref.getSecondDerivative() - (Eigen::Vector3d(error(0), error(1), 0) / (dt * dt));
 
             se3_sample.setValue(ref_m);

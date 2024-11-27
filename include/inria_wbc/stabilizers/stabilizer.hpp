@@ -44,6 +44,7 @@ namespace inria_wbc {
         void com_admittance(
             double dt, // controller dt
             const Eigen::VectorXd& p, // 6d proportional gains
+            const Eigen::Vector2d& forward, // x vector in a pure yaw rotation of the robot in world frame
             const Eigen::Vector2d& cop_filtered, //filtered cop estimation
             const tsid::trajectories::TrajectorySample& model_current_com, //pinocchio current com pos,vel,acc
             const tsid::trajectories::TrajectorySample& com_ref, //next com reference

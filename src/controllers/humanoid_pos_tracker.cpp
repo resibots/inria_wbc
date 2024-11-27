@@ -221,7 +221,8 @@ namespace inria_wbc {
                 const auto& valid_cop = cops[0] ? cops[0] : (cops[1] ? cops[1] : cops[2]);
                 // com_admittance
                 if (valid_cop) {
-                    stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, valid_cop.value(), model_current_com, com_ref, com_sample);
+                    Eigen::Vector2d forward = Eigen::Quaterniond(this->q_tsid().segment<4>(3)).toRotationMatrix().col(0).head<2>().normalized();
+                    stabilizer::com_admittance(dt_, _stabilizer_configs[behavior_type_].com_gains, forward, valid_cop.value(), model_current_com, com_ref, com_sample);
                     set_com_ref(com_sample);
                     _stabilizer_samples["com"] = com_sample;
                 }
