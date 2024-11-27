@@ -63,6 +63,7 @@ int main(int argc, char* argv[])
         ("closed_loop", "Close the loop with floating base position and joint positions; required for torque control [default: from YAML file]")
         ("help,h", "produce help message")
         ("height", po::value<bool>()->default_value(false), "print total feet force data to adjust height in config")
+        ("model_collisions",po::value<bool>()->default_value(false), "display pinocchio qp model collision spheres")
         ("mp4,m", po::value<std::string>(), "save the display to a mp4 video [filename]")
         ("push,p", po::value<std::vector<float>>(), "push the robot at t=x1 0.25 s")
         ("norm_force,n", po::value<float>()->default_value(-15) , "push norm force value")
@@ -223,6 +224,12 @@ int main(int argc, char* argv[])
 
         //////////////////// START SIMULATION //////////////////////////////////////
         simu.set_control_freq(control_freq); // default = 1000 Hz
+        
+        // self-collision spheres
+        bool init_model_sphere_collisions = false;
+        std::vector<std::shared_ptr<robot_dart::Robot>> spheres;
+        bool is_colliding = false;
+
 
         std::shared_ptr<robot_dart::Robot> ghost;
         if (vm.count("ghost") || vm.count("collisions")) {
@@ -293,6 +300,23 @@ int main(int argc, char* argv[])
                     translate_ghost(0) -= 1;
                     ghost->set_positions(controller->filter_cmd(q).tail(ncontrollable), controllable_dofs);
                     ghost->set_positions(q.head(6) + translate_ghost, floating_base);
+                }
+                
+                // self-collision spheres
+                is_colliding = controller->is_model_colliding();
+                if (vm["model_collisions"].as<bool>()) {
+                    auto spherical_members = controller->collision_check().spherical_members();
+                    auto sphere_color = dart::Color::Green(0.5);
+                    Eigen::VectorXd translate_ghost = Eigen::VectorXd::Zero(6);
+                    translate_ghost(0) -= 1;
+
+                    if (init_model_sphere_collisions == false) {
+                        spheres = inria_wbc::robot_dart::create_spherical_members(spherical_members, simu, sphere_color);
+                        init_model_sphere_collisions = true;
+                    }
+                    else {
+                        inria_wbc::robot_dart::update_spherical_members(spherical_members, spheres, sphere_color, is_colliding, controller->collision_check().collision_index(), translate_ghost.head(3));
+                    }
                 }
             }
 

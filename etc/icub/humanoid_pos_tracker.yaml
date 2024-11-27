@@ -16,8 +16,8 @@ CONTROLLER:
   closed_loop: false
   verbose: true
   mimic_dof_names : []
-  check_model_collisions: false
-  collision_path: ""
+  check_model_collisions: true
+  collision_path: "icub_collision_spheres.yaml"
   stabilizer:
     activated: true
     params_ss: stab_single_support.yaml
